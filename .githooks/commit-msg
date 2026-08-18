@@ -1,0 +1,30 @@
+#!/bin/sh
+# Valida a primeira linha da mensagem de commit contra o padrao do
+# CONTRIBUTING.md: "tipo: descricao curta no imperativo"
+
+commit_msg_file="$1"
+first_line=$(sed -n '1p' "$commit_msg_file")
+
+# Ignora merges e reverts (gerados automaticamente pelo git)
+case "$first_line" in
+    "Merge "*|"Revert "*)
+        exit 0
+        ;;
+esac
+
+types="feat|fix|docs|test|refactor|style|chore|build|ci|remove"
+pattern="^(${types}): .+"
+
+if ! echo "$first_line" | grep -Eq "$pattern"; then
+    echo "Commit rejeitado: a primeira linha nao segue o padrao do projeto." >&2
+    echo "" >&2
+    echo "Formato esperado: tipo: descricao curta no imperativo" >&2
+    echo "Tipos validos: feat, fix, docs, test, refactor, style, chore, build, ci, remove" >&2
+    echo "" >&2
+    echo "Exemplo: feat: adiciona menu principal navegavel" >&2
+    echo "" >&2
+    echo "Sua mensagem: $first_line" >&2
+    exit 1
+fi
+
+exit 0
