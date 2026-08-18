@@ -1,0 +1,70 @@
+# --- C (engine-c) ---
+*.o
+*.obj
+*.out
+*.exe
+*.a
+*.so
+*.dll
+*.pdb
+*.stackdump
+build/
+bin/
+
+# --- Haskell (Stack) ---
+.stack-work/
+*.hi
+*.chi
+*.chs.h
+*.dyn_hi
+*.dyn_o
+
+# --- Haskell (Cabal) ---
+dist/
+dist-newstyle/
+cabal.project.local
+cabal.project.local~
+.ghc.environment.*
+
+# --- Saves/persistência local de teste ---
+# (ajustar quando o formato final de persistência for definido)
+*.save
+*.sav
+save_*.txt
+/saves/
+
+# --- Ambiente / segredos ---
+.env
+.env.local
+*.local
+
+# --- Editores / IDEs ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Code::Blocks
+*.cbp
+*.layout
+*.depend
+
+# Visual Studio
+.vs/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+
+# Eclipse CDT
+.cproject
+.project
+.settings/
+
+# --- Sistema Operacional ---
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+.directory
