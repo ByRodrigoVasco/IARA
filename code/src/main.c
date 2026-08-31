@@ -1,9 +1,7 @@
 #include "raylib.h"
 
-#define WINDOW_HEIGHT 576
 #define WINDOW_WIDTH 1024
-
-#define CAMINHO_ASSETS_PADRAO "C:/VSCode - Geral/ADS - Training/Projetos/IARA/engine-c/assets"
+#define WINDOW_HEIGHT 576
 
 const char *title = "IARA";
 
@@ -12,10 +10,20 @@ int main(void) {
 
     SetTargetFPS(60);
 
+    const char *text_in_middle = "Let's begin developing xD";
+    int text_in_middle_font_size = 30;
+
+    int textWidth = MeasureText(text_in_middle, text_in_middle_font_size);
+
+    int text_posX = (WINDOW_WIDTH - textWidth) / 2;
+    int text_posY = (WINDOW_HEIGHT - text_in_middle_font_size) / 2;
+
+
     while (!WindowShouldClose()) {
         BeginDrawing();
-        ClearBackground(RAYWHITE);
-        DrawText("IARA is ready to be developed :)", WINDOW_HEIGHT / 2, WINDOW_HEIGHT / 2, 20, LIGHTGRAY);
+            ClearBackground(RAYWHITE);
+
+            DrawText(text_in_middle, text_posX, text_posY, text_in_middle_font_size, GRAY);
         EndDrawing();
     }
 
