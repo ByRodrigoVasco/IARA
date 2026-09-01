@@ -1,0 +1,27 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build raylib",
+            "type": "shell",
+            "command": "gcc",
+            "args": [
+                "${workspaceFolder}/code/src/main.c",
+                "-o",
+                "${workspaceFolder}/code/src/iara.exe",
+                "-I", "C:/msys64/ucrt64/include",
+                "-L", "C:/msys64/ucrt64/lib",
+                "-lraylib", "-lopengl32", "-lgdi32", "-lwinmm"
+            ],
+            "problemMatcher": ["$gcc"]
+        },
+        {
+            "label": "run raylib",
+            "type": "shell",
+            "command": "${workspaceFolder}/code/src/iara.exe",
+            "dependsOn": "build raylib",
+            "group": { "kind": "build", "isDefault": true },
+            "problemMatcher": []
+        }
+    ]
+}
