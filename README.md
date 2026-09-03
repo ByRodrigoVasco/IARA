@@ -39,4 +39,4 @@ Fotos e sprites ficam em [`docs/assets/`](docs/assets/README.md)
 | ![](docs/assets/team/laura-brayner.png) | ![](docs/assets/sprites/laura-brayner.png) | Laura Brayner | Design e integração | _(adicionar)_ | _(adicionar)_ | _(adicionar)_ |
 | ![](docs/assets/team/luan-arruda.png) | ![](docs/assets/sprites/luan-arruda.png) | Luan Arruda | Design e integração | _(adicionar)_ | _(adicionar)_ | _(adicionar)_ |
 | ![](docs/assets/team/nicolas-mauricio.png) | ![](docs/assets/sprites/nicolas-mauricio.png) | Nicolas Mauricio | Gestão ágil | _(adicionar)_ | _(adicionar)_ | _(adicionar)_ |
-| ![](docs/assets/team/rodrigo-vasco.png) | ![](docs/assets/sprites/rodrigo-vasco.png) | Rodrigo Vasco | Engenharia de software | _(adicionar)_ | _(adicionar)_ | _(adicionar)_ |
+| ![](docs/assets/team/rodrigo-vasco.png) | ![](docs/assets/sprites/rodrigo-vasco.png) | Rodrigo Vasco | Engenharia de software | [ByRodrigoVasco](https://github.com/ByRodrigoVasco) | [rodrigo-vlm](https://www.linkedin.com/in/rodrigo-vlm/) | rvlm@cesar.school |
