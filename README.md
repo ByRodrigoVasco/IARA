@@ -34,8 +34,8 @@ Fotos e sprites ficam em [`docs/assets/`](docs/assets/README.md)
 |---|---|---|---|---|---|---|
 | ![](docs/assets/team/anderson-santos.png) | ![](docs/assets/sprites/anderson-santos.png) | Anderson Santos | Lógica matemática | _(adicionar)_ | _(adicionar)_ | _(adicionar)_ |
 | ![](docs/assets/team/joao-pedro.png) | ![](docs/assets/sprites/joao-pedro.png) | João Pedro | Desenvolvimento das regras em Haskell | _(adicionar)_ | _(adicionar)_ | _(adicionar)_ |
-| ![](docs/assets/team/joao-vitor-medeiros.png) | ![](docs/assets/sprites/joao-vitor-medeiros.png) | João Vitor Medeiros | Desenvolvimento do motor em C | _(adicionar)_ | _(adicionar)_ | _(adicionar)_ |
-| ![](docs/assets/team/julio-cesar-lins.png) | ![](docs/assets/sprites/julio-cesar-lins.png) | Julio Cesar Lins | Desenvolvimento do motor em C | _(adicionar)_ | _(adicionar)_ | _(adicionar)_ |
+| ![](docs/assets/team/joao-vitor-medeiros.png) | ![](docs/assets/sprites/joao-vitor-medeiros.png) | João Vitor Medeiros | Desenvolvimento do motor em C | _(adicionar)_ | _(adicionar)_ | ![]_(adicionar)_ |
+| ![](docs/assets/team/julio-cesar-lins.png) | ![](docs/assets/sprites/julio-cesar-lins.png) | Julio Cesar Lins | Desenvolvimento do motor em C | [Lins-ju](https://github.com/Lins-ju) | [júlio-lins](https://www.linkedin.com/feed/) | jcsl@cesar.school |
 | ![](docs/assets/team/laura-brayner.png) | ![](docs/assets/sprites/laura-brayner.png) | Laura Brayner | Design e integração | _(adicionar)_ | _(adicionar)_ | _(adicionar)_ |
 | ![](docs/assets/team/luan-arruda.png) | ![](docs/assets/sprites/luan-arruda.png) | Luan Arruda | Design e integração | _(adicionar)_ | _(adicionar)_ | _(adicionar)_ |
 | ![](docs/assets/team/nicolas-mauricio.png) | ![](docs/assets/sprites/nicolas-mauricio.png) | Nicolas Mauricio | Gestão ágil | _(adicionar)_ | _(adicionar)_ | _(adicionar)_ |
