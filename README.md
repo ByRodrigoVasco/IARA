@@ -28,15 +28,15 @@ as inconsistências. Assim, a mecânica ensina ao mesmo tempo ética em IA e ló
  
 ## Squad
  
-Fotos e sprites ficam em [`docs/assets/`](docs/assets/README.md)
+Fotos e sprites ficam em [`docs/assets/`](docs/assets/README.md).
  
 | Foto | Sprite | Nome | Função | GitHub | LinkedIn | Email |
 |---|---|---|---|---|---|---|
-| ![](docs/assets/team/anderson-santos.png) | ![](docs/assets/sprites/anderson-santos.png) | Anderson Santos | Lógica matemática | _(adicionar)_ | _(adicionar)_ | _(adicionar)_ |
-| ![](docs/assets/team/joao-pedro.png) | ![](docs/assets/sprites/joao-pedro.png) | João Pedro | Desenvolvimento das regras em Haskell | _(adicionar)_ | _(adicionar)_ | _(adicionar)_ |
-| ![](docs/assets/team/joao-vitor-medeiros.png) | ![](docs/assets/sprites/joao-vitor-medeiros.png) | João Vitor Medeiros | Desenvolvimento do motor em C | _(adicionar)_ | _(adicionar)_ | ![]_(adicionar)_ |
+| ![](docs/assets/team/anderson-santos.png) | ![](docs/assets/sprites/anderson-santos.png) | Anderson Santos | Lógica matemática | [acampospsantos](https://github.com/acampospsantos) | [andersoncampospsantos](https://www.linkedin.com/in/andersoncampospsantos) | acps@cesar.school |
+| ![](docs/assets/team/joao-pedro.png) | ![](docs/assets/sprites/joao-pedro.png) | João Pedro | Desenvolvimento das regras em Haskell | [jpsouza25](https://github.com/jpsouza25) | [joão-pedro-souza-costa](https://www.linkedin.com/in/jo%C3%A3o-pedro-souza-costa-a0456430b/) | jpsc@cesar.school |
+| ![](docs/assets/team/joao-vitor-medeiros.png) | ![](docs/assets/sprites/joao-vitor-medeiros.png) | João Vitor Medeiros | Desenvolvimento do motor em C | [JvMedeiros7](https://github.com/JvMedeiros7) | [jvmedeiros7](https://www.linkedin.com/in/jvmedeiros7/) | jvm7@cesar.school |
 | ![](docs/assets/team/julio-cesar-lins.png) | ![](docs/assets/sprites/julio-cesar-lins.png) | Julio Cesar Lins | Desenvolvimento do motor em C | [Lins-ju](https://github.com/Lins-ju) | [júlio-lins](https://www.linkedin.com/feed/) | jcsl@cesar.school |
-| ![](docs/assets/team/laura-brayner.png) | ![](docs/assets/sprites/laura-brayner.png) | Laura Brayner | Design e integração | _(adicionar)_ | _(adicionar)_ | _(adicionar)_ |
-| ![](docs/assets/team/luan-arruda.png) | ![](docs/assets/sprites/luan-arruda.png) | Luan Arruda | Design e integração | _(adicionar)_ | _(adicionar)_ | _(adicionar)_ |
-| ![](docs/assets/team/nicolas-mauricio.png) | ![](docs/assets/sprites/nicolas-mauricio.png) | Nicolas Mauricio | Gestão ágil | _(adicionar)_ | _(adicionar)_ | _(adicionar)_ |
+| ![](docs/assets/team/laura-brayner.png) | ![](docs/assets/sprites/laura-brayner.png) | Laura Brayner | Design e integração | [laurabrayner](https://github.com/laurabrayner) | [laurabrayner](https://www.linkedin.com/in/laurabrayner) | lcbc@cesar.school |
+| ![](docs/assets/team/luan-arruda.png) | ![](docs/assets/sprites/luan-arruda.png) | Luan Arruda | Design e integração | [luan-arruda](https://github.com/luan-arruda) | [luan-arruda-548a9534b](https://www.linkedin.com/in/luan-arruda-548a9534b) | las9@cesar.school |
+| ![](docs/assets/team/nicolas-mauricio.png) | ![](docs/assets/sprites/nicolas-mauricio.png) | Nicolas Mauricio | Gestão ágil | [nicollasfr](https://github.com/nicollasfr) | [nicollasmfranca](https://www.linkedin.com/in/nicollasmfranca/) | nmcf@cesar.school |
 | ![](docs/assets/team/rodrigo-vasco.png) | ![](docs/assets/sprites/rodrigo-vasco.png) | Rodrigo Vasco | Engenharia de software | [ByRodrigoVasco](https://github.com/ByRodrigoVasco) | [rodrigo-vlm](https://www.linkedin.com/in/rodrigo-vlm/) | rvlm@cesar.school |
