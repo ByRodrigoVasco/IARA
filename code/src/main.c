@@ -1,46 +1,35 @@
-#include "raylib.h"
 #include <stdio.h>
-#include <stdlib.h>
-#include "game_state.h"
-#include "state_machine.h"
 
-#define WINDOW_WIDTH 1024
-#define WINDOW_HEIGHT 576
+#include "state_machine.h"
+#include "game_state.h"
+#include "pre_menu.h"
+#include "menu.h"
+#include "fonts.h"
 
 const char *title = "IARA";
 
-int main(void) {
-    InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, title);
+int main(void)
+{
+    InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, IARA_TITLE);
 
     SetTargetFPS(60);
-
-    const char *text_in_middle = "Let's begin developing xD";
-    int text_in_middle_font_size = 30;
-
-    int textWidth = MeasureText(text_in_middle, text_in_middle_font_size);
-
-    int text_posX = (WINDOW_WIDTH - textWidth) / 2;
-    int text_posY = (WINDOW_HEIGHT - text_in_middle_font_size) / 2;
 
     initialize_game_state_variables();
     initialize_hidden_statistic();
 
-    while (!WindowShouldClose()) {
-        BeginDrawing();
-            ClearBackground(RAYWHITE);
-            DrawText(TextFormat("Dia atual: %d", current_game_state_variables.current_day), 512, 288, text_in_middle_font_size, GRAY);
-            DrawText(TextFormat("Pontos atuais: %d", current_hidden_statistic.current_overall_points), 400, 200, text_in_middle_font_size, GRAY);
-        EndDrawing();
+    initialize_fonts();
 
+    initialize_menu_variables();
+    handle_state_initialization();
+
+    current_game_state_variables.current_screen = PRE_MENU_SCREEN;
+
+    while (!WindowShouldClose())
+    {
         handle_state_machine();
-
-        current_game_state_variables.current_screen++;
-
-        if (current_game_state_variables.current_screen > JUMPING) {
-            current_game_state_variables.current_screen = PRE_MENU;
-        }
     }
 
+    unload_fonts();
     CloseWindow();
     return 0;
 }
