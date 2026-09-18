@@ -55,7 +55,7 @@ static void initialize_menu_textures(void)
     bg_color = GetColor(BG_COLOR_HEX);
 
     float resize_factor_arrow_icon = 3;
-    Image arrow_icon_image = LoadImage("C:/VSCode - Geral/ADS - Training/Projetos/IARA/code/assets/icons/arrow-icon.png");
+    Image arrow_icon_image = LoadImage("code/assets/icons/arrow-icon.png");
     ImageResize(&arrow_icon_image, arrow_icon_image.width / resize_factor_arrow_icon, arrow_icon_image.height / resize_factor_arrow_icon);
 
     float resize_factor_bg_office = 1.2;
