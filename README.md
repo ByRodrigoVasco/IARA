@@ -25,7 +25,12 @@ as inconsistências. Assim, a mecânica ensina ao mesmo tempo ética em IA e ló
 ![Backlog](docs/assets/entregas/backlog.jpeg)
 
 ![Board](docs/assets/entregas/board.jpeg)
- 
+
+## Documentação
+
+- **Diagramas de atividade:** um diagrama UML por história de usuário, traduzindo os critérios de aceitação em fluxo. Ver [`docs/diagramas-atividade/README.md`](docs/diagramas-atividade/README.md).
+- **Protótipos lo-fi:** telas de baixa fidelidade das histórias de usuário, elaboradas no [Figma](https://www.figma.com/design/DpnmgBif3vJcn336pefbpa/IARA---PROTOTIPO-FDS?node-id=0-1&t=vm69jod3fxAtJGjN-1). Ver [`docs/prototipos-lofi/README.md`](docs/prototipos-lofi/README.md).
+
 ## Squad
  
 Fotos e sprites ficam em [`docs/assets/`](docs/assets/README.md).
