@@ -6,7 +6,7 @@ aceitá-las automaticamente, mais precisa recorrer à lógica para provar
 as inconsistências. Assim, a mecânica ensina ao mesmo tempo ética em IA e lógica clássica.
  
 <p align="center">
-  <img src="docs/assets/capa.png" alt="Capa do projeto" width="800">
+  <video src="docs/screencast/Screencast_v2.mp4" controls width="800"></video>
 </p>
 
 
