@@ -1,0 +1,13 @@
+
+// TIPOS DE TELAS
+#define PRE_MENU 0
+#define MENU 1
+#define PLAYING 2
+#define FLASHING 3
+#define JUMPING 4
+
+// TIPOS DE DIAS E TELAS DE GAME_LOOP
+#define NOT_YET_DEFINED 0
+#define PLAYABLE_DAY 1
+#define FLASH_DAY 2
+#define JUMP_DAY 3

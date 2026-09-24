@@ -6,7 +6,7 @@
             "type": "shell",
             "command": "gcc",
             "args": [
-                "${workspaceFolder}/code/src/main.c",
+                "${workspaceFolder}/code/src/*.c",
                 "-o",
                 "${workspaceFolder}/code/src/iara.exe",
                 "-I", "C:/msys64/ucrt64/include",
