@@ -39,7 +39,6 @@ save_*.txt
 *.local
 
 # --- Editores / IDEs ---
-.vscode/
 .idea/
 *.swp
 *.swo
