@@ -25,7 +25,7 @@ as inconsistências. Assim, a mecânica ensina ao mesmo tempo ética em IA e ló
 ## Screencast do Protótipo de Baixa Fidelidade
 
 <p align="center">
-  <video src="https://github.com/ByRodrigoVasco/IARA/raw/docs/diagramas-atividade/docs/screencast/Screencast_v2.mp4" controls width="800"></video>
+  <video src="https://media.githubusercontent.com/media/ByRodrigoVasco/IARA/docs/diagramas-atividade/docs/screencast/Screencast_v2.mp4" controls width="800"></video>
 </p>
  
 ## Squad
