@@ -4,10 +4,6 @@ Você investiga um caso de horror corporativo envolvendo IARA, uma inteligência
 artificial fictícia. Quanto mais questiona as respostas dela em vez de
 aceitá-las automaticamente, mais precisa recorrer à lógica para provar
 as inconsistências. Assim, a mecânica ensina ao mesmo tempo ética em IA e lógica clássica.
- 
-<p align="center">
-  <img src="docs/assets/capa.png" alt="Capa do projeto" width="800">
-</p>
 
 
 ## Ferramentas tecnológicas
@@ -26,6 +22,13 @@ as inconsistências. Assim, a mecânica ensina ao mesmo tempo ética em IA e ló
 
 ![Board](docs/assets/entregas/board.jpeg)
 
+## Screencast do Protótipo de Baixa Fidelidade
+
+<a href="https://youtu.be/qE2Gn79bmqw">
+   <img src="docs/screencast/Thumbnail da Screencast.png" width="800" alt="Watch the video" />
+</a>
+
+ 
 ## Documentação
 
 - **Diagramas de atividade:** um diagrama UML por história de usuário, traduzindo os critérios de aceitação em fluxo. Ver [`docs/diagramas-atividade/README.md`](docs/diagramas-atividade/README.md).
