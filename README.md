@@ -4,10 +4,6 @@ Você investiga um caso de horror corporativo envolvendo IARA, uma inteligência
 artificial fictícia. Quanto mais questiona as respostas dela em vez de
 aceitá-las automaticamente, mais precisa recorrer à lógica para provar
 as inconsistências. Assim, a mecânica ensina ao mesmo tempo ética em IA e lógica clássica.
- 
-<p align="center">
-  <video src="docs/screencast/Screencast_v2.mp4" controls width="800"></video>
-</p>
 
 
 ## Ferramentas tecnológicas
@@ -29,7 +25,7 @@ as inconsistências. Assim, a mecânica ensina ao mesmo tempo ética em IA e ló
 ## Screencast do Protótipo de Baixa Fidelidade
 
 <p align="center">
-  <video src="docs/screencast/Screencast_v2.mp4" width="100%" controls></video>
+  <video src="https://github.com/ByRodrigoVasco/IARA/raw/docs/diagramas-atividade/docs/screencast/Screencast_v2.mp4" controls width="800"></video>
 </p>
  
 ## Squad
