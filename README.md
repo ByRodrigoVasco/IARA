@@ -20,6 +20,8 @@ as inconsistências. Assim, a mecânica ensina ao mesmo tempo ética em IA e ló
 
 ![Backlog](docs/assets/entregas/backlog.jpeg)
 
+[Link Trello](https://trello.com/b/ifJwhbVe/iara-projeto-integrador-squad-8)
+
 ![Board](docs/assets/entregas/board.jpeg)
 
 ## Screencast do Protótipo de Baixa Fidelidade
