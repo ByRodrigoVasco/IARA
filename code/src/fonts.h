@@ -5,7 +5,7 @@
 
 #include "raylib.h"
 
-extern Font default_font_menu;
+extern Font default_game_font;
 
 void initialize_fonts(void);
 void unload_fonts(void);

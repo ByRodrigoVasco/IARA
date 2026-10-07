@@ -5,10 +5,9 @@
 
 #define MAX_ALPHA_CHANNEL_INT 255
 
-
 void fade_in_texture(unsigned int fadeSpeed, Color *color, bool *is_animation_finished)
 {
-    if((color->a + fadeSpeed) < MAX_ALPHA_CHANNEL_INT)
+    if ((color->a + fadeSpeed) < MAX_ALPHA_CHANNEL_INT)
     {
         color->a += fadeSpeed;
     }
@@ -20,7 +19,7 @@ void fade_in_texture(unsigned int fadeSpeed, Color *color, bool *is_animation_fi
 
 void fade_out_texture(unsigned int fadeSpeed, Color *color, bool *is_animation_finished)
 {
-    if(color->a > fadeSpeed)
+    if (color->a > fadeSpeed)
     {
         color->a -= fadeSpeed;
     }

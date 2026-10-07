@@ -19,8 +19,8 @@ GAME_TEXTURE CreateGameTextureFromTexture2D(Texture2D texture)
     game_txtr.texture = texture;
 
     // Aqui já está calculando o número exato para colocar a textura no meio considerando seu próprio tamanho.
-    game_txtr.middle_height = (WINDOW_HEIGHT - texture.height) / 2;
-    game_txtr.middle_width = (WINDOW_WIDTH - texture.width) / 2;
+    game_txtr.middle_height = middle_screen_y - (texture.height / 2);
+    game_txtr.middle_width = middle_screen_x - (texture.width / 2);
 
     return game_txtr;
 }

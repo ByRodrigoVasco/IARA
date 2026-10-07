@@ -11,13 +11,6 @@
 #define CREDITOS 2
 #define SAIR 3
 
-#define TEXT_HORIZONTAL_MARGIN 40
-#define TEXT_VERTICAL_MARGIN 30
-#define DEFAULT_MENU_LETTER_SPACING 5
-#define DEFAULT_MENU_FONT_SIZE 35
-
-#define INICIAR_MENU_FONT_SIZE 50
-
 int next_screen = NONE;
 int mouse_is_hovering = NONE;
 
@@ -29,9 +22,9 @@ static bool menu_fade_in_finished = false;
 static Color texture_color_to_fade = {255, 255, 255, 0};
 
 static int text_mouse_is_hovering = NONE;
-static Color bg_color;
 
 static Texture2D bg_office_texture;
+static Texture2D second_bg_texture;
 static Texture2D arrow_icon_texture;
 static GAME_TEXTURE iara_name_gt;
 
@@ -52,24 +45,37 @@ static void initialize_menu_textures(void)
     // -----------------------------------------------------------------------------------------------
     // PARTE ASSOCIADA AO BACKGROUND DO MENU
     // -----------------------------------------------------------------------------------------------
-    bg_color = GetColor(BG_COLOR_HEX);
 
-    float resize_factor_arrow_icon = 3;
-    Image arrow_icon_image = LoadImage("C:/VSCode - Geral/ADS - Training/Projetos/IARA/code/assets/icons/arrow-icon.png");
-    ImageResize(&arrow_icon_image, arrow_icon_image.width / resize_factor_arrow_icon, arrow_icon_image.height / resize_factor_arrow_icon);
+    Image arrow_icon_image = LoadImage("code/assets/icons/arrow-icon.png");
+    float to_refactor_size_arrow_icon = 2.5;
+    ImageResize(&arrow_icon_image, (float)arrow_icon_image.width / to_refactor_size_arrow_icon, (float)arrow_icon_image.height / to_refactor_size_arrow_icon);
 
-    float resize_factor_bg_office = 1.2;
     Image bg_office_image = LoadImage("code/assets/sprites/tela-inicial/escritorio-tela-inicial.png");
-    ImageResize(&bg_office_image, (float)WINDOW_WIDTH / resize_factor_bg_office, (float)WINDOW_HEIGHT / resize_factor_bg_office);
+    float to_refactor_size_bg_office = 1.15;
+    ImageResize(&bg_office_image, (float)screen_width / to_refactor_size_bg_office, (float)screen_height / to_refactor_size_bg_office);
+
+    Image second_bg_image = LoadImage("code/assets/background/second-background.png");
+    float to_refactor_size_second_bg = 1;
+    ImageResize(&second_bg_image, (float)screen_width / to_refactor_size_second_bg, (float)screen_height / to_refactor_size_second_bg);
 
     Image iara_name_image = LoadImage("code/assets/sprites/tela-inicial/iara-nome.png");
-    int resize_factor_iara_name = 6;
-    ImageResize(&iara_name_image, iara_name_image.width / resize_factor_iara_name, iara_name_image.height / resize_factor_iara_name);
+    int to_refactor_size_iara_name = 3;
+    ImageResize(&iara_name_image, (float)iara_name_image.width / to_refactor_size_iara_name, (float)iara_name_image.height / to_refactor_size_iara_name);
 
     Texture2D iara_name_texture = LoadTextureFromImage(iara_name_image);
-    arrow_icon_texture = LoadTextureFromImage(arrow_icon_image);
 
+    /*
+     * Todos esse depois TEM que implementar um GAME_TEXTURE em vez de um Texture2D apenas.
+     * Isso por que a propriedade "middle_width" e "middle_height" já coloca a textura no meio
+     * sem precisar fazer o calculo da divisão por 2. Essa divisão está atualmente sendo feita
+     * na função "void render_menu(void)"
+     * Ex: DrawTexture(second_bg_texture, middle_screen_x - ***ISSO AQUI*** (bg_office_texture.width / 2),
+     * middle_screen_y - (bg_office_texture.height / 2), texture_color_to_fade);
+     */
+    arrow_icon_texture = LoadTextureFromImage(arrow_icon_image);
     bg_office_texture = LoadTextureFromImage(bg_office_image);
+    second_bg_texture = LoadTextureFromImage(second_bg_image);
+
     iara_name_gt = CreateGameTextureFromTexture2D(iara_name_texture);
 
     UnloadImage(bg_office_image);
@@ -88,14 +94,16 @@ void initialize_menu_variables(void)
     initialize_menu_textures();
 
     // PARTE ASSOCIADA A BOTÕES
-    iniciar_text_size = MeasureTextEx(default_font_menu, "INICIAR", INICIAR_MENU_FONT_SIZE, DEFAULT_MENU_LETTER_SPACING);
-    creditos_text_size = MeasureTextEx(default_font_menu, "CRÉDITOS", DEFAULT_MENU_FONT_SIZE, DEFAULT_MENU_LETTER_SPACING);
-    sair_text_size = MeasureTextEx(default_font_menu, "SAIR", DEFAULT_MENU_FONT_SIZE, DEFAULT_MENU_LETTER_SPACING);
+    iniciar_text_size = MeasureTextEx(default_game_font, "INICIAR", DEFAULT_MENU_FONT_SIZE, DEFAULT_LETTER_SPACING);
+    creditos_text_size = MeasureTextEx(default_game_font, "CRÉDITOS", DEFAULT_MENU_FONT_SIZE, DEFAULT_LETTER_SPACING);
+    sair_text_size = MeasureTextEx(default_game_font, "SAIR", DEFAULT_MENU_FONT_SIZE, DEFAULT_LETTER_SPACING);
 
     float total_menu_height = iniciar_text_size.y + creditos_text_size.y + sair_text_size.y + (2 * TEXT_VERTICAL_MARGIN);
 
     // COLOQUEI + 40 NO MEIO PARA FICAR MAIS ABAIXO DO NOME IARA
-    float start_y = (MIDDLE_SCREEN_Y + 40) - (total_menu_height / 2.0f);
+    float start_y = middle_screen_y; // middle_screen_y - (total_menu_height / 2.0f);
+
+    printf("------------%d------------\n", middle_screen_y);
 
     iniciar_text_target_position = (Vector2){TEXT_HORIZONTAL_MARGIN, start_y};
     creditos_text_target_position = (Vector2){TEXT_HORIZONTAL_MARGIN, iniciar_text_target_position.y + iniciar_text_size.y + TEXT_VERTICAL_MARGIN};
@@ -133,7 +141,8 @@ void handle_mouse_action()
 
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
         {
-            printf("1\n");
+            // Talvez no futuro, esconder o cursor
+            SetMouseCursor(MOUSE_CURSOR_ARROW);
             next_screen = INICIAR;
             is_menu_to_close = true;
         }
@@ -145,7 +154,7 @@ void handle_mouse_action()
 
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
         {
-            printf("2\n");
+            SetMouseCursor(MOUSE_CURSOR_ARROW);
             next_screen = CREDITOS;
             is_menu_to_close = true;
         }
@@ -157,7 +166,7 @@ void handle_mouse_action()
 
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
         {
-            printf("3\n");
+            SetMouseCursor(MOUSE_CURSOR_ARROW);
             next_screen = SAIR;
             is_menu_to_close = true;
         }
@@ -171,18 +180,20 @@ void handle_mouse_action()
 
 void handle_render_arrow()
 {
+    float half_of_arrow_texture = (arrow_icon_texture.height / 2);
+
     switch (mouse_is_hovering)
     {
     case NONE:
         break;
     case INICIAR:
-        DrawTexture(arrow_icon_texture, iniciar_text_target_position.x - arrow_icon_texture.width, iniciar_text_target_position.y + 3, RAYWHITE);
+        DrawTexture(arrow_icon_texture, iniciar_text_rectangle.x - arrow_icon_texture.width, iniciar_text_rectangle.y + half_of_arrow_texture, RAYWHITE);
         break;
     case CREDITOS:
-        DrawTexture(arrow_icon_texture, creditos_text_rectangle.x - arrow_icon_texture.width, creditos_text_rectangle.y - 3, RAYWHITE);
+        DrawTexture(arrow_icon_texture, creditos_text_rectangle.x - arrow_icon_texture.width, creditos_text_rectangle.y + half_of_arrow_texture, RAYWHITE);
         break;
     case SAIR:
-        DrawTexture(arrow_icon_texture, sair_text_rectangle.x - arrow_icon_texture.width, sair_text_rectangle.y - 3, RAYWHITE);
+        DrawTexture(arrow_icon_texture, sair_text_rectangle.x - arrow_icon_texture.width, sair_text_rectangle.y + half_of_arrow_texture, RAYWHITE);
         break;
     default:
         break;
@@ -201,12 +212,13 @@ void render_menu(void)
     BeginDrawing();
     ClearBackground(BG_COLOR);
 
-    DrawTexture(bg_office_texture, 200, 50, texture_color_to_fade);
+    DrawTexture(second_bg_texture, middle_screen_x - (bg_office_texture.width / 2), middle_screen_y - (bg_office_texture.height / 2), texture_color_to_fade);
+    DrawTexture(bg_office_texture, middle_screen_x - (bg_office_texture.width / 2.5), middle_screen_y - (bg_office_texture.height / 2), texture_color_to_fade);
     DrawTexture(iara_name_gt.texture, -10, TEXT_VERTICAL_MARGIN, texture_color_to_fade);
 
-    DrawTextEx(default_font_menu, "INICIAR", iniciar_text_target_position, INICIAR_MENU_FONT_SIZE, DEFAULT_MENU_LETTER_SPACING, texture_color_to_fade);
-    DrawTextEx(default_font_menu, "CRÉDITOS", creditos_text_target_position, DEFAULT_MENU_FONT_SIZE, DEFAULT_MENU_LETTER_SPACING, texture_color_to_fade);
-    DrawTextEx(default_font_menu, "SAIR", sair_text_target_position, DEFAULT_MENU_FONT_SIZE, DEFAULT_MENU_LETTER_SPACING, texture_color_to_fade);
+    DrawTextEx(default_game_font, "INICIAR", iniciar_text_target_position, DEFAULT_MENU_FONT_SIZE, DEFAULT_LETTER_SPACING, texture_color_to_fade);
+    DrawTextEx(default_game_font, "CRÉDITOS", creditos_text_target_position, DEFAULT_MENU_FONT_SIZE, DEFAULT_LETTER_SPACING, texture_color_to_fade);
+    DrawTextEx(default_game_font, "SAIR", sair_text_target_position, DEFAULT_MENU_FONT_SIZE, DEFAULT_LETTER_SPACING, texture_color_to_fade);
 
     handle_render_arrow();
 
