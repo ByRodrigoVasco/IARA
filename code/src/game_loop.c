@@ -201,6 +201,7 @@ void handle_map_interactables(void)
 }
 
 // Código muito estranho, mas vamos lá!
+// E necessita ser melhorado. O player acaba ficando preso por uns milésimos quando se aperta várias teclas simultaneamente.
 void handle_player_input(void)
 {
     float speed = DEFAULT_PLAYER_MOVEMENT_SPEED * get_scale();
