@@ -1,16 +1,6 @@
+#include "helper.h" // Inclua o header do próprio arquivo
 #include "macros.h"
 #include "helper.h"
-
-typedef struct GAME_TEXTURE
-{
-    Texture2D texture;
-    // Width e Height para o objeto ficar corretamente no meio
-    int middle_width;
-    int middle_height;
-
-} GAME_TEXTURE;
-
-GAME_TEXTURE CreateGameTextureFromTexture2D(Texture2D texture);
 
 GAME_TEXTURE CreateGameTextureFromTexture2D(Texture2D texture)
 {
@@ -18,7 +8,7 @@ GAME_TEXTURE CreateGameTextureFromTexture2D(Texture2D texture)
 
     game_txtr.texture = texture;
 
-    // Aqui já está calculando o número exato para colocar a textura no meio considerando seu próprio tamanho.
+    // Calcula a posição centralizada considerando o tamanho da textura
     game_txtr.middle_height = middle_screen_y - (texture.height / 2);
     game_txtr.middle_width = middle_screen_x - (texture.width / 2);
 
