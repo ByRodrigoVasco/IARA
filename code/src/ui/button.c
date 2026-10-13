@@ -5,50 +5,51 @@
 #include "macros.h"
 #include "fonts.h"
 
-// Função reutilizável para desenhar um botão e processar o clique
+// Tamanho da fonte do texto do botão
+#define BUTTON_FONT_SIZE 20.0f
+// Espessura da borda do botão
+#define BUTTON_BORDER_THICKNESS 2.0f
+
+// Cores do botão em cada estado
+#define BUTTON_NORMAL_COLOR LIGHTGRAY
+#define BUTTON_HOVER_COLOR GRAY
+#define BUTTON_PRESSED_COLOR DARKGRAY
+#define BUTTON_TEXT_COLOR BLACK
+#define BUTTON_BORDER_COLOR BLACK
+
 void draw_button(Rectangle bounds, const char *text, bool *is_clicked)
 {
-    // Cores de estado do botão (podem ser extraídas para macros ou parâmetros se preferir)
-    Color normal_color = LIGHTGRAY;
-    Color hover_color = GRAY;
-    Color pressed_color = DARKGRAY;
-    Color text_color = BLACK;
-    Color border_color = BLACK;
-
-    Color current_color = normal_color;
+    Color current_color = BUTTON_NORMAL_COLOR;
     Vector2 mouse_point = GetMousePosition();
-    
-    // Verifica colisão do mouse com a área do botão
+
+    // Verifica se o mouse está sobre a área do botão
     if (CheckCollisionPointRec(mouse_point, bounds))
     {
-        current_color = hover_color;
-        
-        // Verifica se o usuário está segurando o clique
+        current_color = BUTTON_HOVER_COLOR;
+
+        // Mouse pressionado sobre o botão
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
         {
-            current_color = pressed_color;
+            current_color = BUTTON_PRESSED_COLOR;
         }
-        
+
         // O clique é confirmado quando o botão do mouse é solto sobre a área do botão
         if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
         {
-            *is_clicked = true; 
+            *is_clicked = true;
         }
     }
 
     // Renderiza o fundo e a borda do botão
     DrawRectangleRec(bounds, current_color);
-    DrawRectangleLinesEx(bounds, 2.0f, border_color);
+    DrawRectangleLinesEx(bounds, BUTTON_BORDER_THICKNESS, BUTTON_BORDER_COLOR);
 
-    // Centraliza o texto dentro do botão usando a fonte do seu jogo
-    // Substitua `default_game_font` pela sua variável de fonte
-    float font_size = 20.0f; // Ajuste conforme a necessidade
-    Vector2 text_size = MeasureTextEx(default_game_font, text, font_size, DEFAULT_LETTER_SPACING);
-    
-    Vector2 text_pos = {
+    // Centraliza o texto dentro do botão
+    Vector2 text_size = MeasureTextEx(default_game_font, text, BUTTON_FONT_SIZE, DEFAULT_LETTER_SPACING);
+
+    Vector2 text_position = {
         bounds.x + (bounds.width / 2.0f) - (text_size.x / 2.0f),
-        bounds.y + (bounds.height / 2.0f) - (text_size.y / 2.0f)
-    };
+        bounds.y + (bounds.height / 2.0f) - (text_size.y / 2.0f)};
 
-    DrawTextEx(default_game_font, text, text_pos, font_size, DEFAULT_LETTER_SPACING, text_color);
+    DrawTextEx(default_game_font, text, text_position, BUTTON_FONT_SIZE, DEFAULT_LETTER_SPACING, BUTTON_TEXT_COLOR);
 }
