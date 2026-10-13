@@ -48,8 +48,10 @@ extern unsigned int middle_screen_y;
 // AQUI NO RAYLIB PRECISAMOS DE ---8 DÍGITOS--- NO FORMATO "0xRRGGBBAA"
 #define BG_COLOR_HEX 0x140b15FF
 #define DEFAULT_TEXTURE_COLOR 0xFFFFFFFF
+#define CYAN_HEX_COLOR 0x00FFFFFF
 
 #define BG_COLOR GetColor(BG_COLOR_HEX)
+#define COMPUTER_BG_COLOR GetColor(CYAN_HEX_COLOR)
 
 // TIPOS DE TELAS
 #define PRE_MENU_SCREEN 0
@@ -70,6 +72,12 @@ extern unsigned int middle_screen_y;
 #define PERSONAGENS_PATH    SPRITES_PATH "personagens/"
 #define IARA_NOME_PNG_PATH "code/assets/sprites/tela-inicial/iara-nome.png"
 #define ESCRITORIO_TELA_PNG_PATH "code/assets/sprites/tela-inicial/escritorio-tela-inicial.png"
+
+// PATHS PARA O COMPUTADOR
+#define COMPUTER_ASSETS_PATH "code/assets/sprites/computer/"
+#define COMPUTER_WINDOW_PNG_PATH       COMPUTER_ASSETS_PATH "computer-window.png"
+#define COMPUTER_CORRECT_ICON          COMPUTER_ASSETS_PATH "correct-icon.png"
+#define COMPUTER_WRONG_ICON            COMPUTER_ASSETS_PATH "wrong-icon.png"
 
 // PATHS PARA PERSONAGENS
 

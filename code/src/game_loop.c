@@ -7,6 +7,7 @@
 #include "fonts.h"
 #include "animations.h"
 #include "characters.h"
+#include "computer_loop.h"
 
 #define DID_NOT_START -30
 
@@ -30,6 +31,12 @@
 #define COMPUTER_OFFSET_Y_AT_REFERENCE 93.0f
 #define COMPUTER_SIZE_AT_REFERENCE 100.0f
 
+// HITBOX (values at 1920x1080, relative to the sprite's top-left corner)
+#define HITBOX_OFFSET_X_AT_REFERENCE 10.0f
+#define HITBOX_OFFSET_Y_AT_REFERENCE 0.1f
+#define HITBOX_WIDTH_AT_REFERENCE    50.0f
+#define HITBOX_HEIGHT_AT_REFERENCE   72.0f
+
 static bool animation_finished = false;
 
 static int current_key_pressed = NO_KEY_PRESSED;
@@ -52,6 +59,9 @@ static Vector2 calendar_card_subtitle_text_size_line_1;
 static char *current_card_subtitle_line_2 = "Ninguém te recebe. O computador já está ligado, esperando.";
 static Vector2 calendar_card_subtitle_text_size_line_2;
 
+static char *next_day_subtitle_card = "Em breve, novos dias...";
+static Vector2 next_day_subtitle_text_size;
+
 // IN-GAME VARIABLES
 static Texture2D in_game_office;
 
@@ -59,6 +69,7 @@ static char_textures estagiario_texture;
 static Vector2 current_estagiario_position;
 static Texture2D current_estagiarion_texture_direction;
 
+static Rectangle map_collision_rec;
 static Rectangle estagiario_computer_collision_rectangle;
 static Rectangle estagiario_collision_rec;
 
@@ -93,8 +104,13 @@ static Rectangle get_computer_collision_rectangle(void)
 // VAI FAZER O UPDATE DA POSIÇÃO DO RETÂNGULO DE COLISÃO
 void update_collision_rec(void)
 {
-    float size = get_player_size();
-    estagiario_collision_rec = (Rectangle){current_estagiario_position.x, current_estagiario_position.y, size, size};
+    float scale = get_scale();
+
+    estagiario_collision_rec = (Rectangle){
+        current_estagiario_position.x + HITBOX_OFFSET_X_AT_REFERENCE * scale,
+        current_estagiario_position.y + HITBOX_OFFSET_Y_AT_REFERENCE * scale,
+        HITBOX_WIDTH_AT_REFERENCE * scale,
+        HITBOX_HEIGHT_AT_REFERENCE * scale};
 }
 
 void initialize_game_loop_variables(void)
@@ -104,6 +120,8 @@ void initialize_game_loop_variables(void)
     calendar_card_subtitle_text_size_line_1 = MeasureTextEx(default_game_font, current_card_subtitle_line_1, SUBTITLE_FONT_SIZE, DEFAULT_LETTER_SPACING);
     calendar_card_subtitle_text_size_line_2 = MeasureTextEx(default_game_font, current_card_subtitle_line_2, SUBTITLE_FONT_SIZE, DEFAULT_LETTER_SPACING);
 
+    next_day_subtitle_text_size = MeasureTextEx(default_game_font, next_day_subtitle_card, SUBTITLE_FONT_SIZE, DEFAULT_LETTER_SPACING);
+
     in_game_office = LoadTexture("code/assets/sprites/environment/office.png");
 
     initialize_estagiario_1_textures(estagiario_texture);
@@ -111,6 +129,11 @@ void initialize_game_loop_variables(void)
     // ONDE ELE IRÁ SPAWNAR
     current_estagiario_position = (Vector2){middle_screen_x, middle_screen_y};
     current_estagiarion_texture_direction = estagiario_texture[SOUTH];
+
+    map_collision_rec = (Rectangle){
+        middle_screen_x - (in_game_office.width / 2), middle_screen_y - (in_game_office.height / 2),
+        in_game_office.width, in_game_office.height
+    };
 
     estagiario_computer_collision_rectangle = get_computer_collision_rectangle();
     update_collision_rec();
@@ -135,7 +158,7 @@ void handle_calendar_day_card(void)
 
     static double timer = DID_NOT_START;
 
-    double amount_of_seconds_to_wait = 0;
+    double amount_of_seconds_to_wait = 5.0;
 
     switch (current_calendar_day_state)
     {
@@ -145,7 +168,7 @@ void handle_calendar_day_card(void)
         break;
 
     case FADING_IN:
-        fade_in_texture(FAST_FADE_SPEED, &color_to_fade, &fading_in_finished);
+        fade_in_texture(MEDIUM_FADE_SPEED, &color_to_fade, &fading_in_finished);
         render_calendar_day_card();
 
         if (fading_in_finished)
@@ -173,7 +196,7 @@ void handle_calendar_day_card(void)
         break;
 
     case FADING_OUT:
-        fade_out_texture(FAST_FADE_SPEED, &color_to_fade, &render_calendar_day_card_finished);
+        fade_out_texture(DEFAULT_FADE_SPEED, &color_to_fade, &render_calendar_day_card_finished);
         render_calendar_day_card();
         break;
 
@@ -197,6 +220,46 @@ void handle_map_interactables(void)
             enter_computer_screen = true;
             printf("Computer screen...\n");
         }
+    }
+}
+
+// Está checando apenas a colisão do mapa em si. Tem que expandir para outros objetos...
+void handle_map_collisions(void)
+{
+    // isso daqui calcula o offset da hitbox baseado na resolução atual da tela.
+    float scale = get_scale();
+    float offset_x = HITBOX_OFFSET_X_AT_REFERENCE * scale;
+    float offset_y = HITBOX_OFFSET_Y_AT_REFERENCE * scale;
+
+    // Atualiza o retângulo de colisão com a posição atual
+    update_collision_rec();
+
+    if (CheckCollisionRecs(estagiario_collision_rec, map_collision_rec))
+    {
+        // Impede que o jogador saia pela esquerda (considerando o offset da hitbox)
+        if (estagiario_collision_rec.x < map_collision_rec.x)
+        {
+            current_estagiario_position.x = map_collision_rec.x - offset_x;
+        }
+        // Impede que o jogador saia pela direita
+        else if (estagiario_collision_rec.x + estagiario_collision_rec.width > map_collision_rec.x + map_collision_rec.width)
+        {
+            current_estagiario_position.x = map_collision_rec.x + map_collision_rec.width - estagiario_collision_rec.width - offset_x;
+        }
+
+        // Impede que o jogador saia por cima
+        if (estagiario_collision_rec.y < map_collision_rec.y)
+        {
+            current_estagiario_position.y = map_collision_rec.y - offset_y;
+        }
+        // Impede que o jogador saia por baixo
+        else if (estagiario_collision_rec.y + estagiario_collision_rec.height > map_collision_rec.y + map_collision_rec.height)
+        {
+            current_estagiario_position.y = map_collision_rec.y + map_collision_rec.height - estagiario_collision_rec.height - offset_y;
+        }
+
+        // 2. Atualiza o retângulo de colisão final com a posição corrigida
+        update_collision_rec();
     }
 }
 
@@ -274,9 +337,17 @@ void render_game_loop_escritorio(void)
                       office_width, office_height};
 
     DrawTexturePro(in_game_office, source, dest, (Vector2){0, 0}, 0.0f, color_to_fade);
+}
 
-    bool trash;
-    fade_in_texture(FAST_FADE_SPEED, &color_to_fade, &trash);
+void unload_office(void)
+{
+    UnloadTexture(current_estagiarion_texture_direction);
+    UnloadTexture(in_game_office);
+
+    for (int i = 0; i < DIRECTION_COUNT; i++)
+    {
+        UnloadTexture(estagiario_texture[i]);
+    }
 }
 
 void handle_game_loop_screens(void)
@@ -303,10 +374,35 @@ void handle_game_loop_screens(void)
 
         handle_player_input();
         handle_map_interactables();
+        handle_map_collisions();
 
         // ORDEM IMPORTA: primeiro o fundo, depois o jogador
         render_game_loop_escritorio();
         render_player();
+
+        if (enter_computer_screen)
+        {   
+            static bool animation_finished = false;
+            fade_out_texture(MEDIUM_FADE_SPEED, &color_to_fade, &animation_finished);
+
+            if (animation_finished)
+            {
+                unload_office();
+                initialize_computer_loop();
+                current_screen = COMPUTER_SCREEN;
+                enter_computer_screen = false;
+            }
+        }
+        else
+        {
+            bool trash;
+            fade_in_texture(FAST_FADE_SPEED, &color_to_fade, &trash);
+        }
+
+        break;
+
+    case COMPUTER_SCREEN:
+        handle_computer_loop();
         break;
 
     default:
