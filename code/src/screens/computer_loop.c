@@ -135,7 +135,7 @@ static DialogStep sequence[] = {
     },
 };
 
-#define TOTAL_STEPS (sizeof(sequence) / sizeof(sequence[0]))
+#define TOTAL_STEPS ((int)(sizeof(sequence) / sizeof(sequence[0])))
 
 void initialize_computer_loop(void)
 {
