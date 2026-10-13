@@ -54,7 +54,7 @@ typedef struct {
 
 static int current_step_index = 0;
 
-static DialogStep sequence[] = {
+static DialogStep dialog_sequence[] = {
     {
         .type = STEP_STATEMENT,
         .lines = {
@@ -135,7 +135,7 @@ static DialogStep sequence[] = {
     },
 };
 
-#define TOTAL_STEPS ((int)(sizeof(sequence) / sizeof(sequence[0])))
+#define TOTAL_STEPS ((int)(sizeof(dialog_sequence) / sizeof(dialog_sequence[0])))
 
 void initialize_computer_loop(void)
 {
@@ -202,7 +202,7 @@ void render_current_step(void)
         return;
     }
 
-    DialogStep *step = &sequence[current_step_index];
+    DialogStep *step = &dialog_sequence[current_step_index];
 
     // 1. Obtém as dimensões atuais da janela (Texture2D)
     float win_w = (float)window_texture.width;
@@ -279,7 +279,7 @@ void render_current_step(void)
         float button_width  = win_w * 0.30f;
         float button_height = win_h * 0.08f;
 
-        Rectangle btn_rec = {
+        Rectangle button_bounds = {
             middle_screen_x - (button_width / 2.0f),
             buttons_start_y,
             button_width,
@@ -289,7 +289,7 @@ void render_current_step(void)
         bool clicked = false;
         const char *label = (step->button_name != NULL) ? step->button_name : "Continuar";
 
-        draw_button(btn_rec, label, &clicked);
+        draw_button(button_bounds, label, &clicked);
 
         if (clicked)
         {
@@ -330,7 +330,7 @@ void render_current_step(void)
 
         for (int i = 0; i < step->option_count; i++)
         {
-            Rectangle btn_rec = {
+            Rectangle button_bounds = {
                 middle_screen_x - (button_width / 2.0f),
                 buttons_start_y + (i * (button_height + option_spacing)),
                 button_width,
@@ -340,8 +340,8 @@ void render_current_step(void)
             if (current_quiz_answered)
             {
                 // Se já respondeu, renderizamos o botão sem capturar os cliques
-                bool dummy_click = false;
-                draw_button(btn_rec, step->options[i], &dummy_click);
+                bool ignored_click = false;
+                draw_button(button_bounds, step->options[i], &ignored_click);
 
                 // Se esta for a opção escolhida, desenha o ícone ao lado dela
                 if (i == current_quiz_selected)
@@ -349,8 +349,8 @@ void render_current_step(void)
                     Texture2D icon = (i == step->correct_option) ? correct_icon_texture : wrong_icon_texture;
 
                     // Posiciona o ícone à direita do botão
-                    float icon_x = btn_rec.x + btn_rec.width + (win_w * 0.015f);
-                    float icon_y = btn_rec.y + (btn_rec.height / 2.0f) - (icon.height / 2.0f);
+                    float icon_x = button_bounds.x + button_bounds.width + (win_w * 0.015f);
+                    float icon_y = button_bounds.y + (button_bounds.height / 2.0f) - (icon.height / 2.0f);
 
                     // Usa um tint que acompanha o fade global da janela
                     Color icon_tint = {255, 255, 255, color_to_fade.a};
@@ -361,7 +361,7 @@ void render_current_step(void)
             {
                 // Se ainda não respondeu, renderiza os botões capturando o clique normal
                 bool option_clicked = false;
-                draw_button(btn_rec, step->options[i], &option_clicked);
+                draw_button(button_bounds, step->options[i], &option_clicked);
 
                 if (option_clicked)
                 {
@@ -374,24 +374,24 @@ void render_current_step(void)
         // Se o usuário respondeu, desenhamos o botão "Continuar" abaixo de todas as opções
         if (current_quiz_answered)
         {
-            float cont_button_width  = win_w * 0.30f;
-            float cont_button_height = win_h * 0.08f;
+            float continue_button_width  = win_w * 0.30f;
+            float continue_button_height = win_h * 0.08f;
 
             // Calcula o Y abaixo da última alternativa do quiz
-            float cont_button_y = buttons_start_y + (step->option_count * (button_height + option_spacing)) + (win_h * 0.02f);
+            float continue_button_y = buttons_start_y + (step->option_count * (button_height + option_spacing)) + (win_h * 0.02f);
 
-            Rectangle cont_btn_rec = {
-                middle_screen_x - (cont_button_width / 2.0f),
-                cont_button_y,
-                cont_button_width,
-                cont_button_height
+            Rectangle continue_button_bounds = {
+                middle_screen_x - (continue_button_width / 2.0f),
+                continue_button_y,
+                continue_button_width,
+                continue_button_height
             };
 
-            bool cont_clicked = false;
-            draw_button(cont_btn_rec, "Continuar", &cont_clicked);
+            bool continue_clicked = false;
+            draw_button(continue_button_bounds, "Continuar", &continue_clicked);
 
             // Quando clica em continuar, avança de fase e reseta as variáveis do quiz
-            if (cont_clicked)
+            if (continue_clicked)
             {
                 current_step_index++;
                 current_quiz_answered = false;
