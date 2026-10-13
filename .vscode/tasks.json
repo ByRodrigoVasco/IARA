@@ -7,7 +7,10 @@
             "command": "gcc",
             "args": [
                 "${workspaceFolder}/code/src/*.c",
-                "${workspaceFolder}/code/src/*/*.c",
+                "${workspaceFolder}/code/src/core/*.c",
+                "${workspaceFolder}/code/src/screens/*.c",
+                "${workspaceFolder}/code/src/ui/*.c",
+                "${workspaceFolder}/code/src/game/*.c",
                 "-I", "${workspaceFolder}/code/src",
                 "-I", "${workspaceFolder}/code/src/core",
                 "-I", "${workspaceFolder}/code/src/screens",

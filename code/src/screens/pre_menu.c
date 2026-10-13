@@ -39,16 +39,12 @@ void initialize_pre_menu_textures(void)
     bg_office_texture = LoadTextureFromImage(bg_office_image);
     iara_name_gt = CreateGameTextureFromTexture2D(iara_name_texture);
 
-    printf("--- %d .... %d ---\n", iara_name_texture.width, iara_name_texture.height);
-    printf("--- %d ,,,, %d ---\n", iara_name_gt.middle_height, iara_name_gt.middle_height);
 }
 
-bool close_pre_menu(void)
+void close_pre_menu(void)
 {
     // PODE FECHAR APENAS DEPOIS DA ANIMAÇÃO TERMINAR.
     fade_out_texture(10, &textures_color, &can_close_pre_menu_safely);
-
-    printf("Valor canal alpha: %d\n", textures_color.a);
 
     ClearBackground(bg_color);
 
