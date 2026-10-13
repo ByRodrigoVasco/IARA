@@ -14,8 +14,8 @@ bool is_menu_to_close = false;
 static int selected_menu_option = INICIAR;
 
 static bool menu_fade_in_finished = false;
-// ESSE "0" REPRESENTA O "ALPHA CHANNEL" QUE SERVE COMO OPACIDADE.
-// PARA FAZER A ANIMAÇÃO DE FADE IN, TODOS OS OBJETOS RECEBERIAM ESSA COR PARA FAZER O FADE IN JUNTOS.
+// Cor compartilhada por todas as texturas do menu. O último valor (alpha = 0)
+// é a opacidade: o fade in sobe esse valor e todas as texturas aparecem juntas.
 static Color texture_color_to_fade = {255, 255, 255, 0};
 
 static Texture2D bg_office_texture;
@@ -75,7 +75,7 @@ static void initialize_menu_textures(void)
 
 void initialize_menu_variables(void)
 {
-    // [CORREÇÃO]: Zera as variáveis de controle sempre que o menu é carregado.
+    // Zera as variáveis de controle sempre que o menu é carregado.
     // Sem isso, ao tentar voltar pro menu mais tarde no jogo, ele fecharia instantaneamente.
     is_menu_to_close = false;
     next_screen = NONE;
@@ -89,8 +89,8 @@ void initialize_menu_variables(void)
     creditos_text_size = MeasureTextEx(default_game_font, "CRÉDITOS", DEFAULT_MENU_FONT_SIZE, DEFAULT_LETTER_SPACING);
     sair_text_size = MeasureTextEx(default_game_font, "SAIR", DEFAULT_MENU_FONT_SIZE, DEFAULT_LETTER_SPACING);
 
-    // COLOQUEI + 40 NO MEIO PARA FICAR MAIS ABAIXO DO NOME IARA
-    float start_y = middle_screen_y; // middle_screen_y - (total_menu_height / 2.0f);
+    // As opções começam no meio da tela, abaixo do nome IARA.
+    float start_y = middle_screen_y;
 
     iniciar_text_target_position = (Vector2){TEXT_HORIZONTAL_MARGIN, start_y};
     creditos_text_target_position = (Vector2){TEXT_HORIZONTAL_MARGIN, iniciar_text_target_position.y + iniciar_text_size.y + TEXT_VERTICAL_MARGIN};
@@ -238,6 +238,8 @@ void handle_render_arrow()
     DrawTexture(arrow_icon_texture, selected_rectangle.x - arrow_icon_texture.width, selected_rectangle.y + half_of_arrow_texture, RAYWHITE);
 }
 
+// Desenha um quadro do menu: fade in, entradas (teclado e mouse), fundos,
+// textos das opções e seta de seleção.
 void render_menu(void)
 {
     if (!menu_fade_in_finished)
