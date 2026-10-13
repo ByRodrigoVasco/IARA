@@ -64,14 +64,9 @@ static void initialize_menu_textures(void)
 
     Texture2D iara_name_texture = LoadTextureFromImage(iara_name_image);
 
-    /*
-     * Todos esse depois TEM que implementar um GAME_TEXTURE em vez de um Texture2D apenas.
-     * Isso por que a propriedade "middle_width" e "middle_height" já coloca a textura no meio
-     * sem precisar fazer o calculo da divisão por 2. Essa divisão está atualmente sendo feita
-     * na função "void render_menu(void)"
-     * Ex: DrawTexture(second_bg_texture, middle_screen_x - ***ISSO AQUI*** (bg_office_texture.width / 2),
-     * middle_screen_y - (bg_office_texture.height / 2), texture_color_to_fade);
-     */
+    // TODO: usar GAME_TEXTURE (helper.h) no lugar de Texture2D para os fundos.
+    // O GAME_TEXTURE já guarda "middle_width" e "middle_height", o que evita o
+    // cálculo de centralização (largura / 2) feito hoje em render_menu().
     arrow_icon_texture = LoadTextureFromImage(arrow_icon_image);
     bg_office_texture = LoadTextureFromImage(bg_office_image);
     second_bg_texture = LoadTextureFromImage(second_bg_image);
