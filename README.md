@@ -46,12 +46,12 @@ No VS Code, o mesmo processo está na tarefa `run raylib` (`.vscode/tasks.json`)
 
 ## Entregas por disciplina
 
-| Disciplina | O que foi entregue |
+| Disciplina | O que se espera no projeto |
 |---|---|
-| [FDS: Fundamentos de Desenvolvimento de Software](docs/fds/README.md) | Backlog e board, diagramas de atividade, protótipos lo-fi, screencast do protótipo e guia de contribuição |
-| [PIF: Programação Imperativa e Funcional](docs/pif/README.md) | Núcleo do jogo em C e screencast da versão pré-alpha |
-| [IHC: Interação Humano-Computador](docs/ihc/README.md) | Sem entrega exclusiva versionada ainda |
-| [LMC: Lógica para Computação](docs/lmc/README.md) | Sem entrega versionada ainda |
+| [FDS: Fundamentos de Desenvolvimento de Software](docs/fds/README.md) | Histórias de usuário, backlog e board; diagramas de atividade, protótipos lo-fi e screencast; sprints com versionamento e testes; `CONTRIBUTING.md` |
+| [PIF: Programação Imperativa e Funcional](docs/pif/README.md) | Núcleo do jogo em C (menu, game loop, missão de quiz jogável) e regras puras em Haskell |
+| [IHC: Interação Humano-Computador](docs/ihc/README.md) | Personas, protótipo lo-fi, avaliação heurística (Nielsen), critérios de usabilidade e acessibilidade |
+| [LMC: Lógica para Computação](docs/lmc/README.md) | Especificação lógica das regras do jogo e puzzles que exercitem conceitos reais de lógica clássica |
 
 ## Squad
  
