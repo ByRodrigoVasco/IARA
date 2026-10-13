@@ -1,5 +1,4 @@
 #include <time.h>
-#include <stdio.h>
 #include <math.h> // Necessário para operações matemáticas avançadas, como a função sin() usada na animação do indicador
 
 #include "raylib.h"
@@ -29,8 +28,6 @@
 #define AWAIT 2         // O texto fica 100% visível aguardando o tempo limite especificado
 #define FADING_OUT 3    // O texto está desaparecendo gradualmente (Reduzindo Alpha)
 
-#define NO_KEY_PRESSED 0 // Constante auxiliar para indicar ausência de entrada do teclado
-
 // ============================================================================
 // VALORES DE REFERÊNCIA PARA SUPORTE A MÚLTIPLAS RESOLUÇÕES (RESPONSIVIDADE)
 // Todos os cálculos de tamanho e offset tomam como base a resolução 1920x1080 (1080p)
@@ -53,8 +50,6 @@
 // ============================================================================
 // VARIÁVEIS ESTÁTICAS DE CONTROLE E ESTADO
 // ============================================================================
-static bool animation_finished = false;                  // Flag global para controle de finalização de transições
-static int current_key_pressed = NO_KEY_PRESSED;         // Armazena a tecla pressionada atualmente
 static int current_calendar_day_state = NONE;             // Estado atual da animação da tela do cartão narrativo
 static bool render_calendar_day_card_finished = false;   // Indica se toda a sequência do cartão narrativo terminou
 static int current_screen = SCREEN_NONE;                  // Armazena qual tela do jogo está sendo processada no momento
@@ -83,12 +78,12 @@ static Texture2D in_game_office;        // Mapa do escritório
 static Texture2D action_tip_texture;    // Textura da dica visual de ação (Espaço)
 static Texture2D move_tip_texture;      // Textura da dica visual de movimento (WASD)
 static Texture2D move_or_tip_texture;   // Textura da dica visual alternativa de movimento (Setas)
-static Texture2D seta_down_texture;     // Seta indicativa flutuante sobre objetos interativos
+static Texture2D arrow_down_texture;     // Seta indicativa flutuante sobre objetos interativos
 
 // Estruturas do personagem e caixas de colisão
 static char_textures estagiario_texture;                 // Array/Estrutura com as texturas de todas as direções do jogador
 static Vector2 current_estagiario_position;               // Posição cartesiana (X, Y) do jogador na tela
-static Texture2D current_estagiarion_texture_direction;   // Textura atual baseada na direção para onde o jogador está olhando
+static Texture2D current_estagiario_texture_direction;   // Textura atual baseada na direção para onde o jogador está olhando
 
 static Rectangle map_collision_rec;                      // Limites físicos das paredes do mapa
 static Rectangle estagiario_computer_collision_rectangle; // Área de gatilho para interagir com o computador
@@ -184,7 +179,7 @@ void initialize_game_loop_variables(void)
     float rescaling_factor_arrow = 0.2f;
     Image arrow_image = LoadImage(ARROW_DOWN_PNG_PATH);
     ImageResize(&arrow_image, (float)arrow_image.width * rescaling_factor_arrow, (float)arrow_image.height * rescaling_factor_arrow);
-    seta_down_texture = LoadTextureFromImage(arrow_image);
+    arrow_down_texture = LoadTextureFromImage(arrow_image);
 
     // Carregamento e redimensionamento das imagens das dicas de controle na tela
     float rescaling_factor_tip = 1.3f;
@@ -211,7 +206,7 @@ void initialize_game_loop_variables(void)
 
     // Define o ponto inicial de surgimento (spawn) do jogador no centro da tela
     current_estagiario_position = (Vector2){middle_screen_x, middle_screen_y};
-    current_estagiarion_texture_direction = estagiario_texture[SOUTH]; // Inicia olhando para o sul (frente)
+    current_estagiario_texture_direction = estagiario_texture[SOUTH]; // Inicia olhando para o sul (frente)
 
     // Define a área delimitadora de colisão do cenário/escritório centralizado na tela
     map_collision_rec = (Rectangle){
@@ -296,7 +291,7 @@ void handle_calendar_day_card(void)
         break;
 
     default:
-        printf("----------CURRENT CALENDAR DAY STATE INCORRECT----------\n");
+        // Estado inválido do cartão do dia: nada a desenhar
         break;
     }
 }
@@ -326,7 +321,6 @@ void handle_map_interactables(void)
         if (IsKeyPressed(KEY_SPACE))
         {
             enter_computer_screen = true;
-            printf("Computer screen...\n");
         }
     }
 }
@@ -404,14 +398,14 @@ void handle_player_input(void)
     }
 
     // Seleção da textura direcional correta com base no vetor combinado (dx, dy)
-    if      (dx == 0 && dy < 0) current_estagiarion_texture_direction = estagiario_texture[NORTH];
-    else if (dx == 0 && dy > 0) current_estagiarion_texture_direction = estagiario_texture[SOUTH];
-    else if (dx < 0  && dy == 0) current_estagiarion_texture_direction = estagiario_texture[WEST];
-    else if (dx > 0  && dy == 0) current_estagiarion_texture_direction = estagiario_texture[EAST];
-    else if (dx < 0  && dy < 0) current_estagiarion_texture_direction = estagiario_texture[NORTHWEST];
-    else if (dx > 0  && dy < 0) current_estagiarion_texture_direction = estagiario_texture[NORTHEAST];
-    else if (dx < 0  && dy > 0) current_estagiarion_texture_direction = estagiario_texture[SOUTHWEST];
-    else                        current_estagiarion_texture_direction = estagiario_texture[SOUTHEAST];
+    if      (dx == 0 && dy < 0) current_estagiario_texture_direction = estagiario_texture[NORTH];
+    else if (dx == 0 && dy > 0) current_estagiario_texture_direction = estagiario_texture[SOUTH];
+    else if (dx < 0  && dy == 0) current_estagiario_texture_direction = estagiario_texture[WEST];
+    else if (dx > 0  && dy == 0) current_estagiario_texture_direction = estagiario_texture[EAST];
+    else if (dx < 0  && dy < 0) current_estagiario_texture_direction = estagiario_texture[NORTHWEST];
+    else if (dx > 0  && dy < 0) current_estagiario_texture_direction = estagiario_texture[NORTHEAST];
+    else if (dx < 0  && dy > 0) current_estagiario_texture_direction = estagiario_texture[SOUTHWEST];
+    else                        current_estagiario_texture_direction = estagiario_texture[SOUTHEAST];
 
     // Correção de velocidade diagonal (Evita o efeito de ser mais rápido na diagonal devido ao Teorema de Pitágoras)
     if (dx != 0 && dy != 0)
@@ -435,8 +429,8 @@ void render_player(void)
 
     // Retângulo de origem recortando toda a textura direcional atual
     Rectangle source = {0, 0,
-                        (float)current_estagiarion_texture_direction.width,
-                        (float)current_estagiarion_texture_direction.height};
+                        (float)current_estagiario_texture_direction.width,
+                        (float)current_estagiario_texture_direction.height};
     
     // Retângulo de destino definindo onde e com qual tamanho o sprite será desenhado no mundo
     Rectangle dest = {current_estagiario_position.x,
@@ -444,7 +438,7 @@ void render_player(void)
                       size, size};
 
     // Desenha a textura na tela com suporte a tint de opacidade (color_to_fade)
-    DrawTexturePro(current_estagiarion_texture_direction, source, dest,
+    DrawTexturePro(current_estagiario_texture_direction, source, dest,
                    (Vector2){0, 0}, 0.0f, color_to_fade);
 }
 
@@ -534,8 +528,8 @@ void render_interact_arrow(void)
     // Cálculo do desvio de flutuação vertical usando onda senoidal
     float bounce_offset = sinf(GetTime() * 6.0f) * (10.0f * scale);
 
-    float arrow_width  = seta_down_texture.width  * scale;
-    float arrow_height = seta_down_texture.height * scale;
+    float arrow_width  = arrow_down_texture.width  * scale;
+    float arrow_height = arrow_down_texture.height * scale;
 
     // Posição centralizada horizontalmente no topo da caixa de colisão do computador
     float arrow_x = estagiario_computer_collision_rectangle.x
@@ -546,10 +540,10 @@ void render_interact_arrow(void)
     float arrow_y = estagiario_computer_collision_rectangle.y
                   - arrow_height - (10.0f * scale) + bounce_offset;
 
-    Rectangle source = {0, 0, (float)seta_down_texture.width, (float)seta_down_texture.height};
+    Rectangle source = {0, 0, (float)arrow_down_texture.width, (float)arrow_down_texture.height};
     Rectangle dest   = {arrow_x, arrow_y, arrow_width, arrow_height};
 
-    DrawTexturePro(seta_down_texture, source, dest, (Vector2){0, 0}, 0.0f, color_to_fade);
+    DrawTexturePro(arrow_down_texture, source, dest, (Vector2){0, 0}, 0.0f, color_to_fade);
 }
 
 /**
@@ -557,9 +551,9 @@ void render_interact_arrow(void)
  */
 void unload_office(void)
 {
-    UnloadTexture(current_estagiarion_texture_direction);
+    UnloadTexture(current_estagiario_texture_direction);
     UnloadTexture(in_game_office);
-    UnloadTexture(seta_down_texture); // Liberação da textura da seta flutuante
+    UnloadTexture(arrow_down_texture); // Liberação da textura da seta flutuante
 
     UnloadTexture(action_tip_texture);
     UnloadTexture(move_tip_texture);
@@ -671,7 +665,7 @@ void unload_game_loop(void)
 {
     // Limpeza de segurança das texturas do escritório e elementos gráficos
     UnloadTexture(in_game_office);
-    UnloadTexture(seta_down_texture);
+    UnloadTexture(arrow_down_texture);
 
     UnloadTexture(action_tip_texture);
     UnloadTexture(move_tip_texture);
