@@ -135,6 +135,20 @@ bool check_mouse_hover(Rectangle collision_rectangle)
     return false;
 }
 
+// Lê as teclas de navegação: seta para cima ou W sobe; seta para baixo ou S desce.
+static void handle_keyboard_navigation(void)
+{
+    if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S))
+    {
+        move_menu_selection(1);
+    }
+
+    if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W))
+    {
+        move_menu_selection(-1);
+    }
+}
+
 void handle_mouse_action()
 {
     if (check_mouse_hover(iniciar_text_rectangle))
@@ -210,6 +224,7 @@ void render_menu(void)
         fade_in_texture(FAST_FADE_SPEED, &texture_color_to_fade, &menu_fade_in_finished);
     }
 
+    handle_keyboard_navigation();
     handle_mouse_action();
 
     BeginDrawing();
