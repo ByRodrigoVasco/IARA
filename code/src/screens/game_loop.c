@@ -83,7 +83,7 @@ static Texture2D in_game_office;        // Mapa do escritório
 static Texture2D action_tip_texture;    // Textura da dica visual de ação (Espaço)
 static Texture2D move_tip_texture;      // Textura da dica visual de movimento (WASD)
 static Texture2D move_or_tip_texture;   // Textura da dica visual alternativa de movimento (Setas)
-static Texture2D seta_down_texture;     // Seta indicativa flutuante sobre objetos interativos
+static Texture2D arrow_down_texture;     // Seta indicativa flutuante sobre objetos interativos
 
 // Estruturas do personagem e caixas de colisão
 static char_textures estagiario_texture;                 // Array/Estrutura com as texturas de todas as direções do jogador
@@ -184,7 +184,7 @@ void initialize_game_loop_variables(void)
     float rescaling_factor_arrow = 0.2f;
     Image arrow_image = LoadImage(ARROW_DOWN_PNG_PATH);
     ImageResize(&arrow_image, (float)arrow_image.width * rescaling_factor_arrow, (float)arrow_image.height * rescaling_factor_arrow);
-    seta_down_texture = LoadTextureFromImage(arrow_image);
+    arrow_down_texture = LoadTextureFromImage(arrow_image);
 
     // Carregamento e redimensionamento das imagens das dicas de controle na tela
     float rescaling_factor_tip = 1.3f;
@@ -534,8 +534,8 @@ void render_interact_arrow(void)
     // Cálculo do desvio de flutuação vertical usando onda senoidal
     float bounce_offset = sinf(GetTime() * 6.0f) * (10.0f * scale);
 
-    float arrow_width  = seta_down_texture.width  * scale;
-    float arrow_height = seta_down_texture.height * scale;
+    float arrow_width  = arrow_down_texture.width  * scale;
+    float arrow_height = arrow_down_texture.height * scale;
 
     // Posição centralizada horizontalmente no topo da caixa de colisão do computador
     float arrow_x = estagiario_computer_collision_rectangle.x
@@ -546,10 +546,10 @@ void render_interact_arrow(void)
     float arrow_y = estagiario_computer_collision_rectangle.y
                   - arrow_height - (10.0f * scale) + bounce_offset;
 
-    Rectangle source = {0, 0, (float)seta_down_texture.width, (float)seta_down_texture.height};
+    Rectangle source = {0, 0, (float)arrow_down_texture.width, (float)arrow_down_texture.height};
     Rectangle dest   = {arrow_x, arrow_y, arrow_width, arrow_height};
 
-    DrawTexturePro(seta_down_texture, source, dest, (Vector2){0, 0}, 0.0f, color_to_fade);
+    DrawTexturePro(arrow_down_texture, source, dest, (Vector2){0, 0}, 0.0f, color_to_fade);
 }
 
 /**
@@ -559,7 +559,7 @@ void unload_office(void)
 {
     UnloadTexture(current_estagiario_texture_direction);
     UnloadTexture(in_game_office);
-    UnloadTexture(seta_down_texture); // Liberação da textura da seta flutuante
+    UnloadTexture(arrow_down_texture); // Liberação da textura da seta flutuante
 
     UnloadTexture(action_tip_texture);
     UnloadTexture(move_tip_texture);
@@ -671,7 +671,7 @@ void unload_game_loop(void)
 {
     // Limpeza de segurança das texturas do escritório e elementos gráficos
     UnloadTexture(in_game_office);
-    UnloadTexture(seta_down_texture);
+    UnloadTexture(arrow_down_texture);
 
     UnloadTexture(action_tip_texture);
     UnloadTexture(move_tip_texture);
