@@ -18,12 +18,10 @@ const char *title = "IARA";
 
 int main(void)
 {
-    /* Infelizmente Raylib não tem um método para pegar a "screen width e height"
-     *  antes de inicializar a janela. A solução é colocar o InitWindow com 0 para
-     *  width e height por que o próprio raylib (por baixo dos panos) pegará o tamanho
-     *  nativo da tela. Aí logo depois nós extraimos o tamanho horizontal e vertical da tela.
+    /* InitWindow(0, 0) faz a Raylib abrir em tela cheia, então iniciamos com um
+     *  tamanho fixo (janela) e depois ajustamos ao tamanho do monitor.
      */
-    InitWindow(0, 0, IARA_TITLE);
+    InitWindow(800, 450, IARA_TITLE);
 
     monitor_id = GetCurrentMonitor();
 
