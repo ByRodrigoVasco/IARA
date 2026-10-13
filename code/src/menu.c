@@ -19,8 +19,6 @@ static bool menu_fade_in_finished = false;
 // PARA FAZER A ANIMAÇÃO DE FADE IN, TODOS OS OBJETOS RECEBERIAM ESSA COR PARA FAZER O FADE IN JUNTOS.
 static Color texture_color_to_fade = {255, 255, 255, 0};
 
-static int text_mouse_is_hovering = NONE;
-
 static Texture2D bg_office_texture;
 static Texture2D second_bg_texture;
 static Texture2D arrow_icon_texture;
@@ -90,8 +88,6 @@ void initialize_menu_variables(void)
     iniciar_text_size = MeasureTextEx(default_game_font, "INICIAR", DEFAULT_MENU_FONT_SIZE, DEFAULT_LETTER_SPACING);
     creditos_text_size = MeasureTextEx(default_game_font, "CRÉDITOS", DEFAULT_MENU_FONT_SIZE, DEFAULT_LETTER_SPACING);
     sair_text_size = MeasureTextEx(default_game_font, "SAIR", DEFAULT_MENU_FONT_SIZE, DEFAULT_LETTER_SPACING);
-
-    float total_menu_height = iniciar_text_size.y + creditos_text_size.y + sair_text_size.y + (2 * TEXT_VERTICAL_MARGIN);
 
     // COLOQUEI + 40 NO MEIO PARA FICAR MAIS ABAIXO DO NOME IARA
     float start_y = middle_screen_y; // middle_screen_y - (total_menu_height / 2.0f);
