@@ -88,7 +88,7 @@ static Texture2D seta_down_texture;     // Seta indicativa flutuante sobre objet
 // Estruturas do personagem e caixas de colisão
 static char_textures estagiario_texture;                 // Array/Estrutura com as texturas de todas as direções do jogador
 static Vector2 current_estagiario_position;               // Posição cartesiana (X, Y) do jogador na tela
-static Texture2D current_estagiarion_texture_direction;   // Textura atual baseada na direção para onde o jogador está olhando
+static Texture2D current_estagiario_texture_direction;   // Textura atual baseada na direção para onde o jogador está olhando
 
 static Rectangle map_collision_rec;                      // Limites físicos das paredes do mapa
 static Rectangle estagiario_computer_collision_rectangle; // Área de gatilho para interagir com o computador
@@ -211,7 +211,7 @@ void initialize_game_loop_variables(void)
 
     // Define o ponto inicial de surgimento (spawn) do jogador no centro da tela
     current_estagiario_position = (Vector2){middle_screen_x, middle_screen_y};
-    current_estagiarion_texture_direction = estagiario_texture[SOUTH]; // Inicia olhando para o sul (frente)
+    current_estagiario_texture_direction = estagiario_texture[SOUTH]; // Inicia olhando para o sul (frente)
 
     // Define a área delimitadora de colisão do cenário/escritório centralizado na tela
     map_collision_rec = (Rectangle){
@@ -404,14 +404,14 @@ void handle_player_input(void)
     }
 
     // Seleção da textura direcional correta com base no vetor combinado (dx, dy)
-    if      (dx == 0 && dy < 0) current_estagiarion_texture_direction = estagiario_texture[NORTH];
-    else if (dx == 0 && dy > 0) current_estagiarion_texture_direction = estagiario_texture[SOUTH];
-    else if (dx < 0  && dy == 0) current_estagiarion_texture_direction = estagiario_texture[WEST];
-    else if (dx > 0  && dy == 0) current_estagiarion_texture_direction = estagiario_texture[EAST];
-    else if (dx < 0  && dy < 0) current_estagiarion_texture_direction = estagiario_texture[NORTHWEST];
-    else if (dx > 0  && dy < 0) current_estagiarion_texture_direction = estagiario_texture[NORTHEAST];
-    else if (dx < 0  && dy > 0) current_estagiarion_texture_direction = estagiario_texture[SOUTHWEST];
-    else                        current_estagiarion_texture_direction = estagiario_texture[SOUTHEAST];
+    if      (dx == 0 && dy < 0) current_estagiario_texture_direction = estagiario_texture[NORTH];
+    else if (dx == 0 && dy > 0) current_estagiario_texture_direction = estagiario_texture[SOUTH];
+    else if (dx < 0  && dy == 0) current_estagiario_texture_direction = estagiario_texture[WEST];
+    else if (dx > 0  && dy == 0) current_estagiario_texture_direction = estagiario_texture[EAST];
+    else if (dx < 0  && dy < 0) current_estagiario_texture_direction = estagiario_texture[NORTHWEST];
+    else if (dx > 0  && dy < 0) current_estagiario_texture_direction = estagiario_texture[NORTHEAST];
+    else if (dx < 0  && dy > 0) current_estagiario_texture_direction = estagiario_texture[SOUTHWEST];
+    else                        current_estagiario_texture_direction = estagiario_texture[SOUTHEAST];
 
     // Correção de velocidade diagonal (Evita o efeito de ser mais rápido na diagonal devido ao Teorema de Pitágoras)
     if (dx != 0 && dy != 0)
@@ -435,8 +435,8 @@ void render_player(void)
 
     // Retângulo de origem recortando toda a textura direcional atual
     Rectangle source = {0, 0,
-                        (float)current_estagiarion_texture_direction.width,
-                        (float)current_estagiarion_texture_direction.height};
+                        (float)current_estagiario_texture_direction.width,
+                        (float)current_estagiario_texture_direction.height};
     
     // Retângulo de destino definindo onde e com qual tamanho o sprite será desenhado no mundo
     Rectangle dest = {current_estagiario_position.x,
@@ -444,7 +444,7 @@ void render_player(void)
                       size, size};
 
     // Desenha a textura na tela com suporte a tint de opacidade (color_to_fade)
-    DrawTexturePro(current_estagiarion_texture_direction, source, dest,
+    DrawTexturePro(current_estagiario_texture_direction, source, dest,
                    (Vector2){0, 0}, 0.0f, color_to_fade);
 }
 
@@ -557,7 +557,7 @@ void render_interact_arrow(void)
  */
 void unload_office(void)
 {
-    UnloadTexture(current_estagiarion_texture_direction);
+    UnloadTexture(current_estagiario_texture_direction);
     UnloadTexture(in_game_office);
     UnloadTexture(seta_down_texture); // Liberação da textura da seta flutuante
 
