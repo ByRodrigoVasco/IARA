@@ -10,10 +10,6 @@ unsigned int screen_height = 0;
 unsigned int middle_screen_x = 0;
 unsigned int middle_screen_y = 0;
 
-int monitor_id = 0;
-
-const char *title = "IARA";
-
 int main(void)
 {
     /* InitWindow(0, 0) faz a Raylib abrir em tela cheia, então iniciamos com um
@@ -21,7 +17,7 @@ int main(void)
      */
     InitWindow(800, 450, IARA_TITLE);
 
-    monitor_id = GetCurrentMonitor();
+    int monitor_id = GetCurrentMonitor();
 
     int monitor_width = GetMonitorWidth(monitor_id);
     int monitor_height = GetMonitorHeight(monitor_id);
