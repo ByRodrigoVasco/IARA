@@ -16,6 +16,24 @@
 #define COMPUTER_WINDOW_MARGIN_TOP 30
 #define COMPUTER_WINDOW_MARGIN_HORIZONTAL 40
 
+// Proporções do layout do quiz, relativas ao tamanho da janela do computador.
+// Largura: win_w (largura da janela). Altura: win_h (altura da janela).
+#define QUIZ_FONT_SIZE_RATIO 0.038f          // tamanho da fonte (win_h)
+#define QUIZ_LINE_SPACING_RATIO 0.01f        // espaço entre linhas (win_h)
+#define QUIZ_PADDING_X_RATIO 0.04f           // margem interna horizontal da caixa (win_w)
+#define QUIZ_PADDING_Y_RATIO 0.05f           // margem interna vertical da caixa (win_h)
+#define QUIZ_MAX_WIDTH_RATIO 0.85f           // largura máxima da caixa e dos botões (win_w)
+#define QUIZ_MIN_WIDTH_RATIO 0.60f           // largura mínima da caixa (win_w)
+#define QUIZ_BOX_TOP_MARGIN_RATIO 0.15f      // distância da caixa até o topo da janela (win_h)
+#define QUIZ_BUTTONS_TOP_GAP_RATIO 0.025f    // espaço entre a caixa e os botões (win_h)
+#define ACTION_BUTTON_WIDTH_RATIO 0.30f      // largura dos botões Continuar/Concluir (win_w)
+#define ACTION_BUTTON_HEIGHT_RATIO 0.08f     // altura dos botões Continuar/Concluir (win_h)
+#define OPTION_BUTTON_PADDING_RATIO 0.06f    // folga lateral do texto das opções (win_w)
+#define OPTION_BUTTON_HEIGHT_RATIO 0.07f     // altura dos botões de opção (win_h)
+#define OPTION_SPACING_RATIO 0.015f          // espaço entre opções (win_h)
+#define ICON_GAP_RATIO 0.015f                // espaço entre opção e ícone de acerto/erro (win_w)
+#define CONTINUE_BUTTON_GAP_RATIO 0.02f      // espaço entre a última opção e Continuar (win_h)
+
 bool computer_tasks_finished = false;
 
 static bool initial_fade_in_finished = false;
@@ -210,8 +228,8 @@ void render_current_step(void)
     float win_y = middle_screen_y - (win_h / 2.0f);
 
     // 2. Escala da fonte ajustada proporcionalmente
-    float font_size = win_h * 0.038f;
-    float line_spacing = win_h * 0.01f;
+    float font_size = win_h * QUIZ_FONT_SIZE_RATIO;
+    float line_spacing = win_h * QUIZ_LINE_SPACING_RATIO;
 
     // 3. Calcula a largura da maior linha de texto e altura acumulada
     float max_text_width = 0.0f;
@@ -227,12 +245,12 @@ void render_current_step(void)
     float total_text_height = (step->line_count * font_size) + ((step->line_count - 1) * line_spacing);
 
     // 4. Margens internas (Paddings)
-    float padding_x = win_w * 0.04f;
-    float padding_y = win_h * 0.05f;
+    float padding_x = win_w * QUIZ_PADDING_X_RATIO;
+    float padding_y = win_h * QUIZ_PADDING_Y_RATIO;
 
     // 5. Limites de largura da caixa (Trava Máxima em 85% da largura da janela)
-    float max_box_width = win_w * 0.85f;
-    float min_box_width = win_w * 0.60f;
+    float max_box_width = win_w * QUIZ_MAX_WIDTH_RATIO;
+    float min_box_width = win_w * QUIZ_MIN_WIDTH_RATIO;
 
     float text_box_width = max_text_width + (padding_x * 2.0f);
 
@@ -240,7 +258,7 @@ void render_current_step(void)
     if (text_box_width < min_box_width) text_box_width = min_box_width;
 
     float text_box_height = total_text_height + (padding_y * 2.0f);
-    float text_box_margin_top = win_h * 0.15f; // Margem superior em relação à janela do PC
+    float text_box_margin_top = win_h * QUIZ_BOX_TOP_MARGIN_RATIO; // Margem superior em relação à janela do PC
 
     Rectangle text_box = {
         middle_screen_x - (text_box_width / 2.0f),
@@ -272,12 +290,12 @@ void render_current_step(void)
     }
 
     // 8. Renderiza os botões ancorados abaixo da caixa
-    float buttons_start_y = text_box.y + text_box.height + (win_h * 0.025f);
+    float buttons_start_y = text_box.y + text_box.height + (win_h * QUIZ_BUTTONS_TOP_GAP_RATIO);
 
     if (step->type == STEP_STATEMENT)
     {
-        float button_width  = win_w * 0.30f;
-        float button_height = win_h * 0.08f;
+        float button_width  = win_w * ACTION_BUTTON_WIDTH_RATIO;
+        float button_height = win_h * ACTION_BUTTON_HEIGHT_RATIO;
 
         Rectangle button_bounds = {
             middle_screen_x - (button_width / 2.0f),
@@ -310,7 +328,7 @@ void render_current_step(void)
         }
 
         // 2. Define a largura do botão baseada no texto + margens (padding)
-        float button_padding = win_w * 0.06f;
+        float button_padding = win_w * OPTION_BUTTON_PADDING_RATIO;
         float button_width = max_option_text_width + button_padding;
         
         // Garante que o botão não fique menor que a caixa da pergunta
@@ -325,8 +343,8 @@ void render_current_step(void)
             button_width = max_box_width;
         }
 
-        float button_height  = win_h * 0.07f;
-        float option_spacing = win_h * 0.015f;
+        float button_height  = win_h * OPTION_BUTTON_HEIGHT_RATIO;
+        float option_spacing = win_h * OPTION_SPACING_RATIO;
 
         for (int i = 0; i < step->option_count; i++)
         {
@@ -349,7 +367,7 @@ void render_current_step(void)
                     Texture2D icon = (i == step->correct_option) ? correct_icon_texture : wrong_icon_texture;
 
                     // Posiciona o ícone à direita do botão
-                    float icon_x = button_bounds.x + button_bounds.width + (win_w * 0.015f);
+                    float icon_x = button_bounds.x + button_bounds.width + (win_w * ICON_GAP_RATIO);
                     float icon_y = button_bounds.y + (button_bounds.height / 2.0f) - (icon.height / 2.0f);
 
                     // Usa um tint que acompanha o fade global da janela
@@ -374,11 +392,11 @@ void render_current_step(void)
         // Se o usuário respondeu, desenhamos o botão "Continuar" abaixo de todas as opções
         if (current_quiz_answered)
         {
-            float continue_button_width  = win_w * 0.30f;
-            float continue_button_height = win_h * 0.08f;
+            float continue_button_width  = win_w * ACTION_BUTTON_WIDTH_RATIO;
+            float continue_button_height = win_h * ACTION_BUTTON_HEIGHT_RATIO;
 
             // Calcula o Y abaixo da última alternativa do quiz
-            float continue_button_y = buttons_start_y + (step->option_count * (button_height + option_spacing)) + (win_h * 0.02f);
+            float continue_button_y = buttons_start_y + (step->option_count * (button_height + option_spacing)) + (win_h * CONTINUE_BUTTON_GAP_RATIO);
 
             Rectangle continue_button_bounds = {
                 middle_screen_x - (continue_button_width / 2.0f),
