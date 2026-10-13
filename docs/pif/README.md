@@ -12,5 +12,5 @@ Entregas da disciplina que já estão versionadas neste repositório.
 ## Screencast da entrega
 
 <a href="https://www.youtube.com/watch?v=z4OrasORL4c">
-  <img src="https://img.youtube.com/vi/z4OrasORL4c/hqdefault.jpg" width="700" alt="Screencast da entrega de PIF" />
+  <img src="screencast/Thumbnail versao pre-alpha (nucleo em c).png" width="700" alt="Screencast da entrega de PIF" />
 </a>
