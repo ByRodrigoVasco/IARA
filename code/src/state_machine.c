@@ -6,7 +6,7 @@
 #include "macros.h"
 #include "pre_menu.h"
 #include "menu.h"
-
+#include "game_loop.h"
 #include "state_machine.h"
 
 void handle_state_initialization(void)
@@ -19,6 +19,7 @@ int handle_menu_action(int screen)
     switch (screen)
     {
     case INICIAR:
+        initialize_game_loop_variables();
         return PLAYING_SCREEN;
         break;
 
@@ -28,7 +29,7 @@ int handle_menu_action(int screen)
 
     case SAIR:
         CloseWindow();
-        return NONE; // Boa prática garantir que retorne algo mesmo fechando
+        return NONE;
     default:
         return NONE;
         break;
@@ -53,15 +54,16 @@ void handle_state_machine(void)
         break;
 
     case MENU_SCREEN:
-        // Apenas a renderização roda a 60 FPS
         render_menu();
 
         if (is_menu_to_close)
         {
-            // [CORREÇÃO 2]: Passamos o "next_screen" pelo filtro que você criou,
-            // que converte INICIAR para PLAYING_SCREEN corretamente.
+
             current_game_state_variables.current_screen = handle_menu_action(next_screen);
             printf("---------------------------OI---------------------------\n");
+
+            initialize_game_loop_variables();
+
             unload_menu();
         }
         break;
@@ -70,11 +72,13 @@ void handle_state_machine(void)
 
         // SÓ REINICIALIZA O MENU. QUANDO APERTAMOS UM BOTÃO, ELE FAZ O UNLOAD DO MENU.
         // DAÍ É SO INICIALIZAR DENOVO E COLOCAR A "current_screen" (tela atual) PARA O PRÓPRIO MENU.
-        initialize_menu_variables();
-        printf("------------------------------------------------------\n");
-        printf("-------- GAME_LOOP AINDA NAO ESTA DISPONIVEL --------\n");
-        printf("------------------------------------------------------\n");
-        current_game_state_variables.current_screen = MENU_SCREEN;
+        // initialize_menu_variables();
+        // printf("------------------------------------------------------\n");
+        // printf("-------- GAME_LOOP AINDA NAO ESTA DISPONIVEL --------\n");
+        // printf("------------------------------------------------------\n");
+        // current_game_state_variables.current_screen = MENU_SCREEN;
+
+        render_game_loop();
         break;
 
     case FLASHING_SCREEN:
