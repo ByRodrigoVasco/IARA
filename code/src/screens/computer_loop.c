@@ -51,11 +51,14 @@ static Texture2D wrong_icon_texture;
 static bool current_quiz_answered = false;
 static int current_quiz_selected = -1;
 
+// Tipo de passo do diálogo do computador:
+// STEP_STATEMENT = apenas texto com botão; STEP_QUIZ = pergunta com opções.
 typedef enum {
     STEP_STATEMENT,
     STEP_QUIZ
 } StepType;
 
+// Um passo do diálogo (texto simples ou pergunta do quiz).
 typedef struct {
     StepType type;
 
@@ -70,8 +73,10 @@ typedef struct {
     char *button_name;  // Nome do botão (usado apenas em STEP_STATEMENT)
 } DialogStep;
 
+// Índice do passo atual em dialog_sequence.
 static int current_step_index = 0;
 
+// Roteiro completo exibido no computador, na ordem em que aparece para o jogador.
 static DialogStep dialog_sequence[] = {
     {
         .type = STEP_STATEMENT,
@@ -153,8 +158,10 @@ static DialogStep dialog_sequence[] = {
     },
 };
 
+// Quantidade total de passos do roteiro.
 #define TOTAL_STEPS ((int)(sizeof(dialog_sequence) / sizeof(dialog_sequence[0])))
 
+// Carrega e redimensiona as texturas da janela e dos ícones, conforme a altura da tela.
 void initialize_computer_loop(void)
 {
     // Obtém o fator de escala baseado em 1080p
@@ -183,6 +190,7 @@ void initialize_computer_loop(void)
     UnloadImage(wrong_icon_img);
 }
 
+// Desenha o fundo e a janela do computador, aplicando o fade in.
 void render_computer_loop(void)
 {
     if (!initial_fade_in_finished)
@@ -211,6 +219,7 @@ void render_computer_loop(void)
     DrawTexture(window_texture, middle_screen_x - window_texture.width / 2, middle_screen_y - window_texture.height / 2, color_to_fade);
 }
 
+// Desenha o passo atual: caixa de texto, botões de opção e botão de continuar.
 void render_current_step(void)
 {
     // Se ultrapassou o último passo, marca como finalizado
@@ -419,6 +428,7 @@ void render_current_step(void)
     }
 }
 
+// Controla a tela do computador: mostra os passos até o fim e depois aplica o fade out.
 void handle_computer_loop(void)
 {
     render_computer_loop();
@@ -437,11 +447,12 @@ void handle_computer_loop(void)
 
         if (window_fade_out_done && text_fade_out_done)
         {
-            // Close game....
+            // TODO: fim do fade out; a saída da tela é tratada pelo game loop.
         }
     }
 }
 
+// Libera da memória as texturas usadas pela tela do computador.
 void unload_computer_loop(void)
 {
     UnloadTexture(window_texture);
