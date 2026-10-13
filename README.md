@@ -31,8 +31,6 @@ Materiais hospedados fora do repositório:
 
 ## Como compilar e executar
 
-Passo a passo para **Windows**, pensado para quem nunca compilou um programa. Você vai instalar uma única ferramenta (MSYS2), que traz o compilador, o Git e a biblioteca gráfica do jogo.
-
 ### 1. Instalar o MSYS2
 
 1. Baixe o instalador em [msys2.org](https://www.msys2.org/) e execute.
