@@ -147,7 +147,7 @@ void handle_mouse_action()
         SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
         mouse_is_hovering = SAIR;
 
-        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
         {
             SetMouseCursor(MOUSE_CURSOR_ARROW);
             next_screen = SAIR;
