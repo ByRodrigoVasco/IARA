@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 #include "state_machine.h"
 #include "game_state.h"
 #include "pre_menu.h"
@@ -12,10 +10,6 @@ unsigned int screen_height = 0;
 unsigned int middle_screen_x = 0;
 unsigned int middle_screen_y = 0;
 
-int monitor_id = 0;
-
-const char *title = "IARA";
-
 int main(void)
 {
     /* InitWindow(0, 0) faz a Raylib abrir em tela cheia, então iniciamos com um
@@ -23,7 +17,7 @@ int main(void)
      */
     InitWindow(800, 450, IARA_TITLE);
 
-    monitor_id = GetCurrentMonitor();
+    int monitor_id = GetCurrentMonitor();
 
     int monitor_width = GetMonitorWidth(monitor_id);
     int monitor_height = GetMonitorHeight(monitor_id);
@@ -37,10 +31,6 @@ int main(void)
     middle_screen_x = screen_width / 2;
     middle_screen_y = screen_height / 2;
 
-    printf("screen_width = %d\n", screen_width);
-    printf("screen_height = %d\n", screen_height);
-    printf("middle_screen_x = %d\n", middle_screen_x);
-    printf("middle_screen_Y = %d\n", middle_screen_y);
 
     SetWindowSize(screen_width, screen_height);
     SetWindowPosition((monitor_width - (int)screen_width) / 2, (monitor_height - (int)screen_height) / 2);
@@ -51,9 +41,6 @@ int main(void)
     initialize_fonts();
     
     initialize_menu_variables();
-    initialize_game_state_variables();
-    initialize_hidden_statistic();
-
     initialize_game_state_variables();
     initialize_hidden_statistic();
 
