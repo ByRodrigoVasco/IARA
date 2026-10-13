@@ -30,6 +30,10 @@ as inconsistências. Assim, a mecânica ensina ao mesmo tempo ética em IA e ló
    <img src="docs/screencast/Thumbnail da Screencast.png" width="800" alt="Watch the video" />
 </a>
 
+## Screencast da Versão Pré Alpha (núcleo em c)
+<a href="https://youtu.be/qE2Gn79bmqw">
+   <img src="docs/screencast/Thumbnail versao pre-alpha (nucleo em c).png" width="800" alt="Watch the video" />
+</a>
  
 ## Documentação
 
