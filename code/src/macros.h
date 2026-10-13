@@ -4,13 +4,36 @@
 AQUI ESTARÃO OS MACROS GLOBAIS QUE SERÃO USADOS POR DIVERSOS ARQUIVOS.
 NEM TODOS OS MACROS ESTARÃO AQUI.
 */
+// RELACIONADOS A FONT
+#define TITLE_FONT_SIZE 200
+#define SUBTITLE_FONT_SIZE (TITLE_FONT_SIZE / 4)
+#define DEFAULT_TEXT_FONT_SIZE 30
+#define TEXT_HORIZONTAL_MARGIN 60
+#define TEXT_VERTICAL_MARGIN 30
+#define DEFAULT_LETTER_SPACING 5
+#define DEFAULT_MENU_FONT_SIZE 80
 
-// CONFIGURAÇÃO DE JANELA
-#define WINDOW_WIDTH 1024
-#define WINDOW_HEIGHT 576
+// -----------------------------------------------------------------------------
+// Configurações de Janela
+// PS: essas variáveis são definidas na main.c
+// -----------------------------------------------------------------------------
+/*
+ * @brief width inicial calculada automaticamente na main.c
+ */
+extern unsigned int screen_width;
+/*
+ * @brief height inicial calculada automaticamente na main.c
+ */
+extern unsigned int screen_height;
 #define IARA_TITLE "IARA"
-#define MIDDLE_SCREEN_X (WINDOW_WIDTH / 2)
-#define MIDDLE_SCREEN_Y (WINDOW_HEIGHT / 2)
+/*
+ * @brief meio da tela horizontal calculada automaticamente na main.c
+ */
+extern unsigned int middle_screen_x;
+/*
+ * @brief meio da tela vertical calculada automaticamente na main.c
+ */
+extern unsigned int middle_screen_y;
 
 // VARIÁVEIS DE ANIMAÇÕES
 #define DEFAULT_FADE_SPEED 1
@@ -23,10 +46,12 @@ NEM TODOS OS MACROS ESTARÃO AQUI.
 
 // IMPORTANTE: MELHOR TER CUIDADO COM HEX COLOR! NO FIGMA, USAMOS O "SHORT HEX COLOR" QUE SÓ TEM ---6 DÍGITOS---
 // AQUI NO RAYLIB PRECISAMOS DE ---8 DÍGITOS--- NO FORMATO "0xRRGGBBAA"
-#define BG_COLOR_HEX 0x140B15FF
+#define BG_COLOR_HEX 0x140b15FF
 #define DEFAULT_TEXTURE_COLOR 0xFFFFFFFF
+#define CYAN_HEX_COLOR 0x00FFFFFF
 
 #define BG_COLOR GetColor(BG_COLOR_HEX)
+#define COMPUTER_BG_COLOR GetColor(CYAN_HEX_COLOR)
 
 // TIPOS DE TELAS
 #define PRE_MENU_SCREEN 0
@@ -43,5 +68,28 @@ NEM TODOS OS MACROS ESTARÃO AQUI.
 #define JUMP_DAY 3
 
 // PATHS PARA ASSETS
+#define SPRITES_PATH "code/assets/sprites/"
+#define PERSONAGENS_PATH    SPRITES_PATH "personagens/"
 #define IARA_NOME_PNG_PATH "code/assets/sprites/tela-inicial/iara-nome.png"
 #define ESCRITORIO_TELA_PNG_PATH "code/assets/sprites/tela-inicial/escritorio-tela-inicial.png"
+
+// PATHS PARA O COMPUTADOR
+#define COMPUTER_ASSETS_PATH "code/assets/sprites/computer/"
+#define COMPUTER_WINDOW_PNG_PATH       COMPUTER_ASSETS_PATH "computer-window.png"
+#define COMPUTER_CORRECT_ICON          COMPUTER_ASSETS_PATH "correct-icon.png"
+#define COMPUTER_WRONG_ICON            COMPUTER_ASSETS_PATH "wrong-icon.png"
+
+// PATHS PARA PERSONAGENS
+
+// ESTAGIARIO (PLAYER PRINCIPAL)
+#define ESTAGIARIO_1_EAST_PATH          PERSONAGENS_PATH "Estagiarios/east.png"
+#define ESTAGIARIO_1_NORTHEAST_PATH     PERSONAGENS_PATH "Estagiarios/north-east.png"
+#define ESTAGIARIO_1_NORTH_PATH         PERSONAGENS_PATH "Estagiarios/north.png"
+#define ESTAGIARIO_1_NORTHWEST_PATH     PERSONAGENS_PATH "Estagiarios/north-west.png"
+#define ESTAGIARIO_1_WEST_PATH          PERSONAGENS_PATH "Estagiarios/west.png"
+#define ESTAGIARIO_1_SOUTHEAST_PATH     PERSONAGENS_PATH "Estagiarios/south-east.png"
+#define ESTAGIARIO_1_SOUTH_PATH         PERSONAGENS_PATH "Estagiarios/south.png"
+#define ESTAGIARIO_1_SOUTHWEST_PATH     PERSONAGENS_PATH "Estagiarios/south-west.png"
+
+// RELACIONADOS A MOVIMENTO
+#define DEFAULT_PLAYER_MOVEMENT_SPEED 3

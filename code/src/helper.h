@@ -3,6 +3,7 @@
 
 #include "raylib.h"
 
+// typedef define GAME_TEXTURE como um novo TIPO de dados
 typedef struct GAME_TEXTURE
 {
     Texture2D texture;
@@ -11,7 +12,6 @@ typedef struct GAME_TEXTURE
 } GAME_TEXTURE;
 
 GAME_TEXTURE CreateGameTextureFromTexture2D(Texture2D texture);
-
 void UnloadGameTexture(GAME_TEXTURE Texture);
 
 #endif // GAME_TEXTURE_H

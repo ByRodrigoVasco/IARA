@@ -1,17 +1,16 @@
 #include "raylib.h"
 #include "fonts.h"
 
-Font default_font_menu;
-
+Font default_game_font;
 
 void initialize_fonts(void)
 {
     // Load the font
-    default_font_menu = LoadFont("code/assets/fonts/VT323-Regular.ttf");
+    default_game_font = LoadFont("code/assets/fonts/VT323-Regular.ttf");
 }
 
 void unload_fonts(void)
 {
     // Unload the font
-    UnloadFont(default_font_menu);
+    UnloadFont(default_game_font);
 }
