@@ -32,6 +32,8 @@ int main(void)
     screen_width = monitor_width * 3 / 4;
     screen_height = monitor_height * 3 / 4;
 
+    SetWindowSize(screen_width, screen_height);
+
     middle_screen_x = screen_width / 2;
     middle_screen_y = screen_height / 2;
 
