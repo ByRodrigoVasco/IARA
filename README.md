@@ -1,20 +1,21 @@
 # IARA
- 
+
 Você investiga um caso de horror corporativo envolvendo IARA, uma inteligência
 artificial fictícia. Quanto mais questiona as respostas dela em vez de
 aceitá-las automaticamente, mais precisa recorrer à lógica para provar
 as inconsistências. Assim, a mecânica ensina ao mesmo tempo ética em IA e lógica clássica.
 
+## Tecnologias
 
-## Ferramentas tecnológicas
- ![C](https://img.shields.io/badge/c-%23A8B9CC.svg?style=for-the-badge&logo=c&logoColor=black)
+![C](https://img.shields.io/badge/c-%23A8B9CC.svg?style=for-the-badge&logo=c&logoColor=black)
 ![raylib](https://img.shields.io/badge/raylib-000000.svg?style=for-the-badge)
 ![Haskell](https://img.shields.io/badge/haskell-%235D4F85.svg?style=for-the-badge&logo=haskell&logoColor=white)
 ![GitHub](https://img.shields.io/badge/github-%23181717.svg?style=for-the-badge&logo=github&logoColor=white)
+
 - **Motor e gameplay:** C, para o game loop, menus, gerenciamento de estado e persistência.
 - **Renderização:** [raylib](https://www.raylib.com/), biblioteca gráfica em C, 2D.
-- **Regras puras:** Haskell, para os módulos de lógica, validação de respostas e seleção de conteúdo.
-- **Versionamento:** GitHub, com fluxo de branches e Pull Requests descrito no [`CONTRIBUTING.md`](CONTRIBUTING.md).
+- **Regras puras:** Haskell, para pontuação, validação de respostas e seleção de conteúdo.
+- **Versionamento:** GitHub, com o fluxo descrito no [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Como compilar e executar
 
@@ -43,43 +44,18 @@ No VS Code, o mesmo processo está na tarefa `run raylib` (`.vscode/tasks.json`)
 
 > **Versão para terminal (Unidade 1 de PIF):** a versão em texto, exigida na primeira entrega parcial, ainda está em desenvolvimento. Esta seção será atualizada com os comandos de compilação e execução dela.
 
-## Backlog e board
+## Entregas por disciplina
 
-![Backlog](docs/assets/entregas/backlog.jpeg)
-
-[Link Trello](https://trello.com/b/ifJwhbVe/iara-projeto-integrador-squad-8)
-
-![Board](docs/assets/entregas/board.jpeg)
-
-## Screencast do Protótipo de Baixa Fidelidade
-
-<a href="https://youtu.be/qE2Gn79bmqw">
-   <img src="docs/screencast/Thumbnail da Screencast.png" width="800" alt="Watch the video" />
-</a>
-
-## Screencast da Versão Pré Alpha (núcleo em c)
-<a href="https://youtu.be/qE2Gn79bmqw">
-   <img src="docs/screencast/Thumbnail versao pre-alpha (nucleo em c).png" width="800" alt="Watch the video" />
-</a>
- 
-## Artefatos das disciplinas
-
-| Disciplina / frente | Artefato |
+| Disciplina | O que foi entregue |
 |---|---|
-| Gestão ágil | [Board e backlog no Trello](https://trello.com/b/ifJwhbVe/iara-projeto-integrador-squad-8) |
-| Design | [Protótipos lo-fi no Figma](https://www.figma.com/design/DpnmgBif3vJcn336pefbpa/IARA---PROTOTIPO-FDS?node-id=0-1&t=vm69jod3fxAtJGjN-1) e [documentação dos protótipos](docs/prototipos-lofi/README.md) |
-| Engenharia de software | [Diagramas de atividade por história de usuário](docs/diagramas-atividade/README.md) e [guia de contribuição](CONTRIBUTING.md) |
-| Programação imperativa (C) | Código-fonte em [`code/src`](code/src) |
-| Programação funcional (Haskell) | A definir: o módulo de regras ainda não foi adicionado ao repositório |
-
-## Documentação
-
-- **Diagramas de atividade:** um diagrama UML por história de usuário, traduzindo os critérios de aceitação em fluxo. Ver [`docs/diagramas-atividade/README.md`](docs/diagramas-atividade/README.md).
-- **Protótipos lo-fi:** telas de baixa fidelidade das histórias de usuário, elaboradas no [Figma](https://www.figma.com/design/DpnmgBif3vJcn336pefbpa/IARA---PROTOTIPO-FDS?node-id=0-1&t=vm69jod3fxAtJGjN-1). Ver [`docs/prototipos-lofi/README.md`](docs/prototipos-lofi/README.md).
+| [FDS: Fundamentos de Desenvolvimento de Software](docs/fds/README.md) | Backlog e board, diagramas de atividade, protótipos lo-fi, screencast do protótipo e guia de contribuição |
+| [PIF: Programação Imperativa e Funcional](docs/pif/README.md) | Núcleo do jogo em C e screencast da versão pré-alpha |
+| [IHC: Interação Humano-Computador](docs/ihc/README.md) | Sem entrega exclusiva versionada ainda |
+| [LMC: Lógica para Computação](docs/lmc/README.md) | Sem entrega versionada ainda |
 
 ## Squad
  
-Fotos e sprites ficam em [`docs/assets/`](docs/assets/README.md).
+Fotos e sprites ficam em [`docs/assets/`](docs/assets).
  
 | Foto | Sprite | Nome | Função | GitHub | LinkedIn | Email |
 |---|---|---|---|---|---|---|
