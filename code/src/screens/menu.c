@@ -1,27 +1,22 @@
-#include <stdio.h>
-
 #include "raylib.h"
+#include "menu.h"
 #include "macros.h"
 #include "fonts.h"
 #include "helper.h"
 #include "animations.h"
-
-#define NONE 0
-#define INICIAR 1
-#define CREDITOS 2
-#define SAIR 3
 
 int next_screen = NONE;
 int mouse_is_hovering = NONE;
 
 bool is_menu_to_close = false;
 
-static bool menu_fade_in_finished = false;
-// ESSE "0" REPRESENTA O "ALPHA CHANNEL" QUE SERVE COMO OPACIDADE.
-// PARA FAZER A ANIMAÇÃO DE FADE IN, TODOS OS OBJETOS RECEBERIAM ESSA COR PARA FAZER O FADE IN JUNTOS.
-static Color texture_color_to_fade = {255, 255, 255, 0};
+// Opção atualmente destacada no menu (INICIAR, CREDITOS ou SAIR).
+static int selected_menu_option = INICIAR;
 
-static int text_mouse_is_hovering = NONE;
+static bool menu_fade_in_finished = false;
+// Cor compartilhada por todas as texturas do menu. O último valor (alpha = 0)
+// é a opacidade: o fade in sobe esse valor e todas as texturas aparecem juntas.
+static Color texture_color_to_fade = {255, 255, 255, 0};
 
 static Texture2D bg_office_texture;
 static Texture2D second_bg_texture;
@@ -47,31 +42,26 @@ static void initialize_menu_textures(void)
     // -----------------------------------------------------------------------------------------------
 
     Image arrow_icon_image = LoadImage("code/assets/icons/arrow-icon.png");
-    float to_refactor_size_arrow_icon = 2.5;
-    ImageResize(&arrow_icon_image, (float)arrow_icon_image.width / to_refactor_size_arrow_icon, (float)arrow_icon_image.height / to_refactor_size_arrow_icon);
+    float arrow_icon_scale_divisor = 2.5;
+    ImageResize(&arrow_icon_image, (float)arrow_icon_image.width / arrow_icon_scale_divisor, (float)arrow_icon_image.height / arrow_icon_scale_divisor);
 
     Image bg_office_image = LoadImage("code/assets/sprites/tela-inicial/escritorio-tela-inicial.png");
-    float to_refactor_size_bg_office = 1.15;
-    ImageResize(&bg_office_image, (float)screen_width / to_refactor_size_bg_office, (float)screen_height / to_refactor_size_bg_office);
+    float bg_office_scale_divisor = 1.15;
+    ImageResize(&bg_office_image, (float)screen_width / bg_office_scale_divisor, (float)screen_height / bg_office_scale_divisor);
 
     Image second_bg_image = LoadImage("code/assets/background/second-background.png");
-    float to_refactor_size_second_bg = 1;
-    ImageResize(&second_bg_image, (float)screen_width / to_refactor_size_second_bg, (float)screen_height / to_refactor_size_second_bg);
+    float second_bg_scale_divisor = 1;
+    ImageResize(&second_bg_image, (float)screen_width / second_bg_scale_divisor, (float)screen_height / second_bg_scale_divisor);
 
     Image iara_name_image = LoadImage("code/assets/sprites/tela-inicial/iara-nome.png");
-    int to_refactor_size_iara_name = 3;
-    ImageResize(&iara_name_image, (float)iara_name_image.width / to_refactor_size_iara_name, (float)iara_name_image.height / to_refactor_size_iara_name);
+    int iara_name_scale_divisor = 3;
+    ImageResize(&iara_name_image, (float)iara_name_image.width / iara_name_scale_divisor, (float)iara_name_image.height / iara_name_scale_divisor);
 
     Texture2D iara_name_texture = LoadTextureFromImage(iara_name_image);
 
-    /*
-     * Todos esse depois TEM que implementar um GAME_TEXTURE em vez de um Texture2D apenas.
-     * Isso por que a propriedade "middle_width" e "middle_height" já coloca a textura no meio
-     * sem precisar fazer o calculo da divisão por 2. Essa divisão está atualmente sendo feita
-     * na função "void render_menu(void)"
-     * Ex: DrawTexture(second_bg_texture, middle_screen_x - ***ISSO AQUI*** (bg_office_texture.width / 2),
-     * middle_screen_y - (bg_office_texture.height / 2), texture_color_to_fade);
-     */
+    // TODO: usar GAME_TEXTURE (helper.h) no lugar de Texture2D para os fundos.
+    // O GAME_TEXTURE já guarda "middle_width" e "middle_height", o que evita o
+    // cálculo de centralização (largura / 2) feito hoje em render_menu().
     arrow_icon_texture = LoadTextureFromImage(arrow_icon_image);
     bg_office_texture = LoadTextureFromImage(bg_office_image);
     second_bg_texture = LoadTextureFromImage(second_bg_image);
@@ -85,11 +75,12 @@ static void initialize_menu_textures(void)
 
 void initialize_menu_variables(void)
 {
-    // [CORREÇÃO]: Zera as variáveis de controle sempre que o menu é carregado.
+    // Zera as variáveis de controle sempre que o menu é carregado.
     // Sem isso, ao tentar voltar pro menu mais tarde no jogo, ele fecharia instantaneamente.
     is_menu_to_close = false;
     next_screen = NONE;
     mouse_is_hovering = NONE;
+    selected_menu_option = INICIAR;
 
     initialize_menu_textures();
 
@@ -98,12 +89,8 @@ void initialize_menu_variables(void)
     creditos_text_size = MeasureTextEx(default_game_font, "CRÉDITOS", DEFAULT_MENU_FONT_SIZE, DEFAULT_LETTER_SPACING);
     sair_text_size = MeasureTextEx(default_game_font, "SAIR", DEFAULT_MENU_FONT_SIZE, DEFAULT_LETTER_SPACING);
 
-    float total_menu_height = iniciar_text_size.y + creditos_text_size.y + sair_text_size.y + (2 * TEXT_VERTICAL_MARGIN);
-
-    // COLOQUEI + 40 NO MEIO PARA FICAR MAIS ABAIXO DO NOME IARA
-    float start_y = middle_screen_y; // middle_screen_y - (total_menu_height / 2.0f);
-
-    printf("------------%d------------\n", middle_screen_y);
+    // As opções começam no meio da tela, abaixo do nome IARA.
+    float start_y = middle_screen_y;
 
     iniciar_text_target_position = (Vector2){TEXT_HORIZONTAL_MARGIN, start_y};
     creditos_text_target_position = (Vector2){TEXT_HORIZONTAL_MARGIN, iniciar_text_target_position.y + iniciar_text_size.y + TEXT_VERTICAL_MARGIN};
@@ -112,6 +99,22 @@ void initialize_menu_variables(void)
     iniciar_text_rectangle = (Rectangle){iniciar_text_target_position.x, iniciar_text_target_position.y, iniciar_text_size.x, iniciar_text_size.y};
     creditos_text_rectangle = (Rectangle){creditos_text_target_position.x, creditos_text_target_position.y, creditos_text_size.x, creditos_text_size.y};
     sair_text_rectangle = (Rectangle){sair_text_target_position.x, sair_text_target_position.y, sair_text_size.x, sair_text_size.y};
+}
+
+// Move a seleção para a opção seguinte (direction = 1) ou anterior (direction = -1),
+// voltando ao início/fim da lista ao ultrapassar os limites.
+static void move_menu_selection(int direction)
+{
+    selected_menu_option += direction;
+
+    if (selected_menu_option > SAIR)
+    {
+        selected_menu_option = INICIAR;
+    }
+    else if (selected_menu_option < INICIAR)
+    {
+        selected_menu_option = SAIR;
+    }
 }
 
 bool check_mouse_hover(Rectangle collision_rectangle)
@@ -132,74 +135,111 @@ bool check_mouse_hover(Rectangle collision_rectangle)
     return false;
 }
 
-void handle_mouse_action()
+// Confirma a opção selecionada: guarda a escolha e sinaliza o fechamento do menu.
+static void confirm_menu_option(void)
+{
+    SetMouseCursor(MOUSE_CURSOR_ARROW);
+    next_screen = selected_menu_option;
+    is_menu_to_close = true;
+}
+
+// Lê as teclas do menu: seta para cima ou W sobe; seta para baixo ou S desce;
+// Enter ou Espaço confirmam a opção.
+static void handle_keyboard_navigation(void)
+{
+    if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S))
+    {
+        move_menu_selection(1);
+    }
+
+    if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W))
+    {
+        move_menu_selection(-1);
+    }
+
+    if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE))
+    {
+        confirm_menu_option();
+    }
+}
+
+// Descobre qual opção do menu está sob o mouse (NONE se nenhuma).
+static int get_option_under_mouse(void)
 {
     if (check_mouse_hover(iniciar_text_rectangle))
     {
-        SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
-        mouse_is_hovering = INICIAR;
-
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
-        {
-            // Talvez no futuro, esconder o cursor
-            SetMouseCursor(MOUSE_CURSOR_ARROW);
-            next_screen = INICIAR;
-            is_menu_to_close = true;
-        }
+        return INICIAR;
     }
-    else if (check_mouse_hover(creditos_text_rectangle))
-    {
-        SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
-        mouse_is_hovering = CREDITOS;
 
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
-        {
-            SetMouseCursor(MOUSE_CURSOR_ARROW);
-            next_screen = CREDITOS;
-            is_menu_to_close = true;
-        }
-    }
-    else if (check_mouse_hover(sair_text_rectangle))
+    if (check_mouse_hover(creditos_text_rectangle))
     {
-        SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
-        mouse_is_hovering = SAIR;
+        return CREDITOS;
+    }
 
-        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
-        {
-            SetMouseCursor(MOUSE_CURSOR_ARROW);
-            next_screen = SAIR;
-            is_menu_to_close = true;
-        }
-    }
-    else
+    if (check_mouse_hover(sair_text_rectangle))
     {
-        mouse_is_hovering = NONE;
+        return SAIR;
+    }
+
+    return NONE;
+}
+
+// Trata o mouse: mover o mouse destaca a opção sob ele e o clique a confirma.
+// O destaque só muda quando o mouse se mexe, para não brigar com o teclado.
+void handle_mouse_action()
+{
+    int hovered_option = get_option_under_mouse();
+    Vector2 mouse_movement = GetMouseDelta();
+    bool mouse_moved = (mouse_movement.x != 0 || mouse_movement.y != 0);
+
+    mouse_is_hovering = hovered_option;
+
+    if (hovered_option == NONE)
+    {
         SetMouseCursor(MOUSE_CURSOR_ARROW);
+        return;
+    }
+
+    SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+
+    if (mouse_moved)
+    {
+        selected_menu_option = hovered_option;
+    }
+
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+    {
+        selected_menu_option = hovered_option;
+        confirm_menu_option();
     }
 }
 
+// Desenha a seta ao lado da opção selecionada (por teclado ou mouse).
 void handle_render_arrow()
 {
     float half_of_arrow_texture = (arrow_icon_texture.height / 2);
+    Rectangle selected_rectangle;
 
-    switch (mouse_is_hovering)
+    switch (selected_menu_option)
     {
-    case NONE:
-        break;
     case INICIAR:
-        DrawTexture(arrow_icon_texture, iniciar_text_rectangle.x - arrow_icon_texture.width, iniciar_text_rectangle.y + half_of_arrow_texture, RAYWHITE);
+        selected_rectangle = iniciar_text_rectangle;
         break;
     case CREDITOS:
-        DrawTexture(arrow_icon_texture, creditos_text_rectangle.x - arrow_icon_texture.width, creditos_text_rectangle.y + half_of_arrow_texture, RAYWHITE);
+        selected_rectangle = creditos_text_rectangle;
         break;
     case SAIR:
-        DrawTexture(arrow_icon_texture, sair_text_rectangle.x - arrow_icon_texture.width, sair_text_rectangle.y + half_of_arrow_texture, RAYWHITE);
+        selected_rectangle = sair_text_rectangle;
         break;
     default:
-        break;
+        return;
     }
+
+    DrawTexture(arrow_icon_texture, selected_rectangle.x - arrow_icon_texture.width, selected_rectangle.y + half_of_arrow_texture, RAYWHITE);
 }
 
+// Desenha um quadro do menu: fade in, entradas (teclado e mouse), fundos,
+// textos das opções e seta de seleção.
 void render_menu(void)
 {
     if (!menu_fade_in_finished)
@@ -207,6 +247,7 @@ void render_menu(void)
         fade_in_texture(FAST_FADE_SPEED, &texture_color_to_fade, &menu_fade_in_finished);
     }
 
+    handle_keyboard_navigation();
     handle_mouse_action();
 
     BeginDrawing();
