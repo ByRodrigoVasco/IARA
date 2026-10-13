@@ -48,10 +48,10 @@ No VS Code, o mesmo processo está na tarefa `run raylib` (`.vscode/tasks.json`)
 
 | Disciplina | O que se espera no projeto |
 |---|---|
-| [FDS: Fundamentos de Desenvolvimento de Software](docs/fds/README.md) | Histórias de usuário, backlog e board; diagramas de atividade, protótipos lo-fi e screencast; sprints com versionamento e testes; `CONTRIBUTING.md` |
-| [PIF: Programação Imperativa e Funcional](docs/pif/README.md) | Núcleo do jogo em C (menu, game loop, missão de quiz jogável) e regras puras em Haskell |
-| [IHC: Interação Humano-Computador](docs/ihc/README.md) | Personas, protótipo lo-fi e seu screencast, avaliação heurística (Nielsen), critérios de usabilidade e acessibilidade |
-| [LMC: Lógica para Computação](docs/lmc/README.md) | Especificação lógica das regras do jogo e puzzles que exercitem conceitos reais de lógica clássica |
+| **[FDS](docs/fds/README.md)**<br>Fundamentos de Desenvolvimento de Software | • Histórias de usuário, backlog e board<br>• Diagramas de atividade<br>• Protótipos lo-fi e screencast<br>• Sprints com versionamento e testes<br>• `CONTRIBUTING.md` |
+| **[PIF](docs/pif/README.md)**<br>Programação Imperativa e Funcional | • Núcleo do jogo em C (menu, game loop, quiz jogável)<br>• Regras puras em Haskell |
+| **[IHC](docs/ihc/README.md)**<br>Interação Humano-Computador | • Personas<br>• Protótipo lo-fi e screencast<br>• Avaliação heurística (Nielsen)<br>• Critérios de usabilidade e acessibilidade |
+| **[LMC](docs/lmc/README.md)**<br>Lógica para Computação | • Especificação lógica das regras do jogo<br>• Puzzles de lógica clássica |
 
 ## Squad
  
