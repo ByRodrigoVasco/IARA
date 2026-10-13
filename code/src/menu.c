@@ -163,72 +163,79 @@ static void handle_keyboard_navigation(void)
     }
 }
 
-void handle_mouse_action()
+// Descobre qual opção do menu está sob o mouse (NONE se nenhuma).
+static int get_option_under_mouse(void)
 {
     if (check_mouse_hover(iniciar_text_rectangle))
     {
-        SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
-        mouse_is_hovering = INICIAR;
-
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
-        {
-            // Talvez no futuro, esconder o cursor
-            SetMouseCursor(MOUSE_CURSOR_ARROW);
-            next_screen = INICIAR;
-            is_menu_to_close = true;
-        }
+        return INICIAR;
     }
-    else if (check_mouse_hover(creditos_text_rectangle))
-    {
-        SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
-        mouse_is_hovering = CREDITOS;
 
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
-        {
-            SetMouseCursor(MOUSE_CURSOR_ARROW);
-            next_screen = CREDITOS;
-            is_menu_to_close = true;
-        }
-    }
-    else if (check_mouse_hover(sair_text_rectangle))
+    if (check_mouse_hover(creditos_text_rectangle))
     {
-        SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
-        mouse_is_hovering = SAIR;
+        return CREDITOS;
+    }
 
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
-        {
-            SetMouseCursor(MOUSE_CURSOR_ARROW);
-            next_screen = SAIR;
-            is_menu_to_close = true;
-        }
-    }
-    else
+    if (check_mouse_hover(sair_text_rectangle))
     {
-        mouse_is_hovering = NONE;
+        return SAIR;
+    }
+
+    return NONE;
+}
+
+// Trata o mouse: mover o mouse destaca a opção sob ele e o clique a confirma.
+// O destaque só muda quando o mouse se mexe, para não brigar com o teclado.
+void handle_mouse_action()
+{
+    int hovered_option = get_option_under_mouse();
+    Vector2 mouse_movement = GetMouseDelta();
+    bool mouse_moved = (mouse_movement.x != 0 || mouse_movement.y != 0);
+
+    mouse_is_hovering = hovered_option;
+
+    if (hovered_option == NONE)
+    {
         SetMouseCursor(MOUSE_CURSOR_ARROW);
+        return;
+    }
+
+    SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+
+    if (mouse_moved)
+    {
+        selected_menu_option = hovered_option;
+    }
+
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+    {
+        selected_menu_option = hovered_option;
+        confirm_menu_option();
     }
 }
 
+// Desenha a seta ao lado da opção selecionada (por teclado ou mouse).
 void handle_render_arrow()
 {
     float half_of_arrow_texture = (arrow_icon_texture.height / 2);
+    Rectangle selected_rectangle;
 
-    switch (mouse_is_hovering)
+    switch (selected_menu_option)
     {
-    case NONE:
-        break;
     case INICIAR:
-        DrawTexture(arrow_icon_texture, iniciar_text_rectangle.x - arrow_icon_texture.width, iniciar_text_rectangle.y + half_of_arrow_texture, RAYWHITE);
+        selected_rectangle = iniciar_text_rectangle;
         break;
     case CREDITOS:
-        DrawTexture(arrow_icon_texture, creditos_text_rectangle.x - arrow_icon_texture.width, creditos_text_rectangle.y + half_of_arrow_texture, RAYWHITE);
+        selected_rectangle = creditos_text_rectangle;
         break;
     case SAIR:
-        DrawTexture(arrow_icon_texture, sair_text_rectangle.x - arrow_icon_texture.width, sair_text_rectangle.y + half_of_arrow_texture, RAYWHITE);
+        selected_rectangle = sair_text_rectangle;
         break;
     default:
-        break;
+        return;
     }
+
+    DrawTexture(arrow_icon_texture, selected_rectangle.x - arrow_icon_texture.width, selected_rectangle.y + half_of_arrow_texture, RAYWHITE);
 }
 
 void render_menu(void)
