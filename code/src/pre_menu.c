@@ -41,7 +41,7 @@ void initialize_pre_menu_textures(void)
 
 }
 
-bool close_pre_menu(void)
+void close_pre_menu(void)
 {
     // PODE FECHAR APENAS DEPOIS DA ANIMAÇÃO TERMINAR.
     fade_out_texture(10, &textures_color, &can_close_pre_menu_safely);
