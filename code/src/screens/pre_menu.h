@@ -45,8 +45,4 @@ void close_pre_menu(void);
  */
 void unload_pre_menu_textures(void);
 
-#ifdef __cplusplus
-}
-#endif
-
 #endif // PRE_MENU_H
