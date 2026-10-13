@@ -73,8 +73,17 @@ extern unsigned int middle_screen_y;
 #define IARA_NOME_PNG_PATH "code/assets/sprites/tela-inicial/iara-nome.png"
 #define ESCRITORIO_TELA_PNG_PATH "code/assets/sprites/tela-inicial/escritorio-tela-inicial.png"
 
+
+#define ENVIRONMENT_SPRITES_PATH       SPRITES_PATH "environment/"
+#define ACTION_BUTTONS_SPRITES_PATH    ENVIRONMENT_SPRITES_PATH "action.png"
+#define MOVE_BUTTONS_SPRITES_PATH      ENVIRONMENT_SPRITES_PATH "move.png"
+#define MOVE_OR_BUTTONS_SPRITES_PATH   ENVIRONMENT_SPRITES_PATH "move-or.png"
+
+// Icon de indicação de interação com o computador
+#define ARROW_DOWN_PNG_PATH  "code/assets/icons/arrow-down.png"
+
 // PATHS PARA O COMPUTADOR
-#define COMPUTER_ASSETS_PATH "code/assets/sprites/computer/"
+#define COMPUTER_ASSETS_PATH           "code/assets/sprites/computer/"
 #define COMPUTER_WINDOW_PNG_PATH       COMPUTER_ASSETS_PATH "computer-window.png"
 #define COMPUTER_CORRECT_ICON          COMPUTER_ASSETS_PATH "correct-icon.png"
 #define COMPUTER_WRONG_ICON            COMPUTER_ASSETS_PATH "wrong-icon.png"
