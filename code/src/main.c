@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 #include "state_machine.h"
 #include "game_state.h"
 #include "pre_menu.h"
@@ -37,10 +35,6 @@ int main(void)
     middle_screen_x = screen_width / 2;
     middle_screen_y = screen_height / 2;
 
-    printf("screen_width = %d\n", screen_width);
-    printf("screen_height = %d\n", screen_height);
-    printf("middle_screen_x = %d\n", middle_screen_x);
-    printf("middle_screen_Y = %d\n", middle_screen_y);
 
     SetWindowSize(screen_width, screen_height);
     SetWindowPosition((monitor_width - (int)screen_width) / 2, (monitor_height - (int)screen_height) / 2);
