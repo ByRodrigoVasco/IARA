@@ -58,52 +58,33 @@ void handle_state_machine(void)
 
         if (is_menu_to_close)
         {
-
             current_game_state_variables.current_screen = handle_menu_action(next_screen);
-            printf("---------------------------OI---------------------------\n");
-
-            initialize_game_loop_variables();
 
             unload_menu();
         }
         break;
 
     case PLAYING_SCREEN:
-
-        // SÓ REINICIALIZA O MENU. QUANDO APERTAMOS UM BOTÃO, ELE FAZ O UNLOAD DO MENU.
-        // DAÍ É SO INICIALIZAR DENOVO E COLOCAR A "current_screen" (tela atual) PARA O PRÓPRIO MENU.
-        // initialize_menu_variables();
-        // printf("------------------------------------------------------\n");
-        // printf("-------- GAME_LOOP AINDA NAO ESTA DISPONIVEL --------\n");
-        // printf("------------------------------------------------------\n");
-        // current_game_state_variables.current_screen = MENU_SCREEN;
-
         render_game_loop();
         break;
 
     case FLASHING_SCREEN:
-        printf("Transição para a tela de dia de flash\n");
+        // TODO: tela de dia de flash ainda não implementada
         break;
 
     case JUMPING_SCREEN:
-        printf("Transição para a tela de dia de salto\n");
+        // TODO: tela de dia de salto ainda não implementada
         break;
 
     case CREDITS_SCREEN:
-
+        // Tela de créditos ainda não implementada: volta para o menu.
         initialize_menu_variables();
-        printf("------------------------------------------------------\n");
-        printf("-------- CREDITOS AINDA NAO ESTA DISPONIVEL --------\n");
-        printf("------------------------------------------------------\n");
         current_game_state_variables.current_screen = MENU_SCREEN;
         break;
 
     default:
-
+        // Tela desconhecida: volta para o menu por segurança.
         initialize_menu_variables();
-        printf("------------------------------------------------------\n");
-        printf("---- SCREEN NAO RECONHECIDA, VOLTANDO PARA O MENU ----\n");
-        printf("------------------------------------------------------\n");
         current_game_state_variables.current_screen = MENU_SCREEN;
         break;
     }
