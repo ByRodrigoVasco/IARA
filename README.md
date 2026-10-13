@@ -31,30 +31,73 @@ Materiais hospedados fora do repositório:
 
 ## Como compilar e executar
 
-Todos os comandos devem ser executados **na raiz do repositório**, porque o jogo carrega os assets por caminhos relativos (`code/assets/...`).
+Passo a passo para **Windows**, pensado para quem nunca compilou um programa. Você vai instalar uma única ferramenta (MSYS2), que traz o compilador, o Git e a biblioteca gráfica do jogo.
 
-### Requisitos
+### 1. Instalar o MSYS2
 
-- Compilador `gcc` (no Windows, via [MSYS2](https://www.msys2.org/) UCRT64).
-- Biblioteca [raylib](https://www.raylib.com/): no MSYS2, `pacman -S mingw-w64-ucrt-x86_64-raylib`; no Linux, o pacote `raylib` da sua distribuição.
+1. Baixe o instalador em [msys2.org](https://www.msys2.org/) e execute.
+2. Clique em "Next" até o fim, **sem mudar a pasta de instalação** (`C:\msys64`).
 
-### Windows (MSYS2 UCRT64)
+### 2. Abrir o terminal certo
+
+No menu Iniciar, procure e abra **MSYS2 UCRT64** (ícone azul). Atenção: não use o "MSYS2 MSYS" nem o "MINGW64".
+
+### 3. Instalar as dependências
+
+Copie o comando abaixo, cole no terminal (botão direito do mouse) e pressione Enter. Se ele perguntar `Proceed with installation? [Y/n]`, digite `Y` e pressione Enter.
 
 ```bash
-gcc code/src/*.c -o iara.exe -I C:/msys64/ucrt64/include -L C:/msys64/ucrt64/lib -lraylib -lopengl32 -lgdi32 -lwinmm
+pacman -S --needed git mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-raylib
+```
+
+### 4. Baixar o projeto
+
+```bash
+git clone https://github.com/ByRodrigoVasco/IARA.git
+cd IARA
+```
+
+### 5. Compilar
+
+Dentro da pasta `IARA`, rode:
+
+```bash
+gcc code/src/*.c -o iara.exe -lraylib -lopengl32 -lgdi32 -lwinmm
+```
+
+Se não aparecer nenhuma mensagem de erro, o jogo foi compilado e o arquivo `iara.exe` foi criado.
+
+### 6. Jogar
+
+```bash
 ./iara.exe
 ```
 
-### Linux
+> O comando precisa ser executado dentro da pasta `IARA`, porque o jogo procura as imagens e fontes em `code/assets`.
+
+### Para jogar de novo depois
+
+Abra o **MSYS2 UCRT64** e rode:
 
 ```bash
-gcc code/src/*.c -o iara -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
-./iara
+cd IARA
+./iara.exe
 ```
 
-No VS Code, o mesmo processo está na tarefa `run raylib` (`.vscode/tasks.json`).
+Para baixar atualizações do projeto, rode `git pull` dentro da pasta `IARA` e compile de novo (passo 5).
 
-> **Versão para terminal (Unidade 1 de PIF):** a versão em texto, exigida na primeira entrega parcial, ainda está em desenvolvimento. Esta seção será atualizada com os comandos de compilação e execução dela.
+### Problemas comuns
+
+| Mensagem | O que fazer |
+|---|---|
+| `gcc: command not found` | Você abriu o terminal errado. Abra o **MSYS2 UCRT64** |
+| `cannot find -lraylib` ou `raylib.h: No such file` | Rode de novo o comando do passo 3 |
+| `No such file or directory` ao rodar `cd IARA` | Rode o passo 4 antes, ou volte para a pasta com `cd ~` |
+| O jogo abre sem imagens | Você não está dentro da pasta `IARA` |
+
+> **Linux:** não testamos a compilação nesse sistema. Instale `gcc` e `raylib` pelo gerenciador de pacotes e use `gcc code/src/*.c -o iara -lraylib -lGL -lm`.
+
+> **Versão para terminal (PIF, Unidade 1):** a versão em texto ainda está em desenvolvimento. Esta seção será atualizada quando ela estiver pronta.
 
 ## Entregas por disciplina
 
