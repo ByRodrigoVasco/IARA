@@ -66,7 +66,6 @@ gcc code/src/*.c -o iara.exe -lraylib -lopengl32 -lgdi32 -lwinmm
 ```
 Ou, no VS Code com a pasta `IARA` aberta, aperte `Ctrl + Shift + B`: ele compila e já abre o jogo.
 
-
 ### 6. Jogar
 
 ```bash
