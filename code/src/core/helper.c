@@ -1,6 +1,5 @@
-#include "helper.h" // Inclua o header do próprio arquivo
-#include "macros.h"
 #include "helper.h"
+#include "macros.h"
 
 GAME_TEXTURE CreateGameTextureFromTexture2D(Texture2D texture)
 {

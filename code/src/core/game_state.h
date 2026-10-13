@@ -7,15 +7,17 @@
 #include <stdbool.h>
 #include "macros.h"
 
+// Estado geral da partida.
 struct game_state_variables {
-    int current_screen;
-    int current_day;
-    int day_type;
-    bool mode_type;
-    bool user_investigated;
-    bool is_resolved;
+    int current_screen;      // Tela atual (PRE_MENU_SCREEN, MENU_SCREEN, ...)
+    int current_day;         // Dia atual do jogo
+    int day_type;            // Tipo do dia (PLAYABLE_DAY, FLASH_DAY, JUMP_DAY)
+    bool mode_type;          // Modo de resolução escolhido (manual ou automático)
+    bool user_investigated;  // Se o jogador investigou antes de responder
+    bool is_resolved;        // Se a tarefa do dia foi resolvida
 };
 
+// Estatísticas ocultas que definem o final do jogo.
 struct hidden_statistic {
     signed int current_overall_points;
     unsigned int current_automation_points;

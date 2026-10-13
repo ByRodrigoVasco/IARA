@@ -3,7 +3,11 @@
     {
       "name": "Win32",
       "includePath": [
-        "${workspaceFolder}/**",
+        "${workspaceFolder}/code/src",
+        "${workspaceFolder}/code/src/core",
+        "${workspaceFolder}/code/src/screens",
+        "${workspaceFolder}/code/src/ui",
+        "${workspaceFolder}/code/src/game",
         "C:/msys64/ucrt64/include"
       ],
       "compilerPath": "C:/msys64/ucrt64/bin/gcc.exe",

@@ -7,8 +7,14 @@
             "command": "gcc",
             "args": [
                 "${workspaceFolder}/code/src/*.c",
+                "${workspaceFolder}/code/src/*/*.c",
+                "-I", "${workspaceFolder}/code/src",
+                "-I", "${workspaceFolder}/code/src/core",
+                "-I", "${workspaceFolder}/code/src/screens",
+                "-I", "${workspaceFolder}/code/src/ui",
+                "-I", "${workspaceFolder}/code/src/game",
                 "-o",
-                "${workspaceFolder}/code/src/iara.exe",
+                "${workspaceFolder}/iara.exe",
                 "-I", "C:/msys64/ucrt64/include",
                 "-L", "C:/msys64/ucrt64/lib",
                 "-lraylib", "-lopengl32", "-lgdi32", "-lwinmm"
@@ -18,7 +24,8 @@
         {
             "label": "run raylib",
             "type": "shell",
-            "command": "${workspaceFolder}/code/src/iara.exe",
+            "command": "${workspaceFolder}/iara.exe",
+            "options": { "cwd": "${workspaceFolder}" },
             "dependsOn": "build raylib",
             "group": { "kind": "build", "isDefault": true },
             "problemMatcher": []
