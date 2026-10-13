@@ -1,5 +1,4 @@
 #include <time.h>
-#include <stdio.h>
 #include <math.h> // Necessário para operações matemáticas avançadas, como a função sin() usada na animação do indicador
 
 #include "raylib.h"
@@ -292,7 +291,7 @@ void handle_calendar_day_card(void)
         break;
 
     default:
-        printf("----------CURRENT CALENDAR DAY STATE INCORRECT----------\n");
+        // Estado inválido do cartão do dia: nada a desenhar
         break;
     }
 }
@@ -322,7 +321,6 @@ void handle_map_interactables(void)
         if (IsKeyPressed(KEY_SPACE))
         {
             enter_computer_screen = true;
-            printf("Computer screen...\n");
         }
     }
 }
