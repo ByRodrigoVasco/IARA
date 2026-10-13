@@ -59,9 +59,9 @@ static DialogStep sequence[] = {
         .type = STEP_STATEMENT,
         .lines = {
             "Bem-vindo(a) à CISSA, Estagiário.",
-            "Antes de libertar as tuas tarefas preciso",
-            "de te apresentar como trabalhamos por aqui.",
-            "Isto leva menos de dois minutos!"
+            "Antes de liberar suas tarefas, preciso",
+            "apresentar como trabalhamos por aqui.",
+            "Isso leva menos de dois minutos!"
         },
         .line_count = 4,
         .button_name = "Continuar"
@@ -371,7 +371,7 @@ void render_current_step(void)
             }
         }
 
-        // Se o utilizador respondeu, desenhamos o botão "Continuar" abaixo de todas as opções
+        // Se o usuário respondeu, desenhamos o botão "Continuar" abaixo de todas as opções
         if (current_quiz_answered)
         {
             float cont_button_width  = win_w * 0.30f;
