@@ -16,6 +16,33 @@ as inconsistências. Assim, a mecânica ensina ao mesmo tempo ética em IA e ló
 - **Regras puras:** Haskell, para os módulos de lógica, validação de respostas e seleção de conteúdo.
 - **Versionamento:** GitHub, com fluxo de branches e Pull Requests descrito no [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
+## Como compilar e executar
+
+Todos os comandos devem ser executados **na raiz do repositório**, porque o jogo carrega os assets por caminhos relativos (`code/assets/...`).
+
+### Requisitos
+
+- Compilador `gcc` (no Windows, via [MSYS2](https://www.msys2.org/) UCRT64).
+- Biblioteca [raylib](https://www.raylib.com/): no MSYS2, `pacman -S mingw-w64-ucrt-x86_64-raylib`; no Linux, o pacote `raylib` da sua distribuição.
+
+### Windows (MSYS2 UCRT64)
+
+```bash
+gcc code/src/*.c -o iara.exe -I C:/msys64/ucrt64/include -L C:/msys64/ucrt64/lib -lraylib -lopengl32 -lgdi32 -lwinmm
+./iara.exe
+```
+
+### Linux
+
+```bash
+gcc code/src/*.c -o iara -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
+./iara
+```
+
+No VS Code, o mesmo processo está na tarefa `run raylib` (`.vscode/tasks.json`).
+
+> **Versão para terminal (Unidade 1 de PIF):** a versão em texto, exigida na primeira entrega parcial, ainda está em desenvolvimento. Esta seção será atualizada com os comandos de compilação e execução dela.
+
 ## Backlog e board
 
 ![Backlog](docs/assets/entregas/backlog.jpeg)
@@ -35,6 +62,16 @@ as inconsistências. Assim, a mecânica ensina ao mesmo tempo ética em IA e ló
    <img src="docs/screencast/Thumbnail versao pre-alpha (nucleo em c).png" width="800" alt="Watch the video" />
 </a>
  
+## Artefatos das disciplinas
+
+| Disciplina / frente | Artefato |
+|---|---|
+| Gestão ágil | [Board e backlog no Trello](https://trello.com/b/ifJwhbVe/iara-projeto-integrador-squad-8) |
+| Design | [Protótipos lo-fi no Figma](https://www.figma.com/design/DpnmgBif3vJcn336pefbpa/IARA---PROTOTIPO-FDS?node-id=0-1&t=vm69jod3fxAtJGjN-1) e [documentação dos protótipos](docs/prototipos-lofi/README.md) |
+| Engenharia de software | [Diagramas de atividade por história de usuário](docs/diagramas-atividade/README.md) e [guia de contribuição](CONTRIBUTING.md) |
+| Programação imperativa (C) | Código-fonte em [`code/src`](code/src) |
+| Programação funcional (Haskell) | A definir: o módulo de regras ainda não foi adicionado ao repositório |
+
 ## Documentação
 
 - **Diagramas de atividade:** um diagrama UML por história de usuário, traduzindo os critérios de aceitação em fluxo. Ver [`docs/diagramas-atividade/README.md`](docs/diagramas-atividade/README.md).
