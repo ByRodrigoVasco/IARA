@@ -10,6 +10,9 @@ int mouse_is_hovering = NONE;
 
 bool is_menu_to_close = false;
 
+// Opção atualmente destacada no menu (INICIAR, CREDITOS ou SAIR).
+static int selected_menu_option = INICIAR;
+
 static bool menu_fade_in_finished = false;
 // ESSE "0" REPRESENTA O "ALPHA CHANNEL" QUE SERVE COMO OPACIDADE.
 // PARA FAZER A ANIMAÇÃO DE FADE IN, TODOS OS OBJETOS RECEBERIAM ESSA COR PARA FAZER O FADE IN JUNTOS.
@@ -77,6 +80,7 @@ void initialize_menu_variables(void)
     is_menu_to_close = false;
     next_screen = NONE;
     mouse_is_hovering = NONE;
+    selected_menu_option = INICIAR;
 
     initialize_menu_textures();
 
@@ -95,6 +99,22 @@ void initialize_menu_variables(void)
     iniciar_text_rectangle = (Rectangle){iniciar_text_target_position.x, iniciar_text_target_position.y, iniciar_text_size.x, iniciar_text_size.y};
     creditos_text_rectangle = (Rectangle){creditos_text_target_position.x, creditos_text_target_position.y, creditos_text_size.x, creditos_text_size.y};
     sair_text_rectangle = (Rectangle){sair_text_target_position.x, sair_text_target_position.y, sair_text_size.x, sair_text_size.y};
+}
+
+// Move a seleção para a opção seguinte (direction = 1) ou anterior (direction = -1),
+// voltando ao início/fim da lista ao ultrapassar os limites.
+static void move_menu_selection(int direction)
+{
+    selected_menu_option += direction;
+
+    if (selected_menu_option > SAIR)
+    {
+        selected_menu_option = INICIAR;
+    }
+    else if (selected_menu_option < INICIAR)
+    {
+        selected_menu_option = SAIR;
+    }
 }
 
 bool check_mouse_hover(Rectangle collision_rectangle)
