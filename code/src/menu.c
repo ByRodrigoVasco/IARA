@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 #include "raylib.h"
 #include "macros.h"
 #include "fonts.h"
@@ -97,8 +95,6 @@ void initialize_menu_variables(void)
 
     // COLOQUEI + 40 NO MEIO PARA FICAR MAIS ABAIXO DO NOME IARA
     float start_y = middle_screen_y; // middle_screen_y - (total_menu_height / 2.0f);
-
-    printf("------------%d------------\n", middle_screen_y);
 
     iniciar_text_target_position = (Vector2){TEXT_HORIZONTAL_MARGIN, start_y};
     creditos_text_target_position = (Vector2){TEXT_HORIZONTAL_MARGIN, iniciar_text_target_position.y + iniciar_text_size.y + TEXT_VERTICAL_MARGIN};
