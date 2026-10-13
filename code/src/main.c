@@ -54,9 +54,6 @@ int main(void)
     initialize_game_state_variables();
     initialize_hidden_statistic();
 
-    initialize_game_state_variables();
-    initialize_hidden_statistic();
-
     handle_state_initialization();
 
     current_game_state_variables.current_screen = PRE_MENU_SCREEN;
