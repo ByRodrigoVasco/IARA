@@ -1,15 +1,15 @@
 #include "raylib.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
+#include "animations.h"
 
+// Valor máximo do canal alpha (opacidade total)
 #define MAX_ALPHA_CHANNEL_INT 255
 
-void fade_in_texture(unsigned int fadeSpeed, Color *color, bool *is_animation_finished)
+void fade_in_texture(unsigned int fade_speed, Color *color, bool *is_animation_finished)
 {
-    if ((color->a + fadeSpeed) < MAX_ALPHA_CHANNEL_INT)
+    // Sobe o alpha até o limite; ao atingir, sinaliza o fim da animação
+    if ((color->a + fade_speed) < MAX_ALPHA_CHANNEL_INT)
     {
-        color->a += fadeSpeed;
+        color->a += fade_speed;
     }
     else
     {
@@ -17,11 +17,12 @@ void fade_in_texture(unsigned int fadeSpeed, Color *color, bool *is_animation_fi
     }
 }
 
-void fade_out_texture(unsigned int fadeSpeed, Color *color, bool *is_animation_finished)
+void fade_out_texture(unsigned int fade_speed, Color *color, bool *is_animation_finished)
 {
-    if (color->a > fadeSpeed)
+    // Desce o alpha até zero; ao atingir, sinaliza o fim da animação
+    if (color->a > fade_speed)
     {
-        color->a -= fadeSpeed;
+        color->a -= fade_speed;
     }
     else
     {
