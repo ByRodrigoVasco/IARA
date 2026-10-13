@@ -60,8 +60,6 @@ void handle_state_machine(void)
         {
             current_game_state_variables.current_screen = handle_menu_action(next_screen);
 
-            initialize_game_loop_variables();
-
             unload_menu();
         }
         break;
