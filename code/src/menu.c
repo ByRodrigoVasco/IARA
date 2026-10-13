@@ -135,7 +135,16 @@ bool check_mouse_hover(Rectangle collision_rectangle)
     return false;
 }
 
-// Lê as teclas de navegação: seta para cima ou W sobe; seta para baixo ou S desce.
+// Confirma a opção selecionada: guarda a escolha e sinaliza o fechamento do menu.
+static void confirm_menu_option(void)
+{
+    SetMouseCursor(MOUSE_CURSOR_ARROW);
+    next_screen = selected_menu_option;
+    is_menu_to_close = true;
+}
+
+// Lê as teclas do menu: seta para cima ou W sobe; seta para baixo ou S desce;
+// Enter ou Espaço confirmam a opção.
 static void handle_keyboard_navigation(void)
 {
     if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S))
@@ -146,6 +155,11 @@ static void handle_keyboard_navigation(void)
     if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W))
     {
         move_menu_selection(-1);
+    }
+
+    if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE))
+    {
+        confirm_menu_option();
     }
 }
 
