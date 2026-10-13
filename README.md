@@ -50,7 +50,7 @@ No VS Code, o mesmo processo está na tarefa `run raylib` (`.vscode/tasks.json`)
 |---|---|
 | [FDS: Fundamentos de Desenvolvimento de Software](docs/fds/README.md) | Histórias de usuário, backlog e board; diagramas de atividade, protótipos lo-fi e screencast; sprints com versionamento e testes; `CONTRIBUTING.md` |
 | [PIF: Programação Imperativa e Funcional](docs/pif/README.md) | Núcleo do jogo em C (menu, game loop, missão de quiz jogável) e regras puras em Haskell |
-| [IHC: Interação Humano-Computador](docs/ihc/README.md) | Personas, protótipo lo-fi, avaliação heurística (Nielsen), critérios de usabilidade e acessibilidade |
+| [IHC: Interação Humano-Computador](docs/ihc/README.md) | Personas, protótipo lo-fi e seu screencast, avaliação heurística (Nielsen), critérios de usabilidade e acessibilidade |
 | [LMC: Lógica para Computação](docs/lmc/README.md) | Especificação lógica das regras do jogo e puzzles que exercitem conceitos reais de lógica clássica |
 
 ## Squad
