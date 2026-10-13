@@ -48,10 +48,10 @@ No VS Code, o mesmo processo está na tarefa `run raylib` (`.vscode/tasks.json`)
 
 | Disciplina | O que se espera no projeto |
 |---|---|
-| **[FDS](docs/fds/README.md)**<br>Fundamentos de Desenvolvimento de Software | • Histórias de usuário, backlog e board<br>• Diagramas de atividade<br>• Protótipos lo-fi e screencast<br>• Sprints com versionamento e testes<br>• `CONTRIBUTING.md` |
-| **[PIF](docs/pif/README.md)**<br>Programação Imperativa e Funcional | • Núcleo do jogo em C (menu, game loop, quiz jogável)<br>• Regras puras em Haskell |
-| **[IHC](docs/ihc/README.md)**<br>Interação Humano-Computador | • Personas<br>• Protótipo lo-fi e screencast<br>• Avaliação heurística (Nielsen)<br>• Critérios de usabilidade e acessibilidade |
-| **[LMC](docs/lmc/README.md)**<br>Lógica para Computação | • Especificação lógica das regras do jogo<br>• Puzzles de lógica clássica |
+| **FDS**<br>[Fundamentos de Desenvolvimento de Software](docs/fds/README.md) | • Histórias de usuário, backlog e board<br>• Diagramas de atividade<br>• Protótipos lo-fi e screencast<br>• Sprints com versionamento e testes<br>• `CONTRIBUTING.md` |
+| **PIF**<br>[Programação Imperativa e Funcional](docs/pif/README.md) | • Núcleo do jogo em C (menu, game loop, quiz jogável)<br>• Regras puras em Haskell |
+| **IHC**<br>[Interação Humano-Computador](docs/ihc/README.md) | • Personas<br>• Protótipo lo-fi e screencast<br>• Avaliação heurística (Nielsen)<br>• Critérios de usabilidade e acessibilidade |
+| **LMC**<br>[Lógica para Computação](docs/lmc/README.md) | • Especificação lógica das regras do jogo<br>• Puzzles de lógica clássica |
 
 ## Squad
  
