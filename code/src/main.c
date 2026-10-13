@@ -1,46 +1,67 @@
-#include "raylib.h"
 #include <stdio.h>
-#include <stdlib.h>
-#include "game_state.h"
-#include "state_machine.h"
 
-#define WINDOW_WIDTH 1024
-#define WINDOW_HEIGHT 576
+#include "state_machine.h"
+#include "game_state.h"
+#include "pre_menu.h"
+#include "menu.h"
+#include "fonts.h"
+#include "macros.h"
+
+unsigned int screen_width = 0;
+unsigned int screen_height = 0;
+unsigned int middle_screen_x = 0;
+unsigned int middle_screen_y = 0;
+
+int monitor_id = 0;
 
 const char *title = "IARA";
 
-int main(void) {
-    InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, title);
+int main(void)
+{
+    /* Infelizmente Raylib não tem um método para pegar a "screen width e height"
+     *  antes de inicializar a janela. A solução é colocar o InitWindow com 0 para
+     *  width e height por que o próprio raylib (por baixo dos panos) pegará o tamanho
+     *  nativo da tela. Aí logo depois nós extraimos o tamanho horizontal e vertical da tela.
+     */
+    InitWindow(0, 0, IARA_TITLE);
 
+    monitor_id = GetCurrentMonitor();
+
+    screen_width = GetMonitorWidth(monitor_id);
+    screen_height = GetMonitorHeight(monitor_id);
+
+    middle_screen_x = screen_width / 2;
+    middle_screen_y = screen_height / 2;
+
+    printf("screen_width = %d\n", screen_width);
+    printf("screen_height = %d\n", screen_height);
+    printf("middle_screen_x = %d\n", middle_screen_x);
+    printf("middle_screen_Y = %d\n", middle_screen_y);
+
+    ToggleBorderlessWindowed();
+    
     SetTargetFPS(60);
 
-    const char *text_in_middle = "Let's begin developing xD";
-    int text_in_middle_font_size = 30;
-
-    int textWidth = MeasureText(text_in_middle, text_in_middle_font_size);
-
-    int text_posX = (WINDOW_WIDTH - textWidth) / 2;
-    int text_posY = (WINDOW_HEIGHT - text_in_middle_font_size) / 2;
+    // A ORDEM IMPORTA. NÃO MUDE.
+    initialize_fonts();
+    
+    initialize_menu_variables();
+    initialize_game_state_variables();
+    initialize_hidden_statistic();
 
     initialize_game_state_variables();
     initialize_hidden_statistic();
 
-    while (!WindowShouldClose()) {
-        BeginDrawing();
-            ClearBackground(RAYWHITE);
-            DrawText(TextFormat("Dia atual: %d", current_game_state_variables.current_day), 512, 288, text_in_middle_font_size, GRAY);
-            DrawText(TextFormat("Pontos atuais: %d", current_hidden_statistic.current_overall_points), 400, 200, text_in_middle_font_size, GRAY);
-        EndDrawing();
+    handle_state_initialization();
 
+    current_game_state_variables.current_screen = PRE_MENU_SCREEN;
+
+    while (!WindowShouldClose())
+    {
         handle_state_machine();
-
-        current_game_state_variables.current_screen++;
-
-        if (current_game_state_variables.current_screen > JUMPING) {
-            current_game_state_variables.current_screen = PRE_MENU;
-        }
     }
 
+    unload_fonts();
     CloseWindow();
     return 0;
 }
