@@ -30,6 +30,8 @@ int main(void)
     screen_width = GetMonitorWidth(monitor_id);
     screen_height = GetMonitorHeight(monitor_id);
 
+    SetWindowSize(screen_width, screen_height);
+
     middle_screen_x = screen_width / 2;
     middle_screen_y = screen_height / 2;
 
@@ -37,8 +39,6 @@ int main(void)
     printf("screen_height = %d\n", screen_height);
     printf("middle_screen_x = %d\n", middle_screen_x);
     printf("middle_screen_Y = %d\n", middle_screen_y);
-
-    ToggleBorderlessWindowed();
     
     SetTargetFPS(60);
 
