@@ -29,8 +29,6 @@
 #define AWAIT 2         // O texto fica 100% visível aguardando o tempo limite especificado
 #define FADING_OUT 3    // O texto está desaparecendo gradualmente (Reduzindo Alpha)
 
-#define NO_KEY_PRESSED 0 // Constante auxiliar para indicar ausência de entrada do teclado
-
 // ============================================================================
 // VALORES DE REFERÊNCIA PARA SUPORTE A MÚLTIPLAS RESOLUÇÕES (RESPONSIVIDADE)
 // Todos os cálculos de tamanho e offset tomam como base a resolução 1920x1080 (1080p)
@@ -53,8 +51,6 @@
 // ============================================================================
 // VARIÁVEIS ESTÁTICAS DE CONTROLE E ESTADO
 // ============================================================================
-static bool animation_finished = false;                  // Flag global para controle de finalização de transições
-static int current_key_pressed = NO_KEY_PRESSED;         // Armazena a tecla pressionada atualmente
 static int current_calendar_day_state = NONE;             // Estado atual da animação da tela do cartão narrativo
 static bool render_calendar_day_card_finished = false;   // Indica se toda a sequência do cartão narrativo terminou
 static int current_screen = SCREEN_NONE;                  // Armazena qual tela do jogo está sendo processada no momento
