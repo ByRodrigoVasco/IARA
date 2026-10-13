@@ -1,13 +1,9 @@
 #include "raylib.h"
+#include "menu.h"
 #include "macros.h"
 #include "fonts.h"
 #include "helper.h"
 #include "animations.h"
-
-#define NONE 0
-#define INICIAR 1
-#define CREDITOS 2
-#define SAIR 3
 
 int next_screen = NONE;
 int mouse_is_hovering = NONE;
