@@ -7,6 +7,7 @@
 #include "fonts.h"
 #include "animations.h"
 #include "characters.h"
+#include "collisions.h"
 #include "computer_loop.h"
 
 // Valor de sentinela para indicar que o temporizador do cartão de introdução ainda não começou a contar
@@ -130,12 +131,11 @@ static float get_player_size(void)
  */
 static Rectangle get_computer_collision_rectangle(void)
 {
-    float scale = get_scale();
-    return (Rectangle){
-        GetScreenWidth() / 2.0f + COMPUTER_OFFSET_X_AT_REFERENCE * scale,
-        GetScreenHeight() / 2.0f + COMPUTER_OFFSET_Y_AT_REFERENCE * scale,
-        COMPUTER_SIZE_AT_REFERENCE * scale,
-        COMPUTER_SIZE_AT_REFERENCE * scale};
+    Rectangle reference = {COMPUTER_OFFSET_X_AT_REFERENCE, COMPUTER_OFFSET_Y_AT_REFERENCE,
+                           COMPUTER_SIZE_AT_REFERENCE, COMPUTER_SIZE_AT_REFERENCE};
+    Vector2 screen_center = {GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f};
+
+    return scale_reference_rect(reference, get_scale(), screen_center);
 }
 
 /**
@@ -146,13 +146,10 @@ static Rectangle get_computer_collision_rectangle(void)
  */
 void update_collision_rec(void)
 {
-    float scale = get_scale();
+    Rectangle reference = {HITBOX_OFFSET_X_AT_REFERENCE, HITBOX_OFFSET_Y_AT_REFERENCE,
+                           HITBOX_WIDTH_AT_REFERENCE, HITBOX_HEIGHT_AT_REFERENCE};
 
-    estagiario_collision_rec = (Rectangle){
-        current_estagiario_position.x + HITBOX_OFFSET_X_AT_REFERENCE * scale,
-        current_estagiario_position.y + HITBOX_OFFSET_Y_AT_REFERENCE * scale,
-        HITBOX_WIDTH_AT_REFERENCE * scale,
-        HITBOX_HEIGHT_AT_REFERENCE * scale};
+    estagiario_collision_rec = scale_reference_rect(reference, get_scale(), current_estagiario_position);
 }
 
 /**
