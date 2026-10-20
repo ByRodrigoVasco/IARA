@@ -88,6 +88,7 @@ static Texture2D current_estagiario_texture_direction;   // Textura atual basead
 static Rectangle map_collision_rec;                      // Limites físicos das paredes do mapa
 static Rectangle estagiario_computer_collision_rectangle; // Área de gatilho para interagir com o computador
 static Rectangle estagiario_collision_rec;               // Hitbox atualizada dinamicamente do jogador
+static bool show_debug_hitboxes = false;                 // Modo debug (F1): desenha as hitboxes de colisão
 
 // ---------------------------------------------------------------------------
 // FUNÇÕES DE REDIMENSIONAMENTO E ESCALA DINÂMICA
@@ -384,6 +385,9 @@ void handle_player_input(void)
     int dx = 0;
     int dy = 0;
 
+    // F1 liga e desliga o modo debug das hitboxes
+    if (IsKeyPressed(KEY_F1)) show_debug_hitboxes = !show_debug_hitboxes;
+
     // Leitura das teclas de navegação (Suporta tanto WASD quanto as Setas Direcionais)
     if (IsKeyDown(KEY_W) || IsKeyDown(KEY_UP))    dy -= 1;
     if (IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN))  dy += 1;
@@ -440,6 +444,19 @@ void render_player(void)
     // Desenha a textura na tela com suporte a tint de opacidade (color_to_fade)
     DrawTexturePro(current_estagiario_texture_direction, source, dest,
                    (Vector2){0, 0}, 0.0f, color_to_fade);
+}
+
+/**
+ * @brief Desenha o contorno das hitboxes de colisão quando o modo debug (F1) está ligado.
+ */
+void render_debug_hitboxes(void)
+{
+    if (!show_debug_hitboxes) return;
+
+    DrawRectangleLinesEx(map_collision_rec, 2.0f, RED);                           // Limite do mapa
+    DrawRectangleLinesEx(estagiario_computer_collision_rectangle, 2.0f, YELLOW);  // Zona do computador
+    DrawRectangleLinesEx(estagiario_collision_rec, 2.0f, GREEN);                  // Jogador
+    // TODO (próximos passos): desenhar aqui os retângulos dos obstáculos
 }
 
 /**
@@ -609,6 +626,7 @@ void handle_game_loop_screens(void)
         render_player();
         render_control_tips();
         render_interact_arrow();
+        render_debug_hitboxes();
 
         // Se a interação com o computador foi acionada, realiza a transição por Fade Out
         if (enter_computer_screen)
