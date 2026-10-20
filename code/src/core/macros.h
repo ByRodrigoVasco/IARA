@@ -92,6 +92,7 @@ extern unsigned int middle_screen_y;
 
 // ESTAGIARIO (PLAYER PRINCIPAL)
 #define ESTAGIARIO_1_EAST_PATH          PERSONAGENS_PATH "Estagiarios/east.png"
+#define ESTAGIARIO_1_WALK_EAST_PATH     PERSONAGENS_PATH "Estagiarios/walk/east-%d.png" // %d = número do frame
 #define ESTAGIARIO_1_NORTHEAST_PATH     PERSONAGENS_PATH "Estagiarios/north-east.png"
 #define ESTAGIARIO_1_NORTH_PATH         PERSONAGENS_PATH "Estagiarios/north.png"
 #define ESTAGIARIO_1_NORTHWEST_PATH     PERSONAGENS_PATH "Estagiarios/north-west.png"

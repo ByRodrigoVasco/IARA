@@ -24,4 +24,23 @@ typedef Texture2D char_textures[DIRECTION_COUNT];
  */
 void initialize_estagiario_1_textures(char_textures out);
 
+#define WALK_FRAME_COUNT 4       // Quantidade de frames da animação de andar
+#define WALK_FRAME_TIME 0.12f    // Segundos que cada frame do andar fica na tela
+
+/**
+ * @brief Informa qual frame do andar mostrar.
+ *
+ * @param walk_time Segundos desde que o jogador começou a andar.
+ * @return Índice do frame, de 0 a WALK_FRAME_COUNT - 1, repetindo em ciclo.
+ */
+int get_walk_frame(float walk_time);
+
+/**
+ * @brief Carrega os frames do andar do estagiário para o leste e para o oeste.
+ *
+ * @param east Array que recebe os frames do leste.
+ * @param west Array que recebe os frames do oeste (espelho do leste).
+ */
+void initialize_estagiario_1_walk_textures(Texture2D east[WALK_FRAME_COUNT], Texture2D west[WALK_FRAME_COUNT]);
+
 #endif // CHARACTERS_H
