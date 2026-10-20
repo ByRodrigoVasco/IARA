@@ -87,6 +87,10 @@ static Texture2D arrow_down_texture;     // Seta indicativa flutuante sobre obje
 static char_textures estagiario_texture;                 // Array/Estrutura com as texturas de todas as direções do jogador
 static Vector2 current_estagiario_position;               // Posição cartesiana (X, Y) do jogador na tela
 static Texture2D current_estagiario_texture_direction;   // Textura atual baseada na direção para onde o jogador está olhando
+static int current_direction;                            // Direção atual do jogador (EAST, NORTH...)
+static Texture2D walk_east_textures[WALK_FRAME_COUNT];   // Frames do andar para o leste
+static Texture2D walk_west_textures[WALK_FRAME_COUNT];   // Frames do andar para o oeste (espelho do leste)
+static float walk_time = 0.0f;                           // Segundos andando sem parar (0 = parado)
 
 static Rectangle map_collision_rec;                      // Limites físicos das paredes do mapa
 static Vector2 last_screen_center;                        // Centro da tela no quadro anterior (detecta redimensionamento)
@@ -274,11 +278,13 @@ void initialize_game_loop_variables(void)
 
     // Inicializa o conjunto de sprites direcionais do personagem estagiário
     initialize_estagiario_1_textures(estagiario_texture);
+    initialize_estagiario_1_walk_textures(walk_east_textures, walk_west_textures);
 
     // Define o ponto inicial de surgimento (spawn) do jogador, logo acima da porta de entrada
     current_estagiario_position = (Vector2){
         middle_screen_x + PLAYER_SPAWN_OFFSET_X_AT_REFERENCE * get_scale(),
         middle_screen_y + PLAYER_SPAWN_OFFSET_Y_AT_REFERENCE * get_scale()};
+    current_direction = NORTH;
     current_estagiario_texture_direction = estagiario_texture[NORTH]; // Inicia olhando para o norte (entrando no escritório)
 
     // Guarda centro e escala iniciais para detectar redimensionamento depois
@@ -470,19 +476,23 @@ void handle_player_input(void)
     // Se nenhuma tecla direcional estiver pressionada, interrompe o processamento mantendo a posição
     if (dx == 0 && dy == 0)
     {
+        walk_time = 0.0f;
         update_collision_rec();
         return;
     }
 
-    // Seleção da textura direcional correta com base no vetor combinado (dx, dy)
-    if      (dx == 0 && dy < 0) current_estagiario_texture_direction = estagiario_texture[NORTH];
-    else if (dx == 0 && dy > 0) current_estagiario_texture_direction = estagiario_texture[SOUTH];
-    else if (dx < 0  && dy == 0) current_estagiario_texture_direction = estagiario_texture[WEST];
-    else if (dx > 0  && dy == 0) current_estagiario_texture_direction = estagiario_texture[EAST];
-    else if (dx < 0  && dy < 0) current_estagiario_texture_direction = estagiario_texture[NORTHWEST];
-    else if (dx > 0  && dy < 0) current_estagiario_texture_direction = estagiario_texture[NORTHEAST];
-    else if (dx < 0  && dy > 0) current_estagiario_texture_direction = estagiario_texture[SOUTHWEST];
-    else                        current_estagiario_texture_direction = estagiario_texture[SOUTHEAST];
+    walk_time += GetFrameTime(); // Usa o tempo real do quadro para não depender do FPS
+
+    // Seleção da direção correta com base no vetor combinado (dx, dy)
+    if      (dx == 0 && dy < 0) current_direction = NORTH;
+    else if (dx == 0 && dy > 0) current_direction = SOUTH;
+    else if (dx < 0  && dy == 0) current_direction = WEST;
+    else if (dx > 0  && dy == 0) current_direction = EAST;
+    else if (dx < 0  && dy < 0) current_direction = NORTHWEST;
+    else if (dx > 0  && dy < 0) current_direction = NORTHEAST;
+    else if (dx < 0  && dy > 0) current_direction = SOUTHWEST;
+    else                        current_direction = SOUTHEAST;
+    current_estagiario_texture_direction = estagiario_texture[current_direction];
 
     // Correção de velocidade diagonal (Evita o efeito de ser mais rápido na diagonal devido ao Teorema de Pitágoras)
     if (dx != 0 && dy != 0)
@@ -506,19 +516,39 @@ void render_player(void)
 {
     float size = get_player_size();
 
-    // Retângulo de origem recortando toda a textura direcional atual
-    Rectangle source = {0, 0,
-                        (float)current_estagiario_texture_direction.width,
-                        (float)current_estagiario_texture_direction.height};
+    // Parado desenha a textura da direção; andando troca pelo frame do andar
+    Texture2D texture = current_estagiario_texture_direction;
+    float sway_y = 0.0f;
+
+    if (walk_time > 0)
+    {
+        int frame = get_walk_frame(walk_time);
+
+        if (current_direction == EAST || current_direction == NORTHEAST || current_direction == SOUTHEAST)
+        {
+            texture = walk_east_textures[frame];
+        }
+        else if (current_direction == WEST || current_direction == NORTHWEST || current_direction == SOUTHWEST)
+        {
+            texture = walk_west_textures[frame];
+        }
+        else
+        {
+            // TODO: norte e sul ainda não têm frames; trocar este balanço de 1 px pelos frames reais
+            sway_y = frame % 2;
+        }
+    }
+
+    // Retângulo de origem recortando toda a textura atual
+    Rectangle source = {0, 0, (float)texture.width, (float)texture.height};
     
     // Retângulo de destino definindo onde e com qual tamanho o sprite será desenhado no mundo
     Rectangle dest = {current_estagiario_position.x,
-                      current_estagiario_position.y,
+                      current_estagiario_position.y + sway_y,
                       size, size};
 
     // Desenha a textura na tela com suporte a tint de opacidade (color_to_fade)
-    DrawTexturePro(current_estagiario_texture_direction, source, dest,
-                   (Vector2){0, 0}, 0.0f, color_to_fade);
+    DrawTexturePro(texture, source, dest, (Vector2){0, 0}, 0.0f, color_to_fade);
 }
 
 /**
@@ -660,6 +690,13 @@ void unload_office(void)
     {
         UnloadTexture(estagiario_texture[i]);
     }
+
+    // Frames do andar (leste e oeste)
+    for (int i = 0; i < WALK_FRAME_COUNT; i++)
+    {
+        UnloadTexture(walk_east_textures[i]);
+        UnloadTexture(walk_west_textures[i]);
+    }
 }
 
 /**
@@ -774,5 +811,12 @@ void unload_game_loop(void)
     for (int i = 0; i < DIRECTION_COUNT; i++)
     {
         UnloadTexture(estagiario_texture[i]);
+    }
+
+    // Frames do andar (leste e oeste)
+    for (int i = 0; i < WALK_FRAME_COUNT; i++)
+    {
+        UnloadTexture(walk_east_textures[i]);
+        UnloadTexture(walk_west_textures[i]);
     }
 }
