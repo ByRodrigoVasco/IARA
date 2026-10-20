@@ -94,34 +94,33 @@ static Rectangle estagiario_collision_rec;               // Hitbox atualizada di
 static bool show_debug_hitboxes = false;                 // Modo debug (F1): desenha as hitboxes de colisão
 
 // Obstáculos medidos no mapa de referência (office.png), relativos ao centro da tela
-#define OBSTACLE_COUNT 26  // Quantidade de obstáculos medidos; atualizar ao incluir mais
+#define OBSTACLE_COUNT 25  // Quantidade de obstáculos medidos; atualizar ao incluir mais
 static Rectangle office_obstacles_reference[OBSTACLE_COUNT] = {
-    {-531.0f, -438.0f, 1062.0f, 118.0f},  // parede do topo (banheiros, cozinha, quadro, servidores)
-    {-531.0f, -321.0f, 179.0f, 75.0f},    // banheiros, parte de baixo
-    {-193.0f, -321.0f, 39.0f, 20.0f},     // lixeira
-    {14.0f, -321.0f, 39.0f, 20.0f},       // planta embaixo do quadro
-    {181.0f, -321.0f, 31.0f, 20.0f},      // bebedouro
-    {360.0f, -321.0f, 171.0f, 102.0f},    // sala de servidores, parte de baixo
-    {-531.0f, -246.0f, 144.0f, 114.0f},   // sala do mural
-    {399.0f, -219.0f, 132.0f, 495.0f},    // salas de vidro da direita
-    {-282.0f, -207.0f, 210.0f, 98.0f},    // mesas superior esquerda
-    {53.0f, -207.0f, 218.0f, 98.0f},      // mesas superior direita
-    {-21.0f, -164.0f, 35.0f, 90.0f},      // planta do meio, em cima
-    {-477.0f, -132.0f, 89.0f, 94.0f},     // impressora
-    {-531.0f, -69.0f, 47.0f, 71.0f},      // planta da esquerda, em cima
-    {-286.0f, 49.0f, 218.0f, 102.0f},     // mesas inferior esquerda
-    {53.0f, 49.0f, 218.0f, 98.0f},        // mesas inferior direita
-    {-531.0f, 53.0f, 109.0f, 90.0f},      // estante de livros
-    {-25.0f, 92.0f, 39.0f, 94.0f},        // planta do meio, embaixo
-    {-531.0f, 163.0f, 43.0f, 86.0f},      // planta da esquerda, no meio
-    {-426.0f, 249.0f, 74.0f, 51.0f},      // mesinha do sofá
-    {477.0f, 276.0f, 47.0f, 35.0f},       // planta da direita, embaixo
-    {-531.0f, 288.0f, 47.0f, 39.0f},      // planta da esquerda, embaixo
-    {-64.0f, 300.0f, 124.0f, 35.0f},      // porta de vidro
-    {-173.0f, 312.0f, 86.0f, 24.0f},      // jardineira esquerda
-    {91.0f, 312.0f, 86.0f, 24.0f},        // jardineira direita
-    {-531.0f, 328.0f, 288.0f, 8.0f},      // faixa da parede de baixo, lado esquerdo
-    {-531.0f, 335.0f, 1062.0f, 102.0f}};  // parede de baixo
+    {-531.0f, -438.0f, 1062.0f, 114.0f},  // parede do topo (banheiros, cozinha, quadro, servidores)
+    {-531.0f, -317.0f, 175.0f, 67.0f},    // banheiros, parte de baixo
+    {-189.0f, -317.0f, 31.0f, 12.0f},     // lixeira
+    {18.0f, -317.0f, 31.0f, 12.0f},       // planta embaixo do quadro
+    {185.0f, -317.0f, 23.0f, 12.0f},      // bebedouro
+    {364.0f, -317.0f, 167.0f, 94.0f},     // sala de servidores, parte de baixo
+    {-531.0f, -242.0f, 140.0f, 106.0f},   // sala do mural
+    {403.0f, -215.0f, 128.0f, 487.0f},    // salas de vidro da direita
+    {-272.0f, -197.0f, 190.0f, 78.0f},    // mesas superior esquerda
+    {63.0f, -197.0f, 198.0f, 78.0f},      // mesas superior direita
+    {-13.0f, -156.0f, 19.0f, 74.0f},      // planta do meio, em cima
+    {-473.0f, -128.0f, 81.0f, 86.0f},     // impressora
+    {-531.0f, -65.0f, 43.0f, 63.0f},      // planta da esquerda, em cima
+    {-276.0f, 59.0f, 198.0f, 82.0f},      // mesas inferior esquerda
+    {63.0f, 59.0f, 198.0f, 78.0f},        // mesas inferior direita
+    {-531.0f, 57.0f, 105.0f, 82.0f},      // estante de livros
+    {-17.0f, 100.0f, 23.0f, 78.0f},       // planta do meio, embaixo
+    {-531.0f, 167.0f, 39.0f, 78.0f},      // planta da esquerda, no meio
+    {-422.0f, 253.0f, 66.0f, 43.0f},      // mesinha do sofá
+    {481.0f, 280.0f, 39.0f, 27.0f},       // planta da direita, embaixo
+    {-531.0f, 292.0f, 43.0f, 31.0f},      // planta da esquerda, embaixo
+    {-60.0f, 304.0f, 116.0f, 27.0f},      // porta de vidro
+    {-169.0f, 316.0f, 78.0f, 16.0f},      // jardineira esquerda
+    {95.0f, 316.0f, 78.0f, 16.0f},        // jardineira direita
+    {-531.0f, 339.0f, 1062.0f, 98.0f}};   // parede de baixo
 static Rectangle office_obstacles[OBSTACLE_COUNT];  // Mesmos obstáculos em coordenadas da tela
 
 // ---------------------------------------------------------------------------
