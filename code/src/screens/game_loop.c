@@ -47,6 +47,8 @@
 #define HITBOX_OFFSET_Y_AT_REFERENCE 0.1f   // Distância do topo-esquerdo do sprite até o início da hitbox (Y)
 #define HITBOX_WIDTH_AT_REFERENCE    50.0f  // Largura efetiva da área de colisão do jogador
 #define HITBOX_HEIGHT_AT_REFERENCE   72.0f  // Altura efetiva da área de colisão do jogador
+#define PLAYER_SPAWN_OFFSET_X_AT_REFERENCE -37.0f  // Deslocamento X do spawn a partir do centro da tela
+#define PLAYER_SPAWN_OFFSET_Y_AT_REFERENCE 208.0f  // Deslocamento Y do spawn (logo acima da porta de entrada)
 
 // ============================================================================
 // VARIÁVEIS ESTÁTICAS DE CONTROLE E ESTADO
@@ -246,9 +248,11 @@ void initialize_game_loop_variables(void)
     // Inicializa o conjunto de sprites direcionais do personagem estagiário
     initialize_estagiario_1_textures(estagiario_texture);
 
-    // Define o ponto inicial de surgimento (spawn) do jogador no centro da tela
-    current_estagiario_position = (Vector2){middle_screen_x, middle_screen_y};
-    current_estagiario_texture_direction = estagiario_texture[SOUTH]; // Inicia olhando para o sul (frente)
+    // Define o ponto inicial de surgimento (spawn) do jogador, logo acima da porta de entrada
+    current_estagiario_position = (Vector2){
+        middle_screen_x + PLAYER_SPAWN_OFFSET_X_AT_REFERENCE * get_scale(),
+        middle_screen_y + PLAYER_SPAWN_OFFSET_Y_AT_REFERENCE * get_scale()};
+    current_estagiario_texture_direction = estagiario_texture[NORTH]; // Inicia olhando para o norte (entrando no escritório)
 
     // Define a área delimitadora de colisão do cenário/escritório centralizado na tela
     map_collision_rec = (Rectangle){
