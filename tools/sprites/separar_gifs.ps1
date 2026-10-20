@@ -13,17 +13,20 @@ function Save-Walk($bitmap, $dest) {
 # Torna transparente o branco quase puro ligado às bordas (preenchimento a partir das bordas)
 function Clear-WhiteBackground($bmp, $name) {
     function IsWhite($c) { $c.A -gt 0 -and $c.R -ge 245 -and $c.G -ge 245 -and $c.B -ge 245 }
-    if (-not (IsWhite $bmp.GetPixel(0, 0))) { return }
+    # Começa por todos os pixels das 4 bordas; o laço abaixo ignora os que não são brancos
     $stack = New-Object System.Collections.Stack
-    $stack.Push(@(0, 0))
+    foreach ($x in 0..($bmp.Width - 1)) { $stack.Push(@($x, 0)); $stack.Push(@($x, ($bmp.Height - 1))) }
+    foreach ($y in 0..($bmp.Height - 1)) { $stack.Push(@(0, $y)); $stack.Push(@(($bmp.Width - 1), $y)) }
+    $removed = 0
     while ($stack.Count -gt 0) {
         $p = $stack.Pop(); $x = $p[0]; $y = $p[1]
         if ($x -lt 0 -or $y -lt 0 -or $x -ge $bmp.Width -or $y -ge $bmp.Height) { continue }
         if (-not (IsWhite $bmp.GetPixel($x, $y))) { continue }
         $bmp.SetPixel($x, $y, [System.Drawing.Color]::Transparent)
+        $removed++
         $stack.Push(@(($x + 1), $y)); $stack.Push(@(($x - 1), $y)); $stack.Push(@($x, ($y + 1))); $stack.Push(@($x, ($y - 1)))
     }
-    Write-Host "AVISO: fundo branco removido em $name"
+    if ($removed -gt 0) { Write-Host "AVISO: fundo branco removido em $name" }
 }
 
 foreach ($dir in Get-ChildItem "code/assets/sprites/PERSONAGENS" -Directory) {
