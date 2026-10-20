@@ -91,6 +91,12 @@ static Rectangle estagiario_computer_collision_rectangle; // Área de gatilho pa
 static Rectangle estagiario_collision_rec;               // Hitbox atualizada dinamicamente do jogador
 static bool show_debug_hitboxes = false;                 // Modo debug (F1): desenha as hitboxes de colisão
 
+// Obstáculos medidos no mapa de referência, relativos ao centro da tela (a mesa do jogador).
+// O passo 4 completa esta lista com os outros móveis do escritório.
+static Rectangle office_obstacles_reference[] = {{67.0f, 47.0f, 192.0f, 125.0f}};
+static Rectangle office_obstacles[sizeof(office_obstacles_reference) / sizeof(office_obstacles_reference[0])]; // Mesmos obstáculos em coordenadas da tela
+#define OBSTACLE_COUNT (sizeof(office_obstacles) / sizeof(office_obstacles[0]))
+
 // ---------------------------------------------------------------------------
 // FUNÇÕES DE REDIMENSIONAMENTO E ESCALA DINÂMICA
 // ---------------------------------------------------------------------------
@@ -150,6 +156,19 @@ void update_collision_rec(void)
                            HITBOX_WIDTH_AT_REFERENCE, HITBOX_HEIGHT_AT_REFERENCE};
 
     estagiario_collision_rec = scale_reference_rect(reference, get_scale(), current_estagiario_position);
+}
+
+/**
+ * @brief Converte os obstáculos de referência para a tela atual (a janela pode mudar de tamanho).
+ */
+static void update_obstacle_recs(void)
+{
+    Vector2 screen_center = {GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f};
+
+    for (int i = 0; i < OBSTACLE_COUNT; i++)
+    {
+        office_obstacles[i] = scale_reference_rect(office_obstacles_reference[i], get_scale(), screen_center);
+    }
 }
 
 /**
@@ -414,9 +433,20 @@ void handle_player_input(void)
         speed *= 0.7071f;
     }
 
-    // Aplicação final do deslocamento à posição do jogador
+    // Move um eixo por vez: se bater num obstáculo, desfaz só aquele eixo e o jogador desliza na parede
     current_estagiario_position.x += dx * speed;
+    update_collision_rec();
+    if (collides_with_any(estagiario_collision_rec, office_obstacles, OBSTACLE_COUNT))
+    {
+        current_estagiario_position.x -= dx * speed;
+    }
+
     current_estagiario_position.y += dy * speed;
+    update_collision_rec();
+    if (collides_with_any(estagiario_collision_rec, office_obstacles, OBSTACLE_COUNT))
+    {
+        current_estagiario_position.y -= dy * speed;
+    }
 
     update_collision_rec();
 }
@@ -453,7 +483,11 @@ void render_debug_hitboxes(void)
     DrawRectangleLinesEx(map_collision_rec, 2.0f, RED);                           // Limite do mapa
     DrawRectangleLinesEx(estagiario_computer_collision_rectangle, 2.0f, YELLOW);  // Zona do computador
     DrawRectangleLinesEx(estagiario_collision_rec, 2.0f, GREEN);                  // Jogador
-    // TODO (próximos passos): desenhar aqui os retângulos dos obstáculos
+
+    for (int i = 0; i < OBSTACLE_COUNT; i++)
+    {
+        DrawRectangleLinesEx(office_obstacles[i], 2.0f, ORANGE);                  // Obstáculos
+    }
 }
 
 /**
@@ -608,6 +642,7 @@ void handle_game_loop_screens(void)
     case IN_GAME_SCREEN:
         // Mantém a área de colisão do computador atualizada caso haja redimensionamento de janela
         estagiario_computer_collision_rectangle = get_computer_collision_rectangle();
+        update_obstacle_recs();
 
         // Processa lógica de comandos do jogador, interações e colisões com o mapa
         handle_player_input();
