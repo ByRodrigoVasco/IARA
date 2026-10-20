@@ -11,6 +11,10 @@ int main(void)
     assert(get_walk_frame(WALK_FRAME_TIME * 4.5f) == 0);                // volta ao primeiro
     assert(get_walk_frame(WALK_FRAME_TIME * 5.5f) == 1);                // e segue o ciclo
 
+    // Personagem sem os arquivos: não carrega nada e avisa com false (não precisa de janela)
+    Texture2D frames[WALK_FRAME_COUNT];
+    assert(!load_walk_frames("Inexistente", "east", false, frames));
+
     printf("Todos os testes passaram\n");
     return 0;
 }
