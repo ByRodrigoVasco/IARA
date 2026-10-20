@@ -92,23 +92,34 @@ static Rectangle estagiario_collision_rec;               // Hitbox atualizada di
 static bool show_debug_hitboxes = false;                 // Modo debug (F1): desenha as hitboxes de colisão
 
 // Obstáculos medidos no mapa de referência (office.png), relativos ao centro da tela
-#define OBSTACLE_COUNT 15  // Quantidade de obstáculos medidos; atualizar ao incluir mais
+#define OBSTACLE_COUNT 26  // Quantidade de obstáculos medidos; atualizar ao incluir mais
 static Rectangle office_obstacles_reference[OBSTACLE_COUNT] = {
-    {67.0f, 47.0f, 192.0f, 125.0f},      // mesas do grupo inferior direito (a do jogador)
-    {-271.0f, 49.0f, 192.0f, 125.0f},    // mesas do grupo inferior esquerdo
-    {-271.0f, -206.0f, 192.0f, 136.0f},  // mesas do grupo superior esquerdo
-    {67.0f, -206.0f, 192.0f, 136.0f},    // mesas do grupo superior direito
-    {-21.0f, -163.0f, 32.0f, 85.0f},     // planta grande do meio, em cima
-    {-21.0f, 92.0f, 32.0f, 82.0f},       // planta grande do meio, embaixo
-    {-356.0f, -438.0f, 730.0f, 115.0f},  // parede do topo (cozinha, quadro e bebedouro)
-    {-531.0f, -438.0f, 175.0f, 322.0f},  // banheiros e sala do mural
-    {374.0f, -438.0f, 157.0f, 715.0f},   // sala de servidores e salas de vidro da direita
-    {-531.0f, 310.0f, 1062.0f, 129.0f},  // parede de baixo, porta e jardineiras
-    {-476.0f, -133.0f, 85.0f, 87.0f},    // impressora
-    {-529.0f, 52.0f, 103.0f, 87.0f},     // estante de livros
-    {-491.0f, 167.0f, 200.0f, 127.0f},   // sofá, poltronas e mesinha
-    {-526.0f, -63.0f, 33.0f, 58.0f},     // planta da esquerda, em cima
-    {-526.0f, 157.0f, 33.0f, 83.0f}};    // planta da esquerda, embaixo
+    {-531.0f, -438.0f, 1062.0f, 118.0f},  // parede do topo (banheiros, cozinha, quadro, servidores)
+    {-531.0f, -321.0f, 179.0f, 75.0f},    // banheiros, parte de baixo
+    {-193.0f, -321.0f, 39.0f, 20.0f},     // lixeira
+    {14.0f, -321.0f, 39.0f, 20.0f},       // planta embaixo do quadro
+    {181.0f, -321.0f, 31.0f, 20.0f},      // bebedouro
+    {360.0f, -321.0f, 171.0f, 102.0f},    // sala de servidores, parte de baixo
+    {-531.0f, -246.0f, 144.0f, 114.0f},   // sala do mural
+    {399.0f, -219.0f, 132.0f, 495.0f},    // salas de vidro da direita
+    {-282.0f, -207.0f, 210.0f, 98.0f},    // mesas superior esquerda
+    {53.0f, -207.0f, 218.0f, 98.0f},      // mesas superior direita
+    {-21.0f, -164.0f, 35.0f, 90.0f},      // planta do meio, em cima
+    {-477.0f, -132.0f, 89.0f, 94.0f},     // impressora
+    {-531.0f, -69.0f, 47.0f, 71.0f},      // planta da esquerda, em cima
+    {-286.0f, 49.0f, 218.0f, 102.0f},     // mesas inferior esquerda
+    {53.0f, 49.0f, 218.0f, 98.0f},        // mesas inferior direita
+    {-531.0f, 53.0f, 109.0f, 90.0f},      // estante de livros
+    {-25.0f, 92.0f, 39.0f, 94.0f},        // planta do meio, embaixo
+    {-531.0f, 163.0f, 43.0f, 86.0f},      // planta da esquerda, no meio
+    {-426.0f, 249.0f, 74.0f, 51.0f},      // mesinha do sofá
+    {477.0f, 276.0f, 47.0f, 35.0f},       // planta da direita, embaixo
+    {-531.0f, 288.0f, 47.0f, 39.0f},      // planta da esquerda, embaixo
+    {-64.0f, 300.0f, 124.0f, 35.0f},      // porta de vidro
+    {-173.0f, 312.0f, 86.0f, 24.0f},      // jardineira esquerda
+    {91.0f, 312.0f, 86.0f, 24.0f},        // jardineira direita
+    {-531.0f, 328.0f, 288.0f, 8.0f},      // faixa da parede de baixo, lado esquerdo
+    {-531.0f, 335.0f, 1062.0f, 102.0f}};  // parede de baixo
 static Rectangle office_obstacles[OBSTACLE_COUNT];  // Mesmos obstáculos em coordenadas da tela
 
 // ---------------------------------------------------------------------------
