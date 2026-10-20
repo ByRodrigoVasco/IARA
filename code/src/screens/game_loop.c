@@ -90,6 +90,10 @@ static Texture2D current_estagiario_texture_direction;   // Textura atual basead
 static int current_direction;                            // Direção atual do jogador (EAST, NORTH...)
 static Texture2D walk_east_textures[WALK_FRAME_COUNT];   // Frames do andar para o leste
 static Texture2D walk_west_textures[WALK_FRAME_COUNT];   // Frames do andar para o oeste (espelho do leste)
+static Texture2D walk_north_textures[WALK_FRAME_COUNT];  // Frames do andar para o norte (se existirem)
+static Texture2D walk_south_textures[WALK_FRAME_COUNT];  // Frames do andar para o sul (se existirem)
+static bool has_walk_north = false;                      // true se os frames do norte foram carregados
+static bool has_walk_south = false;                      // true se os frames do sul foram carregados
 static float walk_time = 0.0f;                           // Segundos andando sem parar (0 = parado)
 
 static Rectangle map_collision_rec;                      // Limites físicos das paredes do mapa
@@ -278,7 +282,10 @@ void initialize_game_loop_variables(void)
 
     // Inicializa o conjunto de sprites direcionais do personagem estagiário
     initialize_estagiario_1_textures(estagiario_texture);
-    initialize_estagiario_1_walk_textures(walk_east_textures, walk_west_textures);
+    load_walk_frames("Estagiarios", "east", false, walk_east_textures);
+    load_walk_frames("Estagiarios", "east", true, walk_west_textures);
+    has_walk_north = load_walk_frames("Estagiarios", "north", false, walk_north_textures);
+    has_walk_south = load_walk_frames("Estagiarios", "south", false, walk_south_textures);
 
     // Define o ponto inicial de surgimento (spawn) do jogador, logo acima da porta de entrada
     current_estagiario_position = (Vector2){
@@ -532,9 +539,17 @@ void render_player(void)
         {
             texture = walk_west_textures[frame];
         }
+        else if (current_direction == NORTH && has_walk_north)
+        {
+            texture = walk_north_textures[frame];
+        }
+        else if (current_direction == SOUTH && has_walk_south)
+        {
+            texture = walk_south_textures[frame];
+        }
         else
         {
-            // TODO: norte e sul ainda não têm frames; trocar este balanço de 1 px pelos frames reais
+            // TODO: sem frames de norte/sul para este personagem; trocar o balanço de 1 px pelos frames reais
             sway_y = frame % 2;
         }
     }
@@ -696,6 +711,8 @@ void unload_office(void)
     {
         UnloadTexture(walk_east_textures[i]);
         UnloadTexture(walk_west_textures[i]);
+        UnloadTexture(walk_north_textures[i]);
+        UnloadTexture(walk_south_textures[i]);
     }
 }
 
@@ -818,5 +835,7 @@ void unload_game_loop(void)
     {
         UnloadTexture(walk_east_textures[i]);
         UnloadTexture(walk_west_textures[i]);
+        UnloadTexture(walk_north_textures[i]);
+        UnloadTexture(walk_south_textures[i]);
     }
 }

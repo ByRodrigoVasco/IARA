@@ -1,6 +1,7 @@
 #ifndef CHARACTERS_H
 #define CHARACTERS_H
 
+#include <stdbool.h>
 #include "raylib.h"
 
 // Índices das direções nas texturas do personagem (ver char_textures).
@@ -36,11 +37,16 @@ void initialize_estagiario_1_textures(char_textures out);
 int get_walk_frame(float walk_time);
 
 /**
- * @brief Carrega os frames do andar do estagiário para o leste e para o oeste.
+ * @brief Carrega os 4 frames do andar de um personagem em uma direção.
  *
- * @param east Array que recebe os frames do leste.
- * @param west Array que recebe os frames do oeste (espelho do leste).
+ * Lê PERSONAGENS/<character>/walk/<direction>-<n>.png. Só carrega se os 4 arquivos existirem.
+ *
+ * @param character Nome da pasta do personagem (ex.: "Estagiarios").
+ * @param direction "east", "north" ou "south".
+ * @param mirror true para espelhar na horizontal (gera o oeste a partir do leste).
+ * @param frames Array que recebe os frames.
+ * @return true se carregou, false se faltou algum arquivo.
  */
-void initialize_estagiario_1_walk_textures(Texture2D east[WALK_FRAME_COUNT], Texture2D west[WALK_FRAME_COUNT]);
+bool load_walk_frames(const char *character, const char *direction, bool mirror, Texture2D frames[WALK_FRAME_COUNT]);
 
 #endif // CHARACTERS_H
