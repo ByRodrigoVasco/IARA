@@ -91,10 +91,24 @@ static Rectangle estagiario_computer_collision_rectangle; // Área de gatilho pa
 static Rectangle estagiario_collision_rec;               // Hitbox atualizada dinamicamente do jogador
 static bool show_debug_hitboxes = false;                 // Modo debug (F1): desenha as hitboxes de colisão
 
-// Obstáculos medidos no mapa de referência, relativos ao centro da tela (a mesa do jogador).
-// O passo 4 completa esta lista com os outros móveis do escritório.
-#define OBSTACLE_COUNT 1  // Quantidade de obstáculos medidos; atualizar ao incluir mais
-static Rectangle office_obstacles_reference[OBSTACLE_COUNT] = {{67.0f, 47.0f, 192.0f, 125.0f}};
+// Obstáculos medidos no mapa de referência (office.png), relativos ao centro da tela
+#define OBSTACLE_COUNT 15  // Quantidade de obstáculos medidos; atualizar ao incluir mais
+static Rectangle office_obstacles_reference[OBSTACLE_COUNT] = {
+    {67.0f, 47.0f, 192.0f, 125.0f},      // mesas do grupo inferior direito (a do jogador)
+    {-271.0f, 49.0f, 192.0f, 125.0f},    // mesas do grupo inferior esquerdo
+    {-271.0f, -206.0f, 192.0f, 136.0f},  // mesas do grupo superior esquerdo
+    {67.0f, -206.0f, 192.0f, 136.0f},    // mesas do grupo superior direito
+    {-21.0f, -163.0f, 32.0f, 85.0f},     // planta grande do meio, em cima
+    {-21.0f, 92.0f, 32.0f, 82.0f},       // planta grande do meio, embaixo
+    {-356.0f, -438.0f, 730.0f, 115.0f},  // parede do topo (cozinha, quadro e bebedouro)
+    {-531.0f, -438.0f, 175.0f, 322.0f},  // banheiros e sala do mural
+    {374.0f, -438.0f, 157.0f, 715.0f},   // sala de servidores e salas de vidro da direita
+    {-531.0f, 310.0f, 1062.0f, 129.0f},  // parede de baixo, porta e jardineiras
+    {-476.0f, -133.0f, 85.0f, 87.0f},    // impressora
+    {-529.0f, 52.0f, 103.0f, 87.0f},     // estante de livros
+    {-491.0f, 167.0f, 200.0f, 127.0f},   // sofá, poltronas e mesinha
+    {-526.0f, -63.0f, 33.0f, 58.0f},     // planta da esquerda, em cima
+    {-526.0f, 157.0f, 33.0f, 83.0f}};    // planta da esquerda, embaixo
 static Rectangle office_obstacles[OBSTACLE_COUNT];  // Mesmos obstáculos em coordenadas da tela
 
 // ---------------------------------------------------------------------------
