@@ -93,9 +93,9 @@ static bool show_debug_hitboxes = false;                 // Modo debug (F1): des
 
 // Obstáculos medidos no mapa de referência, relativos ao centro da tela (a mesa do jogador).
 // O passo 4 completa esta lista com os outros móveis do escritório.
-static Rectangle office_obstacles_reference[] = {{67.0f, 47.0f, 192.0f, 125.0f}};
-static Rectangle office_obstacles[sizeof(office_obstacles_reference) / sizeof(office_obstacles_reference[0])]; // Mesmos obstáculos em coordenadas da tela
-#define OBSTACLE_COUNT (sizeof(office_obstacles) / sizeof(office_obstacles[0]))
+#define OBSTACLE_COUNT 1  // Quantidade de obstáculos medidos; atualizar ao incluir mais
+static Rectangle office_obstacles_reference[OBSTACLE_COUNT] = {{67.0f, 47.0f, 192.0f, 125.0f}};
+static Rectangle office_obstacles[OBSTACLE_COUNT];  // Mesmos obstáculos em coordenadas da tela
 
 // ---------------------------------------------------------------------------
 // FUNÇÕES DE REDIMENSIONAMENTO E ESCALA DINÂMICA
