@@ -89,6 +89,8 @@ static Vector2 current_estagiario_position;               // Posição cartesian
 static Texture2D current_estagiario_texture_direction;   // Textura atual baseada na direção para onde o jogador está olhando
 
 static Rectangle map_collision_rec;                      // Limites físicos das paredes do mapa
+static Vector2 last_screen_center;                        // Centro da tela no quadro anterior (detecta redimensionamento)
+static float last_scale;                                  // Escala no quadro anterior
 static Rectangle estagiario_computer_collision_rectangle; // Área de gatilho para interagir com o computador
 static Rectangle estagiario_collision_rec;               // Hitbox atualizada dinamicamente do jogador
 static bool show_debug_hitboxes = false;                 // Modo debug (F1): desenha as hitboxes de colisão
@@ -185,6 +187,24 @@ void update_collision_rec(void)
 }
 
 /**
+ * @brief Mantém o jogador no mesmo ponto do mapa quando a janela muda de tamanho.
+ */
+static void keep_player_place_on_resize(void)
+{
+    Vector2 screen_center = {GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f};
+    float scale = get_scale();
+
+    if (screen_center.x != last_screen_center.x || screen_center.y != last_screen_center.y || scale != last_scale)
+    {
+        // Distância do jogador ao centro do mapa, reescalada, somada ao novo centro
+        current_estagiario_position.x = screen_center.x + (current_estagiario_position.x - last_screen_center.x) * scale / last_scale;
+        current_estagiario_position.y = screen_center.y + (current_estagiario_position.y - last_screen_center.y) * scale / last_scale;
+        last_screen_center = screen_center;
+        last_scale = scale;
+    }
+}
+
+/**
  * @brief Converte o limite do mapa e os obstáculos de referência para a tela atual (a janela pode mudar de tamanho).
  */
 static void update_obstacle_recs(void)
@@ -257,6 +277,10 @@ void initialize_game_loop_variables(void)
         middle_screen_x + PLAYER_SPAWN_OFFSET_X_AT_REFERENCE * get_scale(),
         middle_screen_y + PLAYER_SPAWN_OFFSET_Y_AT_REFERENCE * get_scale()};
     current_estagiario_texture_direction = estagiario_texture[NORTH]; // Inicia olhando para o norte (entrando no escritório)
+
+    // Guarda centro e escala iniciais para detectar redimensionamento depois
+    last_screen_center = (Vector2){GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f};
+    last_scale = get_scale();
 
     // Calcula o limite do mapa e os obstáculos já no início (depois são recalculados a cada quadro)
     update_obstacle_recs();
@@ -672,6 +696,7 @@ void handle_game_loop_screens(void)
     case IN_GAME_SCREEN:
         // Mantém a área de colisão do computador atualizada caso haja redimensionamento de janela
         estagiario_computer_collision_rectangle = get_computer_collision_rectangle();
+        keep_player_place_on_resize();
         update_obstacle_recs();
 
         // Processa lógica de comandos do jogador, interações e colisões com o mapa
