@@ -194,6 +194,9 @@ static void keep_player_place_on_resize(void)
     Vector2 screen_center = {GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f};
     float scale = get_scale();
 
+    // Janela minimizada: altura 0 daria divisão por zero, então espera a janela voltar
+    if (scale <= 0) return;
+
     if (screen_center.x != last_screen_center.x || screen_center.y != last_screen_center.y || scale != last_scale)
     {
         // Distância do jogador ao centro do mapa, reescalada, somada ao novo centro
