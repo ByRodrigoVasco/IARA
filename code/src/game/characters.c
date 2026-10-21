@@ -13,3 +13,28 @@ void initialize_estagiario_1_textures(char_textures out)
     out[SOUTHWEST] = LoadTexture(ESTAGIARIO_1_SOUTHWEST_PATH);
     out[NORTHEAST] = LoadTexture(ESTAGIARIO_1_NORTHEAST_PATH);
 }
+
+int get_walk_frame(float walk_time)
+{
+    return (int)(walk_time / WALK_FRAME_TIME) % WALK_FRAME_COUNT;
+}
+
+bool load_walk_frames(const char *character, const char *direction, bool mirror, Texture2D frames[WALK_FRAME_COUNT])
+{
+    // Confere os 4 arquivos antes de carregar, para não deixar o personagem pela metade
+    for (int i = 0; i < WALK_FRAME_COUNT; i++)
+    {
+        if (!FileExists(TextFormat("%s%s/walk/%s-%d.png", PERSONAGENS_PATH, character, direction, i))) return false;
+    }
+
+    for (int i = 0; i < WALK_FRAME_COUNT; i++)
+    {
+        Image frame = LoadImage(TextFormat("%s%s/walk/%s-%d.png", PERSONAGENS_PATH, character, direction, i));
+
+        // O oeste é o espelho do leste
+        if (mirror) ImageFlipHorizontal(&frame);
+        frames[i] = LoadTextureFromImage(frame);
+        UnloadImage(frame);
+    }
+    return true;
+}
