@@ -30,3 +30,15 @@ Rectangle scale_reference_rect(Rectangle ref, float scale, Vector2 origin)
     return (Rectangle){origin.x + ref.x * scale, origin.y + ref.y * scale,
                        ref.width * scale, ref.height * scale};
 }
+
+float move_axis(float position, float step, Rectangle hitbox, bool is_x_axis, const Rectangle *obstacles, int count)
+{
+    // Testa a hitbox já deslocada só naquele eixo
+    if (is_x_axis) hitbox.x += step;
+    else           hitbox.y += step;
+
+    // Se bateu, desfaz o passo (a posição não muda)
+    if (collides_with_any(hitbox, obstacles, count)) return position;
+
+    return position + step;
+}

@@ -32,4 +32,17 @@ bool collides_with_any(Rectangle hitbox, const Rectangle *obstacles, int count);
  */
 Rectangle scale_reference_rect(Rectangle ref, float scale, Vector2 origin);
 
+/**
+ * @brief Dá um passo em um eixo e desfaz o passo se a hitbox bater em algum obstáculo.
+ *
+ * @param position Posição atual do jogador naquele eixo.
+ * @param step Deslocamento do passo naquele eixo.
+ * @param hitbox Hitbox do jogador antes do passo.
+ * @param is_x_axis true para o eixo X, false para o eixo Y.
+ * @param obstacles Lista de retângulos obstáculo.
+ * @param count Quantidade de obstáculos na lista.
+ * @return Posição depois do passo, ou a mesma posição se o passo bateu.
+ */
+float move_axis(float position, float step, Rectangle hitbox, bool is_x_axis, const Rectangle *obstacles, int count);
+
 #endif // COLLISIONS_H
