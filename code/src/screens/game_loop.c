@@ -488,20 +488,11 @@ void handle_player_input(void)
     }
 
     // Move um eixo por vez: se bater num obstáculo, desfaz só aquele eixo e o jogador desliza na parede
-    current_estagiario_position.x += dx * speed;
     update_collision_rec();
-    if (collides_with_any(estagiario_collision_rec, office_obstacles, OBSTACLE_COUNT))
-    {
-        current_estagiario_position.x -= dx * speed;
-    }
+    current_estagiario_position.x = move_axis(current_estagiario_position.x, dx * speed, estagiario_collision_rec, true, office_obstacles, OBSTACLE_COUNT);
 
-    current_estagiario_position.y += dy * speed;
     update_collision_rec();
-    if (collides_with_any(estagiario_collision_rec, office_obstacles, OBSTACLE_COUNT))
-    {
-        current_estagiario_position.y -= dy * speed;
-    }
-
+    current_estagiario_position.y = move_axis(current_estagiario_position.y, dy * speed, estagiario_collision_rec, false, office_obstacles, OBSTACLE_COUNT);
     update_collision_rec();
 }
 
