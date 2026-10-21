@@ -185,11 +185,16 @@ void update_collision_rec(void)
 }
 
 /**
- * @brief Converte os obstáculos de referência para a tela atual (a janela pode mudar de tamanho).
+ * @brief Converte o limite do mapa e os obstáculos de referência para a tela atual (a janela pode mudar de tamanho).
  */
 static void update_obstacle_recs(void)
 {
     Vector2 screen_center = {GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f};
+
+    // O mapa é desenhado com get_scale() centralizado, então o limite usa a mesma escala e centro
+    Rectangle map_reference = {-in_game_office.width / 2.0f, -in_game_office.height / 2.0f,
+                               (float)in_game_office.width, (float)in_game_office.height};
+    map_collision_rec = scale_reference_rect(map_reference, get_scale(), screen_center);
 
     for (int i = 0; i < OBSTACLE_COUNT; i++)
     {
@@ -253,11 +258,8 @@ void initialize_game_loop_variables(void)
         middle_screen_y + PLAYER_SPAWN_OFFSET_Y_AT_REFERENCE * get_scale()};
     current_estagiario_texture_direction = estagiario_texture[NORTH]; // Inicia olhando para o norte (entrando no escritório)
 
-    // Define a área delimitadora de colisão do cenário/escritório centralizado na tela
-    map_collision_rec = (Rectangle){
-        middle_screen_x - (in_game_office.width / 2), middle_screen_y - (in_game_office.height / 2),
-        in_game_office.width, in_game_office.height
-    };
+    // Calcula o limite do mapa e os obstáculos já no início (depois são recalculados a cada quadro)
+    update_obstacle_recs();
 
     // Obtém o retângulo do computador e alinha a caixa de colisão inicial do jogador
     estagiario_computer_collision_rectangle = get_computer_collision_rectangle();
