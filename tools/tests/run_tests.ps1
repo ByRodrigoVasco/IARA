@@ -4,11 +4,56 @@
     Uso, a partir de qualquer pasta do repositorio:
         powershell -ExecutionPolicy Bypass -File tools/tests/run_tests.ps1
 
+    Para gravar o screencast, o modo pausado espera uma tecla entre um conjunto
+    e o outro, para dar tempo de narrar:
+        powershell -ExecutionPolicy Bypass -File tools/tests/run_tests.ps1 -Pausado
+
     Pre-requisitos: MSYS2 UCRT64 com gcc e raylib instalados (mesmo ambiente
     usado pela tarefa "build raylib" do VS Code).
 #>
 
+param(
+    # Espera uma tecla entre os conjuntos, para narrar com calma na gravacao.
+    [switch]$Pausado
+)
+
 $ErrorActionPreference = "Stop"
+
+# Espera uma tecla. Em terminal sem teclado (CI, saida redirecionada) a espera
+# precisa ser por tempo: ReadKey nao falha nesse caso, ele trava para sempre.
+function Wait-Narracao {
+    if (-not $Pausado) { return }
+
+    Write-Host ""
+
+    $temTeclado = $true
+
+    try {
+        if ([Console]::IsInputRedirected) { $temTeclado = $false }
+        if (-not [Environment]::UserInteractive) { $temTeclado = $false }
+    }
+    catch {
+        $temTeclado = $false
+    }
+
+    if (-not $temTeclado) {
+        Write-Host "  ---- pausa de 5s (sem teclado neste terminal) ----" -ForegroundColor DarkGray
+        Start-Sleep -Seconds 5
+        Write-Host ""
+        return
+    }
+
+    Write-Host "  ---- pressione qualquer tecla para continuar ----" -ForegroundColor DarkGray
+
+    try {
+        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    }
+    catch {
+        Start-Sleep -Seconds 5
+    }
+
+    Write-Host ""
+}
 
 $raiz = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 Set-Location $raiz
@@ -97,6 +142,8 @@ foreach ($teste in $suite) {
     Write-Host "  ok  $($teste.Nome)"
 }
 
+Wait-Narracao
+
 # ----------------------------------------------------------------- execucao
 $reprovados = @()
 
@@ -108,6 +155,8 @@ foreach ($teste in $suite) {
     if ($LASTEXITCODE -ne 0) {
         $reprovados += $teste
     }
+
+    Wait-Narracao
 }
 
 # ------------------------------------------------------------------ resumo

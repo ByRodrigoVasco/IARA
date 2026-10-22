@@ -21,6 +21,9 @@ O script compila e roda os cinco conjuntos de teste e devolve um resumo. O códi
 de saída é `0` quando tudo passa e `1` quando há falha, o que permite ligar a
 suíte a um CI mais adiante.
 
+O parâmetro `-Pausado` espera uma tecla entre um conjunto e o outro, para dar tempo
+de narrar durante a gravação do screencast.
+
 ## O que foi testado
 
 A suíte monta o jogo de verdade — os mesmos módulos, os mesmos arquivos de mídia,
