@@ -1,6 +1,6 @@
 # Bug tracker — bugs encontrados nos testes de sistema
 
-Sete problemas encontrados na execução dos testes de sistema de 22/10/2026
+Oito problemas encontrados na execução dos testes de sistema de 22/10/2026
 (branch `develop`, commit `8b43f71`).
 
 Cada bloco abaixo é **uma issue pronta para abrir** em
@@ -20,6 +20,7 @@ Atualizar esta tabela conforme as issues forem abertas e corrigidas.
 | BUG-05 | Desenho fora do `BeginDrawing`/`EndDrawing` | Baixa | _a abrir_ | Aberto |
 | BUG-06 | Caminho de sprites em minúsculo | Média | _a abrir_ | Aberto |
 | BUG-07 | Pré-menu não descarrega imagens | Média | _a abrir_ | Aberto |
+| BUG-08 | Texto do quiz vaza para fora da caixa | Média | _a abrir_ | Aberto |
 
 ---
 
@@ -224,3 +225,53 @@ pré-menu roda só uma vez por sessão, então não cresce.
 
 **Onde:** `code/src/screens/pre_menu.c:29` e `code/src/screens/pre_menu.c:32`
 **Coberto por:** nenhum teste automatizado (achado por inspeção)
+
+---
+
+<a id="bug-08"></a>
+
+## BUG-08 — Texto do quiz vaza para fora da caixa e dos botões
+
+**Labels:** `bug`, `ui`, `gravidade: média`
+
+Na tela do computador, enunciados e alternativas mais longos do que a caixa são
+desenhados por cima da borda e saem pelos dois lados, cortados.
+
+`render_current_step()` calcula a largura da caixa como
+`maior_linha + 2 × padding`, mas aplica um teto de 85% da largura da janela
+(`QUIZ_MAX_WIDTH_RATIO`). Quando o texto passa desse teto, **a caixa para de
+crescer e o texto não**: ele continua sendo desenhado centralizado, na largura
+que tiver. O mesmo acontece com os botões de alternativa.
+
+Falta quebra de linha automática ou redução da fonte quando o texto não cabe.
+
+**Como reproduzir**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/tests/run_tests.ps1
+```
+
+O caso CT-35 refaz a mesma conta de largura e lista os oito pontos onde o texto
+passa do limite:
+
+```
+passo 1: texto tem 594 px e a caixa so tem 532 px
+passo 3, opcao 1: texto tem 677 px e o botao so tem 532 px
+...
+```
+
+O pior caso é a alternativa B da pergunta sobre viés
+("Tratamento desigual devido aos dados de treino"), com 677 px num botão de
+532 px — 27% a mais do que cabe.
+
+Dá para ver o efeito na evidência
+[`evidencias/quiz-respondido.png`](evidencias/quiz-respondido.png): o enunciado
+"O que é Inteligência Artificial, no sentido usado no dia a dia?" aparece com a
+primeira e a última letra fora da caixa cinza.
+
+**Esperado:** o texto cabe dentro da caixa e dos botões, em qualquer resolução.
+**Obtido:** oito trechos do roteiro atual vazam pelas laterais.
+
+**Onde:** `code/src/screens/computer_loop.c:266` (caixa) e
+`code/src/screens/computer_loop.c:350` (botões de alternativa)
+**Coberto por:** CT-35 (`code/tests/test_fluxo.c`)

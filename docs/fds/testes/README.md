@@ -8,7 +8,7 @@ simulando o uso real de um jogador.
 | **Data da execução** | 22/10/2026 |
 | **Versão testada** | branch `develop`, commit `8b43f71` |
 | **Ambiente** | Windows 11, MSYS2 UCRT64, gcc 16.2.0, raylib |
-| **Resultado** | **31 de 33 casos aprovados** — 2 falhas, ambas registradas como bug |
+| **Resultado** | **32 de 35 casos aprovados** — 3 falhas, todas registradas como bug |
 | **Veredito** | **Aprovado com ressalvas**: nenhuma falha impede jogar |
 
 ## Como executar
@@ -30,8 +30,9 @@ A suíte monta o jogo de verdade — os mesmos módulos, os mesmos arquivos de m
 a mesma máquina de estados — e o conduz como um jogador faria. Não há simulação de
 fachada: `test_sistema` (CT-01 a CT-16) inclui `game_loop.c` para alcançar o estado
 interno real da partida, `test_conteudo` (CT-17 a CT-24) percorre o quiz e o menu, e
-`test_fluxo` (CT-25 a CT-33) monta o jogo inteiro menos a `main.c` e o conduz pela
-máquina de estados, com a janela do jogo à vista. Junto rodam os dois testes de unidade que já existiam,
+`test_fluxo` (CT-25 a CT-35) monta o jogo inteiro menos a `main.c` e o percorre do
+começo ao fim com a janela à vista: abertura, menu, CRÉDITOS e a volta ao menu,
+INICIAR, cartão do dia, caminhada pelo escritório e as quatro perguntas do quiz. Junto rodam os dois testes de unidade que já existiam,
 `test_collisions` e `test_characters`.
 
 ## Casos de teste
@@ -65,12 +66,14 @@ máquina de estados, com a janela do jogo à vista. Junto rodam os dois testes d
 | CT-25 | Partida começa no dia 1, em um dia jogável | OK |
 | CT-26 | Estatísticas ocultas começam no valor base | OK |
 | CT-27 | Tela de abertura termina sozinha e entrega o menu (283 quadros) | OK |
-| CT-28 | Escolher INICIAR leva para a tela de jogo | OK |
-| CT-29 | Escolher CRÉDITOS leva para a tela de créditos | OK |
-| CT-30 | Tela sem implementação devolve o jogador ao menu | OK |
+| CT-28 | Escolher CRÉDITOS aponta para a tela de créditos | OK |
+| CT-29 | Tela sem implementação devolve o jogador ao menu | OK |
+| CT-30 | Escolher INICIAR no menu começa a partida | OK |
 | CT-31 | Cartão do dia termina e o escritório aparece (10,1 s) | OK |
-| CT-32 | Personagem atravessa o escritório até o computador (54 passos) | OK |
+| CT-32 | Personagem atravessa o escritório até o computador (53 passos) | OK |
 | CT-33 | Interagir com o computador abre a tela do quiz | OK |
+| CT-34 | Jogador responde as 4 perguntas e conclui o quiz | OK |
+| CT-35 | Texto do computador cabe dentro da caixa e dos botões | **FALHA — [BUG-08](bugs.md#bug-08)** |
 
 ## Evidência do percurso
 
@@ -88,9 +91,15 @@ seta de interação acesa.
 
 ![Personagem em frente ao computador no escritório, durante a execução do teste](evidencias/escritorio-em-jogo.png)
 
+O bloco segue até o computador e responde as quatro perguntas. Foi nesta captura
+que apareceu o [BUG-08](bugs.md#bug-08): repare no enunciado vazando para fora da
+caixa cinza, cortado nas duas bordas.
+
+![Tela do quiz com a primeira pergunta respondida e o ícone de acerto](evidencias/quiz-respondido.png)
+
 ## Bugs encontrados
 
-Sete problemas, dois pegos pelos testes automatizados e cinco por inspeção do código
+Oito problemas, três pegos pelos testes automatizados e cinco por inspeção do código
 durante a escrita da suíte. O detalhamento e o texto pronto para abrir cada issue
 estão em **[bugs.md](bugs.md)**.
 
@@ -103,6 +112,7 @@ estão em **[bugs.md](bugs.md)**.
 | [BUG-05](bugs.md#bug-05) | `close_pre_menu()` desenha fora do par `BeginDrawing`/`EndDrawing` | Baixa | Inspeção |
 | [BUG-06](bugs.md#bug-06) | `PERSONAGENS_PATH` em minúsculo quebra o jogo fora do Windows | Média | Inspeção |
 | [BUG-07](bugs.md#bug-07) | Pré-menu nunca descarrega as imagens da memória RAM | Média | Inspeção |
+| [BUG-08](bugs.md#bug-08) | Texto do quiz vaza para fora da caixa e dos botões | Média | CT-35 |
 
 Nenhum deles impede jogar a versão atual: o jogo abre, o menu funciona, o
 personagem anda, colide e chega ao computador, e o quiz vai até o fim.

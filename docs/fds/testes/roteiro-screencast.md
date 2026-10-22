@@ -26,7 +26,7 @@ Narrar é opcional. O caminho mais simples é gravar mudo, e ele já entrega o c
 powershell -ExecutionPolicy Bypass -File tools/tests/run_tests.ps1
 ```
 
-3. Não faça nada. Deixe rodar **cerca de 40 segundos**.
+3. Não faça nada. Deixe rodar **cerca de 45 segundos**.
 4. Quando aparecer o `RESUMO DA SUITE`, espere 2 segundos e pare: `Win + Alt + R`.
 
 O vídeo fica em `Vídeos\Capturas`.
@@ -47,14 +47,16 @@ Vale saber para não achar que travou:
 
 | Momento | O que aparece |
 |---|---|
-| 0s a 3s | Compilação dos cinco conjuntos |
-| 3s a 11s | Blocos 1 e 2 passando no terminal |
-| 11s a 16s | A tela de abertura do jogo, com o nome IARA |
-| 16s a 19s | O menu principal |
-| 19s a 29s | O cartão **"Dia 1"**. Fica parado ~10s, e **isso é normal**: é o tempo real da animação do jogo |
-| 29s a 34s | O escritório, com o personagem andando e esbarrando nos móveis |
-| 34s a 38s | O personagem chega no computador e a tela do quiz abre |
-| 38s em diante | O resumo final no terminal |
+| 0s a 5s | Compilação dos cinco conjuntos |
+| 5s a 9s | Blocos 1 e 2 passando no terminal |
+| 9s a 14s | A tela de abertura do jogo, com o nome IARA |
+| 14s a 16s | O menu principal |
+| 16s a 19s | A seta desce até **CRÉDITOS**, confirma — e o jogo volta ao menu, porque essa tela ainda não foi feita |
+| 19s a 20s | A seta volta para **INICIAR** e confirma |
+| 20s a 30s | O cartão **"Dia 1"**. Fica parado ~10s, e **isso é normal**: é o tempo real da animação do jogo |
+| 30s a 35s | O escritório: o personagem anda, esbarra nos móveis e vai até o computador |
+| 35s a 45s | A tela do computador, com as **4 perguntas sendo respondidas** uma a uma |
+| 45s em diante | O resumo final no terminal |
 
 A parte do jogo não é gravação de tela colada depois: é a partida de verdade,
 conduzida pelo próprio teste.
@@ -92,12 +94,13 @@ só então aperte. São seis paradas. Sugestões do que dizer:
 
 **Durante o bloco 3**, aponte para a janela do jogo:
 
-> "Essa é a partida de verdade rodando dentro do teste: a abertura, o menu, o
-> cartão do dia, o personagem andando pelo escritório e a tela do computador."
+> "Essa é a partida de verdade rodando dentro do teste: a abertura, o menu, os
+> créditos que ainda não existem, o cartão do dia, o personagem andando pelo
+> escritório e o quiz sendo respondido até o fim."
 
 **No resumo final:**
 
-> "Trinta e um dos trinta e três casos passaram. Os dois que falharam são bugs
+> "Trinta e dois dos trinta e cinco casos passaram. Os três que falharam são bugs
 > reais, já documentados."
 
 ---
