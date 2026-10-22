@@ -88,6 +88,16 @@ extern unsigned int middle_screen_y;
 #define COMPUTER_CORRECT_ICON          COMPUTER_ASSETS_PATH "correct-icon.png"
 #define COMPUTER_WRONG_ICON            COMPUTER_ASSETS_PATH "wrong-icon.png"
 
+// PATHS PARA OS CRÉDITOS
+#define TEAM_ASSETS_PATH "docs/assets/team/"
+#define LAURA_BRAYNER_CREDITS_PATH TEAM_ASSETS_PATH "laura-brayner.png"
+#define RODRIGO_VASCO_CREDITS_PATH TEAM_ASSETS_PATH "rodrigo-vasco.png"
+#define ANDERSON_SANTOS_CREDITS_PATH TEAM_ASSETS_PATH "anderson-santos.png"
+#define JOAO_VITOR_CREDITS_PATH TEAM_ASSETS_PATH "joao-vitor-medeiros.png"
+#define LUAN_ARRUDA_CREDITS_PATH TEAM_ASSETS_PATH "luan-arruda.png"
+#define NICOLAS_MAURICIO_CREDITS_PATH TEAM_ASSETS_PATH "nicolas-mauricio.png"
+#define JULIO_LINS_CREDITS_PATH TEAM_ASSETS_PATH "julio-cesar-lins.png"
+
 // PATHS PARA PERSONAGENS
 
 // ESTAGIARIO (PLAYER PRINCIPAL)
