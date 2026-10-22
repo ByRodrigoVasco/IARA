@@ -269,6 +269,7 @@ void render_menu(void)
 void unload_menu()
 {
     UnloadTexture(bg_office_texture);
+    UnloadTexture(second_bg_texture);
     UnloadTexture(arrow_icon_texture);
     UnloadGameTexture(iara_name_gt);
 }
