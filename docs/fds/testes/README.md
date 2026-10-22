@@ -8,7 +8,7 @@ simulando o uso real de um jogador.
 | **Data da execução** | 22/10/2026 |
 | **Versão testada** | branch `develop`, commit `8b43f71` |
 | **Ambiente** | Windows 11, MSYS2 UCRT64, gcc 16.2.0, raylib |
-| **Resultado** | **29 de 31 casos aprovados** — 2 falhas, ambas registradas como bug |
+| **Resultado** | **31 de 33 casos aprovados** — 2 falhas, ambas registradas como bug |
 | **Veredito** | **Aprovado com ressalvas**: nenhuma falha impede jogar |
 
 ## Como executar
@@ -30,8 +30,8 @@ A suíte monta o jogo de verdade — os mesmos módulos, os mesmos arquivos de m
 a mesma máquina de estados — e o conduz como um jogador faria. Não há simulação de
 fachada: `test_sistema` (CT-01 a CT-16) inclui `game_loop.c` para alcançar o estado
 interno real da partida, `test_conteudo` (CT-17 a CT-24) percorre o quiz e o menu, e
-`test_fluxo` (CT-25 a CT-31) linka o jogo inteiro menos a `main.c` e o conduz pela
-máquina de estados. Junto rodam os dois testes de unidade que já existiam,
+`test_fluxo` (CT-25 a CT-33) monta o jogo inteiro menos a `main.c` e o conduz pela
+máquina de estados, com a janela do jogo à vista. Junto rodam os dois testes de unidade que já existiam,
 `test_collisions` e `test_characters`.
 
 ## Casos de teste
@@ -68,7 +68,9 @@ máquina de estados. Junto rodam os dois testes de unidade que já existiam,
 | CT-28 | Escolher INICIAR leva para a tela de jogo | OK |
 | CT-29 | Escolher CRÉDITOS leva para a tela de créditos | OK |
 | CT-30 | Tela sem implementação devolve o jogador ao menu | OK |
-| CT-31 | Partida roda do cartão do dia até o escritório sem travar | OK |
+| CT-31 | Cartão do dia termina e o escritório aparece (10,1 s) | OK |
+| CT-32 | Personagem atravessa o escritório até o computador (54 passos) | OK |
+| CT-33 | Interagir com o computador abre a tela do quiz | OK |
 
 ## Evidência do percurso
 
@@ -78,6 +80,13 @@ do teste: verde é o spawn, azul é o caminho encontrado, laranja são os 25 obs
 do escritório e amarelo é a zona de interação do computador.
 
 ![Percurso do jogador do spawn até o computador, com as hitboxes de colisão](evidencias/percurso-e-colisoes.png)
+
+O bloco 3 vai além e roda a partida na tela: abertura, menu, cartão do dia,
+caminhada pelo escritório e entrada no computador. A imagem abaixo é um quadro
+capturado pelo próprio teste, com o personagem parado em frente ao computador e a
+seta de interação acesa.
+
+![Personagem em frente ao computador no escritório, durante a execução do teste](evidencias/escritorio-em-jogo.png)
 
 ## Bugs encontrados
 

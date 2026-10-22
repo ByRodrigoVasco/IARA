@@ -1,90 +1,108 @@
 # Roteiro do screencast dos testes
 
-Vídeo de **2 minutos** mostrando a suíte de testes rodando, para anexar ao card
+Vídeo curto mostrando a suíte de testes sendo executada, para anexar ao card
 *"Gravar e anexar screencast dos testes"*.
 
-A suíte faz o trabalho sozinha: você só aperta gravar, roda **um comando** e fala
-quatro frases.
+O card pede apenas **"um vídeo curto mostrando os testes sendo executados"**.
+Narrar é opcional. O caminho mais simples é gravar mudo, e ele já entrega o card.
 
 ---
 
-## 1. Antes de gravar (2 minutos)
+## Caminho simples: vídeo mudo (5 minutos no total)
+
+### Antes
 
 1. Abra o VS Code na pasta `IARA`.
-2. Abra o terminal integrado: `Ctrl + '`
-3. Aumente a fonte do terminal com `Ctrl + Scroll` até o texto ficar bem legível.
+2. Abra o terminal: `Ctrl + '`
+3. Aumente a fonte do terminal com `Ctrl + Scroll`.
 4. Feche abas e notificações que não interessam.
 
-Pronto. Não precisa preparar mais nada.
+### Gravar
+
+1. Aperte `Win + G` e clique no botão de gravar da Xbox Game Bar.
+2. Clique no terminal, cole o comando e dê Enter:
+
+```
+powershell -ExecutionPolicy Bypass -File tools/tests/run_tests.ps1
+```
+
+3. Não faça nada. Deixe rodar **cerca de 40 segundos**.
+4. Quando aparecer o `RESUMO DA SUITE`, espere 2 segundos e pare: `Win + Alt + R`.
+
+O vídeo fica em `Vídeos\Capturas`.
+
+### Depois
+
+1. Suba no YouTube como **Não listado**.
+2. Cole o link no card do Trello.
+3. Acrescente o link na tabela de entregas em [`docs/fds/README.md`](../README.md).
+
+**Acabou.**
 
 ---
 
-## 2. Gravar (2 minutos)
+## O que aparece no vídeo
 
-**Comece a gravação:** `Win + G` abre a Xbox Game Bar → botão de gravar.
-(Ou use o OBS, se preferir.)
+Vale saber para não achar que travou:
 
-**Cole o comando no terminal e dê Enter.** Repare no `-Pausado` no fim — é ele que
-segura a saída entre um conjunto e o outro, esperando você apertar uma tecla:
+| Momento | O que aparece |
+|---|---|
+| 0s a 3s | Compilação dos cinco conjuntos |
+| 3s a 11s | Blocos 1 e 2 passando no terminal |
+| 11s a 16s | A tela de abertura do jogo, com o nome IARA |
+| 16s a 19s | O menu principal |
+| 19s a 29s | O cartão **"Dia 1"**. Fica parado ~10s, e **isso é normal**: é o tempo real da animação do jogo |
+| 29s a 34s | O escritório, com o personagem andando e esbarrando nos móveis |
+| 34s a 38s | O personagem chega no computador e a tela do quiz abre |
+| 38s em diante | O resumo final no terminal |
+
+A parte do jogo não é gravação de tela colada depois: é a partida de verdade,
+conduzida pelo próprio teste.
+
+---
+
+## Se quiser narrar (opcional)
+
+Só faça isso **depois** de já ter o vídeo mudo salvo, como garantia.
+
+Use o parâmetro `-Pausado`, que segura a saída entre um bloco e outro esperando
+você apertar uma tecla:
 
 ```
 powershell -ExecutionPolicy Bypass -File tools/tests/run_tests.ps1 -Pausado
 ```
 
-A partir daqui **você controla o ritmo**. A cada parada aparece
-`---- pressione qualquer tecla para continuar ----`: fale, e só então aperte.
+A cada parada aparece `---- pressione qualquer tecla para continuar ----`. Fale, e
+só então aperte. São seis paradas. Sugestões do que dizer:
 
-**Pausa 1, depois de "Compilando":**
+**Depois de "Compilando":**
 
-> "Esse é o projeto IARA. Acabei de compilar a suíte de testes de sistema, que
-> testa o jogo inteiro simulando o uso de um jogador."
+> "Esse é o projeto IARA. Acabei de compilar a suíte de testes de sistema."
 
-**Pausas 2 e 3** (os dois testes de unidade, que passam rápido): pode só apertar a
-tecla, ou dizer "esses dois são os testes de unidade que já existiam".
+**Depois do bloco 1:**
 
-**Pausa 4, depois do bloco 1** — é o bloco mais rico, vale a pena rolar a tela para
-cima enquanto fala:
+> "Dezesseis casos: conferiu os vinte e cinco arquivos de mídia, fez o personagem
+> andar vinte mil passos pelo escritório sem atravessar nada, e achou um caminho do
+> spawn até o computador."
 
-> "Dezesseis casos aqui: ele conferiu os vinte e cinco arquivos de mídia, fez o
-> personagem andar vinte mil passos pelo escritório sem atravessar nada, e achou um
-> caminho do spawn até o computador em setenta e dois passos."
-
-**Pausa 5, depois do bloco 2:**
+**Depois do bloco 2:**
 
 > "Aqui ele percorreu o quiz inteiro e testou o menu. Esse CT-24 que falhou abriu e
 > fechou o menu vinte vezes medindo a memória."
 
-**Durante o bloco 3 a janela do jogo abre sozinha e fica uns 7 segundos na tela.**
-Aponte para ela e fale:
+**Durante o bloco 3**, aponte para a janela do jogo:
 
-> "Essa é a partida de verdade rodando dentro do teste: o cartão do dia e o
-> escritório."
+> "Essa é a partida de verdade rodando dentro do teste: a abertura, o menu, o
+> cartão do dia, o personagem andando pelo escritório e a tela do computador."
 
-**Pausa 6, no resumo final:**
+**No resumo final:**
 
-> "Vinte e nove dos trinta e um casos passaram. Os dois que falharam são bugs reais,
-> já documentados: o fade in que não chega a cem por cento, e o menu que vaza
-> memória cada vez que é reaberto."
-
-**Pare a gravação.** Fim.
+> "Trinta e um dos trinta e três casos passaram. Os dois que falharam são bugs
+> reais, já documentados."
 
 ---
 
-## 3. Depois de gravar (2 minutos)
+## Ferramenta de gravação
 
-1. Suba o vídeo no YouTube como **não listado** (é o que a squad já usa nas outras
-   entregas).
-2. Cole o link no card do Trello *"Gravar e anexar screencast dos testes"*.
-3. Acrescente o link na tabela de entregas em [`docs/fds/README.md`](../README.md).
-
----
-
-## Se quiser mostrar mais
-
-Opcional, só se sobrar vontade: depois do resumo, abra a imagem
-`docs/fds/testes/evidencias/percurso-e-colisoes.png` e diga que ela é gerada pelo
-próprio teste — verde é onde o jogador nasce, azul é o caminho encontrado até o
-computador, laranja são os obstáculos do escritório.
-
-O relatório completo dos testes está em [README.md](README.md) e os bugs em
-[bugs.md](bugs.md), caso o professor peça.
+A **Xbox Game Bar** (`Win + G`) já vem no Windows e basta. O **OBS Studio** dá mais
+controle, se você quiser mostrar terminal e jogo lado a lado.
