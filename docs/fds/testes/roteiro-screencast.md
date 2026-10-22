@@ -24,28 +24,43 @@ Pronto. Não precisa preparar mais nada.
 **Comece a gravação:** `Win + G` abre a Xbox Game Bar → botão de gravar.
 (Ou use o OBS, se preferir.)
 
-**Fale a frase 1**, com o VS Code na tela:
-
-> "Esse é o projeto IARA. Vou rodar a suíte de testes de sistema, que testa o jogo
-> inteiro simulando o uso de um jogador."
-
-**Cole o comando no terminal e dê Enter:**
+**Cole o comando no terminal e dê Enter.** Repare no `-Pausado` no fim — é ele que
+segura a saída entre um conjunto e o outro, esperando você apertar uma tecla:
 
 ```
-powershell -ExecutionPolicy Bypass -File tools/tests/run_tests.ps1
+powershell -ExecutionPolicy Bypass -File tools/tests/run_tests.ps1 -Pausado
 ```
 
-**Fale a frase 2** enquanto os testes rolam (uns 40 segundos):
+A partir daqui **você controla o ritmo**. A cada parada aparece
+`---- pressione qualquer tecla para continuar ----`: fale, e só então aperte.
 
-> "São 31 casos de teste. Ele confere os arquivos de mídia, faz o personagem andar
-> vinte mil passos pelo escritório e procura um caminho até o computador."
+**Pausa 1, depois de "Compilando":**
 
-**Quando a janela do jogo abrir sozinha, aponte e fale a frase 3:**
+> "Esse é o projeto IARA. Acabei de compilar a suíte de testes de sistema, que
+> testa o jogo inteiro simulando o uso de um jogador."
+
+**Pausas 2 e 3** (os dois testes de unidade, que passam rápido): pode só apertar a
+tecla, ou dizer "esses dois são os testes de unidade que já existiam".
+
+**Pausa 4, depois do bloco 1** — é o bloco mais rico, vale a pena rolar a tela para
+cima enquanto fala:
+
+> "Dezesseis casos aqui: ele conferiu os vinte e cinco arquivos de mídia, fez o
+> personagem andar vinte mil passos pelo escritório sem atravessar nada, e achou um
+> caminho do spawn até o computador em setenta e dois passos."
+
+**Pausa 5, depois do bloco 2:**
+
+> "Aqui ele percorreu o quiz inteiro e testou o menu. Esse CT-24 que falhou abriu e
+> fechou o menu vinte vezes medindo a memória."
+
+**Durante o bloco 3 a janela do jogo abre sozinha e fica uns 7 segundos na tela.**
+Aponte para ela e fale:
 
 > "Essa é a partida de verdade rodando dentro do teste: o cartão do dia e o
 > escritório."
 
-**No resumo final, fale a frase 4:**
+**Pausa 6, no resumo final:**
 
 > "Vinte e nove dos trinta e um casos passaram. Os dois que falharam são bugs reais,
 > já documentados: o fade in que não chega a cem por cento, e o menu que vaza
