@@ -64,7 +64,7 @@ New-Item -ItemType Directory -Force -Path (Join-Path $raiz "docs/fds/testes/evid
 
 $incluir = @(
     "-Icode/src", "-Icode/src/core", "-Icode/src/screens",
-    "-Icode/src/ui", "-Icode/src/game"
+    "-Icode/src/ui", "-Icode/src/game", "-Icode/tests"
 )
 
 $raylib = @(
@@ -106,12 +106,14 @@ $suite = @(
     @{
         Nome  = "test_fluxo"
         Nota  = "Sistema bloco 3: fluxo de telas do jogo completo"
+        # game_loop.c nao entra aqui: o teste o inclui direto, para alcancar o
+        # estado interno e conduzir o personagem sem depender do teclado.
         Fonte = @(
             "code/tests/test_fluxo.c",
             "code/src/core/state_machine.c", "code/src/core/game_state.c",
             "code/src/core/helper.c",
             "code/src/screens/menu.c", "code/src/screens/pre_menu.c",
-            "code/src/screens/game_loop.c", "code/src/screens/computer_loop.c",
+            "code/src/screens/computer_loop.c",
             "code/src/game/collisions.c", "code/src/game/characters.c",
             "code/src/ui/fonts.c", "code/src/ui/animations.c", "code/src/ui/button.c"
         )
