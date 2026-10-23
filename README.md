@@ -9,6 +9,8 @@ as inconsistências. Assim, a mecânica ensina ao mesmo tempo ética em IA e ló
   <img src="docs/assets/capa.png" alt="Capa do projeto IARA" width="800">
 </p>
 
+> **Entrega 3 (FDS):** [Report da Sprint 01](docs/fds/sprint-01/README.md), com histórias, versionamento, testes, programação em pares e evidências.
+
 ## Tecnologias
 
 ![C](https://img.shields.io/badge/c-%23A8B9CC.svg?style=for-the-badge&logo=c&logoColor=black)
