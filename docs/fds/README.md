@@ -10,6 +10,7 @@ Entregas da disciplina que já estão versionadas neste repositório.
 | Screencast do protótipo de baixa fidelidade (Entrega 02), compartilhado com [IHC](../ihc/README.md) | [Vídeo no YouTube](https://youtu.be/qE2Gn79bmqw) |
 | Testes de sistema | [Relatório dos testes](testes/README.md), com os [bugs encontrados](testes/bugs.md) e o [roteiro do screencast](testes/roteiro-screencast.md) |
 | Processo e versionamento | [CONTRIBUTING.md](../../CONTRIBUTING.md): fluxo de branches (GitFlow), padrão de commits e Pull Requests |
+| Report da Sprint 01 (Entrega 03) | [Report da Sprint 01](sprint-01/README.md): histórias implementadas, versionamento, testes, programação em pares e evidências |
 
 ## Screencast do protótipo
 
