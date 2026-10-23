@@ -6,7 +6,7 @@ simulando o uso real de um jogador.
 | | |
 |---|---|
 | **Data da execução** | 22/10/2026 |
-| **Versão testada** | branch `develop`, commit `8b43f71` |
+| **Versão testada** | branch `develop`, commit `b366e7c` |
 | **Ambiente** | Windows 11, MSYS2 UCRT64, gcc 16.2.0, raylib |
 | **Resultado** | **32 de 35 casos aprovados** — 3 falhas, todas registradas como bug |
 | **Veredito** | **Aprovado com ressalvas**: nenhuma falha impede jogar |
