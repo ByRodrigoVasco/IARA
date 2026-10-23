@@ -67,3 +67,36 @@ Thumbs.db
 ehthumbs.db
 desktop.ini
 .directory
+
+# --- Arquivos locais de agentes de IA, prompts e assistentes ---
+# Configuração pessoal de cada integrante. Não deve ser versionada.
+.antigravity/
+.agent/
+.agents/
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+.cursor/
+.cursorrules
+.cursorignore
+.windsurf/
+.windsurfrules
+.aider*
+.continue/
+.codex/
+.gemini/
+GEMINI.md
+AGENTS.md
+.copilot/
+.mcp.json
+.vscode/mcp.json
+.github/agents/
+.github/prompts/
+.github/chatmodes/
+.github/instructions/
+.github/copilot-instructions.md
+.prompts/
+prompts/
+*.agent.md
+*.prompt.md
+*.chatmode.md
