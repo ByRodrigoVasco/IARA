@@ -106,14 +106,13 @@ $suite = @(
     @{
         Nome  = "test_fluxo"
         Nota  = "Sistema bloco 3: o jogo do inicio ao fim"
-        # menu.c, game_loop.c e computer_loop.c nao entram aqui: o teste os
+        # menu.c, game_loop.c, computer_loop.c e credits.c nao entram aqui: o teste os
         # inclui direto, para alcancar o estado interno de cada tela e conduzir
         # o jogo sem depender de teclado e mouse.
         Fonte = @(
             "code/tests/test_fluxo.c",
             "code/src/core/state_machine.c", "code/src/core/game_state.c",
             "code/src/core/helper.c", "code/src/screens/pre_menu.c",
-            "code/src/screens/credits.c",
             "code/src/game/collisions.c", "code/src/game/characters.c",
             "code/src/ui/fonts.c", "code/src/ui/animations.c", "code/src/ui/button.c"
         )

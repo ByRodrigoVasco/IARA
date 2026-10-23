@@ -43,8 +43,21 @@ unsigned int middle_screen_y = 0;
 #include "game_loop.c"
 #include "percurso_do_jogador.h"
 
-/* Definida na state_machine.c, mas sem declaracao no cabecalho. */
-int handle_menu_action(int screen);
+/* A raylib nao permite injetar teclas. A tela de creditos so volta ao menu
+ * quando o jogador aperta uma tecla, entao, so enquanto credits.c e incluido,
+ * a consulta de teclas passa por este gancho: o teste liga
+ * creditos_tecla_de_voltar para simular o jogador apertando ESC. O resto da
+ * tela (desenho, botao, retorno da funcao) e o codigo real. */
+static bool creditos_tecla_de_voltar = false;
+
+static bool tecla_dos_creditos(int tecla)
+{
+    return creditos_tecla_de_voltar && tecla == KEY_ESCAPE;
+}
+
+#define IsKeyPressed(tecla) tecla_dos_creditos(tecla)
+#include "credits.c"
+#undef IsKeyPressed
 
 #define LARGURA_JANELA 1280
 #define ALTURA_JANELA 720
@@ -265,18 +278,29 @@ static void testar_abertura(void)
 static void testar_creditos(void)
 {
     titulo("Opcao CREDITOS (CT-28 e CT-29)");
-    etapa("[2/7] escolhendo CREDITOS: a tela ainda nao existe, volta ao menu");
-
-    checar("CT-28", "Escolher CREDITOS aponta para a tela de creditos",
-           handle_menu_action(CREDITOS) == CREDITS_SCREEN);
+    etapa("[2/7] escolhendo CREDITOS: a tela de creditos abre e o jogador volta ao menu");
 
     /* Caminho real: a seta desce ate CREDITOS e o jogador confirma. */
     navegar_menu_ate(CREDITOS);
     confirm_menu_option();
 
-    rodar_por(1.2);
+    /* Tempo com a tela de creditos a vista; sem tecla, ela nao pode sair sozinha. */
+    rodar_por(1.5);
+
+    checar("CT-28", "Escolher CREDITOS abre a tela de creditos e ela permanece aberta",
+           current_game_state_variables.current_screen == CREDITS_SCREEN);
+
+    /* O jogador aperta a tecla de voltar: o quadro seguinte da maquina de
+     * estados descarrega a tela de creditos e devolve o menu. */
+    creditos_tecla_de_voltar = true;
+    handle_state_machine();
+    creditos_tecla_de_voltar = false;
 
     bool voltou_ao_menu = (current_game_state_variables.current_screen == MENU_SCREEN);
+
+    rodar_por(0.8);
+
+    bool menu_aguarda = (current_game_state_variables.current_screen == MENU_SCREEN);
 
     /* Tela desconhecida tambem nao pode travar o jogo. */
     current_game_state_variables.current_screen = 99;
@@ -285,8 +309,8 @@ static void testar_creditos(void)
 
     rodar_por(0.8);
 
-    checar("CT-29", "Tela sem implementacao devolve o jogador ao menu",
-           voltou_ao_menu && desconhecida_volta);
+    checar("CT-29", "Voltar dos creditos e tela desconhecida devolvem o jogador ao menu",
+           voltou_ao_menu && menu_aguarda && desconhecida_volta);
 }
 
 static void testar_iniciar(void)
