@@ -66,8 +66,8 @@ INICIAR, cartão do dia, caminhada pelo escritório e as quatro perguntas do qui
 | CT-25 | Partida começa no dia 1, em um dia jogável | OK |
 | CT-26 | Estatísticas ocultas começam no valor base | OK |
 | CT-27 | Tela de abertura termina sozinha e entrega o menu (283 quadros) | OK |
-| CT-28 | Escolher CRÉDITOS aponta para a tela de créditos | OK |
-| CT-29 | Tela sem implementação devolve o jogador ao menu | OK |
+| CT-28 | Escolher CRÉDITOS abre a tela de créditos e ela permanece aberta | OK |
+| CT-29 | Voltar dos créditos e tela desconhecida devolvem o jogador ao menu | OK |
 | CT-30 | Escolher INICIAR no menu começa a partida | OK |
 | CT-31 | Cartão do dia termina e o escritório aparece (10,1 s) | OK |
 | CT-32 | Personagem atravessa o escritório até o computador (53 passos) | OK |
@@ -123,9 +123,11 @@ personagem anda, colide e chega ao computador, e o quiz vai até o fim.
 os testes chamam as mesmas funções de movimento que `handle_player_input()` chama,
 substituindo só a leitura do teclado — o mapeamento tecla → direção continua sendo
 verificado à mão. **Aparência**: os testes provam que as texturas carregam e que as
-posições batem, não que a tela está legível. **Telas não implementadas**: créditos,
-dia de flash e dia de salto não têm o que testar, e o CT-30 verifica justamente que
-elas devolvem o jogador ao menu. **Haskell**: as regras puras de PIF ficam de fora.
+posições batem, não que a tela está legível. **Telas não implementadas**: dia de
+flash e dia de salto não têm o que testar. O CT-29 verifica, para os créditos, a
+volta ao menu com uma tecla simulada (só nesse ponto a leitura de teclado é
+substituída, e o resto da tela é o código real) e que uma tela desconhecida também
+devolve o jogador ao menu. **Haskell**: as regras puras de PIF ficam de fora.
 
 O roteiro para gravar o screencast desta execução está em
 [roteiro-screencast.md](roteiro-screencast.md).

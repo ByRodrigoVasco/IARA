@@ -94,8 +94,8 @@ só então aperte. São seis paradas. Sugestões do que dizer:
 
 **Durante o bloco 3**, aponte para a janela do jogo:
 
-> "Essa é a partida de verdade rodando dentro do teste: a abertura, o menu, os
-> créditos que ainda não existem, o cartão do dia, o personagem andando pelo
+> "Essa é a partida de verdade rodando dentro do teste: a abertura, o menu, a
+> tela de créditos, o cartão do dia, o personagem andando pelo
 > escritório e o quiz sendo respondido até o fim."
 
 **No resumo final:**

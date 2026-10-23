@@ -16,7 +16,7 @@ Histórias com status **Concluído** no Jira:
 
 | Card | História | Responsável | Entrega no repositório |
 |---|---|---|---|
-| [PI2-166](https://csprj-adsr-2p-e8.atlassian.net/browse/PI2-166) | Tela de créditos | Julio Lins | Branch `Feature/creditos` (`40c918f`) |
+| [PI2-166](https://csprj-adsr-2p-e8.atlassian.net/browse/PI2-166) | Tela de créditos | Julio Lins | Branch `feature/creditos`, já no `develop` (`40c918f`) |
 | [PI2-192](https://csprj-adsr-2p-e8.atlassian.net/browse/PI2-192) | US09b, Testes automatizados por tarefa | Equipe | PR #31, `feature/testes-de-sistema` (`code/tests/`) |
 | [PI2-151](https://csprj-adsr-2p-e8.atlassian.net/browse/PI2-151) | Testar o sistema e manter o bug tracker atualizado | João Vitor Medeiros | PR #31, [relatório de testes](../testes/README.md), issues #32 a #39 |
 | [PI2-144](https://csprj-adsr-2p-e8.atlassian.net/browse/PI2-144) | Implementar histórias e configurar a Sprint 01 no board | Rodrigo Vasco | Board do Jira |
