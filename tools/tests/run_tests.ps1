@@ -113,6 +113,7 @@ $suite = @(
             "code/tests/test_fluxo.c",
             "code/src/core/state_machine.c", "code/src/core/game_state.c",
             "code/src/core/helper.c", "code/src/screens/pre_menu.c",
+            "code/src/screens/credits.c",
             "code/src/game/collisions.c", "code/src/game/characters.c",
             "code/src/ui/fonts.c", "code/src/ui/animations.c", "code/src/ui/button.c"
         )
