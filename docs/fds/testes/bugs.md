@@ -1,7 +1,7 @@
 # Bug tracker — bugs encontrados nos testes de sistema
 
 Oito problemas encontrados na execução dos testes de sistema de 22/10/2026
-(branch `develop`, commit `8b43f71`).
+(branch `develop`, commit `b366e7c`).
 
 Todos os oito estão registrados como issue no repositório, com a label `bug`.
 Os blocos abaixo repetem o conteúdo de cada uma, para consulta sem sair do repositório.
