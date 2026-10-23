@@ -7,6 +7,7 @@
 #include "pre_menu.h"
 #include "menu.h"
 #include "game_loop.h"
+#include "credits.h"
 #include "state_machine.h"
 
 void handle_state_initialization(void)
@@ -24,6 +25,7 @@ int handle_menu_action(int screen)
         break;
 
     case CREDITOS:
+        initialize_credits_screen();
         return CREDITS_SCREEN;
         break;
 
@@ -77,9 +79,12 @@ void handle_state_machine(void)
         break;
 
     case CREDITS_SCREEN:
-        // Tela de créditos ainda não implementada: volta para o menu.
-        initialize_menu_variables();
-        current_game_state_variables.current_screen = MENU_SCREEN;
+        if (render_credits_screen())
+        {
+            unload_credits_screen();
+            initialize_menu_variables();
+            current_game_state_variables.current_screen = MENU_SCREEN;
+        }
         break;
 
     default:
