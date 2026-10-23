@@ -96,7 +96,3 @@ Board do Jira atual, com as histórias organizadas por sprint: **Week 12** (spri
 Novas histórias adicionadas ao backlog (PI2-252 a PI2-257), já planejadas nas sprints **Week 13e14** e **Week 15e16**:
 
 ![Novas histórias no backlog, planejadas para as próximas sprints](board-novas-historias.png)
-
-### Screencast das novas histórias
-
-> **PREENCHER:** link do vídeo mostrando as histórias implementadas.
