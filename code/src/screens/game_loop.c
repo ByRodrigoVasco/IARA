@@ -7,6 +7,7 @@
 #include "fonts.h"
 #include "animations.h"
 #include "characters.h"
+#include "collisions.h"
 #include "computer_loop.h"
 
 // Valor de sentinela para indicar que o temporizador do cartão de introdução ainda não começou a contar
@@ -40,12 +41,14 @@
 
 // ============================================================================
 // DIMENSÕES E OFFSETS DA HITBOX (CAIXA DE COLISÃO DO JOGADOR)
-// Ajustados para que a colisão ocorra apenas no corpo do personagem e não no espaço transparente do sprite
+// A colisão ocorre só nos pés do personagem, para ele poder passar atrás dos móveis (a cabeça fica por cima)
 // ============================================================================
 #define HITBOX_OFFSET_X_AT_REFERENCE 10.0f  // Distância do topo-esquerdo do sprite até o início da hitbox (X)
-#define HITBOX_OFFSET_Y_AT_REFERENCE 0.1f   // Distância do topo-esquerdo do sprite até o início da hitbox (Y)
+#define HITBOX_OFFSET_Y_AT_REFERENCE 48.0f  // Distância do topo-esquerdo do sprite até o início da hitbox (Y)
 #define HITBOX_WIDTH_AT_REFERENCE    50.0f  // Largura efetiva da área de colisão do jogador
-#define HITBOX_HEIGHT_AT_REFERENCE   72.0f  // Altura efetiva da área de colisão do jogador
+#define HITBOX_HEIGHT_AT_REFERENCE   24.0f  // Altura da área de colisão do jogador (só os pés)
+#define PLAYER_SPAWN_OFFSET_X_AT_REFERENCE -37.0f  // Deslocamento X do spawn a partir do centro da tela
+#define PLAYER_SPAWN_OFFSET_Y_AT_REFERENCE 208.0f  // Deslocamento Y do spawn (logo acima da porta de entrada)
 
 // ============================================================================
 // VARIÁVEIS ESTÁTICAS DE CONTROLE E ESTADO
@@ -84,10 +87,51 @@ static Texture2D arrow_down_texture;     // Seta indicativa flutuante sobre obje
 static char_textures estagiario_texture;                 // Array/Estrutura com as texturas de todas as direções do jogador
 static Vector2 current_estagiario_position;               // Posição cartesiana (X, Y) do jogador na tela
 static Texture2D current_estagiario_texture_direction;   // Textura atual baseada na direção para onde o jogador está olhando
+static int current_direction;                            // Direção atual do jogador (EAST, NORTH...)
+static Texture2D walk_east_textures[WALK_FRAME_COUNT];   // Frames do andar para o leste
+static Texture2D walk_west_textures[WALK_FRAME_COUNT];   // Frames do andar para o oeste (espelho do leste)
+static Texture2D walk_north_textures[WALK_FRAME_COUNT];  // Frames do andar para o norte (se existirem)
+static Texture2D walk_south_textures[WALK_FRAME_COUNT];  // Frames do andar para o sul (se existirem)
+static bool has_walk_north = false;                      // true se os frames do norte foram carregados
+static bool has_walk_south = false;                      // true se os frames do sul foram carregados
+static float walk_time = 0.0f;                           // Segundos andando sem parar (0 = parado)
 
 static Rectangle map_collision_rec;                      // Limites físicos das paredes do mapa
+static Vector2 last_screen_center;                        // Centro da tela no quadro anterior (detecta redimensionamento)
+static float last_scale;                                  // Escala no quadro anterior
 static Rectangle estagiario_computer_collision_rectangle; // Área de gatilho para interagir com o computador
 static Rectangle estagiario_collision_rec;               // Hitbox atualizada dinamicamente do jogador
+static bool show_debug_hitboxes = false;                 // Modo debug (F1): desenha as hitboxes de colisão
+
+// Obstáculos medidos no mapa de referência (office.png), relativos ao centro da tela
+#define OBSTACLE_COUNT 25  // Quantidade de obstáculos medidos; atualizar ao incluir mais
+static Rectangle office_obstacles_reference[OBSTACLE_COUNT] = {
+    {-531.0f, -438.0f, 1062.0f, 114.0f},  // parede do topo (banheiros, cozinha, quadro, servidores)
+    {-531.0f, -317.0f, 175.0f, 67.0f},    // banheiros, parte de baixo
+    {-189.0f, -317.0f, 31.0f, 12.0f},     // lixeira
+    {18.0f, -317.0f, 31.0f, 12.0f},       // planta embaixo do quadro
+    {185.0f, -317.0f, 23.0f, 12.0f},      // bebedouro
+    {364.0f, -317.0f, 167.0f, 94.0f},     // sala de servidores, parte de baixo
+    {-531.0f, -242.0f, 140.0f, 106.0f},   // sala do mural
+    {403.0f, -215.0f, 128.0f, 487.0f},    // salas de vidro da direita
+    {-272.0f, -197.0f, 190.0f, 78.0f},    // mesas superior esquerda
+    {63.0f, -197.0f, 198.0f, 78.0f},      // mesas superior direita
+    {-13.0f, -156.0f, 19.0f, 74.0f},      // planta do meio, em cima
+    {-473.0f, -128.0f, 81.0f, 86.0f},     // impressora
+    {-531.0f, -65.0f, 43.0f, 63.0f},      // planta da esquerda, em cima
+    {-276.0f, 59.0f, 198.0f, 82.0f},      // mesas inferior esquerda
+    {63.0f, 59.0f, 198.0f, 78.0f},        // mesas inferior direita
+    {-531.0f, 57.0f, 105.0f, 82.0f},      // estante de livros
+    {-17.0f, 100.0f, 23.0f, 78.0f},       // planta do meio, embaixo
+    {-531.0f, 167.0f, 39.0f, 78.0f},      // planta da esquerda, no meio
+    {-422.0f, 253.0f, 66.0f, 43.0f},      // mesinha do sofá
+    {481.0f, 280.0f, 39.0f, 27.0f},       // planta da direita, embaixo
+    {-531.0f, 292.0f, 43.0f, 31.0f},      // planta da esquerda, embaixo
+    {-60.0f, 304.0f, 116.0f, 27.0f},      // porta de vidro
+    {-169.0f, 316.0f, 78.0f, 16.0f},      // jardineira esquerda
+    {95.0f, 316.0f, 78.0f, 16.0f},        // jardineira direita
+    {-531.0f, 339.0f, 1062.0f, 98.0f}};   // parede de baixo
+static Rectangle office_obstacles[OBSTACLE_COUNT];  // Mesmos obstáculos em coordenadas da tela
 
 // ---------------------------------------------------------------------------
 // FUNÇÕES DE REDIMENSIONAMENTO E ESCALA DINÂMICA
@@ -129,12 +173,11 @@ static float get_player_size(void)
  */
 static Rectangle get_computer_collision_rectangle(void)
 {
-    float scale = get_scale();
-    return (Rectangle){
-        GetScreenWidth() / 2.0f + COMPUTER_OFFSET_X_AT_REFERENCE * scale,
-        GetScreenHeight() / 2.0f + COMPUTER_OFFSET_Y_AT_REFERENCE * scale,
-        COMPUTER_SIZE_AT_REFERENCE * scale,
-        COMPUTER_SIZE_AT_REFERENCE * scale};
+    Rectangle reference = {COMPUTER_OFFSET_X_AT_REFERENCE, COMPUTER_OFFSET_Y_AT_REFERENCE,
+                           COMPUTER_SIZE_AT_REFERENCE, COMPUTER_SIZE_AT_REFERENCE};
+    Vector2 screen_center = {GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f};
+
+    return scale_reference_rect(reference, get_scale(), screen_center);
 }
 
 /**
@@ -145,13 +188,49 @@ static Rectangle get_computer_collision_rectangle(void)
  */
 void update_collision_rec(void)
 {
+    Rectangle reference = {HITBOX_OFFSET_X_AT_REFERENCE, HITBOX_OFFSET_Y_AT_REFERENCE,
+                           HITBOX_WIDTH_AT_REFERENCE, HITBOX_HEIGHT_AT_REFERENCE};
+
+    estagiario_collision_rec = scale_reference_rect(reference, get_scale(), current_estagiario_position);
+}
+
+/**
+ * @brief Mantém o jogador no mesmo ponto do mapa quando a janela muda de tamanho.
+ */
+static void keep_player_place_on_resize(void)
+{
+    Vector2 screen_center = {GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f};
     float scale = get_scale();
 
-    estagiario_collision_rec = (Rectangle){
-        current_estagiario_position.x + HITBOX_OFFSET_X_AT_REFERENCE * scale,
-        current_estagiario_position.y + HITBOX_OFFSET_Y_AT_REFERENCE * scale,
-        HITBOX_WIDTH_AT_REFERENCE * scale,
-        HITBOX_HEIGHT_AT_REFERENCE * scale};
+    // Janela minimizada: altura 0 daria divisão por zero, então espera a janela voltar
+    if (scale <= 0) return;
+
+    if (screen_center.x != last_screen_center.x || screen_center.y != last_screen_center.y || scale != last_scale)
+    {
+        // Distância do jogador ao centro do mapa, reescalada, somada ao novo centro
+        current_estagiario_position.x = screen_center.x + (current_estagiario_position.x - last_screen_center.x) * scale / last_scale;
+        current_estagiario_position.y = screen_center.y + (current_estagiario_position.y - last_screen_center.y) * scale / last_scale;
+        last_screen_center = screen_center;
+        last_scale = scale;
+    }
+}
+
+/**
+ * @brief Converte o limite do mapa e os obstáculos de referência para a tela atual (a janela pode mudar de tamanho).
+ */
+static void update_obstacle_recs(void)
+{
+    Vector2 screen_center = {GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f};
+
+    // O mapa é desenhado com get_scale() centralizado, então o limite usa a mesma escala e centro
+    Rectangle map_reference = {-in_game_office.width / 2.0f, -in_game_office.height / 2.0f,
+                               (float)in_game_office.width, (float)in_game_office.height};
+    map_collision_rec = scale_reference_rect(map_reference, get_scale(), screen_center);
+
+    for (int i = 0; i < OBSTACLE_COUNT; i++)
+    {
+        office_obstacles[i] = scale_reference_rect(office_obstacles_reference[i], get_scale(), screen_center);
+    }
 }
 
 /**
@@ -203,16 +282,24 @@ void initialize_game_loop_variables(void)
 
     // Inicializa o conjunto de sprites direcionais do personagem estagiário
     initialize_estagiario_1_textures(estagiario_texture);
+    load_walk_frames("Estagiarios", "east", false, walk_east_textures);
+    load_walk_frames("Estagiarios", "east", true, walk_west_textures);
+    has_walk_north = load_walk_frames("Estagiarios", "north", false, walk_north_textures);
+    has_walk_south = load_walk_frames("Estagiarios", "south", false, walk_south_textures);
 
-    // Define o ponto inicial de surgimento (spawn) do jogador no centro da tela
-    current_estagiario_position = (Vector2){middle_screen_x, middle_screen_y};
-    current_estagiario_texture_direction = estagiario_texture[SOUTH]; // Inicia olhando para o sul (frente)
+    // Define o ponto inicial de surgimento (spawn) do jogador, logo acima da porta de entrada
+    current_estagiario_position = (Vector2){
+        middle_screen_x + PLAYER_SPAWN_OFFSET_X_AT_REFERENCE * get_scale(),
+        middle_screen_y + PLAYER_SPAWN_OFFSET_Y_AT_REFERENCE * get_scale()};
+    current_direction = NORTH;
+    current_estagiario_texture_direction = estagiario_texture[NORTH]; // Inicia olhando para o norte (entrando no escritório)
 
-    // Define a área delimitadora de colisão do cenário/escritório centralizado na tela
-    map_collision_rec = (Rectangle){
-        middle_screen_x - (in_game_office.width / 2), middle_screen_y - (in_game_office.height / 2),
-        in_game_office.width, in_game_office.height
-    };
+    // Guarda centro e escala iniciais para detectar redimensionamento depois
+    last_screen_center = (Vector2){GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f};
+    last_scale = get_scale();
+
+    // Calcula o limite do mapa e os obstáculos já no início (depois são recalculados a cada quadro)
+    update_obstacle_recs();
 
     // Obtém o retângulo do computador e alinha a caixa de colisão inicial do jogador
     estagiario_computer_collision_rectangle = get_computer_collision_rectangle();
@@ -384,6 +471,9 @@ void handle_player_input(void)
     int dx = 0;
     int dy = 0;
 
+    // F1 liga e desliga o modo debug das hitboxes
+    if (IsKeyPressed(KEY_F1)) show_debug_hitboxes = !show_debug_hitboxes;
+
     // Leitura das teclas de navegação (Suporta tanto WASD quanto as Setas Direcionais)
     if (IsKeyDown(KEY_W) || IsKeyDown(KEY_UP))    dy -= 1;
     if (IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN))  dy += 1;
@@ -393,19 +483,23 @@ void handle_player_input(void)
     // Se nenhuma tecla direcional estiver pressionada, interrompe o processamento mantendo a posição
     if (dx == 0 && dy == 0)
     {
+        walk_time = 0.0f;
         update_collision_rec();
         return;
     }
 
-    // Seleção da textura direcional correta com base no vetor combinado (dx, dy)
-    if      (dx == 0 && dy < 0) current_estagiario_texture_direction = estagiario_texture[NORTH];
-    else if (dx == 0 && dy > 0) current_estagiario_texture_direction = estagiario_texture[SOUTH];
-    else if (dx < 0  && dy == 0) current_estagiario_texture_direction = estagiario_texture[WEST];
-    else if (dx > 0  && dy == 0) current_estagiario_texture_direction = estagiario_texture[EAST];
-    else if (dx < 0  && dy < 0) current_estagiario_texture_direction = estagiario_texture[NORTHWEST];
-    else if (dx > 0  && dy < 0) current_estagiario_texture_direction = estagiario_texture[NORTHEAST];
-    else if (dx < 0  && dy > 0) current_estagiario_texture_direction = estagiario_texture[SOUTHWEST];
-    else                        current_estagiario_texture_direction = estagiario_texture[SOUTHEAST];
+    walk_time += GetFrameTime(); // Usa o tempo real do quadro para não depender do FPS
+
+    // Seleção da direção correta com base no vetor combinado (dx, dy)
+    if      (dx == 0 && dy < 0) current_direction = NORTH;
+    else if (dx == 0 && dy > 0) current_direction = SOUTH;
+    else if (dx < 0  && dy == 0) current_direction = WEST;
+    else if (dx > 0  && dy == 0) current_direction = EAST;
+    else if (dx < 0  && dy < 0) current_direction = NORTHWEST;
+    else if (dx > 0  && dy < 0) current_direction = NORTHEAST;
+    else if (dx < 0  && dy > 0) current_direction = SOUTHWEST;
+    else                        current_direction = SOUTHEAST;
+    current_estagiario_texture_direction = estagiario_texture[current_direction];
 
     // Correção de velocidade diagonal (Evita o efeito de ser mais rápido na diagonal devido ao Teorema de Pitágoras)
     if (dx != 0 && dy != 0)
@@ -413,10 +507,12 @@ void handle_player_input(void)
         speed *= 0.7071f;
     }
 
-    // Aplicação final do deslocamento à posição do jogador
-    current_estagiario_position.x += dx * speed;
-    current_estagiario_position.y += dy * speed;
+    // Move um eixo por vez: se bater num obstáculo, desfaz só aquele eixo e o jogador desliza na parede
+    update_collision_rec();
+    current_estagiario_position.x = move_axis(current_estagiario_position.x, dx * speed, estagiario_collision_rec, true, office_obstacles, OBSTACLE_COUNT);
 
+    update_collision_rec();
+    current_estagiario_position.y = move_axis(current_estagiario_position.y, dy * speed, estagiario_collision_rec, false, office_obstacles, OBSTACLE_COUNT);
     update_collision_rec();
 }
 
@@ -427,19 +523,64 @@ void render_player(void)
 {
     float size = get_player_size();
 
-    // Retângulo de origem recortando toda a textura direcional atual
-    Rectangle source = {0, 0,
-                        (float)current_estagiario_texture_direction.width,
-                        (float)current_estagiario_texture_direction.height};
+    // Parado desenha a textura da direção; andando troca pelo frame do andar
+    Texture2D texture = current_estagiario_texture_direction;
+    float sway_y = 0.0f;
+
+    if (walk_time > 0)
+    {
+        int frame = get_walk_frame(walk_time);
+
+        if (current_direction == EAST || current_direction == NORTHEAST || current_direction == SOUTHEAST)
+        {
+            texture = walk_east_textures[frame];
+        }
+        else if (current_direction == WEST || current_direction == NORTHWEST || current_direction == SOUTHWEST)
+        {
+            texture = walk_west_textures[frame];
+        }
+        else if (current_direction == NORTH && has_walk_north)
+        {
+            texture = walk_north_textures[frame];
+        }
+        else if (current_direction == SOUTH && has_walk_south)
+        {
+            texture = walk_south_textures[frame];
+        }
+        else
+        {
+            // TODO: sem frames de norte/sul para este personagem; trocar o balanço de 1 px pelos frames reais
+            sway_y = frame % 2;
+        }
+    }
+
+    // Retângulo de origem recortando toda a textura atual
+    Rectangle source = {0, 0, (float)texture.width, (float)texture.height};
     
     // Retângulo de destino definindo onde e com qual tamanho o sprite será desenhado no mundo
     Rectangle dest = {current_estagiario_position.x,
-                      current_estagiario_position.y,
+                      current_estagiario_position.y + sway_y,
                       size, size};
 
     // Desenha a textura na tela com suporte a tint de opacidade (color_to_fade)
-    DrawTexturePro(current_estagiario_texture_direction, source, dest,
-                   (Vector2){0, 0}, 0.0f, color_to_fade);
+    DrawTexturePro(texture, source, dest, (Vector2){0, 0}, 0.0f, color_to_fade);
+}
+
+/**
+ * @brief Desenha o contorno das hitboxes de colisão quando o modo debug (F1) está ligado.
+ */
+void render_debug_hitboxes(void)
+{
+    if (!show_debug_hitboxes) return;
+
+    DrawRectangleLinesEx(map_collision_rec, 2.0f, RED);                           // Limite do mapa
+    DrawRectangleLinesEx(estagiario_computer_collision_rectangle, 2.0f, YELLOW);  // Zona do computador
+    DrawRectangleLinesEx(estagiario_collision_rec, 2.0f, GREEN);                  // Jogador
+
+    for (int i = 0; i < OBSTACLE_COUNT; i++)
+    {
+        DrawRectangleLinesEx(office_obstacles[i], 2.0f, ORANGE);                  // Obstáculos
+    }
 }
 
 /**
@@ -564,6 +705,15 @@ void unload_office(void)
     {
         UnloadTexture(estagiario_texture[i]);
     }
+
+    // Frames do andar (leste e oeste)
+    for (int i = 0; i < WALK_FRAME_COUNT; i++)
+    {
+        UnloadTexture(walk_east_textures[i]);
+        UnloadTexture(walk_west_textures[i]);
+        UnloadTexture(walk_north_textures[i]);
+        UnloadTexture(walk_south_textures[i]);
+    }
 }
 
 /**
@@ -594,6 +744,8 @@ void handle_game_loop_screens(void)
     case IN_GAME_SCREEN:
         // Mantém a área de colisão do computador atualizada caso haja redimensionamento de janela
         estagiario_computer_collision_rectangle = get_computer_collision_rectangle();
+        keep_player_place_on_resize();
+        update_obstacle_recs();
 
         // Processa lógica de comandos do jogador, interações e colisões com o mapa
         handle_player_input();
@@ -609,6 +761,7 @@ void handle_game_loop_screens(void)
         render_player();
         render_control_tips();
         render_interact_arrow();
+        render_debug_hitboxes();
 
         // Se a interação com o computador foi acionada, realiza a transição por Fade Out
         if (enter_computer_screen)
@@ -675,5 +828,14 @@ void unload_game_loop(void)
     for (int i = 0; i < DIRECTION_COUNT; i++)
     {
         UnloadTexture(estagiario_texture[i]);
+    }
+
+    // Frames do andar (leste e oeste)
+    for (int i = 0; i < WALK_FRAME_COUNT; i++)
+    {
+        UnloadTexture(walk_east_textures[i]);
+        UnloadTexture(walk_west_textures[i]);
+        UnloadTexture(walk_north_textures[i]);
+        UnloadTexture(walk_south_textures[i]);
     }
 }
