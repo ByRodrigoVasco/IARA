@@ -3,9 +3,9 @@
 Oito problemas encontrados na execução dos testes de sistema de 22/10/2026
 (branch `develop`, commit `8b43f71`).
 
-Cada bloco abaixo é **uma issue pronta para abrir** em
-[github.com/ByRodrigoVasco/IARA/issues/new](https://github.com/ByRodrigoVasco/IARA/issues/new):
-copie o título, aplique as labels e cole o corpo.
+Cada bloco abaixo é o texto de uma issue. As oito já foram abertas no
+[bug tracker do GitHub](https://github.com/ByRodrigoVasco/IARA/issues), e a
+coluna "Issue" da tabela abaixo aponta para cada uma.
 
 ## Status
 
@@ -13,14 +13,14 @@ Atualizar esta tabela conforme as issues forem abertas e corrigidas.
 
 | ID | Problema | Gravidade | Issue | Status |
 |---|---|---|---|---|
-| BUG-01 | Fade in para em alpha 250 | Baixa | _a abrir_ | Aberto |
-| BUG-02 | Voltar ao menu vaza memória | Alta | _a abrir_ | Aberto |
-| BUG-03 | Textura do jogador liberada duas vezes | Média | _a abrir_ | Aberto |
-| BUG-04 | Funções de unload nunca chamadas | Baixa | _a abrir_ | Aberto |
-| BUG-05 | Desenho fora do `BeginDrawing`/`EndDrawing` | Baixa | _a abrir_ | Aberto |
-| BUG-06 | Caminho de sprites em minúsculo | Média | _a abrir_ | Aberto |
-| BUG-07 | Pré-menu não descarrega imagens | Média | _a abrir_ | Aberto |
-| BUG-08 | Texto do quiz vaza para fora da caixa | Média | _a abrir_ | Aberto |
+| BUG-01 | Fade in para em alpha 250 | Baixa | [#32](https://github.com/ByRodrigoVasco/IARA/issues/32) | Aberto |
+| BUG-02 | Voltar ao menu vaza memória | Alta | [#33](https://github.com/ByRodrigoVasco/IARA/issues/33) | Aberto |
+| BUG-03 | Textura do jogador liberada duas vezes | Média | [#34](https://github.com/ByRodrigoVasco/IARA/issues/34) | Aberto |
+| BUG-04 | Funções de unload nunca chamadas | Baixa | [#35](https://github.com/ByRodrigoVasco/IARA/issues/35) | Aberto |
+| BUG-05 | Desenho fora do `BeginDrawing`/`EndDrawing` | Baixa | [#36](https://github.com/ByRodrigoVasco/IARA/issues/36) | Aberto |
+| BUG-06 | Caminho de sprites em minúsculo | Média | [#37](https://github.com/ByRodrigoVasco/IARA/issues/37) | Aberto |
+| BUG-07 | Pré-menu não descarrega imagens | Média | [#38](https://github.com/ByRodrigoVasco/IARA/issues/38) | Aberto |
+| BUG-08 | Texto do quiz vaza para fora da caixa | Média | [#39](https://github.com/ByRodrigoVasco/IARA/issues/39) | Aberto |
 
 ---
 
