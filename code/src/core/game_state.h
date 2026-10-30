@@ -7,6 +7,9 @@
 #include <stdbool.h>
 #include "macros.h"
 
+// Quantidade total de dias da campanha (Dia 1 ao Dia 100).
+#define TOTAL_GAME_DAYS 100
+
 // Estado geral da partida.
 struct game_state_variables {
     int current_screen;      // Tela atual (PRE_MENU_SCREEN, MENU_SCREEN, ...)
@@ -15,6 +18,10 @@ struct game_state_variables {
     bool mode_type;          // Modo de resolução escolhido (manual ou automático)
     bool user_investigated;  // Se o jogador investigou antes de responder
     bool is_resolved;        // Se a tarefa do dia foi resolvida
+
+    // Puzzles já resolvidos na campanha. O índice é o número do dia
+    // (resolved_puzzles[1] = Dia 1); a posição 0 não é usada.
+    bool resolved_puzzles[TOTAL_GAME_DAYS + 1];
 };
 
 // Estatísticas ocultas que definem o final do jogo.
