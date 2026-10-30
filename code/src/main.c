@@ -4,6 +4,7 @@
 #include "menu.h"
 #include "fonts.h"
 #include "macros.h"
+#include "save.h"
 
 unsigned int screen_width = 0;
 unsigned int screen_height = 0;
@@ -48,9 +49,24 @@ int main(void)
 
     current_game_state_variables.current_screen = PRE_MENU_SCREEN;
 
+    /* WindowShouldClose() fica true quando o jogador fecha a janela pelo X,
+     * por ALT+F4 (o sistema manda o mesmo pedido de fechar) ou pela tecla ESC.
+     * A opção SAIR do menu também encerra este loop. */
     while (!WindowShouldClose())
     {
         handle_state_machine();
+    }
+
+    /* Save automático (US01): grava o progresso ANTES de liberar qualquer
+     * recurso, para nenhum progresso recente se perder ao fechar. */
+    save_result save_status = save_game_state(SAVE_FILE_PATH);
+    if (save_status == SAVE_OK)
+    {
+        TraceLog(LOG_INFO, "SAVE: progresso salvo em %s (dia %d)", SAVE_FILE_PATH, current_game_state_variables.current_day);
+    }
+    else
+    {
+        TraceLog(LOG_WARNING, "SAVE: nao foi possivel salvar o progresso: %s", save_result_to_string(save_status));
     }
 
     unload_fonts();
