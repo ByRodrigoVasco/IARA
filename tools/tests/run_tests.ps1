@@ -85,6 +85,11 @@ $suite = @(
         Fonte = @("code/tests/test_characters.c", "code/src/game/characters.c")
     },
     @{
+        Nome  = "test_save"
+        Nota  = "Unidade: save e carregamento da partida"
+        Fonte = @("code/tests/test_save.c", "code/src/core/save.c", "code/src/core/game_state.c")
+    },
+    @{
         Nome  = "test_sistema"
         Nota  = "Sistema bloco 1: partida, movimento e colisoes"
         Fonte = @(
