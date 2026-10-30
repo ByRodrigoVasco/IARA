@@ -13,6 +13,11 @@ void initialize_game_state_variables(void)
     current_game_state_variables.mode_type = false;
     current_game_state_variables.user_investigated = false;
     current_game_state_variables.is_resolved = false;
+
+    for (int day = 0; day <= TOTAL_GAME_DAYS; day++)
+    {
+        current_game_state_variables.resolved_puzzles[day] = false;
+    }
 }
 
 void initialize_hidden_statistic(void)
