@@ -74,7 +74,18 @@ Ou, no VS Code com a pasta `IARA` aberta, aperte `Ctrl + Shift + B`: ele compila
 ./iara.exe
 ```
 
+O jogo abre em janela, que pode ser redimensionada. **F11** ou a caixa **Tela cheia**, em `CONFIGURAÇÕES` no menu, alternam entre janela e tela cheia. A mesma tela ajusta o brilho e o alto contraste.
+
 > **Versão para terminal (PIF):** em desenvolvimento.
+
+### Gerar o pacote para outras máquinas
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/pacote/empacotar.ps1
+powershell -ExecutionPolicy Bypass -File tools/pacote/testar_pacote.ps1
+```
+
+O primeiro comando gera `build/IARA-windows.zip`, com o executável, as DLLs e os assets. Quem recebe só extrai e abre o `iara.exe`: não precisa de instalação, conta, internet nem administrador. O segundo testa o pacote fora do ambiente de desenvolvimento; o teste em máquina real segue o [roteiro de máquina limpa](docs/fds/testes/maquina-limpa.md).
 
 ## Entregas por disciplina
 
