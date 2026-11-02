@@ -7,7 +7,8 @@
 #define NONE 0
 #define INICIAR 1
 #define CREDITOS 2
-#define SAIR 3
+#define CONFIGURACOES 3
+#define SAIR 4
 
 extern bool is_menu_to_close; // true quando o jogador escolheu uma opção
 extern int next_screen;       // opção escolhida (INICIAR, CREDITOS ou SAIR)

@@ -2,7 +2,7 @@
 #include "fonts.h"
 
 // Tamanho base (em pixels) com que a fonte é carregada.
-#define FONT_BASE_SIZE 32
+#define FONT_BASE_SIZE 64
 
 // Caracteres carregados: ASCII imprimível (32 a 126) e Latin-1 (160 a 255),
 // que inclui os acentos do português: á, é, ç, ã, õ etc.
@@ -34,6 +34,9 @@ void initialize_fonts(void)
     }
 
     default_game_font = LoadFontEx("code/assets/fonts/VT323-Regular.ttf", FONT_BASE_SIZE, codepoints, TOTAL_CODEPOINT_COUNT);
+
+    // A interface muda de tamanho com a janela: a suavização mantém o texto legível em qualquer escala.
+    SetTextureFilter(default_game_font.texture, TEXTURE_FILTER_BILINEAR);
 }
 
 void unload_fonts(void)
