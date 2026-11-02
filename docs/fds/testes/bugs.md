@@ -19,7 +19,7 @@ Atualizar a coluna Status conforme as issues forem corrigidas e fechadas.
 | BUG-05 | Desenho fora do `BeginDrawing`/`EndDrawing` | Baixa | [#36](https://github.com/ByRodrigoVasco/IARA/issues/36) | Aberto |
 | BUG-06 | Caminho de sprites em minúsculo | Média | [#37](https://github.com/ByRodrigoVasco/IARA/issues/37) | Aberto |
 | BUG-07 | Pré-menu não descarrega imagens | Média | [#38](https://github.com/ByRodrigoVasco/IARA/issues/38) | Aberto |
-| BUG-08 | Texto do quiz vaza para fora da caixa | Média | [#39](https://github.com/ByRodrigoVasco/IARA/issues/39) | Aberto |
+| BUG-08 | Texto do quiz vaza para fora da caixa | Média | [#39](https://github.com/ByRodrigoVasco/IARA/issues/39) | Corrigido na branch, falta publicar |
 
 ---
 
