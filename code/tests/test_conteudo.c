@@ -22,6 +22,8 @@ unsigned int middle_screen_y = 0;
 /* Inclui os .c para alcancar o roteiro e o estado interno, que sao estaticos. */
 #include "computer_loop.c"
 #include "menu.c"
+#include "settings.h"
+#include "accessibility.h"
 
 #define LARGURA_JANELA 1280
 #define ALTURA_JANELA 720
@@ -210,6 +212,25 @@ static void testar_roteiro_do_quiz(void)
     checar("CT-20", "Fim do roteiro encerra a tela do computador", computer_tasks_finished);
 }
 
+/* Desenha um fundo cinza com o brilho atual e devolve a cor resultante. */
+static Color cor_com_brilho_atual(void)
+{
+    RenderTexture2D alvo = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
+
+    BeginTextureMode(alvo);
+    ClearBackground((Color){128, 128, 128, 255});
+    draw_brightness_overlay();
+    EndTextureMode();
+
+    Image quadro = LoadImageFromTexture(alvo.texture);
+    Color cor = GetImageColor(quadro, 10, 10);
+
+    UnloadImage(quadro);
+    UnloadRenderTexture(alvo);
+
+    return cor;
+}
+
 /* ------------------------------------------------------------------------ */
 /* Menu principal                                                             */
 /* ------------------------------------------------------------------------ */
@@ -223,9 +244,12 @@ static void testar_menu(void)
     checar("CT-21", "Menu abre em INICIAR, destravado",
            selected_menu_option == INICIAR && !is_menu_to_close && next_screen == NONE);
 
-    /* Descer tres vezes deve voltar para INICIAR (lista circular). */
+    /* Descer quatro vezes deve voltar para INICIAR (lista circular). */
     move_menu_selection(1);
     bool desceu_para_creditos = (selected_menu_option == CREDITOS);
+
+    move_menu_selection(1);
+    bool desceu_para_configuracoes = (selected_menu_option == CONFIGURACOES);
 
     move_menu_selection(1);
     bool desceu_para_sair = (selected_menu_option == SAIR);
@@ -238,7 +262,31 @@ static void testar_menu(void)
     bool subiu_para_o_fim = (selected_menu_option == SAIR);
 
     checar("CT-22", "Selecao do menu circula nos dois sentidos",
-           desceu_para_creditos && desceu_para_sair && voltou_ao_topo && subiu_para_o_fim);
+           desceu_para_creditos && desceu_para_configuracoes && desceu_para_sair && voltou_ao_topo && subiu_para_o_fim);
+
+    /* As caixas da tela de configuracoes mudam na hora, e so VOLTAR sai dela. */
+    bool saiu_ao_ligar = activate_settings_option(SETTINGS_CONTRAST);
+    bool ligou = is_high_contrast_enabled() && is_high_contrast_filter_ready() && !saiu_ao_ligar;
+
+    bool saiu_ao_desligar = activate_settings_option(SETTINGS_CONTRAST);
+    bool desligou = !is_high_contrast_enabled() && !saiu_ao_desligar;
+
+    checar("CT-37", "Alto contraste liga e desliga na tela de configuracoes", ligou && desligou && activate_settings_option(SETTINGS_BACK));
+
+    /* O brilho respeita os limites e muda de verdade o que aparece na tela. */
+    set_game_brightness(9.0f);
+    bool teto = get_game_brightness() == BRIGHTNESS_MAX;
+    Color claro = cor_com_brilho_atual();
+
+    set_game_brightness(0.0f);
+    bool piso = get_game_brightness() == BRIGHTNESS_MIN;
+    Color escuro = cor_com_brilho_atual();
+
+    set_game_brightness(1.0f);
+    Color normal = cor_com_brilho_atual();
+
+    checar("CT-41", "Brilho respeita os limites e altera a imagem",
+           teto && piso && escuro.r < normal.r && claro.r > normal.r);
 
     /* Confirmar guarda a escolha e sinaliza o fechamento do menu. */
     selected_menu_option = CREDITOS;
