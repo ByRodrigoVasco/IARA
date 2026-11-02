@@ -4,6 +4,18 @@
 #include <stdbool.h>
 #include "raylib.h"
 
+typedef enum { TILE_SOLID, TILE_GLASS } tile_type;
+typedef struct {
+    Rectangle bounds;
+    tile_type type;
+    float base_height; // Vidro: apenas a base bloqueia os pes do jogador.
+} collision_tile;
+
+/** Retorna o bloqueio efetivo: tile solido inteiro ou somente a base do vidro. */
+Rectangle tile_collision_rectangle(collision_tile tile);
+/** Variante tipada de collides_with_any; preserva a API de retangulos existente. */
+bool collides_with_tiles(Rectangle hitbox, const collision_tile *tiles, int count);
+
 /**
  * @brief Informa se o mouse está sobre um retângulo.
  *

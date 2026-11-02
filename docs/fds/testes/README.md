@@ -131,3 +131,70 @@ devolve o jogador ao menu. **Haskell**: as regras puras de PIF ficam de fora.
 
 O roteiro para gravar o screencast desta execução está em
 [roteiro-screencast.md](roteiro-screencast.md).
+
+
+## PI2-224 — vidro e fachada inferior (02/11/2026)
+
+Os dois painéis inferiores e a porta de entrada permitem caminhar atrás do vidro.
+A personagem também entra parcialmente atrás dos trechos opacos da fachada,
+respeitando a mesma profundidade máxima dos vidros. O limite físico inferior
+coincide com a linha de baixo da porta (y=808 no asset, referência y=369,5), em toda
+a largura do mapa. Não é permitido afundar no rodapé ou na placa NEXO. As plantas
+e jardineiras têm bloqueio em toda a área visível, incluindo vasos e folhagem;
+as jardineiras inferiores ocupam também a parte inferior dos vasos, antes ausente.
+As salas da direita e os móveis mantêm seus bloqueios. A porta oferece passagem visual, sem transição para outro mapa.
+
+`collision_tile` distingue `TILE_SOLID` e `TILE_GLASS`; o vidro fornece somente
+sua base como retângulo bloqueante. `collides_with_tiles` oferece a consulta
+tipada e `collides_with_any`/`move_axis` preservam as assinaturas existentes.
+A superfície visível é definida em `glass_surface_reference`, separadamente
+da profundidade física em `glass_reference`. F1 mostra os bloqueios efetivos.
+
+A cena e a personagem são desenhadas em uma RenderTexture. Um shader GLSL 330
+aplica 12% de azul somente nas superfícies de vidro, sem deslocar pixels e sem
+usar tempo ou ondas. Os reflexos fixos reutilizam o asset; molduras, divisória
+da porta, rodapés, pilares e parede central são redesenhados à frente. Dicas de
+controle e seta ficam fora do efeito. A textura intermediária é recriada ao
+redimensionar e, junto do shader, é liberada ao sair do escritório ou encerrar o
+jogo. Se o shader não estiver disponível, reflexos e oclusão continuam.
+
+Validação: build completo sem diagnósticos do compilador; testes de unidade de
+colisão aprovados; testes gráficos VID-01 a VID-08 em 800×450, 1280×720,
+1366×768, 1920×1080 e 1024×768:
+
+| Caso | Verificação |
+|---|---|
+| VID-01 | Entrar atrás dos painéis, porta e pilares sem colidir com a fachada |
+| VID-02 | Movimento bloqueado ao tentar ultrapassar a base inferior |
+| VID-03 | Pixels alterados no vidro e preservados fora das superfícies |
+| VID-04 | Molduras redesenhadas sobre a parte sobreposta da personagem |
+| VID-05 | Quadros idênticos com a personagem parada, mesmo após decorrer tempo |
+| VID-06 | Varredura da fachada com passos verticais e diagonais sem ultrapassar a linha inferior da porta |
+| VID-07 | Plantas e jardineiras bloqueiam os quatro lados e a parte inferior dos vasos |
+| VID-08 | Personagem permanece visível no piso entre pilares e jardineiras, nos dois lados |
+
+A suíte completa manteve as falhas preexistentes CT-15 (fade in), CT-24
+(memória do menu) e CT-35 (layout do quiz). Na execução completa anterior, com sete casos do vidro, os testes
+de sistema somaram 39/42 aprovados. Após a correção visual, o bloco 1 foi
+executado novamente: 23/24 aprovados, com somente CT-15 reprovado; os oito
+casos VID passaram nas cinco resoluções. O VID-08 falhou antes da correção e
+passou depois, confirmando a regressão visual. Os três conjuntos de unidade passaram.
+
+Os recortes opacos da parede central começam na sua borda real, em y=808 no
+asset. A faixa de piso acima dela não é redesenhada sobre a personagem. Essa
+correção altera somente a oclusão visual; as colisões aprovadas permanecem iguais.
+
+![Personagem inteira no piso entre a jardineira e o pilar](evidencias/personagem-no-piso.png)
+
+![Personagem atrás do painel inferior direito](evidencias/vidro-inferior.png)
+
+![Personagem atrás do vidro da porta](evidencias/vidro-porta.png)
+
+![Limite de colisão alinhado à base da porta, destacado em vermelho](evidencias/parede-inferior.png)
+
+Para conferir manualmente, caminhe para baixo diante dos painéis, da porta e
+dos dois pilares inferiores. A personagem deve aparecer através do vidro e
+ficar parcialmente oculta pelas áreas opacas sem ultrapassar a base da porta;
+a fachada deve permanecer estática. Nenhuma planta ou jardineira pode ser atravessada. As superfícies,
+as bases físicas e a camada de primeiro plano devem ser revistas se `office.png`
+mudar. As salas de vidro da direita permanecem fora do escopo desta tarefa.
