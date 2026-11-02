@@ -19,20 +19,41 @@ int get_walk_frame(float walk_time)
     return (int)(walk_time / WALK_FRAME_TIME) % WALK_FRAME_COUNT;
 }
 
-bool load_walk_frames(const char *character, const char *direction, bool mirror, Texture2D frames[WALK_FRAME_COUNT])
+// Nome da direção nos arquivos walk/<nome>-<n>.png. O oeste usa os arquivos do leste.
+static const char *walk_file_name(int direction)
+{
+    switch (direction)
+    {
+    case SOUTH:     return "south";
+    case NORTH:     return "north";
+    case SOUTHEAST: return "south-east";
+    case NORTHWEST: return "north-west";
+    case SOUTHWEST: return "south-west";
+    case NORTHEAST: return "north-east";
+    default:        return "east";
+    }
+}
+
+bool has_walk_frames(const char *character, int direction)
+{
+    for (int i = 0; i < WALK_FRAME_COUNT; i++)
+    {
+        if (!FileExists(TextFormat("%s%s/walk/%s-%d.png", PERSONAGENS_PATH, character, walk_file_name(direction), i))) return false;
+    }
+    return true;
+}
+
+bool load_walk_frames(const char *character, int direction, Texture2D frames[WALK_FRAME_COUNT])
 {
     // Confere os 4 arquivos antes de carregar, para não deixar o personagem pela metade
-    for (int i = 0; i < WALK_FRAME_COUNT; i++)
-    {
-        if (!FileExists(TextFormat("%s%s/walk/%s-%d.png", PERSONAGENS_PATH, character, direction, i))) return false;
-    }
+    if (!has_walk_frames(character, direction)) return false;
 
     for (int i = 0; i < WALK_FRAME_COUNT; i++)
     {
-        Image frame = LoadImage(TextFormat("%s%s/walk/%s-%d.png", PERSONAGENS_PATH, character, direction, i));
+        Image frame = LoadImage(TextFormat("%s%s/walk/%s-%d.png", PERSONAGENS_PATH, character, walk_file_name(direction), i));
 
         // O oeste é o espelho do leste
-        if (mirror) ImageFlipHorizontal(&frame);
+        if (direction == WEST) ImageFlipHorizontal(&frame);
         frames[i] = LoadTextureFromImage(frame);
         UnloadImage(frame);
     }

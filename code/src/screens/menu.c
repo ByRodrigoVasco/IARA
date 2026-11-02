@@ -4,6 +4,14 @@
 #include "fonts.h"
 #include "helper.h"
 #include "animations.h"
+#include "accessibility.h"
+
+// Tamanhos em 1080p, como divisores da imagem original ou da janela.
+#define ARROW_ICON_SCALE_DIVISOR 2.5f
+#define IARA_NAME_SCALE_DIVISOR 3.0f
+#define MENU_OFFICE_SCALE_DIVISOR 1.15f
+
+#define FULLSCREEN_HINT "F11: tela cheia"
 
 int next_screen = NONE;
 int mouse_is_hovering = NONE;
@@ -21,56 +29,63 @@ static Color texture_color_to_fade = {255, 255, 255, 0};
 static Texture2D bg_office_texture;
 static Texture2D second_bg_texture;
 static Texture2D arrow_icon_texture;
-static GAME_TEXTURE iara_name_gt;
+static Texture2D iara_name_texture;
+
+static float menu_scale;
+static float menu_font_size;
+static float menu_letter_spacing;
 
 static Vector2 iniciar_text_size;
 static Vector2 creditos_text_size;
+static Vector2 configuracoes_text_size;
 static Vector2 sair_text_size;
 
 static Vector2 iniciar_text_target_position;
 static Vector2 creditos_text_target_position;
+static Vector2 configuracoes_text_target_position;
 static Vector2 sair_text_target_position;
 
 static Rectangle iniciar_text_rectangle;
 static Rectangle creditos_text_rectangle;
+static Rectangle configuracoes_text_rectangle;
 static Rectangle sair_text_rectangle;
 
 static void initialize_menu_textures(void)
 {
-    // -----------------------------------------------------------------------------------------------
-    // PARTE ASSOCIADA AO BACKGROUND DO MENU
-    // -----------------------------------------------------------------------------------------------
+    // Carregadas no tamanho original: o tamanho na tela é calculado a cada quadro
+    arrow_icon_texture = load_smooth_texture("code/assets/icons/arrow-icon.png");
+    bg_office_texture = load_smooth_texture("code/assets/sprites/tela-inicial/escritorio-tela-inicial.png");
+    second_bg_texture = load_smooth_texture("code/assets/background/second-background.png");
+    iara_name_texture = load_smooth_texture("code/assets/sprites/tela-inicial/iara-nome.png");
+}
 
-    Image arrow_icon_image = LoadImage("code/assets/icons/arrow-icon.png");
-    float arrow_icon_scale_divisor = 2.5;
-    ImageResize(&arrow_icon_image, (float)arrow_icon_image.width / arrow_icon_scale_divisor, (float)arrow_icon_image.height / arrow_icon_scale_divisor);
+// Recalcula as opções do menu para o tamanho atual da janela.
+static void update_menu_layout(void)
+{
+    menu_scale = get_ui_scale();
+    menu_font_size = DEFAULT_MENU_FONT_SIZE * menu_scale;
+    menu_letter_spacing = DEFAULT_LETTER_SPACING * menu_scale;
 
-    Image bg_office_image = LoadImage("code/assets/sprites/tela-inicial/escritorio-tela-inicial.png");
-    float bg_office_scale_divisor = 1.15;
-    ImageResize(&bg_office_image, (float)screen_width / bg_office_scale_divisor, (float)screen_height / bg_office_scale_divisor);
+    float margin_x = TEXT_HORIZONTAL_MARGIN * menu_scale;
+    float margin_y = TEXT_VERTICAL_MARGIN * menu_scale;
 
-    Image second_bg_image = LoadImage("code/assets/background/second-background.png");
-    float second_bg_scale_divisor = 1;
-    ImageResize(&second_bg_image, (float)screen_width / second_bg_scale_divisor, (float)screen_height / second_bg_scale_divisor);
+    iniciar_text_size = MeasureTextEx(default_game_font, "INICIAR", menu_font_size, menu_letter_spacing);
+    creditos_text_size = MeasureTextEx(default_game_font, "CRÉDITOS", menu_font_size, menu_letter_spacing);
+    configuracoes_text_size = MeasureTextEx(default_game_font, "CONFIGURAÇÕES", menu_font_size, menu_letter_spacing);
+    sair_text_size = MeasureTextEx(default_game_font, "SAIR", menu_font_size, menu_letter_spacing);
 
-    Image iara_name_image = LoadImage("code/assets/sprites/tela-inicial/iara-nome.png");
-    int iara_name_scale_divisor = 3;
-    ImageResize(&iara_name_image, (float)iara_name_image.width / iara_name_scale_divisor, (float)iara_name_image.height / iara_name_scale_divisor);
+    // As opções começam no meio da tela, abaixo do nome IARA.
+    float start_y = GetScreenHeight() / 2.0f;
 
-    Texture2D iara_name_texture = LoadTextureFromImage(iara_name_image);
+    iniciar_text_target_position = (Vector2){margin_x, start_y};
+    creditos_text_target_position = (Vector2){margin_x, iniciar_text_target_position.y + iniciar_text_size.y + margin_y};
+    configuracoes_text_target_position = (Vector2){margin_x, creditos_text_target_position.y + creditos_text_size.y + margin_y};
+    sair_text_target_position = (Vector2){margin_x, configuracoes_text_target_position.y + configuracoes_text_size.y + margin_y};
 
-    // TODO: usar GAME_TEXTURE (helper.h) no lugar de Texture2D para os fundos.
-    // O GAME_TEXTURE já guarda "middle_width" e "middle_height", o que evita o
-    // cálculo de centralização (largura / 2) feito hoje em render_menu().
-    arrow_icon_texture = LoadTextureFromImage(arrow_icon_image);
-    bg_office_texture = LoadTextureFromImage(bg_office_image);
-    second_bg_texture = LoadTextureFromImage(second_bg_image);
-
-    iara_name_gt = CreateGameTextureFromTexture2D(iara_name_texture);
-
-    UnloadImage(bg_office_image);
-    UnloadImage(iara_name_image);
-    UnloadImage(arrow_icon_image);
+    iniciar_text_rectangle = (Rectangle){iniciar_text_target_position.x, iniciar_text_target_position.y, iniciar_text_size.x, iniciar_text_size.y};
+    creditos_text_rectangle = (Rectangle){creditos_text_target_position.x, creditos_text_target_position.y, creditos_text_size.x, creditos_text_size.y};
+    configuracoes_text_rectangle = (Rectangle){configuracoes_text_target_position.x, configuracoes_text_target_position.y, configuracoes_text_size.x, configuracoes_text_size.y};
+    sair_text_rectangle = (Rectangle){sair_text_target_position.x, sair_text_target_position.y, sair_text_size.x, sair_text_size.y};
 }
 
 void initialize_menu_variables(void)
@@ -83,22 +98,7 @@ void initialize_menu_variables(void)
     selected_menu_option = INICIAR;
 
     initialize_menu_textures();
-
-    // PARTE ASSOCIADA A BOTÕES
-    iniciar_text_size = MeasureTextEx(default_game_font, "INICIAR", DEFAULT_MENU_FONT_SIZE, DEFAULT_LETTER_SPACING);
-    creditos_text_size = MeasureTextEx(default_game_font, "CRÉDITOS", DEFAULT_MENU_FONT_SIZE, DEFAULT_LETTER_SPACING);
-    sair_text_size = MeasureTextEx(default_game_font, "SAIR", DEFAULT_MENU_FONT_SIZE, DEFAULT_LETTER_SPACING);
-
-    // As opções começam no meio da tela, abaixo do nome IARA.
-    float start_y = middle_screen_y;
-
-    iniciar_text_target_position = (Vector2){TEXT_HORIZONTAL_MARGIN, start_y};
-    creditos_text_target_position = (Vector2){TEXT_HORIZONTAL_MARGIN, iniciar_text_target_position.y + iniciar_text_size.y + TEXT_VERTICAL_MARGIN};
-    sair_text_target_position = (Vector2){TEXT_HORIZONTAL_MARGIN, creditos_text_target_position.y + creditos_text_size.y + TEXT_VERTICAL_MARGIN};
-
-    iniciar_text_rectangle = (Rectangle){iniciar_text_target_position.x, iniciar_text_target_position.y, iniciar_text_size.x, iniciar_text_size.y};
-    creditos_text_rectangle = (Rectangle){creditos_text_target_position.x, creditos_text_target_position.y, creditos_text_size.x, creditos_text_size.y};
-    sair_text_rectangle = (Rectangle){sair_text_target_position.x, sair_text_target_position.y, sair_text_size.x, sair_text_size.y};
+    update_menu_layout();
 }
 
 // Move a seleção para a opção seguinte (direction = 1) ou anterior (direction = -1),
@@ -176,6 +176,11 @@ static int get_option_under_mouse(void)
         return CREDITOS;
     }
 
+    if (check_mouse_hover(configuracoes_text_rectangle))
+    {
+        return CONFIGURACOES;
+    }
+
     if (check_mouse_hover(sair_text_rectangle))
     {
         return SAIR;
@@ -217,7 +222,8 @@ void handle_mouse_action()
 // Desenha a seta ao lado da opção selecionada (por teclado ou mouse).
 void handle_render_arrow()
 {
-    float half_of_arrow_texture = (arrow_icon_texture.height / 2);
+    float arrow_width = (arrow_icon_texture.width / ARROW_ICON_SCALE_DIVISOR) * menu_scale;
+    float arrow_height = (arrow_icon_texture.height / ARROW_ICON_SCALE_DIVISOR) * menu_scale;
     Rectangle selected_rectangle;
 
     switch (selected_menu_option)
@@ -228,6 +234,9 @@ void handle_render_arrow()
     case CREDITOS:
         selected_rectangle = creditos_text_rectangle;
         break;
+    case CONFIGURACOES:
+        selected_rectangle = configuracoes_text_rectangle;
+        break;
     case SAIR:
         selected_rectangle = sair_text_rectangle;
         break;
@@ -235,7 +244,10 @@ void handle_render_arrow()
         return;
     }
 
-    DrawTexture(arrow_icon_texture, selected_rectangle.x - arrow_icon_texture.width, selected_rectangle.y + half_of_arrow_texture, RAYWHITE);
+    Rectangle arrow_source = {0, 0, (float)arrow_icon_texture.width, (float)arrow_icon_texture.height};
+    Rectangle arrow_dest = {selected_rectangle.x - arrow_width, selected_rectangle.y + (selected_rectangle.height - arrow_height) / 2.0f, arrow_width, arrow_height};
+
+    DrawTexturePro(arrow_icon_texture, arrow_source, arrow_dest, (Vector2){0, 0}, 0.0f, RAYWHITE);
 }
 
 // Desenha um quadro do menu: fade in, entradas (teclado e mouse), fundos,
@@ -247,23 +259,43 @@ void render_menu(void)
         fade_in_texture(FAST_FADE_SPEED, &texture_color_to_fade, &menu_fade_in_finished);
     }
 
+    update_menu_layout();
+
     handle_keyboard_navigation();
     handle_mouse_action();
 
-    BeginDrawing();
+    begin_game_drawing();
     ClearBackground(BG_COLOR);
 
-    DrawTexture(second_bg_texture, middle_screen_x - (bg_office_texture.width / 2), middle_screen_y - (bg_office_texture.height / 2), texture_color_to_fade);
-    DrawTexture(bg_office_texture, middle_screen_x - (bg_office_texture.width / 2.5), middle_screen_y - (bg_office_texture.height / 2), texture_color_to_fade);
-    DrawTexture(iara_name_gt.texture, -10, TEXT_VERTICAL_MARGIN, texture_color_to_fade);
+    float window_w = (float)GetScreenWidth();
+    float window_h = (float)GetScreenHeight();
+    float office_w = window_w / MENU_OFFICE_SCALE_DIVISOR;
+    float office_h = window_h / MENU_OFFICE_SCALE_DIVISOR;
 
-    DrawTextEx(default_game_font, "INICIAR", iniciar_text_target_position, DEFAULT_MENU_FONT_SIZE, DEFAULT_LETTER_SPACING, texture_color_to_fade);
-    DrawTextEx(default_game_font, "CRÉDITOS", creditos_text_target_position, DEFAULT_MENU_FONT_SIZE, DEFAULT_LETTER_SPACING, texture_color_to_fade);
-    DrawTextEx(default_game_font, "SAIR", sair_text_target_position, DEFAULT_MENU_FONT_SIZE, DEFAULT_LETTER_SPACING, texture_color_to_fade);
+    draw_texture_cover(second_bg_texture, (Rectangle){0, 0, window_w, window_h}, texture_color_to_fade);
+    draw_texture_cover(bg_office_texture, (Rectangle){(window_w / 2.0f) - (office_w / 2.5f), (window_h - office_h) / 2.0f, office_w, office_h}, texture_color_to_fade);
+
+    float name_scale = menu_scale / IARA_NAME_SCALE_DIVISOR;
+    Rectangle name_source = {0, 0, (float)iara_name_texture.width, (float)iara_name_texture.height};
+    Rectangle name_dest = {-10.0f * menu_scale, TEXT_VERTICAL_MARGIN * menu_scale, iara_name_texture.width * name_scale, iara_name_texture.height * name_scale};
+
+    DrawTexturePro(iara_name_texture, name_source, name_dest, (Vector2){0, 0}, 0.0f, texture_color_to_fade);
+
+    DrawTextEx(default_game_font, "INICIAR", iniciar_text_target_position, menu_font_size, menu_letter_spacing, texture_color_to_fade);
+    DrawTextEx(default_game_font, "CRÉDITOS", creditos_text_target_position, menu_font_size, menu_letter_spacing, texture_color_to_fade);
+    DrawTextEx(default_game_font, "CONFIGURAÇÕES", configuracoes_text_target_position, menu_font_size, menu_letter_spacing, texture_color_to_fade);
+    DrawTextEx(default_game_font, "SAIR", sair_text_target_position, menu_font_size, menu_letter_spacing, texture_color_to_fade);
 
     handle_render_arrow();
 
-    EndDrawing();
+    // Mostra o atalho da tela cheia, que de outro modo o jogador não teria como descobrir
+    float hint_size = DEFAULT_TEXT_FONT_SIZE * menu_scale;
+    Vector2 hint_measure = MeasureTextEx(default_game_font, FULLSCREEN_HINT, hint_size, menu_letter_spacing / 2.0f);
+    Vector2 hint_position = {window_w - hint_measure.x - (TEXT_VERTICAL_MARGIN * menu_scale), window_h - hint_measure.y - (TEXT_VERTICAL_MARGIN * menu_scale)};
+
+    DrawTextEx(default_game_font, FULLSCREEN_HINT, hint_position, hint_size, menu_letter_spacing / 2.0f, texture_color_to_fade);
+
+    end_game_drawing();
 }
 
 void unload_menu()
@@ -271,5 +303,5 @@ void unload_menu()
     UnloadTexture(bg_office_texture);
     UnloadTexture(second_bg_texture);
     UnloadTexture(arrow_icon_texture);
-    UnloadGameTexture(iara_name_gt);
+    UnloadTexture(iara_name_texture);
 }

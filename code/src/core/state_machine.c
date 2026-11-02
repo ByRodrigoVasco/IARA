@@ -8,7 +8,10 @@
 #include "menu.h"
 #include "game_loop.h"
 #include "credits.h"
+#include "settings.h"
 #include "state_machine.h"
+
+bool is_game_to_close = false;
 
 void handle_state_initialization(void)
 {
@@ -29,8 +32,14 @@ int handle_menu_action(int screen)
         return CREDITS_SCREEN;
         break;
 
+    case CONFIGURACOES:
+        initialize_settings_screen();
+        return SETTINGS_SCREEN;
+        break;
+
     case SAIR:
-        CloseWindow();
+        // Só avisa a main.c: fechar a janela aqui derrubaria o jogo no unload_menu() logo depois
+        is_game_to_close = true;
         return NONE;
     default:
         return NONE;
@@ -82,6 +91,15 @@ void handle_state_machine(void)
         if (render_credits_screen())
         {
             unload_credits_screen();
+            initialize_menu_variables();
+            current_game_state_variables.current_screen = MENU_SCREEN;
+        }
+        break;
+
+    case SETTINGS_SCREEN:
+        if (render_settings_screen())
+        {
+            unload_settings_screen();
             initialize_menu_variables();
             current_game_state_variables.current_screen = MENU_SCREEN;
         }

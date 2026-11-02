@@ -5,6 +5,8 @@
 #include "fonts.h"
 #include "macros.h"
 #include "save.h"
+#include "helper.h"
+#include "accessibility.h"
 
 unsigned int screen_width = 0;
 unsigned int screen_height = 0;
@@ -13,28 +15,30 @@ unsigned int middle_screen_y = 0;
 
 int main(void)
 {
+    /* Assets e save são relativos à pasta do executável (US02): assim o jogo
+     * abre certo por atalho ou por outro terminal, em qualquer pasta. */
+    ChangeDirectory(GetApplicationDirectory());
+
     /* InitWindow(0, 0) faz a Raylib abrir em tela cheia, então iniciamos com um
      *  tamanho fixo (janela) e depois ajustamos ao tamanho do monitor.
      */
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(800, 450, IARA_TITLE);
+    SetWindowMinSize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT);
 
     int monitor_id = GetCurrentMonitor();
 
     int monitor_width = GetMonitorWidth(monitor_id);
     int monitor_height = GetMonitorHeight(monitor_id);
 
-    /* Modo janela: usa um tamanho menor que o monitor (para o gravador de tela capturar). */
-    screen_width = monitor_width * 3 / 4;
-    screen_height = monitor_height * 3 / 4;
+    /* Modo janela: um pouco menor que o monitor. F11 alterna com a tela cheia. */
+    int window_width = monitor_width * WINDOW_MONITOR_RATIO;
+    int window_height = monitor_height * WINDOW_MONITOR_RATIO;
 
-    SetWindowSize(screen_width, screen_height);
+    SetWindowSize(window_width, window_height);
+    SetWindowPosition((monitor_width - window_width) / 2, (monitor_height - window_height) / 2);
 
-    middle_screen_x = screen_width / 2;
-    middle_screen_y = screen_height / 2;
-
-
-    SetWindowSize(screen_width, screen_height);
-    SetWindowPosition((monitor_width - (int)screen_width) / 2, (monitor_height - (int)screen_height) / 2);
+    update_screen_metrics();
 
     SetTargetFPS(60);
 
@@ -69,8 +73,16 @@ int main(void)
     /* WindowShouldClose() fica true quando o jogador fecha a janela pelo X,
      * por ALT+F4 (o sistema manda o mesmo pedido de fechar) ou pela tecla ESC.
      * A opção SAIR do menu também encerra este loop. */
-    while (!WindowShouldClose())
+    while (!WindowShouldClose() && !is_game_to_close)
     {
+        /* A janela pode mudar de tamanho a qualquer momento (borda, maximizar ou F11). */
+        if (IsKeyPressed(KEY_F11))
+        {
+            toggle_fullscreen();
+        }
+
+        update_screen_metrics();
+
         handle_state_machine();
     }
 
@@ -86,6 +98,7 @@ int main(void)
         TraceLog(LOG_WARNING, "SAVE: nao foi possivel salvar o progresso: %s", save_result_to_string(save_status));
     }
 
+    unload_accessibility();
     unload_fonts();
     CloseWindow();
     return 0;

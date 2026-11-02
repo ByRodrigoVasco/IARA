@@ -13,6 +13,10 @@ NEM TODOS OS MACROS ESTARÃO AQUI.
 #define DEFAULT_LETTER_SPACING 5
 #define DEFAULT_MENU_FONT_SIZE 80
 
+// RESPONSIVIDADE: os tamanhos acima valem para 1920x1080 e são multiplicados por get_ui_scale()
+#define UI_REFERENCE_WIDTH 1920.0f
+#define UI_REFERENCE_HEIGHT 1080.0f
+
 // -----------------------------------------------------------------------------
 // Configurações de Janela
 // PS: essas variáveis são definidas na main.c
@@ -26,6 +30,9 @@ extern unsigned int screen_width;
  */
 extern unsigned int screen_height;
 #define IARA_TITLE "IARA"
+#define WINDOW_MONITOR_RATIO 0.85f // Tamanho inicial da janela em relação ao monitor
+#define WINDOW_MIN_WIDTH 960
+#define WINDOW_MIN_HEIGHT 540
 /*
  * @brief meio da tela horizontal calculada automaticamente na main.c
  */
@@ -60,6 +67,7 @@ extern unsigned int middle_screen_y;
 #define FLASHING_SCREEN 3
 #define JUMPING_SCREEN 4
 #define CREDITS_SCREEN 5
+#define SETTINGS_SCREEN 6
 
 // TIPOS DE DIAS E TELAS DE GAME_LOOP
 #define NOT_YET_DEFINED 0

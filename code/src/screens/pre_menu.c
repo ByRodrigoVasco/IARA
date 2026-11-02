@@ -7,6 +7,10 @@
 #include "animations.h"
 #include "macros.h"
 #include "helper.h"
+#include "accessibility.h"
+
+// Largura do nome IARA em 1080p, como fração da imagem original.
+#define IARA_NAME_SCALE_AT_REFERENCE 0.5f
 
 static bool fade_in_animation_finished = false;
 
@@ -20,25 +24,29 @@ ISSO ESTÁ SENDO FEITO POR QUE O "fade_in_texture" MODIFICARÁ A MESMA COR PARA 
 static Color textures_color = {255, 255, 255, 0};
 
 static Texture2D bg_office_texture;
-static GAME_TEXTURE iara_name_gt;
+static Texture2D iara_name_texture;
 
 void initialize_pre_menu_textures(void)
 {
     bg_color = GetColor(BG_COLOR_HEX);
 
-    Image bg_office_image = LoadImage("code/assets/sprites/tela-inicial/escritorio-tela-inicial.png");
-    ImageResize(&bg_office_image, screen_width, screen_height);
+    bg_office_texture = load_smooth_texture("code/assets/sprites/tela-inicial/escritorio-tela-inicial.png");
+    iara_name_texture = load_smooth_texture("code/assets/sprites/tela-inicial/iara-nome.png");
+}
 
-    Image iara_name_image = LoadImage("code/assets/sprites/tela-inicial/iara-nome.png");
-    int fator_de_resize = 2;
-    ImageResize(&iara_name_image, iara_name_image.width / fator_de_resize, iara_name_image.height / fator_de_resize);
+// Desenha o fundo cobrindo a janela e o nome IARA centralizado, conforme o tamanho atual da janela.
+static void draw_pre_menu_textures(void)
+{
+    // A ordem IMPORTA!! Quem ficará em cima de quem depende disso. Ou seja, Background tem que ir primeiro, depois os textos.
+    draw_texture_cover(bg_office_texture, (Rectangle){0, 0, (float)GetScreenWidth(), (float)GetScreenHeight()}, textures_color);
 
-    Texture2D iara_name_texture = LoadTextureFromImage(iara_name_image);
+    float name_scale = IARA_NAME_SCALE_AT_REFERENCE * get_ui_scale();
+    float name_width = iara_name_texture.width * name_scale;
+    float name_height = iara_name_texture.height * name_scale;
+    Rectangle name_source = {0, 0, (float)iara_name_texture.width, (float)iara_name_texture.height};
+    Rectangle name_dest = {(GetScreenWidth() - name_width) / 2.0f, (GetScreenHeight() - name_height) / 2.0f, name_width, name_height};
 
-    
-    bg_office_texture = LoadTextureFromImage(bg_office_image);
-    iara_name_gt = CreateGameTextureFromTexture2D(iara_name_texture);
-
+    DrawTexturePro(iara_name_texture, name_source, name_dest, (Vector2){0, 0}, 0.0f, textures_color);
 }
 
 void close_pre_menu(void)
@@ -48,25 +56,19 @@ void close_pre_menu(void)
 
     ClearBackground(bg_color);
 
-    // A ordem IMPORTA!! Quem ficará em cima de quem depende disso. Ou seja, Background tem que ir primeiro, depois os textos.
-    // bg_office_texture não usa middle_height nem middle_width por que já está com o tamanho máximo da tela e fica no meio naturalmente se por 0 em posX e posY.
-    DrawTexture(bg_office_texture, 0, 0, textures_color);
-    DrawTexture(iara_name_gt.texture, iara_name_gt.middle_width, iara_name_gt.middle_height, textures_color);
+    draw_pre_menu_textures();
 }
 
 void render_pre_menu(void)
 {
     fade_in_texture(DEFAULT_FADE_SPEED, &textures_color, &fade_in_animation_finished);
 
-    BeginDrawing();
+    begin_game_drawing();
     ClearBackground(bg_color);
 
-    // A ordem IMPORTA!! Quem ficará em cima de quem depende disso. Ou seja, Background tem que ir primeiro, depois os textos.
-    // bg_office_texture não usa middle_height nem middle_width por que já está com o tamanho máximo da tela e fica no meio naturalmente se por 0 em posX e posY.
-    DrawTexture(bg_office_texture, 0, 0, textures_color);
-    DrawTexture(iara_name_gt.texture, iara_name_gt.middle_width, iara_name_gt.middle_height, textures_color);
+    draw_pre_menu_textures();
 
-    EndDrawing();
+    end_game_drawing();
 
     if (fade_in_animation_finished)
     {
@@ -77,5 +79,5 @@ void render_pre_menu(void)
 void unload_pre_menu_textures(void)
 {
     UnloadTexture(bg_office_texture);
-    UnloadTexture(iara_name_gt.texture);
+    UnloadTexture(iara_name_texture);
 }
