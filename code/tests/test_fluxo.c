@@ -5,7 +5,7 @@
  * ao fim, na ordem em que um jogador percorreria:
  *
  *   abertura -> menu -> CREDITOS (e a volta ao menu) -> INICIAR -> cartao do dia
- *   -> escritorio -> computador -> as 4 perguntas do quiz
+ *   -> escritorio -> computador -> as perguntas do quiz
  *
  * A janela do jogo fica a vista durante todo o bloco: o que aparece na tela e a
  * partida de verdade, e serve de evidencia visual no screencast.
@@ -21,6 +21,7 @@
 #include "state_machine.h"
 #include "pre_menu.h"
 #include "fonts.h"
+#include "settings.h"
 
 /* A main.c define estas globais; aqui o teste assume esse papel. */
 unsigned int screen_width = 0;
@@ -31,13 +32,8 @@ unsigned int middle_screen_y = 0;
 /* Os .c entram inteiros (e nao so os .h) porque o teste precisa alcancar o
  * estado interno de cada tela: conduzir o personagem, mover a selecao do menu e
  * avancar o roteiro do quiz sem depender de teclado e mouse.
- *
- * computer_loop.c e game_loop.c tem, cada um, um estatico chamado
- * color_to_fade. Juntos no mesmo arquivo dariam erro de redefinicao, entao o do
- * computador e renomeado na hora de incluir. */
-#define color_to_fade color_to_fade_do_computador
+ */
 #include "computer_loop.c"
-#undef color_to_fade
 
 #include "menu.c"
 #include "game_loop.c"
@@ -168,7 +164,7 @@ static void conduzir_quadro(int dx, int dy)
     render_game_loop_escritorio();
     render_player();
     render_control_tips();
-    render_interact_arrow();
+    render_interact_arrow(estagiario_computer_collision_rectangle);
 
     EndDrawing();
 
@@ -189,7 +185,7 @@ static void gravar_evidencia_do_jogo(const char *arquivo)
     render_game_loop_escritorio();
     render_player();
     render_control_tips();
-    render_interact_arrow();
+    render_interact_arrow(estagiario_computer_collision_rectangle);
 
     EndTextureMode();
 
@@ -208,6 +204,7 @@ static void gravar_evidencia_do_quiz(const char *arquivo)
 
     BeginTextureMode(alvo);
 
+    render_computer_backdrop();
     render_computer_loop();
     render_current_step();
 
@@ -414,6 +411,9 @@ static void testar_computador(void)
     titulo("Tela do computador (CT-33)");
     etapa("[6/7] apertando ESPACO no computador");
 
+    /* O teste nao pode prender o mouse de quem o executa. */
+    computer_mouse_capture_enabled = false;
+
     /* Mesmo efeito de apertar ESPACO em cima do computador. */
     enter_computer_screen = true;
 
@@ -480,16 +480,10 @@ static void testar_quiz(void)
 }
 
 /* Refaz a conta de largura de render_current_step() e confere se o texto cabe
- * dentro da caixa desenhada. A caixa tem um teto de 85% da janela; passando
- * disso, o texto continua sendo desenhado centralizado e vaza pelas laterais. */
-static void testar_layout_do_quiz(void)
+ * dentro da caixa desenhada. */
+static int conferir_layout_do_quiz(float win_w, float font_size)
 {
-    titulo("Layout da tela do computador (CT-35)");
-
-    float win_w = (float)window_texture.width;
-    float win_h = (float)window_texture.height;
-
-    float font_size = win_h * QUIZ_FONT_SIZE_RATIO;
+    float letter_spacing = font_size * QUIZ_LETTER_SPACING_RATIO;
     float padding_x = win_w * QUIZ_PADDING_X_RATIO;
     float max_box_width = win_w * QUIZ_MAX_WIDTH_RATIO;
     float min_box_width = win_w * QUIZ_MIN_WIDTH_RATIO;
@@ -505,7 +499,7 @@ static void testar_layout_do_quiz(void)
         for (int l = 0; l < passo->line_count; l++)
         {
             float largura = MeasureTextEx(default_game_font, passo->lines[l],
-                                          font_size, DEFAULT_LETTER_SPACING).x;
+                                          font_size, letter_spacing).x;
 
             if (largura > maior_linha) maior_linha = largura;
         }
@@ -525,7 +519,7 @@ static void testar_layout_do_quiz(void)
         for (int o = 0; o < passo->option_count; o++)
         {
             float largura = MeasureTextEx(default_game_font, passo->options[o],
-                                          font_size, DEFAULT_LETTER_SPACING).x;
+                                          font_size, letter_spacing).x;
 
             if (largura > max_box_width)
             {
@@ -536,8 +530,70 @@ static void testar_layout_do_quiz(void)
         }
     }
 
-    checar("CT-35", "Texto do computador cabe dentro da caixa e dos botoes",
-           vazamentos == 0);
+    return vazamentos;
+}
+
+/* Refaz a conta de update_computer_layout() para um tamanho de janela, sem precisar
+ * redimensionar a janela do teste. Alem do texto, confere se o maior passo do roteiro
+ * cabe na altura da janela da IARA e se a tela do monitor fica dentro da janela do jogo. */
+static int conferir_layout_na_janela(int largura, int altura)
+{
+    float screen_h = altura * MONITOR_SCREEN_HEIGHT_RATIO;
+    float screen_w = screen_h * MONITOR_SCREEN_ASPECT;
+
+    if (screen_w > largura * MONITOR_SCREEN_MAX_WIDTH_RATIO)
+    {
+        screen_w = largura * MONITOR_SCREEN_MAX_WIDTH_RATIO;
+        screen_h = screen_w / MONITOR_SCREEN_ASPECT;
+    }
+
+    float taskbar_h = screen_h * TASKBAR_HEIGHT_RATIO;
+    float janela_h = screen_h - taskbar_h - (screen_h * DESKTOP_WINDOW_MARGIN_RATIO * 2.0f);
+    float win_w = screen_w * DESKTOP_WINDOW_WIDTH_RATIO;
+    float win_h = janela_h - (janela_h * WINDOW_ART_TITLE_RATIO);
+
+    float por_altura = win_h * QUIZ_FONT_SIZE_RATIO;
+    float por_largura = (win_w * QUIZ_MAX_WIDTH_RATIO * QUIZ_TEXT_FIT_RATIO) / get_longest_text_width_per_font_size();
+    float font_size = (por_altura < por_largura) ? por_altura : por_largura;
+
+    int problemas = conferir_layout_do_quiz(win_w, font_size);
+
+    /* Maior caso do roteiro: quatro linhas, tres opcoes e Continuar. */
+    float altura_do_quiz = (win_h * QUIZ_BOX_TOP_MARGIN_RATIO) + (4.0f * font_size) + (3.0f * win_h * QUIZ_LINE_SPACING_RATIO) +
+                           (win_h * QUIZ_PADDING_Y_RATIO * 2.0f) + (win_h * QUIZ_BUTTONS_TOP_GAP_RATIO) +
+                           (3.0f * win_h * (OPTION_BUTTON_HEIGHT_RATIO + OPTION_SPACING_RATIO)) +
+                           (win_h * CONTINUE_BUTTON_GAP_RATIO) + (win_h * ACTION_BUTTON_HEIGHT_RATIO);
+
+    if (altura_do_quiz > win_h)
+    {
+        printf("           janela %dx%d: o quiz pede %.0f px de altura e so ha %.0f px\n", largura, altura, altura_do_quiz, win_h);
+        problemas++;
+    }
+
+    if (screen_w > largura || (altura * MONITOR_TOP_RATIO) + (altura * MONITOR_BEZEL_RATIO) + screen_h > altura)
+    {
+        printf("           janela %dx%d: a tela do monitor sai da janela\n", largura, altura);
+        problemas++;
+    }
+
+    return problemas;
+}
+
+static void testar_layout_do_quiz(void)
+{
+    titulo("Layout da tela do computador (CT-35)");
+
+    /* Minima, padrao em monitor 1080p, 1080p, 1440p, 4:3 e 21:9. */
+    int janelas[][2] = {{960, 540}, {1280, 720}, {1632, 918}, {1920, 1080}, {2560, 1440}, {1024, 768}, {2560, 1080}};
+    int problemas = 0;
+
+    for (int i = 0; i < (int)(sizeof(janelas) / sizeof(janelas[0])); i++)
+    {
+        problemas += conferir_layout_na_janela(janelas[i][0], janelas[i][1]);
+    }
+
+    checar("CT-35", "Texto do computador cabe na caixa, nos botoes e na janela em 7 tamanhos",
+           problemas == 0);
 }
 
 int main(void)
@@ -571,6 +627,27 @@ int main(void)
     testar_computador();
     testar_quiz();
     testar_layout_do_quiz();
+
+    /* CONFIGURACOES abre a propria tela e VOLTAR devolve o jogador ao menu. */
+    current_game_state_variables.current_screen = handle_menu_action(CONFIGURACOES);
+    bool abriu_configuracoes = (current_game_state_variables.current_screen == SETTINGS_SCREEN);
+
+    for (int quadro = 0; quadro < 5; quadro++)
+    {
+        handle_state_machine();
+    }
+
+    bool continua_nas_configuracoes = (current_game_state_variables.current_screen == SETTINGS_SCREEN);
+
+    checar("CT-42", "Escolher CONFIGURACOES abre a tela e ela permanece aberta",
+           abriu_configuracoes && continua_nas_configuracoes && activate_settings_option(SETTINGS_BACK));
+
+    unload_settings_screen();
+
+    /* SAIR nao fecha a janela na hora: a main.c ainda precisa salvar e descarregar tudo. */
+    int tela_apos_sair = handle_menu_action(SAIR);
+    checar("CT-36", "Escolher SAIR pede o fechamento e mantem a janela viva para o save",
+           is_game_to_close && tela_apos_sair == NONE && IsWindowReady());
 
     printf("\n------------------------------------------------------------------------\n");
     printf(" Bloco 3: %d de %d casos aprovados", casos_ok, total_casos);

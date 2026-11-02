@@ -83,12 +83,12 @@ static Vector2 posicao_do_caminho(Vector2 spawn, int k)
                      spawn.y + (caminho_j[k] - GRADE_CENTRO) * passo};
 }
 
-/* Procura um caminho do spawn ate a zona do computador andando um passo por vez.
+/* Procura um caminho do spawn ate uma zona de interacao andando um passo por vez.
  * Cada celula da grade e exatamente um passo do jogador em um eixo, entao o
  * caminho encontrado e um percurso que o jogador consegue fazer de verdade.
  *
- * O caminho fica em caminho_i/caminho_j, do computador (indice 0) ate o spawn. */
-static bool calcular_caminho_ate_o_computador(Vector2 spawn, int *passos_do_caminho)
+ * O caminho fica em caminho_i/caminho_j, da zona (indice 0) ate o spawn. */
+static bool calcular_caminho_ate(Rectangle zona, Vector2 spawn, int *passos_do_caminho)
 {
     float passo = DEFAULT_PLAYER_MOVEMENT_SPEED * get_scale();
 
@@ -113,8 +113,8 @@ static bool calcular_caminho_ate_o_computador(Vector2 spawn, int *passos_do_cami
         float px = spawn.x + (i - GRADE_CENTRO) * passo;
         float py = spawn.y + (j - GRADE_CENTRO) * passo;
 
-        /* Chegou: a hitbox encosta na zona de interacao do computador. */
-        if (CheckCollisionRecs(hitbox_em(px, py), estagiario_computer_collision_rectangle))
+        /* Chegou: a hitbox encosta na zona de interacao. */
+        if (CheckCollisionRecs(hitbox_em(px, py), zona))
         {
             while (veio_de[i][j] != 5)
             {
@@ -154,6 +154,11 @@ static bool calcular_caminho_ate_o_computador(Vector2 spawn, int *passos_do_cami
     }
 
     return false;
+}
+
+static bool calcular_caminho_ate_o_computador(Vector2 spawn, int *passos_do_caminho)
+{
+    return calcular_caminho_ate(estagiario_computer_collision_rectangle, spawn, passos_do_caminho);
 }
 
 #endif // PERCURSO_DO_JOGADOR_H

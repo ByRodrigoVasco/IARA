@@ -1,0 +1,195 @@
+﻿
+========================================================================
+ IARA - SUITE DE TESTES
+ 02/11/2026 14:09
+========================================================================
+
+Compilando...
+  ok  test_collisions
+  ok  test_characters
+  ok  test_save
+  ok  test_hints
+  ok  test_sistema
+  ok  test_conteudo
+  ok  test_fluxo
+Todos os testes passaram
+Todos os testes passaram
+Todos os testes passaram
+
+  test_hints: todos os testes passaram
+
+
+========================================================================
+ IARA - TESTES DE SISTEMA | Bloco 1: partida, movimento e colisoes
+========================================================================
+
+  --- Recursos em disco (CT-01 a CT-03) ---
+
+  [ OK  ]  CT-01   Janela do jogo inicializa
+           fonte VT323 com 191 glifos; 16 de 16 acentos presentes
+  [ OK  ]  CT-02   Fonte do jogo cobre os acentos do portugues
+           25 de 25 arquivos de midia encontrados
+  [ OK  ]  CT-03   Todos os arquivos de midia usados pelo jogo existem
+
+  --- Carregamento da partida (CT-04 a CT-07) ---
+
+  [ OK  ]  CT-04   Mapa do escritorio carregado na placa de video
+           8 de 8 sprites direcionais do estagiario carregados
+  [ OK  ]  CT-05   Sprites das 8 direcoes do jogador carregados
+  [ OK  ]  CT-06   Frames do andar das 8 direcoes carregados
+  [ OK  ]  CT-07   Animacao do andar percorre os 4 frames em ciclo
+
+  --- Percurso real do jogador (CT-08) ---
+
+           caminho encontrado em 72 passos do jogador
+  [ OK  ]  CT-08   Jogador consegue ir do spawn ate o computador
+
+  --- Movimento e colisoes (CT-09 a CT-13) ---
+
+  [ OK  ]  CT-09   Jogador nasce livre, fora de qualquer obstaculo
+           20000 passos simulados; 0 invasoes de obstaculo, 0 saidas do mapa
+  [ OK  ]  CT-10   Jogador nunca entra em um obstaculo ao andar
+  [ OK  ]  CT-11   Jogador nunca sai dos limites do mapa
+  [ OK  ]  CT-12   Empurrar contra as 4 bordas nao atravessa a parede
+  [ OK  ]  CT-13   Zona do computador so acende com o jogador em cima
+
+  --- Dica no mural (CT-38 e CT-39) ---
+
+           caminho do spawn ate o mural: 246 passos
+  [ OK  ]  CT-38   Jogador consegue ir do spawn ate o item da dica
+  [ OK  ]  CT-39   Examinar a dica abre o bilhete e nao altera a pontuacao
+
+  --- Alto contraste com daltonismo simulado (CT-40) ---
+
+  [ OK  ]  CT-40   Contornos seguem distinguiveis com protanopia e deuteranopia simuladas
+
+  --- Redimensionamento da janela (CT-14) ---
+
+  [ OK  ]  CT-14   Redimensionar a janela mantem o jogador no mesmo ponto do mapa
+
+  --- Animacoes de transicao (CT-15 e CT-16) ---
+
+           fade in terminou com alpha = 250 (esperado 255)
+  [FALHA]  CT-15   Fade in chega a opacidade total (alpha 255)
+           fade out terminou com alpha = 0 (esperado 0)
+  [ OK  ]  CT-16   Fade out chega a transparencia total (alpha 0)
+
+  Evidencia salva em docs/fds/testes/evidencias/percurso-e-colisoes.png
+
+------------------------------------------------------------------------
+ Bloco 1: 18 de 19 casos aprovados | 1 FALHA(S)
+========================================================================
+
+
+========================================================================
+ IARA - TESTES DE SISTEMA | Bloco 2: quiz do computador e menu
+========================================================================
+
+  --- Roteiro do computador (CT-17 a CT-20) ---
+
+           7 passos no roteiro: 2 declaracoes e 5 perguntas
+  [ OK  ]  CT-17   Roteiro do computador integro (textos, opcoes e gabarito)
+  [ OK  ]  CT-18   Roteiro abre e fecha com uma tela de texto
+           7 avancos ate o fim; 5 perguntas respondidas
+  [ OK  ]  CT-19   Jogador percorre o roteiro do inicio ao fim
+  [ OK  ]  CT-20   Fim do roteiro encerra a tela do computador
+
+  --- Menu principal (CT-21 a CT-23) ---
+
+  [ OK  ]  CT-21   Menu abre em INICIAR, destravado
+  [ OK  ]  CT-22   Selecao do menu circula nos dois sentidos
+  [ OK  ]  CT-37   Alto contraste liga e desliga na tela de configuracoes
+  [ OK  ]  CT-41   Brilho respeita os limites e altera a imagem
+  [ OK  ]  CT-23   Confirmar guarda a opcao escolhida e fecha o menu
+
+  --- Reabertura do menu (CT-24) ---
+
+           memoria do processo: 139 MB antes, 147 MB depois de 20 ciclos
+           crescimento de 8 MB (limite aceitavel: 16 MB)
+  [ OK  ]  CT-24   Abrir e fechar o menu varias vezes nao acumula memoria
+
+------------------------------------------------------------------------
+ Bloco 2: 10 de 10 casos aprovados
+========================================================================
+
+
+========================================================================
+ IARA - TESTES DE SISTEMA | Bloco 3: o jogo do inicio ao fim
+========================================================================
+
+  A janela do jogo mostra a partida de verdade durante este bloco.
+
+  --- Estado inicial da partida (CT-25 e CT-26) ---
+
+  [ OK  ]  CT-25   Partida comeca no dia 1, em um dia jogavel
+  [ OK  ]  CT-26   Estatisticas ocultas comecam no valor base
+
+  --- Abertura do jogo (CT-27) ---
+
+           [1/7] tela de abertura e menu principal
+                 abertura concluida em 283 quadros
+  [ OK  ]  CT-27   Abertura entrega o menu, que aguarda a escolha do jogador
+
+  --- Opcao CREDITOS (CT-28 e CT-29) ---
+
+           [2/7] escolhendo CREDITOS: a tela de creditos abre e o jogador volta ao menu
+  [ OK  ]  CT-28   Escolher CREDITOS abre a tela de creditos e ela permanece aberta
+  [ OK  ]  CT-29   Voltar dos creditos e tela desconhecida devolvem o jogador ao menu
+
+  --- Opcao INICIAR (CT-30) ---
+
+           [3/7] escolhendo INICIAR
+  [ OK  ]  CT-30   Escolher INICIAR no menu comeca a partida
+
+  --- Cartao do dia e escritorio (CT-31) ---
+
+           [4/7] cartao "Dia 1": leva cerca de 10s para sair
+                 escritorio na tela depois de 10.1s
+  [ OK  ]  CT-31   Cartao do dia termina e o escritorio aparece
+
+  --- Caminhada pelo escritorio (CT-32) ---
+
+           [5/7] o personagem anda, desvia dos moveis e vai ate o computador
+                 caminho de 53 passos ate o computador
+  [ OK  ]  CT-32   Personagem atravessa o escritorio ate o computador
+
+  --- Tela do computador (CT-33) ---
+
+           [6/7] apertando ESPACO no computador
+  [ OK  ]  CT-33   Interagir com o computador abre a tela do quiz
+
+  --- Quiz do dia inicial (CT-34) ---
+
+           [7/7] respondendo as perguntas ate o fim do roteiro
+                 pergunta 1 respondida na alternativa A
+                 pergunta 2 respondida na alternativa B
+                 pergunta 3 respondida na alternativa B
+                 pergunta 4 respondida na alternativa A
+                 pergunta 5 respondida na alternativa A
+  [ OK  ]  CT-34   Jogador responde todas as perguntas e conclui o quiz
+
+  --- Layout da tela do computador (CT-35) ---
+
+  [ OK  ]  CT-35   Texto do computador cabe na caixa, nos botoes e na janela em 7 tamanhos
+  [ OK  ]  CT-42   Escolher CONFIGURACOES abre a tela e ela permanece aberta
+  [ OK  ]  CT-36   Escolher SAIR pede o fechamento e mantem a janela viva para o save
+
+------------------------------------------------------------------------
+ Bloco 3: 13 de 13 casos aprovados
+========================================================================
+
+========================================================================
+ RESUMO DA SUITE
+========================================================================
+  OK     test_collisions  Unidade: colisoes e movimento por eixo
+  OK     test_characters  Unidade: frames do andar
+  OK     test_save        Unidade: save e carregamento da partida
+  OK     test_hints       Unidade: dica no mural e pontuacao
+  FALHA  test_sistema     Sistema bloco 1: partida, movimento e colisoes
+  OK     test_conteudo    Sistema bloco 2: quiz do computador e menu
+  OK     test_fluxo       Sistema bloco 3: o jogo do inicio ao fim
+
+ 1 de 7 conjuntos com falha. Veja os casos marcados [FALHA] acima.
+ Bugs conhecidos e seu status: docs/fds/testes/README.md
+========================================================================
+
