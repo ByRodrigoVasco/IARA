@@ -28,8 +28,8 @@
  *   checksum=9f3a1c07
  */
 
-// Arquivo de save, relativo à pasta de onde o jogo é executado (a raiz do
-// repositório, a mesma usada para carregar os assets). Já está no .gitignore.
+// Arquivo de save, relativo à pasta do executável (a mesma usada para carregar
+// os assets, ver main.c). Já está no .gitignore.
 #define SAVE_FILE_PATH "iara.save"
 
 // Primeira linha do arquivo. Mudar a versão quando o formato mudar.
