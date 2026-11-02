@@ -63,18 +63,12 @@ static bool is_near_computer = false;                     // Flag que indica se 
 static Texture2D second_background_texture;              // Textura do fundo do cartão do dia
 static Color color_to_fade = {255, 255, 255, 0};          // Cor base de renderização (RGBA) usada para aplicar efeito de opacidade/fade
 
-// Textos e tamanhos pré-calculados para otimização de renderização na tela de transição
+// Textos exibidos na tela de transição
 static char *current_card_title = "Dia 1";
-static Vector2 calendar_card_title_text_size;
 
 static char *current_card_subtitle_line_1 = "Sua mesa fica na salinha ao lado do corredor, um pouco afastada do resto.";
-static Vector2 calendar_card_subtitle_text_size_line_1;
 
 static char *current_card_subtitle_line_2 = "Ninguém te recebe. O computador já está ligado, esperando.";
-static Vector2 calendar_card_subtitle_text_size_line_2;
-
-static char *next_day_subtitle_card = "Em breve, novos dias...";
-static Vector2 next_day_subtitle_text_size;
 
 // Texturas do ambiente de jogo (Escritório e Dicas de Teclado)
 static Texture2D in_game_office;        // Mapa do escritório
@@ -244,13 +238,6 @@ void initialize_game_loop_variables(void)
     // Carrega a textura de fundo da tela de introdução
     second_background_texture = LoadTexture("code/assets/background/second-background.png");
     
-    // Pré-calcula as dimensões dos textos usando a fonte padrão para posterior centralização perfeita
-    calendar_card_title_text_size = MeasureTextEx(default_game_font, current_card_title, TITLE_FONT_SIZE, DEFAULT_LETTER_SPACING);
-    calendar_card_subtitle_text_size_line_1 = MeasureTextEx(default_game_font, current_card_subtitle_line_1, SUBTITLE_FONT_SIZE, DEFAULT_LETTER_SPACING);
-    calendar_card_subtitle_text_size_line_2 = MeasureTextEx(default_game_font, current_card_subtitle_line_2, SUBTITLE_FONT_SIZE, DEFAULT_LETTER_SPACING);
-
-    next_day_subtitle_text_size = MeasureTextEx(default_game_font, next_day_subtitle_card, SUBTITLE_FONT_SIZE, DEFAULT_LETTER_SPACING);
-
     // Carrega o mapa do escritório
     in_game_office = LoadTexture("code/assets/sprites/environment/office.png");
 
@@ -306,23 +293,71 @@ void initialize_game_loop_variables(void)
     update_collision_rec();
 }
 
+static void get_calendar_subtitle_positions(float screen_center_x, float screen_center_y,
+                                            Vector2 line_1_size, Vector2 line_2_size,
+                                            Vector2 *line_1_position, Vector2 *line_2_position)
+{
+    float subtitle_block_height = line_1_size.y + line_2_size.y;
+    line_1_position->x = screen_center_x - (line_1_size.x / 2.0f);
+    line_1_position->y = screen_center_y - (subtitle_block_height / 2.0f);
+    line_2_position->x = screen_center_x - (line_2_size.x / 2.0f);
+    line_2_position->y = line_1_position->y + line_1_size.y;
+}
+
 /**
  * @brief Desenha os textos do cartão do dia centralizados na tela, aplicando a cor de fade atual.
  */
 void render_calendar_day_card(void)
 {
-    // Desenha o Título ("Dia 1")
+    float screen_width = (float)GetScreenWidth();
+    float screen_height = (float)GetScreenHeight();
+    if (screen_width <= 0.0f || screen_height <= 0.0f)
+    {
+        return;
+    }
+
+    float scale_x = screen_width / 1920.0f;
+    float scale_y = screen_height / REFERENCE_HEIGHT;
+    float screen_scale = scale_x < scale_y ? scale_x : scale_y;
+    float letter_spacing = DEFAULT_LETTER_SPACING * screen_scale;
+    float screen_center_x = screen_width / 2.0f;
+    float screen_center_y = screen_height / 2.0f;
+    float max_text_width = screen_width * 0.92f;
+
+    float title_font_size = TITLE_FONT_SIZE * screen_scale;
+    Vector2 title_size = MeasureTextEx(default_game_font, current_card_title, title_font_size, letter_spacing);
+    float subtitle_font_size = SUBTITLE_FONT_SIZE * screen_scale;
+    Vector2 subtitle_line_1_size;
+    Vector2 subtitle_line_2_size;
+    subtitle_line_1_size = MeasureTextEx(default_game_font, current_card_subtitle_line_1, subtitle_font_size, letter_spacing);
+    subtitle_line_2_size = MeasureTextEx(default_game_font, current_card_subtitle_line_2, subtitle_font_size, letter_spacing);
+    float widest_subtitle = subtitle_line_1_size.x > subtitle_line_2_size.x
+        ? subtitle_line_1_size.x
+        : subtitle_line_2_size.x;
+    if (widest_subtitle > max_text_width)
+    {
+        subtitle_font_size *= max_text_width / widest_subtitle * 0.99f;
+        subtitle_line_1_size = MeasureTextEx(default_game_font, current_card_subtitle_line_1, subtitle_font_size, letter_spacing);
+        subtitle_line_2_size = MeasureTextEx(default_game_font, current_card_subtitle_line_2, subtitle_font_size, letter_spacing);
+    }
+
+    Vector2 subtitle_line_1_position;
+    Vector2 subtitle_line_2_position;
+    get_calendar_subtitle_positions(screen_center_x, screen_center_y,
+                                    subtitle_line_1_size, subtitle_line_2_size,
+                                    &subtitle_line_1_position, &subtitle_line_2_position);
+
     DrawTextEx(default_game_font, current_card_title,
-               (Vector2){middle_screen_x - (calendar_card_title_text_size.x / 2), middle_screen_y - (calendar_card_subtitle_text_size_line_1.y * 5)},
-               TITLE_FONT_SIZE, DEFAULT_LETTER_SPACING, color_to_fade);
+               (Vector2){screen_center_x - (title_size.x / 2.0f), screen_center_y - (subtitle_line_1_size.y * 5.0f)},
+               title_font_size, letter_spacing, color_to_fade);
 
     // Desenha a primeira linha do subtítulo narrativa
-    DrawTextEx(default_game_font, current_card_subtitle_line_1, (Vector2){middle_screen_x - (calendar_card_subtitle_text_size_line_1.x / 2), middle_screen_y - (calendar_card_subtitle_text_size_line_1.y / 2)},
-               SUBTITLE_FONT_SIZE, DEFAULT_LETTER_SPACING, color_to_fade);
+    DrawTextEx(default_game_font, current_card_subtitle_line_1, subtitle_line_1_position,
+               subtitle_font_size, letter_spacing, color_to_fade);
 
     // Desenha a segunda linha do subtítulo narrativa
-    DrawTextEx(default_game_font, current_card_subtitle_line_2, (Vector2){middle_screen_x - (calendar_card_subtitle_text_size_line_2.x / 2), middle_screen_y + (calendar_card_subtitle_text_size_line_1.y / 2)},
-               SUBTITLE_FONT_SIZE, DEFAULT_LETTER_SPACING, color_to_fade);
+    DrawTextEx(default_game_font, current_card_subtitle_line_2, subtitle_line_2_position,
+               subtitle_font_size, letter_spacing, color_to_fade);
 }
 
 /**

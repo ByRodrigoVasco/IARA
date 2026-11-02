@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <stddef.h> // Define a constante NULL
+#include <string.h>
 
 #include "raylib.h"
 #include "computer_loop.h"
@@ -20,6 +21,7 @@
 // Largura: win_w (largura da janela). Altura: win_h (altura da janela).
 #define QUIZ_FONT_SIZE_RATIO 0.038f          // tamanho da fonte (win_h)
 #define QUIZ_LINE_SPACING_RATIO 0.01f        // espaço entre linhas (win_h)
+#define QUIZ_OPTION_FONT_SIZE 20.0f
 #define QUIZ_PADDING_X_RATIO 0.04f           // margem interna horizontal da caixa (win_w)
 #define QUIZ_PADDING_Y_RATIO 0.05f           // margem interna vertical da caixa (win_h)
 #define QUIZ_MAX_WIDTH_RATIO 0.85f           // largura máxima da caixa e dos botões (win_w)
@@ -161,6 +163,109 @@ static DialogStep dialog_sequence[] = {
 // Quantidade total de passos do roteiro.
 #define TOTAL_STEPS ((int)(sizeof(dialog_sequence) / sizeof(dialog_sequence[0])))
 
+static float measure_max_dialog_line(const DialogStep *step, float font_size, float letter_spacing)
+{
+    float max_width = 0.0f;
+    for (int i = 0; i < step->line_count; i++)
+    {
+        float width = MeasureTextEx(default_game_font, step->lines[i], font_size, letter_spacing).x;
+        if (width > max_width) max_width = width;
+    }
+    return max_width;
+}
+
+static float fit_dialog_font_size(const DialogStep *step, float font_size, float max_width, float letter_spacing)
+{
+    for (int adjustment = 0; adjustment < 8; adjustment++)
+    {
+        float text_width = measure_max_dialog_line(step, font_size, letter_spacing);
+        if (text_width <= max_width) break;
+        font_size *= max_width / text_width * 0.99f;
+    }
+    return font_size;
+}
+
+static bool wrap_option_text(const char *text, char *wrapped_text, size_t buffer_size,
+                             float max_width, int *line_count, float *max_line_width)
+{
+    if (text == NULL || wrapped_text == NULL || buffer_size == 0 || line_count == NULL || max_line_width == NULL)
+    {
+        return false;
+    }
+
+    char line[MAX_OPTION_LEN] = "";
+    size_t line_length = 0;
+    size_t output_length = 0;
+    const char *cursor = text;
+    *line_count = 0;
+    *max_line_width = 0.0f;
+    wrapped_text[0] = '\0';
+
+    while (*cursor != '\0')
+    {
+        while (*cursor == ' ') cursor++;
+        if (*cursor == '\0') break;
+
+        const char *word_start = cursor;
+        while (*cursor != '\0' && *cursor != ' ') cursor++;
+        size_t word_length = (size_t)(cursor - word_start);
+        size_t candidate_length = line_length + (line_length > 0 ? 1 : 0) + word_length;
+        if (candidate_length >= sizeof(line))
+        {
+            return false;
+        }
+
+        char candidate[MAX_OPTION_LEN];
+        size_t candidate_index = 0;
+        if (line_length > 0)
+        {
+            memcpy(candidate, line, line_length);
+            candidate_index = line_length;
+            candidate[candidate_index++] = ' ';
+        }
+        memcpy(candidate + candidate_index, word_start, word_length);
+        candidate[candidate_length] = '\0';
+
+        float candidate_width = MeasureTextEx(default_game_font, candidate,
+                                              QUIZ_OPTION_FONT_SIZE, DEFAULT_LETTER_SPACING).x;
+        if (line_length > 0 && candidate_width > max_width)
+        {
+            float line_width = MeasureTextEx(default_game_font, line,
+                                             QUIZ_OPTION_FONT_SIZE, DEFAULT_LETTER_SPACING).x;
+            if (line_width > *max_line_width) *max_line_width = line_width;
+            if (output_length + line_length + 2 > buffer_size) return false;
+            memcpy(wrapped_text + output_length, line, line_length);
+            output_length += line_length;
+            wrapped_text[output_length++] = '\n';
+            (*line_count)++;
+            line_length = 0;
+            candidate_length = word_length;
+            memcpy(candidate, word_start, word_length);
+            candidate[candidate_length] = '\0';
+            candidate_width = MeasureTextEx(default_game_font, candidate,
+                                            QUIZ_OPTION_FONT_SIZE, DEFAULT_LETTER_SPACING).x;
+        }
+
+        if (candidate_width > max_width) return false;
+        memcpy(line, candidate, candidate_length + 1);
+        line_length = candidate_length;
+    }
+
+    if (line_length > 0)
+    {
+        float line_width = MeasureTextEx(default_game_font, line,
+                                         QUIZ_OPTION_FONT_SIZE, DEFAULT_LETTER_SPACING).x;
+        if (line_width > *max_line_width) *max_line_width = line_width;
+        if (output_length + line_length + 1 > buffer_size) return false;
+        memcpy(wrapped_text + output_length, line, line_length);
+        output_length += line_length;
+        (*line_count)++;
+    }
+
+    wrapped_text[output_length] = '\0';
+    return *line_count > 0;
+}
+
 // Carrega e redimensiona as texturas da janela e dos ícones, conforme a altura da tela.
 void initialize_computer_loop(void)
 {
@@ -234,44 +339,34 @@ void render_current_step(void)
     // 1. Obtém as dimensões atuais da janela (Texture2D)
     float win_w = (float)window_texture.width;
     float win_h = (float)window_texture.height;
-    float win_y = middle_screen_y - (win_h / 2.0f);
+    float screen_center_x = GetScreenWidth() / 2.0f;
+    float screen_center_y = GetScreenHeight() / 2.0f;
+    float win_y = screen_center_y - (win_h / 2.0f);
 
-    // 2. Escala da fonte ajustada proporcionalmente
-    float font_size = win_h * QUIZ_FONT_SIZE_RATIO;
-    float line_spacing = win_h * QUIZ_LINE_SPACING_RATIO;
-
-    // 3. Calcula a largura da maior linha de texto e altura acumulada
-    float max_text_width = 0.0f;
-    for (int i = 0; i < step->line_count; i++)
-    {
-        Vector2 line_size = MeasureTextEx(default_game_font, step->lines[i], font_size, DEFAULT_LETTER_SPACING);
-        if (line_size.x > max_text_width)
-        {
-            max_text_width = line_size.x;
-        }
-    }
-
-    float total_text_height = (step->line_count * font_size) + ((step->line_count - 1) * line_spacing);
-
-    // 4. Margens internas (Paddings)
+    // 2. Ajusta a fonte ao espaço disponível dentro da caixa.
     float padding_x = win_w * QUIZ_PADDING_X_RATIO;
     float padding_y = win_h * QUIZ_PADDING_Y_RATIO;
-
-    // 5. Limites de largura da caixa (Trava Máxima em 85% da largura da janela)
     float max_box_width = win_w * QUIZ_MAX_WIDTH_RATIO;
     float min_box_width = win_w * QUIZ_MIN_WIDTH_RATIO;
+    float text_box_margin_top = win_h * QUIZ_BOX_TOP_MARGIN_RATIO;
+    float available_text_width = max_box_width - (padding_x * 2.0f);
+    float font_size = win_h * QUIZ_FONT_SIZE_RATIO;
+    float letter_spacing = DEFAULT_LETTER_SPACING;
+    font_size = fit_dialog_font_size(step, font_size, available_text_width, letter_spacing);
 
-    float text_box_width = max_text_width + (padding_x * 2.0f);
+    float line_spacing = win_h * QUIZ_LINE_SPACING_RATIO;
+    float text_box_top = win_y + text_box_margin_top;
+    float text_box_width = measure_max_dialog_line(step, font_size, letter_spacing) + (padding_x * 2.0f);
 
     if (text_box_width > max_box_width) text_box_width = max_box_width;
     if (text_box_width < min_box_width) text_box_width = min_box_width;
 
+    float total_text_height = (step->line_count * font_size) + ((step->line_count - 1) * line_spacing);
     float text_box_height = total_text_height + (padding_y * 2.0f);
-    float text_box_margin_top = win_h * QUIZ_BOX_TOP_MARGIN_RATIO; // Margem superior em relação à janela do PC
 
     Rectangle text_box = {
-        middle_screen_x - (text_box_width / 2.0f),
-        win_y + text_box_margin_top,
+        screen_center_x - (text_box_width / 2.0f),
+        text_box_top,
         text_box_width,
         text_box_height
     };
@@ -288,13 +383,13 @@ void render_current_step(void)
 
     for (int i = 0; i < step->line_count; i++)
     {
-        Vector2 text_size = MeasureTextEx(default_game_font, step->lines[i], font_size, DEFAULT_LETTER_SPACING);
+        Vector2 text_size = MeasureTextEx(default_game_font, step->lines[i], font_size, letter_spacing);
         Vector2 text_pos = {
-            middle_screen_x - (text_size.x / 2.0f),
+            screen_center_x - (text_size.x / 2.0f),
             current_y
         };
 
-        DrawTextEx(default_game_font, step->lines[i], text_pos, font_size, DEFAULT_LETTER_SPACING, text_to_fade);
+        DrawTextEx(default_game_font, step->lines[i], text_pos, font_size, letter_spacing, text_to_fade);
         current_y += font_size + line_spacing;
     }
 
@@ -307,7 +402,7 @@ void render_current_step(void)
         float button_height = win_h * ACTION_BUTTON_HEIGHT_RATIO;
 
         Rectangle button_bounds = {
-            middle_screen_x - (button_width / 2.0f),
+            screen_center_x - (button_width / 2.0f),
             buttons_start_y,
             button_width,
             button_height
@@ -325,50 +420,63 @@ void render_current_step(void)
     }
     else if (step->type == STEP_QUIZ)
     {
-        // 1. Encontra a largura da maior opção de resposta dinamicamente
+        char wrapped_options[MAX_OPTIONS][MAX_OPTION_LEN];
+        float option_button_heights[MAX_OPTIONS];
+        float button_padding = win_w * OPTION_BUTTON_PADDING_RATIO;
+        float option_text_max_width = max_box_width - button_padding;
         float max_option_text_width = 0.0f;
+        float base_button_height = win_h * OPTION_BUTTON_HEIGHT_RATIO;
+
         for (int i = 0; i < step->option_count; i++)
         {
-            Vector2 text_size = MeasureTextEx(default_game_font, step->options[i], font_size, DEFAULT_LETTER_SPACING);
-            if (text_size.x > max_option_text_width)
+            int option_line_count;
+            float option_line_max_width;
+            if (!wrap_option_text(step->options[i], wrapped_options[i], sizeof(wrapped_options[i]),
+                                  option_text_max_width, &option_line_count, &option_line_max_width))
             {
-                max_option_text_width = text_size.x;
+                TraceLog(LOG_ERROR, "QUIZ: nao foi possivel ajustar a alternativa %d ao botao", i + 1);
+                return;
             }
+
+            if (option_line_max_width > max_option_text_width)
+            {
+                max_option_text_width = option_line_max_width;
+            }
+
+            float option_text_height = MeasureTextEx(default_game_font, wrapped_options[i],
+                                                     QUIZ_OPTION_FONT_SIZE, DEFAULT_LETTER_SPACING).y;
+            float wrapped_line_height = option_line_count * QUIZ_OPTION_FONT_SIZE;
+            if (option_text_height < wrapped_line_height) option_text_height = wrapped_line_height;
+            float button_vertical_padding = base_button_height > QUIZ_OPTION_FONT_SIZE
+                ? base_button_height - QUIZ_OPTION_FONT_SIZE
+                : 0.0f;
+            option_button_heights[i] = option_text_height + button_vertical_padding;
+            if (option_button_heights[i] < base_button_height) option_button_heights[i] = base_button_height;
         }
 
-        // 2. Define a largura do botão baseada no texto + margens (padding)
-        float button_padding = win_w * OPTION_BUTTON_PADDING_RATIO;
+        // 2. Define uma largura comum para os botões com base nas linhas já quebradas.
         float button_width = max_option_text_width + button_padding;
-        
-        // Garante que o botão não fique menor que a caixa da pergunta
-        if (button_width < text_box_width) 
-        {
-            button_width = text_box_width;
-        }
+        if (button_width < text_box_width) button_width = text_box_width;
+        if (button_width > max_box_width) button_width = max_box_width;
 
-        // NOVA REGRA: Garante que o botão não ultrapasse 85% da janela
-        if (button_width > max_box_width)
-        {
-            button_width = max_box_width;
-        }
-
-        float button_height  = win_h * OPTION_BUTTON_HEIGHT_RATIO;
         float option_spacing = win_h * OPTION_SPACING_RATIO;
+        float option_y = buttons_start_y;
 
         for (int i = 0; i < step->option_count; i++)
         {
             Rectangle button_bounds = {
-                middle_screen_x - (button_width / 2.0f),
-                buttons_start_y + (i * (button_height + option_spacing)),
+                screen_center_x - (button_width / 2.0f),
+                option_y,
                 button_width,
-                button_height
+                option_button_heights[i]
             };
+            option_y += option_button_heights[i] + option_spacing;
 
             if (current_quiz_answered)
             {
                 // Se já respondeu, renderizamos o botão sem capturar os cliques
                 bool ignored_click = false;
-                draw_button(button_bounds, step->options[i], &ignored_click);
+                draw_button(button_bounds, wrapped_options[i], &ignored_click);
 
                 // Se esta for a opção escolhida, desenha o ícone ao lado dela
                 if (i == current_quiz_selected)
@@ -388,7 +496,7 @@ void render_current_step(void)
             {
                 // Se ainda não respondeu, renderiza os botões capturando o clique normal
                 bool option_clicked = false;
-                draw_button(button_bounds, step->options[i], &option_clicked);
+                draw_button(button_bounds, wrapped_options[i], &option_clicked);
 
                 if (option_clicked)
                 {
@@ -404,11 +512,10 @@ void render_current_step(void)
             float continue_button_width  = win_w * ACTION_BUTTON_WIDTH_RATIO;
             float continue_button_height = win_h * ACTION_BUTTON_HEIGHT_RATIO;
 
-            // Calcula o Y abaixo da última alternativa do quiz
-            float continue_button_y = buttons_start_y + (step->option_count * (button_height + option_spacing)) + (win_h * CONTINUE_BUTTON_GAP_RATIO);
+            float continue_button_y = option_y - option_spacing + (win_h * CONTINUE_BUTTON_GAP_RATIO);
 
             Rectangle continue_button_bounds = {
-                middle_screen_x - (continue_button_width / 2.0f),
+                screen_center_x - (continue_button_width / 2.0f),
                 continue_button_y,
                 continue_button_width,
                 continue_button_height

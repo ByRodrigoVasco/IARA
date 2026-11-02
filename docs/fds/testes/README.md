@@ -30,7 +30,7 @@ A suíte monta o jogo de verdade — os mesmos módulos, os mesmos arquivos de m
 a mesma máquina de estados — e o conduz como um jogador faria. Não há simulação de
 fachada: `test_sistema` (CT-01 a CT-16) inclui `game_loop.c` para alcançar o estado
 interno real da partida, `test_conteudo` (CT-17 a CT-24) percorre o quiz e o menu, e
-`test_fluxo` (CT-25 a CT-35) monta o jogo inteiro menos a `main.c` e o percorre do
+`test_fluxo` (CT-25 a CT-36) monta o jogo inteiro menos a `main.c` e o percorre do
 começo ao fim com a janela à vista: abertura, menu, CRÉDITOS e a volta ao menu,
 INICIAR, cartão do dia, caminhada pelo escritório e as quatro perguntas do quiz. Junto rodam os dois testes de unidade que já existiam,
 `test_collisions` e `test_characters`.
@@ -73,7 +73,8 @@ INICIAR, cartão do dia, caminhada pelo escritório e as quatro perguntas do qui
 | CT-32 | Personagem atravessa o escritório até o computador (53 passos) | OK |
 | CT-33 | Interagir com o computador abre a tela do quiz | OK |
 | CT-34 | Jogador responde as 4 perguntas e conclui o quiz | OK |
-| CT-35 | Texto do computador cabe dentro da caixa e dos botões | **FALHA — [BUG-08](bugs.md#bug-08)** |
+| CT-35 | Perguntas e alternativas cabem no layout do computador | OK |
+| CT-36 | Subtítulo do cartão permanece centralizado em várias resoluções | OK |
 
 ## Evidência do percurso
 
@@ -91,9 +92,9 @@ seta de interação acesa.
 
 ![Personagem em frente ao computador no escritório, durante a execução do teste](evidencias/escritorio-em-jogo.png)
 
-O bloco segue até o computador e responde as quatro perguntas. Foi nesta captura
-que apareceu o [BUG-08](bugs.md#bug-08): repare no enunciado vazando para fora da
-caixa cinza, cortado nas duas bordas.
+O bloco segue até o computador e responde as quatro perguntas. As alternativas
+longas agora quebram em linhas dentro dos botões, que aumentam de altura para
+acomodar o texto.
 
 ![Tela do quiz com a primeira pergunta respondida e o ícone de acerto](evidencias/quiz-respondido.png)
 
@@ -112,7 +113,7 @@ estão em **[bugs.md](bugs.md)**.
 | [BUG-05](bugs.md#bug-05) | `close_pre_menu()` desenha fora do par `BeginDrawing`/`EndDrawing` | Baixa | Inspeção |
 | [BUG-06](bugs.md#bug-06) | `PERSONAGENS_PATH` em minúsculo quebra o jogo fora do Windows | Média | Inspeção |
 | [BUG-07](bugs.md#bug-07) | Pré-menu nunca descarrega as imagens da memória RAM | Média | Inspeção |
-| [BUG-08](bugs.md#bug-08) | Texto do quiz vaza para fora da caixa e dos botões | Média | CT-35 |
+| [BUG-08](bugs.md#bug-08) | Texto do quiz vaza para fora da caixa e dos botões | Média | CT-35 (corrigido) |
 
 Nenhum deles impede jogar a versão atual: o jogo abre, o menu funciona, o
 personagem anda, colide e chega ao computador, e o quiz vai até o fim.

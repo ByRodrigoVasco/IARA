@@ -233,6 +233,13 @@ pré-menu roda só uma vez por sessão, então não cresce.
 
 **Labels:** `bug`, `ui`, `gravidade: média`
 
+**Estado no código:** corrigido. Enunciados reduzem a fonte para caber na caixa;
+alternativas quebram em linhas nos espaços e os botões aumentam de altura para
+acomodá-las. O CT-35 agora verifica a largura das linhas e o espaço vertical,
+e passou na validação. A issue #39 permanece aberta até ser atualizada no GitHub.
+
+O relato abaixo registra o comportamento encontrado antes da correção.
+
 Na tela do computador, enunciados e alternativas mais longos do que a caixa são
 desenhados por cima da borda e saem pelos dois lados, cortados.
 
@@ -269,7 +276,7 @@ Dá para ver o efeito na evidência
 primeira e a última letra fora da caixa cinza.
 
 **Esperado:** o texto cabe dentro da caixa e dos botões, em qualquer resolução.
-**Obtido:** oito trechos do roteiro atual vazam pelas laterais.
+**Obtido na captura original:** oito trechos do roteiro vazavam pelas laterais.
 
 **Onde:** `code/src/screens/computer_loop.c:266` (caixa) e
 `code/src/screens/computer_loop.c:350` (botões de alternativa)

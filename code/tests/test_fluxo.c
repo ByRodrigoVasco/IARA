@@ -328,6 +328,67 @@ static void testar_iniciar(void)
            current_game_state_variables.current_screen == PLAYING_SCREEN);
 }
 
+static void testar_centralizacao_subtitulo_cartao(void)
+{
+    titulo("Centralizacao responsiva do subtitulo (CT-36)");
+
+    const int window_sizes[][2] = {
+        {800, 450},
+        {1280, 720},
+        {1920, 1080},
+        {2560, 1080},
+        {3840, 2160}
+    };
+    bool centered = true;
+
+    for (size_t i = 0; i < sizeof(window_sizes) / sizeof(window_sizes[0]); i++)
+    {
+        float width = (float)window_sizes[i][0];
+        float height = (float)window_sizes[i][1];
+        float screen_scale_x = width / 1920.0f;
+        float screen_scale_y = height / REFERENCE_HEIGHT;
+        float screen_scale = screen_scale_x < screen_scale_y ? screen_scale_x : screen_scale_y;
+        float font_size = SUBTITLE_FONT_SIZE * screen_scale;
+        float letter_spacing = DEFAULT_LETTER_SPACING * screen_scale;
+        float max_text_width = width * 0.92f;
+        Vector2 line_1_size = MeasureTextEx(default_game_font, current_card_subtitle_line_1,
+                                            font_size, letter_spacing);
+        Vector2 line_2_size = MeasureTextEx(default_game_font, current_card_subtitle_line_2,
+                                            font_size, letter_spacing);
+        float widest_line = line_1_size.x > line_2_size.x ? line_1_size.x : line_2_size.x;
+
+        if (widest_line > max_text_width)
+        {
+            font_size *= max_text_width / widest_line * 0.99f;
+            line_1_size = MeasureTextEx(default_game_font, current_card_subtitle_line_1,
+                                        font_size, letter_spacing);
+            line_2_size = MeasureTextEx(default_game_font, current_card_subtitle_line_2,
+                                        font_size, letter_spacing);
+        }
+
+        float center_x = width / 2.0f;
+        float center_y = height / 2.0f;
+        Vector2 line_1_position;
+        Vector2 line_2_position;
+        get_calendar_subtitle_positions(center_x, center_y, line_1_size, line_2_size,
+                                        &line_1_position, &line_2_position);
+        float block_center_y = (line_1_position.y + line_2_position.y + line_2_size.y) / 2.0f;
+        float line_1_center_x = line_1_position.x + (line_1_size.x / 2.0f);
+        float line_2_center_x = line_2_position.x + (line_2_size.x / 2.0f);
+
+        if (fabsf(block_center_y - center_y) > 0.01f
+            || fabsf(line_1_center_x - center_x) > 0.01f
+            || fabsf(line_2_center_x - center_x) > 0.01f)
+        {
+            printf("           subtitulo fora do centro em %dx%d\n",
+                   window_sizes[i][0], window_sizes[i][1]);
+            centered = false;
+        }
+    }
+
+    checar("CT-36", "Subtitulo do cartao permanece centralizado em varias resolucoes", centered);
+}
+
 static void testar_cartao_do_dia(void)
 {
     titulo("Cartao do dia e escritorio (CT-31)");
@@ -479,65 +540,97 @@ static void testar_quiz(void)
            respondidas == perguntas && computer_tasks_finished);
 }
 
-/* Refaz a conta de largura de render_current_step() e confere se o texto cabe
- * dentro da caixa desenhada. A caixa tem um teto de 85% da janela; passando
- * disso, o texto continua sendo desenhado centralizado e vaza pelas laterais. */
+/* Confere se perguntas e alternativas cabem no layout da tela do computador. */
 static void testar_layout_do_quiz(void)
 {
     titulo("Layout da tela do computador (CT-35)");
 
     float win_w = (float)window_texture.width;
     float win_h = (float)window_texture.height;
-
-    float font_size = win_h * QUIZ_FONT_SIZE_RATIO;
     float padding_x = win_w * QUIZ_PADDING_X_RATIO;
+    float padding_y = win_h * QUIZ_PADDING_Y_RATIO;
     float max_box_width = win_w * QUIZ_MAX_WIDTH_RATIO;
-    float min_box_width = win_w * QUIZ_MIN_WIDTH_RATIO;
+    float available_text_width = max_box_width - (padding_x * 2.0f);
+    float window_bottom = middle_screen_y + (win_h / 2.0f);
 
-    int vazamentos = 0;
+    bool layout_ok = true;
 
     for (int p = 0; p < TOTAL_STEPS; p++)
     {
         DialogStep *passo = &dialog_sequence[p];
-
-        float maior_linha = 0.0f;
-
-        for (int l = 0; l < passo->line_count; l++)
+        float font_size = fit_dialog_font_size(passo, win_h * QUIZ_FONT_SIZE_RATIO,
+                                               available_text_width, DEFAULT_LETTER_SPACING);
+        float question_width = measure_max_dialog_line(passo, font_size, DEFAULT_LETTER_SPACING);
+        if (question_width > available_text_width)
         {
-            float largura = MeasureTextEx(default_game_font, passo->lines[l],
-                                          font_size, DEFAULT_LETTER_SPACING).x;
-
-            if (largura > maior_linha) maior_linha = largura;
+            printf("           passo %d: pergunta mede %.1f px, limite %.1f px\n",
+                   p, question_width, available_text_width);
+            layout_ok = false;
         }
 
-        float largura_da_caixa = maior_linha + (padding_x * 2.0f);
+        float line_spacing = win_h * QUIZ_LINE_SPACING_RATIO;
+        float box_height = (passo->line_count * font_size)
+            + ((passo->line_count - 1) * line_spacing)
+            + (padding_y * 2.0f);
+        float buttons_start_y = (middle_screen_y - (win_h / 2.0f))
+            + (win_h * QUIZ_BOX_TOP_MARGIN_RATIO)
+            + box_height
+            + (win_h * QUIZ_BUTTONS_TOP_GAP_RATIO);
 
-        if (largura_da_caixa > max_box_width) largura_da_caixa = max_box_width;
-        if (largura_da_caixa < min_box_width) largura_da_caixa = min_box_width;
-
-        if (maior_linha > largura_da_caixa)
+        if (passo->type == STEP_QUIZ)
         {
-            printf("           passo %d: texto tem %.0f px e a caixa so tem %.0f px\n",
-                   p, maior_linha, largura_da_caixa);
-            vazamentos++;
-        }
+            float button_padding = win_w * OPTION_BUTTON_PADDING_RATIO;
+            float option_text_max_width = max_box_width - button_padding;
+            float base_button_height = win_h * OPTION_BUTTON_HEIGHT_RATIO;
+            float option_spacing = win_h * OPTION_SPACING_RATIO;
+            float options_bottom = buttons_start_y;
 
-        for (int o = 0; o < passo->option_count; o++)
-        {
-            float largura = MeasureTextEx(default_game_font, passo->options[o],
-                                          font_size, DEFAULT_LETTER_SPACING).x;
-
-            if (largura > max_box_width)
+            for (int i = 0; i < passo->option_count; i++)
             {
-                printf("           passo %d, opcao %d: texto tem %.0f px e o botao so tem %.0f px\n",
-                       p, o, largura, max_box_width);
-                vazamentos++;
+                char wrapped_option[MAX_OPTION_LEN];
+                int option_line_count;
+                float option_line_max_width;
+                if (!wrap_option_text(passo->options[i], wrapped_option, sizeof(wrapped_option),
+                                      option_text_max_width, &option_line_count, &option_line_max_width))
+                {
+                    printf("           passo %d, alternativa %d: nao foi possivel quebrar o texto\n", p, i);
+                    layout_ok = false;
+                    continue;
+                }
+
+                if (option_line_max_width > option_text_max_width)
+                {
+                    printf("           passo %d, alternativa %d: linha mede %.1f px, limite %.1f px\n",
+                           p, i, option_line_max_width, option_text_max_width);
+                    layout_ok = false;
+                }
+
+                float option_text_height = MeasureTextEx(default_game_font, wrapped_option,
+                                                         QUIZ_OPTION_FONT_SIZE, DEFAULT_LETTER_SPACING).y;
+                float wrapped_line_height = option_line_count * QUIZ_OPTION_FONT_SIZE;
+                if (option_text_height < wrapped_line_height) option_text_height = wrapped_line_height;
+                float button_vertical_padding = base_button_height > QUIZ_OPTION_FONT_SIZE
+                    ? base_button_height - QUIZ_OPTION_FONT_SIZE
+                    : 0.0f;
+                float option_button_height = option_text_height + button_vertical_padding;
+                if (option_button_height < base_button_height) option_button_height = base_button_height;
+                options_bottom += option_button_height;
+                if (i < passo->option_count - 1) options_bottom += option_spacing;
+            }
+
+            float continue_bottom = options_bottom
+                + (win_h * CONTINUE_BUTTON_GAP_RATIO)
+                + (win_h * ACTION_BUTTON_HEIGHT_RATIO);
+            float bottom_margin = win_h * 0.05f;
+            if (continue_bottom > window_bottom - bottom_margin)
+            {
+                printf("           passo %d: alternativas e Continuar ultrapassam a janela\n", p);
+                layout_ok = false;
             }
         }
     }
 
-    checar("CT-35", "Texto do computador cabe dentro da caixa e dos botoes",
-           vazamentos == 0);
+    checar("CT-35", "Perguntas e alternativas cabem no layout do computador", layout_ok);
 }
 
 int main(void)
@@ -566,6 +659,7 @@ int main(void)
     testar_abertura();
     testar_creditos();
     testar_iniciar();
+    testar_centralizacao_subtitulo_cartao();
     testar_cartao_do_dia();
     testar_caminhada();
     testar_computador();
