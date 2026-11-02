@@ -104,34 +104,88 @@ static Rectangle estagiario_collision_rec;               // Hitbox atualizada di
 static bool show_debug_hitboxes = false;                 // Modo debug (F1): desenha as hitboxes de colisão
 
 // Obstáculos medidos no mapa de referência (office.png), relativos ao centro da tela
-#define OBSTACLE_COUNT 25  // Quantidade de obstáculos medidos; atualizar ao incluir mais
+// Linha inferior da porta no asset: y = 808 px (centro vertical do mapa = 438,5).
+#define OFFICE_FRONT_BOUNDARY_Y 369.5f
+#define OBSTACLE_COUNT 32  // Quantidade de obstáculos medidos; atualizar ao incluir mais
 static Rectangle office_obstacles_reference[OBSTACLE_COUNT] = {
     {-531.0f, -438.0f, 1062.0f, 114.0f},  // parede do topo (banheiros, cozinha, quadro, servidores)
     {-531.0f, -317.0f, 175.0f, 67.0f},    // banheiros, parte de baixo
     {-189.0f, -317.0f, 31.0f, 12.0f},     // lixeira
-    {18.0f, -317.0f, 31.0f, 12.0f},       // planta embaixo do quadro
+    {16.0f, -356.5f, 37.0f, 52.0f},       // planta embaixo do quadro
     {185.0f, -317.0f, 23.0f, 12.0f},      // bebedouro
     {364.0f, -317.0f, 167.0f, 94.0f},     // sala de servidores, parte de baixo
     {-531.0f, -242.0f, 140.0f, 106.0f},   // sala do mural
     {403.0f, -215.0f, 128.0f, 487.0f},    // salas de vidro da direita
     {-272.0f, -197.0f, 190.0f, 78.0f},    // mesas superior esquerda
     {63.0f, -197.0f, 198.0f, 78.0f},      // mesas superior direita
-    {-13.0f, -156.0f, 19.0f, 74.0f},      // planta do meio, em cima
+    {-28.0f, -171.0f, 48.0f, 89.0f},      // planta do meio, em cima
     {-473.0f, -128.0f, 81.0f, 86.0f},     // impressora
     {-531.0f, -65.0f, 43.0f, 63.0f},      // planta da esquerda, em cima
     {-276.0f, 59.0f, 198.0f, 82.0f},      // mesas inferior esquerda
     {63.0f, 59.0f, 198.0f, 78.0f},        // mesas inferior direita
     {-531.0f, 57.0f, 105.0f, 82.0f},      // estante de livros
-    {-17.0f, 100.0f, 23.0f, 78.0f},       // planta do meio, embaixo
+    {-32.0f, 82.0f, 52.0f, 96.0f},       // planta do meio, embaixo
     {-531.0f, 167.0f, 39.0f, 78.0f},      // planta da esquerda, no meio
     {-422.0f, 253.0f, 66.0f, 43.0f},      // mesinha do sofá
-    {481.0f, 280.0f, 39.0f, 27.0f},       // planta da direita, embaixo
+    {475.0f, 247.0f, 50.0f, 60.0f},       // planta da direita, embaixo
     {-531.0f, 292.0f, 43.0f, 31.0f},      // planta da esquerda, embaixo
-    {-60.0f, 304.0f, 116.0f, 27.0f},      // porta de vidro
-    {-169.0f, 316.0f, 78.0f, 16.0f},      // jardineira esquerda
-    {95.0f, 316.0f, 78.0f, 16.0f},        // jardineira direita
-    {-531.0f, 339.0f, 1062.0f, 98.0f}};   // parede de baixo
+    {0},                              // porta: passagem atras do vidro
+    {-175.0f, 307.5f, 84.0f, 54.0f},      // jardineira esquerda
+    {93.0f, 307.5f, 84.0f, 54.0f},        // jardineira direita
+    {-531.0f, OFFICE_FRONT_BOUNDARY_Y, 1062.0f, 68.0f}, // linha inferior da porta
+    {0}, {0},                         // pilares: oclusao visual, passagem livre
+    {-531.0f, 331.5f, 4.0f, 106.0f},    // lateral esquerda
+    {524.0f, 331.5f, 7.0f, 106.0f},      // lateral direita
+    {0}, {0}, {0}};                    // bases dos tres tiles de vidro
 static Rectangle office_obstacles[OBSTACLE_COUNT];  // Mesmos obstáculos em coordenadas da tela
+
+// Paineis inferiores: coordenadas do mesmo office.png, relativas ao centro.
+#define GLASS_COUNT 3
+static const collision_tile glass_reference[GLASS_COUNT] = {
+    {{-527.0f, 331.5f, 210.0f, OFFICE_FRONT_BOUNDARY_Y - 331.5f + 4.0f}, TILE_GLASS, 4.0f},
+    {{317.0f, 331.5f, 207.0f, OFFICE_FRONT_BOUNDARY_Y - 331.5f + 4.0f}, TILE_GLASS, 4.0f},
+    {{-58.0f, 308.5f, 109.0f, OFFICE_FRONT_BOUNDARY_Y - 308.5f + 4.0f}, TILE_GLASS, 4.0f}
+};
+// Superficie visual independente; a base fisica nunca ultrapassa a linha da porta.
+static const Rectangle glass_surface_reference[GLASS_COUNT] = {
+    {-527.0f, 331.5f, 210.0f, 49.0f},
+    {317.0f, 331.5f, 207.0f, 49.0f},
+    {-58.0f, 308.5f, 109.0f, 58.0f}
+};
+static const Rectangle office_foreground_reference[] = {
+    {-245.0f, 369.5f, 181.0f, 68.0f},  // parede esquerda: sem incluir o piso
+    {58.0f, 369.5f, 185.0f, 68.0f},    // parede direita: sem incluir o piso
+    {-64.0f, 369.5f, 122.0f, 68.0f},    // soleira e placa abaixo da porta
+    {-314.0f, 324.5f, 69.0f, 113.0f},   // pilar esquerdo
+    {243.0f, 324.5f, 74.0f, 113.0f},    // pilar direito
+    {-7.0f, 296.5f, 10.0f, 73.0f}      // divisoria central da porta
+};
+static collision_tile office_glass[GLASS_COUNT];
+static Rectangle office_glass_surface[GLASS_COUNT];
+static RenderTexture2D glass_scene;
+static Shader glass_shader;
+static int glass_panel_loc, glass_size_loc;
+
+// Cena intermediaria invertida em Y; o recorte usa coordenadas de tela.
+static const char *glass_fragment_shader =
+    "#version 330\n"
+    "in vec2 fragTexCoord; in vec4 fragColor; out vec4 finalColor;\n"
+    "uniform sampler2D texture0; uniform vec4 colDiffuse;\n"
+    "uniform vec4 panel; uniform vec2 size;\n"
+    "void main() {\n"
+    " vec2 pixel = vec2(fragTexCoord.x, 1.0-fragTexCoord.y)*size;\n"
+    " if(any(lessThan(pixel,panel.xy)) || any(greaterThanEqual(pixel,panel.xy+panel.zw))) discard;\n"
+    " vec4 c = texture(texture0, fragTexCoord);\n"
+    " c.rgb = mix(c.rgb,vec3(0.45,0.80,0.95),0.12);\n"
+    " finalColor = c*colDiffuse*fragColor; }\n";
+
+static void unload_glass(void)
+{
+    if (glass_scene.id) UnloadRenderTexture(glass_scene);
+    if (glass_shader.id) UnloadShader(glass_shader);
+    glass_scene = (RenderTexture2D){0};
+    glass_shader = (Shader){0};
+}
 
 // ---------------------------------------------------------------------------
 // FUNÇÕES DE REDIMENSIONAMENTO E ESCALA DINÂMICA
@@ -231,6 +285,14 @@ static void update_obstacle_recs(void)
     {
         office_obstacles[i] = scale_reference_rect(office_obstacles_reference[i], get_scale(), screen_center);
     }
+    for (int i = 0; i < GLASS_COUNT; i++)
+    {
+        office_glass[i] = glass_reference[i];
+        office_glass[i].bounds = scale_reference_rect(glass_reference[i].bounds, get_scale(), screen_center);
+        office_glass[i].base_height *= get_scale();
+        office_glass_surface[i] = scale_reference_rect(glass_surface_reference[i], get_scale(), screen_center);
+        office_obstacles[OBSTACLE_COUNT - GLASS_COUNT + i] = tile_collision_rectangle(office_glass[i]);
+    }
 }
 
 /**
@@ -250,6 +312,11 @@ void initialize_game_loop_variables(void)
     calendar_card_subtitle_text_size_line_2 = MeasureTextEx(default_game_font, current_card_subtitle_line_2, SUBTITLE_FONT_SIZE, DEFAULT_LETTER_SPACING);
 
     next_day_subtitle_text_size = MeasureTextEx(default_game_font, next_day_subtitle_card, SUBTITLE_FONT_SIZE, DEFAULT_LETTER_SPACING);
+
+    unload_glass();
+    glass_shader = LoadShaderFromMemory(NULL, glass_fragment_shader);
+    glass_panel_loc = GetShaderLocation(glass_shader, "panel");
+    glass_size_loc = GetShaderLocation(glass_shader, "size");
 
     // Carrega o mapa do escritório
     in_game_office = LoadTexture("code/assets/sprites/environment/office.png");
@@ -600,6 +667,77 @@ void render_game_loop_escritorio(void)
     DrawTexturePro(in_game_office, source, dest, (Vector2){0, 0}, 0.0f, color_to_fade);
 }
 
+// Chamado no ciclo de desenho existente, antes da interface.
+static void render_office_with_glass(void)
+{
+    int width = GetScreenWidth(), height = GetScreenHeight();
+    if (width <= 0 || height <= 0) return;
+    if (glass_scene.texture.width != width || glass_scene.texture.height != height)
+    {
+        if (glass_scene.id) UnloadRenderTexture(glass_scene);
+        glass_scene = LoadRenderTexture(width, height);
+    }
+    if (!glass_scene.id)
+    {
+        render_game_loop_escritorio();
+        render_player();
+        return;
+    }
+    BeginTextureMode(glass_scene);
+    ClearBackground(BG_COLOR);
+    render_game_loop_escritorio();
+    render_player();
+    EndTextureMode();
+
+    Rectangle source = {0, 0, (float)width, -(float)height};
+    DrawTextureRec(glass_scene.texture, source, (Vector2){0}, WHITE);
+    float scale = get_scale();
+    Vector2 size = {(float)width, (float)height};
+    bool shader_ready = glass_panel_loc >= 0 && glass_size_loc >= 0;
+    for (int i = 0; i < GLASS_COUNT; i++)
+    {
+        Rectangle pane = office_glass_surface[i];
+        if (shader_ready)
+        {
+            SetShaderValue(glass_shader, glass_panel_loc, &pane, SHADER_UNIFORM_VEC4);
+            SetShaderValue(glass_shader, glass_size_loc, &size, SHADER_UNIFORM_VEC2);
+            BeginShaderMode(glass_shader);
+            DrawTextureRec(glass_scene.texture, source, (Vector2){0}, color_to_fade);
+            EndShaderMode();
+        }
+        // Reutiliza os reflexos do asset e redesenha a moldura sem distorcao.
+        Rectangle ref = glass_surface_reference[i];
+        Rectangle crop = {ref.x + in_game_office.width/2.0f,
+                          ref.y + in_game_office.height/2.0f, ref.width, ref.height};
+        Color reflection = color_to_fade;
+        reflection.a = (unsigned char)(reflection.a * 0.18f);
+        DrawTexturePro(in_game_office, crop, pane, (Vector2){0}, 0, reflection);
+        float top_frame = i == GLASS_COUNT - 1 ? 12.0f : 7.0f;
+        Rectangle frames[] = {
+            {crop.x, crop.y-top_frame, crop.width, top_frame},
+            {crop.x, crop.y+crop.height-4, crop.width, in_game_office.height-crop.y-crop.height+4},
+            {crop.x-3, crop.y-7, 3, crop.height+15},
+            {crop.x+crop.width, crop.y-7, 3, crop.height+15}
+        };
+        Vector2 origin = {(width-in_game_office.width*scale)/2.0f,
+                          (height-in_game_office.height*scale)/2.0f};
+        for (int j = 0; j < 4; j++)
+            DrawTexturePro(in_game_office, frames[j], scale_reference_rect(frames[j], scale, origin),
+                           (Vector2){0}, 0, color_to_fade);
+    }
+    // Pilares e parede central tambem ocluem a parte superior do sprite.
+    Vector2 origin = {(width-in_game_office.width*scale)/2.0f,
+                      (height-in_game_office.height*scale)/2.0f};
+    for (unsigned int i = 0; i < sizeof(office_foreground_reference)/sizeof(office_foreground_reference[0]); i++)
+    {
+        Rectangle ref = office_foreground_reference[i];
+        Rectangle crop = {ref.x+in_game_office.width/2.0f, ref.y+in_game_office.height/2.0f,
+                          ref.width, ref.height};
+        DrawTexturePro(in_game_office, crop, scale_reference_rect(crop, scale, origin),
+                       (Vector2){0}, 0, color_to_fade);
+    }
+}
+
 /**
  * @brief Renderiza os ícones de dica de controle (WASD, Setas, Espaço) de forma alinhada e
  * centralizada no espaço livre da margem inferior da tela (abaixo do mapa do escritório).
@@ -692,6 +830,7 @@ void render_interact_arrow(void)
  */
 void unload_office(void)
 {
+    unload_glass();
     UnloadTexture(current_estagiario_texture_direction);
     UnloadTexture(in_game_office);
     UnloadTexture(arrow_down_texture); // Liberação da textura da seta flutuante
@@ -754,11 +893,10 @@ void handle_game_loop_screens(void)
 
         // ORDEM DE RENDERIZAÇÃO (Layering / Z-Index):
         // 1º O mapa de fundo (Escritório)
-        // 2º O sprite do Jogador
+        // 2º O sprite do Jogador, refracao dos vidros e molduras em primeiro plano
         // 3º As dicas de controle no rodapé
         // 4º A seta indicativa por cima do cenário
-        render_game_loop_escritorio();
-        render_player();
+        render_office_with_glass();
         render_control_tips();
         render_interact_arrow();
         render_debug_hitboxes();
@@ -816,6 +954,7 @@ void render_game_loop(void)
  */
 void unload_game_loop(void)
 {
+    unload_glass();
     // Limpeza de segurança das texturas do escritório e elementos gráficos
     UnloadTexture(in_game_office);
     UnloadTexture(arrow_down_texture);
