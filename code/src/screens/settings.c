@@ -86,9 +86,11 @@ bool activate_settings_option(int option)
     }
 }
 
-// Teclado: W/S ou setas escolhem a linha, A/D ou setas ajustam o brilho, Enter ou Espaço acionam.
+// Teclado: W/S ou setas escolhem a linha, A/D ou setas ajustam o brilho, Enter ou Espaço acionam e ESC volta ao menu.
 static bool handle_settings_keyboard(void)
 {
+    if (IsKeyPressed(KEY_ESCAPE)) return true;
+
     if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S))
     {
         selected_option = (selected_option + 1) % SETTINGS_OPTION_COUNT;

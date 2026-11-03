@@ -53,15 +53,18 @@ void close_pre_menu(void)
 {
     // PODE FECHAR APENAS DEPOIS DA ANIMAÇÃO TERMINAR.
     fade_out_texture(10, &textures_color, &can_close_pre_menu_safely);
-
-    ClearBackground(bg_color);
-
-    draw_pre_menu_textures();
 }
 
 void render_pre_menu(void)
 {
-    fade_in_texture(DEFAULT_FADE_SPEED, &textures_color, &fade_in_animation_finished);
+    if (fade_in_animation_finished)
+    {
+        close_pre_menu();
+    }
+    else
+    {
+        fade_in_texture(DEFAULT_FADE_SPEED, &textures_color, &fade_in_animation_finished);
+    }
 
     begin_game_drawing();
     ClearBackground(bg_color);
@@ -69,11 +72,6 @@ void render_pre_menu(void)
     draw_pre_menu_textures();
 
     end_game_drawing();
-
-    if (fade_in_animation_finished)
-    {
-        close_pre_menu();
-    }
 }
 
 void unload_pre_menu_textures(void)

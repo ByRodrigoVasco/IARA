@@ -18,7 +18,7 @@ int mouse_is_hovering = NONE;
 
 bool is_menu_to_close = false;
 
-// Opção atualmente destacada no menu (INICIAR, CREDITOS ou SAIR).
+// Opção atualmente destacada no menu (INICIAR, CREDITOS, CONFIGURACOES ou SAIR).
 static int selected_menu_option = INICIAR;
 
 static bool menu_fade_in_finished = false;
