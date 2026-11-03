@@ -90,7 +90,8 @@ function Teclar($janela, $vk) {
 }
 
 Remove-Item -Force $save -ErrorAction SilentlyContinue
-$jogo = Abrir-Jogo $exe $pasta 9
+# Folga para a abertura terminar: num executavel recem-gerado, o inicio pode demorar mais
+$jogo = Abrir-Jogo $exe $pasta 15
 $jogo.Refresh()
 if ($jogo.MainWindowHandle -ne [IntPtr]::Zero) {
     Teclar $jogo.MainWindowHandle 0x53   # S: CREDITOS
