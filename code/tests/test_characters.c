@@ -13,7 +13,17 @@ int main(void)
 
     // Personagem sem os arquivos: não carrega nada e avisa com false (não precisa de janela)
     Texture2D frames[WALK_FRAME_COUNT];
-    assert(!load_walk_frames("Inexistente", "east", false, frames));
+    assert(!load_walk_frames("Inexistente", EAST, frames));
+
+    // Todo personagem tem os 4 frames nas 8 direções (rodar na raiz do repositório)
+    const char *characters[] = {"Anderson", "Estagiarios", "JP", "Julio", "JV", "Laura", "Nicollas", "Vasco", "Zito"};
+    for (int c = 0; c < 9; c++)
+    {
+        for (int direction = 0; direction < DIRECTION_COUNT; direction++)
+        {
+            assert(has_walk_frames(characters[c], direction));
+        }
+    }
 
     printf("Todos os testes passaram\n");
     return 0;

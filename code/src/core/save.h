@@ -20,6 +20,7 @@
  *   mode_type=0
  *   user_investigated=1
  *   is_resolved=0
+ *   has_cheat_sheet=1
  *   overall_points=4
  *   automation_points=1
  *   perception_points=3
@@ -28,8 +29,8 @@
  *   checksum=9f3a1c07
  */
 
-// Arquivo de save, relativo à pasta de onde o jogo é executado (a raiz do
-// repositório, a mesma usada para carregar os assets). Já está no .gitignore.
+// Arquivo de save, relativo à pasta do executável (a mesma usada para carregar
+// os assets, ver main.c). Já está no .gitignore.
 #define SAVE_FILE_PATH "iara.save"
 
 // Primeira linha do arquivo. Mudar a versão quando o formato mudar.
