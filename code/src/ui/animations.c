@@ -13,6 +13,7 @@ void fade_in_texture(unsigned int fade_speed, Color *color, bool *is_animation_f
     }
     else
     {
+        color->a = MAX_ALPHA_CHANNEL_INT;
         *is_animation_finished = true;
     }
 }

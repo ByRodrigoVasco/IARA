@@ -7,6 +7,7 @@
 #include "save.h"
 #include "helper.h"
 #include "accessibility.h"
+#include "preferences.h"
 
 unsigned int screen_width = 0;
 unsigned int screen_height = 0;
@@ -30,22 +31,27 @@ int main(void)
 
     int monitor_width = GetMonitorWidth(monitor_id);
     int monitor_height = GetMonitorHeight(monitor_id);
+    Vector2 monitor_position = GetMonitorPosition(monitor_id);
 
     /* Modo janela: um pouco menor que o monitor. F11 alterna com a tela cheia. */
     int window_width = monitor_width * WINDOW_MONITOR_RATIO;
     int window_height = monitor_height * WINDOW_MONITOR_RATIO;
 
     SetWindowSize(window_width, window_height);
-    SetWindowPosition((monitor_width - window_width) / 2, (monitor_height - window_height) / 2);
+    SetWindowPosition((int)monitor_position.x + ((monitor_width - window_width) / 2),
+                      (int)monitor_position.y + ((monitor_height - window_height) / 2));
 
     update_screen_metrics();
 
     SetTargetFPS(60);
 
+    // ESC é tratado no loop principal: nos créditos e nas configurações ele volta ao menu
+    SetExitKey(KEY_NULL);
+
     // A ORDEM IMPORTA. NÃO MUDE.
     initialize_fonts();
-    
-    initialize_menu_variables();
+    load_preferences(PREFERENCES_FILE_PATH);
+
     initialize_game_state_variables();
     initialize_hidden_statistic();
 
@@ -71,10 +77,15 @@ int main(void)
     current_game_state_variables.current_screen = PRE_MENU_SCREEN;
 
     /* WindowShouldClose() fica true quando o jogador fecha a janela pelo X,
-     * por ALT+F4 (o sistema manda o mesmo pedido de fechar) ou pela tecla ESC.
-     * A opção SAIR do menu também encerra este loop. */
+     * ou por ALT+F4 (o sistema manda o mesmo pedido de fechar). A opção SAIR do
+     * menu e a tecla ESC, fora dos créditos e das configurações, também encerram. */
     while (!WindowShouldClose() && !is_game_to_close)
     {
+        if (IsKeyPressed(KEY_ESCAPE) && escape_closes_current_screen())
+        {
+            break;
+        }
+
         /* A janela pode mudar de tamanho a qualquer momento (borda, maximizar ou F11). */
         if (IsKeyPressed(KEY_F11))
         {
@@ -98,6 +109,12 @@ int main(void)
         TraceLog(LOG_WARNING, "SAVE: nao foi possivel salvar o progresso: %s", save_result_to_string(save_status));
     }
 
+    if (!save_preferences(PREFERENCES_FILE_PATH))
+    {
+        TraceLog(LOG_WARNING, "PREFERENCIAS: nao foi possivel salvar em %s", PREFERENCES_FILE_PATH);
+    }
+
+    handle_state_shutdown();
     unload_accessibility();
     unload_fonts();
     CloseWindow();

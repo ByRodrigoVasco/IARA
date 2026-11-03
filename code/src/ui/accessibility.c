@@ -70,7 +70,8 @@ void end_high_contrast_filter(void)
 
 void set_game_brightness(float brightness)
 {
-    if (brightness < BRIGHTNESS_MIN) brightness = BRIGHTNESS_MIN;
+    // A comparação invertida também recusa um valor inválido (NaN) vindo do arquivo
+    if (!(brightness >= BRIGHTNESS_MIN)) brightness = BRIGHTNESS_MIN;
     if (brightness > BRIGHTNESS_MAX) brightness = BRIGHTNESS_MAX;
 
     game_brightness = roundf(brightness / BRIGHTNESS_STEP) * BRIGHTNESS_STEP;
