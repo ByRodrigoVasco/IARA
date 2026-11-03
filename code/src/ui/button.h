@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include "raylib.h"
 
+#define BUTTON_LETTER_SPACING_RATIO 0.04f // espaço entre letras dos botões (fonte)
+
 /**
  * @brief Desenha um botão retangular com texto centralizado e detecta o clique.
  *

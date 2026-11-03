@@ -87,7 +87,6 @@ static bool computer_loop_loaded = false;                // Indica se as textura
 static bool render_calendar_day_card_finished = false;   // Indica se toda a sequência do cartão narrativo terminou
 static int current_screen = SCREEN_NONE;                  // Armazena qual tela do jogo está sendo processada no momento
 static bool game_loop_finished = false;                   // Indica que o dia terminou e a partida volta ao menu
-static bool calendar_texture_loaded = false;             // Indica se o fundo do cartão do dia está carregado
 static bool leave_office = false;                        // Flag acionada ao interagir com a porta depois de concluir a tarefa
 static bool is_near_exit = false;                        // Flag que indica se o jogador alcança a porta de saída
 static bool enter_computer_screen = false;               // Flag acionada ao interagir com o computador para mudar de tela
@@ -95,7 +94,6 @@ static bool is_near_hint = false;                         // Flag que indica se 
 static bool is_near_computer = false;                     // Flag que indica se o jogador está sobre a zona de interação do computador
 
 // Texturas gerais de interface e mapas
-static Texture2D second_background_texture;              // Textura do fundo do cartão do dia
 static Color color_to_fade = {255, 255, 255, 0};          // Cor base de renderização (RGBA) usada para aplicar efeito de opacidade/fade
 
 // Textos da tela de transição
@@ -467,10 +465,6 @@ void initialize_game_loop_variables(void)
     walk_time = 0.0f;
     color_to_fade.a = 0;
 
-    // Carrega a textura de fundo da tela de introdução
-    second_background_texture = LoadTexture("code/assets/background/second-background.png");
-    calendar_texture_loaded = true;
-    
     // Carrega o mapa do escritório
     in_game_office = LoadTexture("code/assets/sprites/environment/office.png");
 
@@ -629,17 +623,6 @@ void handle_calendar_day_card(void)
         // Estado inválido do cartão do dia: nada a desenhar
         break;
     }
-}
-
-/**
- * @brief Descarrega da memória GPU os ativos visuais exclusivos da tela do cartão narrativo.
- */
-void unload_calendar_day_textures(void)
-{
-    if (!calendar_texture_loaded) return;
-
-    calendar_texture_loaded = false;
-    UnloadTexture(second_background_texture);
 }
 
 /**
@@ -1135,10 +1118,9 @@ void handle_game_loop_screens(void)
         // Executa a lógica e renderização da apresentação do dia
         handle_calendar_day_card();
 
-        // Quando a animação do cartão for totalmente concluída, descarrega a tela e passa para a fase in-game
+        // Quando a animação do cartão for totalmente concluída, passa para a fase in-game
         if (render_calendar_day_card_finished)
         {
-            unload_calendar_day_textures();
             color_to_fade.a = 0;
             current_screen = IN_GAME_SCREEN;
         }
@@ -1280,9 +1262,6 @@ void unload_game_loop(void)
     if (!game_loop_loaded) return;
 
     game_loop_loaded = false;
-
-    // O cartão do dia pode não ter terminado se o jogo fechar antes dele
-    unload_calendar_day_textures();
 
     if (computer_loop_loaded)
     {
