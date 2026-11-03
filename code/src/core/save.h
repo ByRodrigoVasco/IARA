@@ -20,6 +20,7 @@
  *   mode_type=0
  *   user_investigated=1
  *   is_resolved=0
+ *   has_cheat_sheet=1
  *   overall_points=4
  *   automation_points=1
  *   perception_points=3

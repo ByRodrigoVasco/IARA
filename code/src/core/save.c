@@ -140,6 +140,25 @@ static bool apply_save_line(const char *key, const char *value,
         if (!parse_bool(value, &state->is_resolved)) return false;
         *fields_read |= FIELD_IS_RESOLVED;
     }
+    else if (strcmp(key, "has_cheat_sheet") == 0)
+    {
+        // Não entra em ALL_FIELDS: saves anteriores à colinha continuam válidos, sem ela.
+        if (!parse_bool(value, &state->has_cheat_sheet)) return false;
+    }
+    else if (strcmp(key, "evidence_mask") == 0)
+    {
+        // Estes também são opcionais: saves anteriores aos próximos dias continuam válidos.
+        if (!parse_ranged(value, 0, 1000000, &number)) return false;
+        state->evidence_mask = (unsigned int)number;
+    }
+    else if (strcmp(key, "found_mariana") == 0)
+    {
+        if (!parse_bool(value, &state->found_mariana)) return false;
+    }
+    else if (strcmp(key, "proof_succeeded") == 0)
+    {
+        if (!parse_bool(value, &state->proof_succeeded)) return false;
+    }
     else if (strcmp(key, "overall_points") == 0)
     {
         // Pontuação geral pode ficar negativa.
@@ -212,6 +231,10 @@ static int build_save_body(char *buffer, size_t size)
                            "mode_type=%d\n"
                            "user_investigated=%d\n"
                            "is_resolved=%d\n"
+                           "has_cheat_sheet=%d\n"
+                           "evidence_mask=%u\n"
+                           "found_mariana=%d\n"
+                           "proof_succeeded=%d\n"
                            "overall_points=%d\n"
                            "automation_points=%u\n"
                            "perception_points=%u\n"
@@ -222,6 +245,10 @@ static int build_save_body(char *buffer, size_t size)
                            state->mode_type ? 1 : 0,
                            state->user_investigated ? 1 : 0,
                            state->is_resolved ? 1 : 0,
+                           state->has_cheat_sheet ? 1 : 0,
+                           state->evidence_mask,
+                           state->found_mariana ? 1 : 0,
+                           state->proof_succeeded ? 1 : 0,
                            stats->current_overall_points,
                            stats->current_automation_points,
                            stats->current_perception_points,

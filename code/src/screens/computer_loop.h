@@ -6,6 +6,12 @@
 // true quando o jogador terminou todos os passos do quiz do computador.
 extern bool computer_tasks_finished;
 
+// true quando a tela já desligou e o monitor saiu de cena: o game loop volta ao mapa.
+extern bool computer_exit_finished;
+
+// true quando a IARA assumiu a tarefa depois de 3 erros seguidos: o expediente acaba.
+extern bool computer_failsafe_triggered;
+
 // false deixa o mouse livre: os testes rodam sem prender o ponteiro de quem os executa.
 extern bool computer_mouse_capture_enabled;
 
@@ -13,7 +19,13 @@ extern bool computer_mouse_capture_enabled;
 extern float computer_scene_progress;
 
 /**
+ * @brief Volta os chamados ao começo, para uma partida nova.
+ */
+void reset_computer_progress(void);
+
+/**
  * @brief Carrega as texturas da janela do computador e dos ícones de acerto/erro.
+ * Os chamados continuam de onde o jogador parou.
  */
 void initialize_computer_loop(void);
 
