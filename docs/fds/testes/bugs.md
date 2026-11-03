@@ -10,22 +10,21 @@ Os blocos abaixo repetem o conteúdo de cada um, para consulta sem sair do repos
 ## Status
 
 Atualizar a coluna Status conforme as issues forem corrigidas e fechadas. Conferido em 03/11/2026:
-as issues seguem abertas no GitHub, com comentário do que já foi corrigido na branch. Nenhuma
-dessas correções está na `develop`.
+do BUG-01 ao BUG-11 as correções estão na `develop` e as issues foram fechadas. Só o BUG-12 segue aberto.
 
 | ID | Problema | Gravidade | Issue | Status |
 |---|---|---|---|---|
-| BUG-01 | Fade in para em alpha 250 | Baixa | [#32](https://github.com/ByRodrigoVasco/IARA/issues/32) | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e fechar a issue |
-| BUG-02 | Voltar ao menu vaza memória | Alta | [#33](https://github.com/ByRodrigoVasco/IARA/issues/33) | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e fechar a issue |
-| BUG-03 | Textura do jogador liberada duas vezes | Média | [#34](https://github.com/ByRodrigoVasco/IARA/issues/34) | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e fechar a issue |
-| BUG-04 | Funções de unload nunca chamadas | Baixa | [#35](https://github.com/ByRodrigoVasco/IARA/issues/35) | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e fechar a issue |
-| BUG-05 | Desenho fora do `BeginDrawing`/`EndDrawing` | Baixa | [#36](https://github.com/ByRodrigoVasco/IARA/issues/36) | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e fechar a issue |
-| BUG-06 | Caminho de sprites em minúsculo | Média | [#37](https://github.com/ByRodrigoVasco/IARA/issues/37) | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e fechar a issue |
-| BUG-07 | Pré-menu não descarrega imagens | Média | [#38](https://github.com/ByRodrigoVasco/IARA/issues/38) | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e fechar a issue |
-| BUG-08 | Texto do quiz vaza para fora da caixa | Média | [#39](https://github.com/ByRodrigoVasco/IARA/issues/39) | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e fechar a issue |
-| BUG-09 | Rótulos das mesas vazam dos botões | Média | [#43](https://github.com/ByRodrigoVasco/IARA/issues/43) | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e fechar a issue |
-| BUG-10 | Falha ao trocar o save pode perder o progresso | Média | [#44](https://github.com/ByRodrigoVasco/IARA/issues/44) | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e fechar a issue |
-| BUG-11 | Fundo do cartão do dia é carregado e nunca desenhado | Baixa | [#45](https://github.com/ByRodrigoVasco/IARA/issues/45) | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e fechar a issue |
+| BUG-01 | Fade in para em alpha 250 | Baixa | [#32](https://github.com/ByRodrigoVasco/IARA/issues/32) | Corrigido na `develop`, issue fechada |
+| BUG-02 | Voltar ao menu vaza memória | Alta | [#33](https://github.com/ByRodrigoVasco/IARA/issues/33) | Corrigido na `develop`, issue fechada |
+| BUG-03 | Textura do jogador liberada duas vezes | Média | [#34](https://github.com/ByRodrigoVasco/IARA/issues/34) | Corrigido na `develop`, issue fechada |
+| BUG-04 | Funções de unload nunca chamadas | Baixa | [#35](https://github.com/ByRodrigoVasco/IARA/issues/35) | Corrigido na `develop`, issue fechada |
+| BUG-05 | Desenho fora do `BeginDrawing`/`EndDrawing` | Baixa | [#36](https://github.com/ByRodrigoVasco/IARA/issues/36) | Corrigido na `develop`, issue fechada |
+| BUG-06 | Caminho de sprites em minúsculo | Média | [#37](https://github.com/ByRodrigoVasco/IARA/issues/37) | Corrigido na `develop`, issue fechada |
+| BUG-07 | Pré-menu não descarrega imagens | Média | [#38](https://github.com/ByRodrigoVasco/IARA/issues/38) | Corrigido na `develop`, issue fechada |
+| BUG-08 | Texto do quiz vaza para fora da caixa | Média | [#39](https://github.com/ByRodrigoVasco/IARA/issues/39) | Corrigido na `develop`, issue fechada |
+| BUG-09 | Rótulos das mesas vazam dos botões | Média | [#43](https://github.com/ByRodrigoVasco/IARA/issues/43) | Corrigido na `develop`, issue fechada |
+| BUG-10 | Falha ao trocar o save pode perder o progresso | Média | [#44](https://github.com/ByRodrigoVasco/IARA/issues/44) | Corrigido na `develop`, issue fechada |
+| BUG-11 | Fundo do cartão do dia é carregado e nunca desenhado | Baixa | [#45](https://github.com/ByRodrigoVasco/IARA/issues/45) | Corrigido na `develop`, issue fechada |
 | BUG-12 | Menu não tem como começar uma partida nova | Média | [#46](https://github.com/ByRodrigoVasco/IARA/issues/46) | Aberto: falta decidir onde fica a opção |
 
 **Sobre o BUG-02:** os dois vazamentos descritos abaixo já não existem. Restava uma carga duplicada do menu ao abrir o jogo, removida. O CT-24 oscilava porque media sem desenhar quadros, e o driver de vídeo só devolve uma textura apagada depois de um quadro. Com quadros, 400 voltas ao menu cresceram 19 MB (cerca de 0,05 MB por volta, contra os 7 MB originais).

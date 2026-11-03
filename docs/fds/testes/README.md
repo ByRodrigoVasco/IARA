@@ -207,7 +207,7 @@ estão em **[bugs.md](bugs.md)**.
 | [BUG-11](bugs.md#bug-11) | Fundo do cartão do dia é carregado e nunca desenhado (corrigido) | Baixa | Inspeção |
 | [BUG-12](bugs.md#bug-12) | Menu não tem como começar uma partida nova (aberto) | Média | Inspeção |
 
-Do BUG-01 ao BUG-11 estão corrigidos na branch, e o status de cada um fica em [bugs.md](bugs.md). Nenhum deles impedia jogar: o jogo abre, o menu funciona, o
+Do BUG-01 ao BUG-11 estão corrigidos na `develop`, e o status de cada um fica em [bugs.md](bugs.md). Nenhum deles impedia jogar: o jogo abre, o menu funciona, o
 personagem anda, colide e chega ao computador, e o quiz vai até o fim.
 
 ## O que a suíte ainda não cobre
