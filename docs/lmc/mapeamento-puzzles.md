@@ -7,8 +7,8 @@ PI2-215 (conceito embutido na narrativa). A revisão com o material de LMC é o 
 
 ## Puzzles implementados
 
-O jogo tem um único conteúdo jogável: os chamados de integração do Dia 1, em
-[`computer_loop.c`](../../code/src/screens/computer_loop.c). Os outros 8 puzzles do GDD ainda não existem.
+O Dia 1 traz os chamados de integração, em
+[`computer_loop.c`](../../code/src/screens/computer_loop.c). Os puzzles dos outros 8 dias estão em [Puzzles dos dias](#puzzles-dos-dias).
 
 | Passo | Conteúdo | Conceito | Tipo de conceito |
 |---|---|---|---|

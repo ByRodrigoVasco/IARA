@@ -6,7 +6,6 @@ Relação entre os requisitos do GDD (seção 8.4) e o código, conferida em 03/
 
 **Situação:** ✅ implementado e testado · 🟡 parcial · ❌ não implementado.
 A coluna de issue traz só o que foi confirmado no Jira; as demais ficam para a equipe preencher.
-O trabalho desta branch ainda não foi commitado, então não há hash de commit para ele.
 
 ## Requisitos funcionais
 
@@ -59,4 +58,3 @@ O repositório ainda não tem as regras formalizadas por LMC. A verificação us
 
 - **Nome da empresa:** a arte do escritório mostra "NEXO LABS", e o GDD e o quiz usam "CISSA".
 - **Camada em Haskell:** as regras puras previstas no GDD não existem no repositório.
-- **Depois do Dia 1:** o jogador volta ao mapa e encerra o dia pela porta (PI2-167, PI2-179, PI2-180), mas ainda não há um próximo dia: o jogo volta ao menu e INICIAR recomeça o Dia 1. O texto do cartão de fim do dia é provisório.
