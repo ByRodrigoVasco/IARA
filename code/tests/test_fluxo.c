@@ -909,7 +909,6 @@ static void ir_para_o_primeiro_chamado(void)
 /* Pula o cartao do dia e abre o computador no primeiro chamado. */
 static void abrir_o_primeiro_chamado(void)
 {
-    unload_calendar_day_textures();
     current_screen = IN_GAME_SCREEN;
     enter_computer_screen = true;
     rodar_ate_a_tela(COMPUTER_SCREEN, 5.0);
@@ -922,7 +921,6 @@ static void testar_caminhos_do_dia(void)
     titulo("Caminhos do Dia 1 na partida (CT-53 a CT-56)");
 
     /* Partida recomecada pelo CT-46, ainda no cartao do dia. */
-    unload_calendar_day_textures();
     current_screen = IN_GAME_SCREEN;
 
     bool contador = strcmp(get_day_counter_text(), "Dia 1 de 100") == 0;
@@ -1225,7 +1223,6 @@ static void testar_campanha(void)
         if (current_screen == SCREEN_NONE) handle_state_machine();
 
         /* Pula o cartao de chegada e joga o dia. */
-        unload_calendar_day_textures();
         current_screen = IN_GAME_SCREEN;
         dias_jogados++;
 
@@ -1319,6 +1316,82 @@ static void testar_campanha(void)
     iniciar_partida_nova();
 }
 
+/* Confere, em cada dia, se os textos dos botoes da mesa cabem neles e se a mesa cabe na janela da IARA. */
+static int conferir_mesas_na_janela(int largura, int altura)
+{
+    float screen_h = altura * MONITOR_SCREEN_HEIGHT_RATIO;
+    float screen_w = screen_h * MONITOR_SCREEN_ASPECT;
+
+    if (screen_w > largura * MONITOR_SCREEN_MAX_WIDTH_RATIO)
+    {
+        screen_w = largura * MONITOR_SCREEN_MAX_WIDTH_RATIO;
+        screen_h = screen_w / MONITOR_SCREEN_ASPECT;
+    }
+
+    float janela_h = screen_h - (screen_h * TASKBAR_HEIGHT_RATIO) - (screen_h * DESKTOP_WINDOW_MARGIN_RATIO * 2.0f);
+    float win_w = screen_w * DESKTOP_WINDOW_WIDTH_RATIO;
+    float win_h = janela_h - (janela_h * WINDOW_ART_TITLE_RATIO);
+    float vao = win_h * OPTION_SPACING_RATIO;
+    float largura_da_linha = win_w * QUIZ_MAX_WIDTH_RATIO;
+    float largura_da_marca = win_w * BOARD_BUTTON_WIDTH_RATIO;
+    float largura_do_envio = (largura_da_linha - (win_w * SUGGESTION_BUTTON_GAP_RATIO)) / 2.0f;
+    int problemas = 0;
+
+    quiz_area_rect = (Rectangle){0, 0, win_w, win_h};
+
+    for (int d = 0; d < DAY_SCRIPT_COUNT; d++)
+    {
+        select_day_script(day_scripts[d].day);
+
+        float por_altura = win_h * QUIZ_FONT_SIZE_RATIO;
+        float por_largura = (largura_da_linha * QUIZ_TEXT_FIT_RATIO) / get_longest_text_width_per_font_size();
+
+        quiz_font_size = (por_altura < por_largura) ? por_altura : por_largura;
+
+        for (int p = 0; p < TOTAL_STEPS; p++)
+        {
+            const DialogStep *passo = &dialog_sequence[p];
+
+            if (passo->type != STEP_TRIAGE) continue;
+
+            float primeira_linha = (win_h * QUIZ_BOX_TOP_MARGIN_RATIO) + (passo->line_count * quiz_font_size) +
+                                   ((passo->line_count - 1) * win_h * QUIZ_LINE_SPACING_RATIO) +
+                                   (win_h * QUIZ_PADDING_Y_RATIO * 2.0f) + vao;
+            bool tem_mini_ia = passo->board_mode == BOARD_TRAINING;
+            float altura_da_linha = get_board_row_height(passo, primeira_linha, tem_mini_ia);
+            int linhas_depois = passo->card_count + (tem_mini_ia ? 1 : 0);
+            float fim_da_mesa = primeira_linha + (linhas_depois * (altura_da_linha + vao)) + (2.0f * altura_da_linha) + vao;
+            const char *textos[] = {TextFormat("[%s]", passo->choice_labels[0]), TextFormat("[%s]", passo->choice_labels[1]),
+                                    "Perguntar à IARA", passo->submit_label};
+            float larguras[] = {largura_da_marca, largura_da_marca, largura_do_envio, largura_do_envio};
+
+            if (fim_da_mesa > win_h)
+            {
+                printf("           Dia %d em %dx%d: a mesa pede %.0f px e so ha %.0f px\n", day_scripts[d].day, largura, altura, fim_da_mesa, win_h);
+                problemas++;
+            }
+
+            for (int t = 0; t < 4; t++)
+            {
+                Rectangle botao = {0, 0, larguras[t], altura_da_linha};
+                float fonte = get_board_button_font_size(textos[t], botao);
+                float texto = MeasureTextEx(default_game_font, textos[t], fonte, fonte * BUTTON_LETTER_SPACING_RATIO).x;
+
+                if (texto > botao.width || fonte > botao.height || fonte < 9.0f)
+                {
+                    printf("           Dia %d em %dx%d: \"%s\" tem %.0f px, fonte %.1f, em botao de %.0fx%.0f\n",
+                           day_scripts[d].day, largura, altura, textos[t], texto, fonte, botao.width, botao.height);
+                    problemas++;
+                }
+            }
+        }
+    }
+
+    select_day_script(current_game_state_variables.current_day);
+
+    return problemas;
+}
+
 static void testar_layout_do_quiz(void)
 {
     titulo("Layout da tela do computador (CT-35)");
@@ -1326,14 +1399,18 @@ static void testar_layout_do_quiz(void)
     /* Minima, padrao em monitor 1080p, 1080p, 1440p, 4:3 e 21:9. */
     int janelas[][2] = {{960, 540}, {1280, 720}, {1632, 918}, {1920, 1080}, {2560, 1440}, {1024, 768}, {2560, 1080}};
     int problemas = 0;
+    int problemas_nas_mesas = 0;
 
     for (int i = 0; i < (int)(sizeof(janelas) / sizeof(janelas[0])); i++)
     {
         problemas += conferir_layout_na_janela(janelas[i][0], janelas[i][1]);
+        problemas_nas_mesas += conferir_mesas_na_janela(janelas[i][0], janelas[i][1]);
     }
 
     checar("CT-35", "Texto do computador cabe na caixa, nos botoes e na janela em 7 tamanhos",
            problemas == 0);
+    checar("CT-76", "Botoes das mesas de todos os dias cabem, com o texto legivel, em 7 tamanhos",
+           problemas_nas_mesas == 0);
 }
 
 int main(void)

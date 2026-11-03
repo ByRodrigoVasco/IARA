@@ -5,8 +5,6 @@
 #include "macros.h"
 #include "fonts.h"
 
-// Espaço entre letras, relativo ao tamanho da fonte
-#define BUTTON_LETTER_SPACING_RATIO 0.04f
 // Espessura da borda e do relevo do botão
 #define BUTTON_BORDER_THICKNESS 1.0f
 #define BUTTON_BEVEL_THICKNESS 2.0f

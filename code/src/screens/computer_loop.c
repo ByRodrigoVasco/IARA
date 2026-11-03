@@ -1945,12 +1945,27 @@ static void draw_text_band(const char *text, Rectangle band, Color fill)
     draw_text_centered(text, (Vector2){band.x + (band.width / 2.0f), band.y + (band.height / 2.0f)}, font_size, BLACK);
 }
 
-// Botão de marcar: colchetes além da cor, para a escolha não depender só dela.
+// Fonte de um botão da mesa: encolhe para o texto caber na largura e na altura dele.
+static float get_board_button_font_size(const char *text, Rectangle bounds)
+{
+    float available = bounds.width * QUIZ_TEXT_FIT_RATIO;
+    float font_size = quiz_font_size;
+    float text_width = MeasureTextEx(default_game_font, text, font_size, font_size * BUTTON_LETTER_SPACING_RATIO).x;
+
+    if (text_width > available) font_size *= available / text_width;
+    if (font_size > bounds.height) font_size = bounds.height;
+
+    return font_size;
+}
+
+// Botão de marcar: colchetes além da cor, para a escolha não depender só dela. A fonte é a
+// do rótulo com colchetes, para o texto não mudar de tamanho ao marcar.
 static bool draw_choice_button(Rectangle bounds, const char *label, bool selected, bool enabled)
 {
     bool clicked = false;
+    const char *marked_label = TextFormat("[%s]", label);
 
-    draw_button(bounds, selected ? TextFormat("[%s]", label) : label, quiz_font_size,
+    draw_button(bounds, selected ? marked_label : label, get_board_button_font_size(marked_label, bounds),
                 selected ? CHOICE_SELECTED_FILL_COLOR : BUTTON_FILL_COLOR, enabled, &clicked);
 
     return clicked;
@@ -2169,6 +2184,19 @@ static const char *get_board_result_text(const DialogStep *step)
     }
 }
 
+// Altura das linhas da mesa: encolhem nas mesas maiores, para o resultado e os botões caberem na janela.
+static float get_board_row_height(const DialogStep *step, float first_row_y, bool shows_mini_ia)
+{
+    float win_h = quiz_area_rect.height;
+    int slots = step->card_count + (shows_mini_ia ? 3 : 2);
+    float available = (quiz_area_rect.y + win_h) - first_row_y - (win_h * CONTINUE_BUTTON_GAP_RATIO);
+    float row_height = (available / slots) - (win_h * OPTION_SPACING_RATIO);
+
+    if (row_height > win_h * OPTION_BUTTON_HEIGHT_RATIO) row_height = win_h * OPTION_BUTTON_HEIGHT_RATIO;
+
+    return row_height;
+}
+
 // Mesa: o jogador decide cada linha com as regras do dia, sem alternativas prontas.
 static void render_ticket_triage(DialogStep *step, float top)
 {
@@ -2183,12 +2211,7 @@ static void render_ticket_triage(DialogStep *step, float top)
     bool all_chosen = true;
     bool shows_mini_ia = step->board_mode == BOARD_TRAINING && current_quiz_answered;
 
-    // As linhas encolhem nas mesas maiores, para o resultado e os botões caberem na janela
-    int slots = step->card_count + (shows_mini_ia ? 3 : 2);
-    float available = (quiz_area_rect.y + win_h) - y - (win_h * CONTINUE_BUTTON_GAP_RATIO);
-    float row_height = (available / slots) - spacing;
-
-    if (row_height > win_h * OPTION_BUTTON_HEIGHT_RATIO) row_height = win_h * OPTION_BUTTON_HEIGHT_RATIO;
+    float row_height = get_board_row_height(step, y, shows_mini_ia);
 
     for (int card = 0; card < step->card_count; card++)
     {
@@ -2224,7 +2247,9 @@ static void render_ticket_triage(DialogStep *step, float top)
         Rectangle action = {get_quiz_center_x() - (win_w * ACTION_BUTTON_WIDTH_RATIO / 2.0f), y + row_height + spacing, win_w * ACTION_BUTTON_WIDTH_RATIO, row_height};
         bool action_clicked = false;
 
-        draw_button(action, can_retry ? RETRY_BUTTON_TEXT : "Continuar", quiz_font_size, BUTTON_FILL_COLOR, step_can_click, &action_clicked);
+        const char *action_label = can_retry ? RETRY_BUTTON_TEXT : "Continuar";
+
+        draw_button(action, action_label, get_board_button_font_size(action_label, action), BUTTON_FILL_COLOR, step_can_click, &action_clicked);
 
         if (action_clicked) continue_after_answer();
         return;
@@ -2236,8 +2261,11 @@ static void render_ticket_triage(DialogStep *step, float top)
     bool ask_clicked = false;
     bool send_clicked = false;
 
-    draw_button((Rectangle){left, buttons_y, button_width, row_height}, "Perguntar à IARA", quiz_font_size, BUTTON_FILL_COLOR, step_can_click && !ticket_asked_iara, &ask_clicked);
-    draw_button((Rectangle){left + button_width + gap, buttons_y, button_width, row_height}, step->submit_label, quiz_font_size, BUTTON_FILL_COLOR, step_can_click && all_chosen, &send_clicked);
+    Rectangle ask_bounds = {left, buttons_y, button_width, row_height};
+    Rectangle send_bounds = {left + button_width + gap, buttons_y, button_width, row_height};
+
+    draw_button(ask_bounds, "Perguntar à IARA", get_board_button_font_size("Perguntar à IARA", ask_bounds), BUTTON_FILL_COLOR, step_can_click && !ticket_asked_iara, &ask_clicked);
+    draw_button(send_bounds, step->submit_label, get_board_button_font_size(step->submit_label, send_bounds), BUTTON_FILL_COLOR, step_can_click && all_chosen, &send_clicked);
 
     if (ask_clicked) ask_iara();
     else if (send_clicked) submit_triage();
