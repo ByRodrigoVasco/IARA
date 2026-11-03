@@ -1,10 +1,12 @@
+#include <stddef.h>
+
 #include "raylib.h"
 #include "hints.h"
 #include "collisions.h"
 #include "helper.h"
 #include "fonts.h"
 
-#define HINT_LINE_COUNT 4
+#define HINT_LINE_COUNT 5
 
 // Medidas no mapa de referência, relativas ao centro da tela.
 #define HINT_ZONE_REFERENCE {-400.0f, -235.0f, 35.0f, 95.0f} // Lado direito da sala do mural
@@ -28,11 +30,21 @@
 static bool hint_note_open = false;
 
 // A dica estreita o raciocínio sem citar o chamado nem as alternativas do quiz.
-static const char *hint_note_lines[HINT_LINE_COUNT] = {
+static const char *const first_day_note_lines[HINT_LINE_COUNT] = {
     "Bilhete colado no mural:",
     "P -> Q quer dizer: se P acontecer, Q vem junto.",
     "Confira se P aconteceu e siga o que a regra manda.",
-    "- Estagiário do ano passado"};
+    "- Estagiário do ano passado",
+    "Você leva a colinha dos símbolos para o seu monitor."};
+
+static const char *const *hint_note_lines = first_day_note_lines;
+static int hint_note_line_count = HINT_LINE_COUNT;
+
+void set_hint_note_lines(const char *const *lines, int line_count)
+{
+    hint_note_lines = (lines != NULL) ? lines : first_day_note_lines;
+    hint_note_line_count = (lines != NULL) ? line_count : HINT_LINE_COUNT;
+}
 
 Rectangle get_hint_zone(float scale, Vector2 center)
 {
@@ -67,7 +79,7 @@ bool is_hint_note_open(void)
 
 int get_hint_note_line_count(void)
 {
-    return HINT_LINE_COUNT;
+    return hint_note_line_count;
 }
 
 const char *get_hint_note_line(int index)
@@ -89,7 +101,7 @@ void draw_hint_note(void)
     // Reduz a fonte se a maior linha não couber em uma janela estreita
     float longest = MeasureTextEx(default_game_font, NOTE_CLOSE_TEXT, font_size, font_size * NOTE_LETTER_SPACING_RATIO).x;
 
-    for (int i = 0; i < HINT_LINE_COUNT; i++)
+    for (int i = 0; i < hint_note_line_count; i++)
     {
         float width = MeasureTextEx(default_game_font, hint_note_lines[i], font_size, font_size * NOTE_LETTER_SPACING_RATIO).x;
         if (width > longest) longest = width;
@@ -105,7 +117,7 @@ void draw_hint_note(void)
 
     float letter_spacing = font_size * NOTE_LETTER_SPACING_RATIO;
     float note_w = longest + (padding * 2.0f);
-    float note_h = ((HINT_LINE_COUNT + 2) * (font_size + line_gap)) + (padding * 2.0f);
+    float note_h = ((hint_note_line_count + 2) * (font_size + line_gap)) + (padding * 2.0f);
     Rectangle note = {(window_w - note_w) / 2.0f, (window_h - note_h) / 2.0f, note_w, note_h};
     float shadow = NOTE_SHADOW_OFFSET * scale;
 
@@ -115,7 +127,7 @@ void draw_hint_note(void)
 
     float y = note.y + padding;
 
-    for (int i = 0; i < HINT_LINE_COUNT; i++)
+    for (int i = 0; i < hint_note_line_count; i++)
     {
         DrawTextEx(default_game_font, hint_note_lines[i], (Vector2){note.x + padding, y}, font_size, letter_spacing, NOTE_TEXT_COLOR);
         y += font_size + line_gap;
