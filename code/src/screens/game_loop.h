@@ -1,6 +1,7 @@
 #ifndef GAME_LOOP_H
 #define GAME_LOOP_H
 
+#include <stdbool.h>
 #include "raylib.h" // Inclui a biblioteca Raylib para disponibilizar os tipos gráficos, vetores e estruturas base do motor
 
 /**
@@ -22,6 +23,20 @@ void initialize_game_loop_variables(void);
  * delimita a renderização entre `BeginDrawing()` e `EndDrawing()`, e desenha os elementos na ordem correta de camadas (Z-index).
  */
 void render_game_loop(void);
+
+/**
+ * @brief Informa se o jogador encerrou o dia e o cartão de fim do dia terminou: a partida volta ao menu.
+ *
+ * @return true quando a máquina de estados deve sair da partida.
+ */
+bool is_game_loop_finished(void);
+
+/**
+ * @brief Informa se a tela do computador está aberta: nela, o ESC sai do computador, não do jogo.
+ *
+ * @return true enquanto o jogador está no computador.
+ */
+bool is_computer_screen_open(void);
 
 /**
  * @brief Descarrega e libera todos os recursos de memória de vídeo (GPU) alocados para o Game Loop.

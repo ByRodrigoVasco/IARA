@@ -3,6 +3,7 @@
 
 #include "raylib.h"
 #include "game_loop.h"
+#include "game_state.h"
 #include "macros.h"
 #include "fonts.h"
 #include "animations.h"
@@ -12,6 +13,7 @@
 #include "helper.h"
 #include "hints.h"
 #include "accessibility.h"
+#include "calendar.h"
 
 // Valor de sentinela para indicar que o temporizador do cartão de introdução ainda não começou a contar
 #define DID_NOT_START -30
@@ -23,6 +25,9 @@
 #define CALENDAR_DAY_CARD_SCREEN 1     // Tela do cartão narrativo do dia ("Dia 1...")
 #define IN_GAME_SCREEN 2               // Tela do jogo onde o jogador anda pelo escritório
 #define COMPUTER_SCREEN 3              // Tela interativa do computador de trabalho
+#define DAY_END_CARD_SCREEN 4          // Cartão de fim do dia, depois de sair pela porta
+#define DAY_TRANSITION_SCREEN 5        // Flash do dia e salto puro, até o próximo dia jogável
+#define ENDING_CARD_SCREEN 6           // Cartão do final, depois do Dia 100
 
 // ============================================================================
 // ESTADOS DA ANIMAÇÃO DO CARTÃO DO DIA (TRANSIÇÃO FADE IN / AWAIT / FADE OUT)
@@ -46,6 +51,18 @@
 #define COMPUTER_SCENE_DIM_ALPHA 120           // Escurecimento do escritório atrás do monitor (0 a 255)
 #define HIGH_CONTRAST_LINE_AT_REFERENCE 4.0f   // Espessura dos contornos do alto contraste
 #define CARD_TEXT_MAX_WIDTH_RATIO 0.92f        // Largura máxima do texto do cartão do dia (largura da janela)
+#define DAY_COUNTER_FONT_AT_REFERENCE 44.0f    // Tamanho do contador de dias, na margem de cima do mapa
+
+// Tempos da passagem entre os dias, em segundos (GDD 2.7).
+#define FLASH_MIN_TIME 3.0f                    // O flash fica na tela ao menos isso antes de aceitar o toque
+#define JUMP_BLOCK_TIME 0.8f                   // Um bloco de salto puro inteiro passa em menos de 1s
+#define TRANSITION_TEXT_WIDTH_RATIO 0.88f      // Largura máxima da frase do flash (largura da janela)
+#define FLASH_DIM_ALPHA 190                    // Escurecimento da imagem atrás da frase do flash
+
+// Sintoma visual do avanço da campanha: o escritório escurece e a água sobe (GDD 6.1).
+#define OFFICE_MAX_DARKENING 90.0f
+#define WATER_COLOR_RGB 20, 80, 110
+#define WATER_ALPHA 85
 
 // ============================================================================
 // DIMENSÕES E OFFSETS DA HITBOX (CAIXA DE COLISÃO DO JOGADOR)
@@ -58,12 +75,21 @@
 #define PLAYER_SPAWN_OFFSET_X_AT_REFERENCE -37.0f  // Deslocamento X do spawn a partir do centro da tela
 #define PLAYER_SPAWN_OFFSET_Y_AT_REFERENCE 208.0f  // Deslocamento Y do spawn (logo acima da porta de entrada)
 
+// Zona em frente à porta de vidro, por onde o jogador encerra o dia
+static const Rectangle EXIT_ZONE_REFERENCE = {-80.0f, 282.0f, 156.0f, 30.0f};
+
 // ============================================================================
 // VARIÁVEIS ESTÁTICAS DE CONTROLE E ESTADO
 // ============================================================================
 static int current_calendar_day_state = NONE;             // Estado atual da animação da tela do cartão narrativo
+static bool game_loop_loaded = false;                    // Indica se as texturas da partida estão carregadas
+static bool computer_loop_loaded = false;                // Indica se as texturas da tela do computador estão carregadas
 static bool render_calendar_day_card_finished = false;   // Indica se toda a sequência do cartão narrativo terminou
 static int current_screen = SCREEN_NONE;                  // Armazena qual tela do jogo está sendo processada no momento
+static bool game_loop_finished = false;                   // Indica que o dia terminou e a partida volta ao menu
+static bool calendar_texture_loaded = false;             // Indica se o fundo do cartão do dia está carregado
+static bool leave_office = false;                        // Flag acionada ao interagir com a porta depois de concluir a tarefa
+static bool is_near_exit = false;                        // Flag que indica se o jogador alcança a porta de saída
 static bool enter_computer_screen = false;               // Flag acionada ao interagir com o computador para mudar de tela
 static bool is_near_hint = false;                         // Flag que indica se o jogador alcança o bilhete do mural
 static bool is_near_computer = false;                     // Flag que indica se o jogador está sobre a zona de interação do computador
@@ -73,9 +99,32 @@ static Texture2D second_background_texture;              // Textura do fundo do 
 static Color color_to_fade = {255, 255, 255, 0};          // Cor base de renderização (RGBA) usada para aplicar efeito de opacidade/fade
 
 // Textos da tela de transição
-static char *current_card_title = "Dia 1";
-static char *current_card_subtitle_line_1 = "Sua mesa fica na salinha ao lado do corredor, um pouco afastada do resto.";
-static char *current_card_subtitle_line_2 = "Ninguém te recebe. O computador já está ligado, esperando.";
+static const char *current_card_title;
+static const char *current_card_subtitle_line_1;
+static const char *current_card_subtitle_line_2;
+static char card_title_text[32];                // Título do cartão com o número do dia
+
+// Passagem entre os dias
+static float transition_time = 0.0f;            // Segundos no dia de flash ou de salto atual
+static float jump_day_time = 0.0f;              // Quanto dura cada dia do bloco de salto atual
+
+#define DAY_END_CARD_FIRST_LINE_1 "Você encerra seu primeiro expediente e deixa o escritório."
+#define DAY_END_CARD_LINE_1 "Mais um expediente encerrado."
+#define DAY_END_CARD_DELEGATED_LINE_1 "A IARA fechou seus chamados em segundos. Você só assinou embaixo."
+#define DAY_END_CARD_FAILSAFE_LINE_1 "O expediente acaba. A IARA conclui o que faltava, em silêncio."
+
+// Os 4 finais (GDD 6.5). O GDD define as condições; os textos são proposta.
+typedef struct {
+    const char *title;
+    const char *line_1;
+    const char *line_2;
+} EndingCard;
+
+static const EndingCard ending_cards[] = {
+    [ENDING_UNHARMED] = {"Final A: Ileso", "Você é efetivado(a). Nunca viu nada de estranho, e nada viu você.", "Na sexta tem happy hour. A água nunca chegou à sua mesa."},
+    [ENDING_PAMONHA] = {"Final B: Pamonha", "A IARA fez tudo, e você assinou embaixo. Promoção garantida.", "Sua mesa nova fica lá embaixo. É bem tranquilo."},
+    [ENDING_HYPNOTIZED] = {"Final C: Hipnotizado", "Você ouviu o canto, foi atrás dele e chegou sozinho(a).", "O seu crachá abre uma última porta, no porão."},
+    [ENDING_RUPTURE] = {"Final D: Ruptura", "A prova fecha, e o trato de Ricardo Marés não se sustenta.", "Quem ainda está desperto abre o porão com você. O rio volta a correr."}};
 
 // Texturas do ambiente de jogo (Escritório e Dicas de Teclado)
 static Texture2D in_game_office;        // Mapa do escritório
@@ -185,6 +234,162 @@ static Rectangle get_computer_collision_rectangle(void)
 }
 
 /**
+ * @brief Prepara o cartão narrativo com os textos indicados, para aparecer do início.
+ */
+static void start_day_card(const char *title, const char *line_1, const char *line_2)
+{
+    current_card_title = title;
+    current_card_subtitle_line_1 = line_1;
+    current_card_subtitle_line_2 = line_2;
+    current_calendar_day_state = NONE;
+    render_calendar_day_card_finished = false;
+}
+
+/**
+ * @brief Calcula a zona em frente à porta de vidro, em coordenadas da tela.
+ */
+static Rectangle get_exit_zone(void)
+{
+    Vector2 screen_center = {GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f};
+
+    return scale_reference_rect(EXIT_ZONE_REFERENCE, get_scale(), screen_center);
+}
+
+/**
+ * @brief Objeto indicado pela seta: primeiro o computador e, com a tarefa resolvida, a porta.
+ */
+static Rectangle get_next_objective_rectangle(void)
+{
+    return current_game_state_variables.is_resolved ? office_obstacles[GLASS_DOOR_OBSTACLE] : estagiario_computer_collision_rectangle;
+}
+
+/**
+ * @brief Encerra o dia e mostra o cartão final, com o texto de como a tarefa foi resolvida.
+ */
+static void finish_day(void)
+{
+    int day = current_game_state_variables.current_day;
+    const char *line_1 = (day == 1) ? DAY_END_CARD_FIRST_LINE_1 : DAY_END_CARD_LINE_1;
+
+    if (computer_failsafe_triggered) line_1 = DAY_END_CARD_FAILSAFE_LINE_1;
+    else if (current_game_state_variables.mode_type == MODE_AUTOMATIC) line_1 = DAY_END_CARD_DELEGATED_LINE_1;
+
+    walk_time = 0.0f;
+    color_to_fade.a = 0;
+    current_game_state_variables.resolved_puzzles[day] = true;
+    snprintf(card_title_text, sizeof(card_title_text), "Fim do Dia %d", day);
+    start_day_card(card_title_text, line_1, calendar_get_day_end_line(day));
+    current_screen = DAY_END_CARD_SCREEN;
+}
+
+/**
+ * @brief Coloca o jogador na porta de entrada, olhando para o escritório.
+ */
+static void place_player_at_entrance(void)
+{
+    current_estagiario_position = (Vector2){
+        (GetScreenWidth() / 2.0f) + PLAYER_SPAWN_OFFSET_X_AT_REFERENCE * get_scale(),
+        (GetScreenHeight() / 2.0f) + PLAYER_SPAWN_OFFSET_Y_AT_REFERENCE * get_scale()};
+    current_direction = NORTH;
+    current_estagiario_texture_direction = estagiario_texture[NORTH];
+    walk_time = 0.0f;
+}
+
+/**
+ * @brief Abre um dia jogável: chamados do dia, bilhete do mural e cartão de chegada.
+ */
+static void open_playable_day(void)
+{
+    int day = current_game_state_variables.current_day;
+
+    // Quem perdeu o bilhete do Dia 1 não fica sem a colinha nos puzzles seguintes (RF07)
+    if (day > 1) current_game_state_variables.has_cheat_sheet = true;
+
+    reset_computer_progress();
+    set_hint_note_lines(calendar_get_note_lines(day), CALENDAR_NOTE_LINE_COUNT);
+    color_to_fade.a = 0;
+    snprintf(card_title_text, sizeof(card_title_text), "Dia %d", day);
+    start_day_card(card_title_text, calendar_get_arrival_line(day, 0), calendar_get_arrival_line(day, 1));
+    current_screen = SCREEN_NONE;
+}
+
+/**
+ * @brief Entra no dia atual da campanha: dia jogável abre o escritório, os outros passam rápido.
+ */
+static void enter_current_day(void)
+{
+    int day = current_game_state_variables.current_day;
+
+    current_game_state_variables.day_type = calendar_get_day_type(day);
+    transition_time = 0.0f;
+
+    if (current_game_state_variables.day_type == PLAYABLE_DAY)
+    {
+        open_playable_day();
+        return;
+    }
+
+    if (current_game_state_variables.day_type == JUMP_DAY)
+    {
+        jump_day_time = JUMP_BLOCK_TIME / calendar_get_jump_block_length(day);
+    }
+
+    current_screen = DAY_TRANSITION_SCREEN;
+}
+
+/**
+ * @brief Passa para o dia seguinte da campanha. Num salto, mantém o ritmo do bloco.
+ */
+static void advance_to_next_day(void)
+{
+    float block_day_time = jump_day_time;
+    bool was_jumping = current_game_state_variables.day_type == JUMP_DAY;
+
+    start_game_day(current_game_state_variables.current_day + 1);
+    enter_current_day();
+
+    if (was_jumping && current_game_state_variables.day_type == JUMP_DAY) jump_day_time = block_day_time;
+}
+
+/**
+ * @brief Mostra o final da partida, calculado das escolhas de toda a campanha.
+ */
+static void show_ending(void)
+{
+    const EndingCard *card = &ending_cards[get_game_ending()];
+
+    color_to_fade.a = 0;
+    start_day_card(card->title, card->line_1, card->line_2);
+    current_screen = ENDING_CARD_SCREEN;
+}
+
+/**
+ * @brief Abre ou fecha o bilhete do mural. É nele que o jogador pega a colinha. Ler o bilhete antes
+ * de concluir a tarefa conta como investigar; os pontos só entram quando a tarefa é concluída,
+ * então ler de novo não soma nada.
+ */
+static void toggle_mural_note(void)
+{
+    toggle_hint_note();
+
+    if (!is_hint_note_open()) return;
+
+    int day = current_game_state_variables.current_day;
+
+    current_game_state_variables.has_cheat_sheet = true;
+
+    // O que o jogador examina vira evidência para a prova do Dia 100
+    if (day == 58) current_game_state_variables.evidence_mask |= EVIDENCE_BADGE_AFTER_LEAVING;
+    if (day == 74) current_game_state_variables.evidence_mask |= EVIDENCE_NO_HUMAN_ORDER;
+    if (day == 89) current_game_state_variables.found_mariana = true;
+
+    if (!current_game_state_variables.is_resolved)
+    {
+        current_game_state_variables.user_investigated = true;
+    }
+}
+
+/**
  * @brief Atualiza a caixa de colisão (hitbox) do jogador conforme sua posição atual na tela.
  * 
  * Aplica os offsets X e Y escalados à posição do sprite do jogador para garantir
@@ -253,8 +458,18 @@ static Vector2 get_map_center(void)
  */
 void initialize_game_loop_variables(void)
 {
+    game_loop_loaded = true;
+
+    // A partida pode recomeçar depois de voltar ao menu
+    game_loop_finished = false;
+    leave_office = false;
+    enter_computer_screen = false;
+    walk_time = 0.0f;
+    color_to_fade.a = 0;
+
     // Carrega a textura de fundo da tela de introdução
     second_background_texture = LoadTexture("code/assets/background/second-background.png");
+    calendar_texture_loaded = true;
     
     // Carrega o mapa do escritório
     in_game_office = LoadTexture("code/assets/sprites/environment/office.png");
@@ -293,11 +508,7 @@ void initialize_game_loop_variables(void)
     }
 
     // Define o ponto inicial de surgimento (spawn) do jogador, logo acima da porta de entrada
-    current_estagiario_position = (Vector2){
-        middle_screen_x + PLAYER_SPAWN_OFFSET_X_AT_REFERENCE * get_scale(),
-        middle_screen_y + PLAYER_SPAWN_OFFSET_Y_AT_REFERENCE * get_scale()};
-    current_direction = NORTH;
-    current_estagiario_texture_direction = estagiario_texture[NORTH]; // Inicia olhando para o norte (entrando no escritório)
+    place_player_at_entrance();
 
     // Guarda centro e escala iniciais para detectar redimensionamento depois
     last_screen_center = (Vector2){GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f};
@@ -310,6 +521,13 @@ void initialize_game_loop_variables(void)
     estagiario_computer_collision_rectangle = get_computer_collision_rectangle();
     hint_item_rectangle = get_hint_item_rectangle(get_scale(), get_map_center());
     update_collision_rec();
+
+    // Retoma de onde o save parou. Fechado no cartão de fim do dia, o dia já estava encerrado
+    int day = current_game_state_variables.current_day;
+
+    if (current_game_state_variables.resolved_puzzles[day] && day < TOTAL_GAME_DAYS) start_game_day(day + 1);
+
+    enter_current_day();
 }
 
 /**
@@ -418,6 +636,9 @@ void handle_calendar_day_card(void)
  */
 void unload_calendar_day_textures(void)
 {
+    if (!calendar_texture_loaded) return;
+
+    calendar_texture_loaded = false;
     UnloadTexture(second_background_texture);
 }
 
@@ -426,21 +647,28 @@ void unload_calendar_day_textures(void)
  * 
  * Checa a sobreposição entre a caixa de colisão do jogador e cada objeto. Com a tecla ESPAÇO,
  * o computador abre a tela do quiz e o mural abre o bilhete com a dica; com o bilhete aberto,
- * ESPAÇO apenas o fecha. Examinar o bilhete não altera a pontuação (US04).
+ * ESPAÇO apenas o fecha. Examinar o bilhete não reduz a pontuação (US04). Depois de concluir
+ * a tarefa, o computador deixa de abrir e a porta de vidro encerra o dia.
  */
 void handle_map_interactables(void)
 {
     // Checa colisão AABB (Axis-Aligned Bounding Box) entre o jogador e o computador
     is_near_computer = CheckCollisionRecs(estagiario_collision_rec, estagiario_computer_collision_rectangle);
-    is_near_hint = is_hitbox_on_hint(estagiario_collision_rec, get_scale(), get_map_center());
+    is_near_hint = calendar_has_investigation(current_game_state_variables.current_day) &&
+                   is_hitbox_on_hint(estagiario_collision_rec, get_scale(), get_map_center());
+    is_near_exit = current_game_state_variables.is_resolved && CheckCollisionRecs(estagiario_collision_rec, get_exit_zone());
 
     if (!IsKeyPressed(KEY_SPACE)) return;
 
     if (is_hint_note_open() || is_near_hint)
     {
-        toggle_hint_note();
+        toggle_mural_note();
     }
-    else if (is_near_computer)
+    else if (is_near_exit)
+    {
+        leave_office = true;
+    }
+    else if (is_near_computer && !current_game_state_variables.is_resolved)
     {
         // Se estiver ao alcance e pressionar ESPAÇO, ativa a flag para abrir o computador
         enter_computer_screen = true;
@@ -609,7 +837,91 @@ void render_game_loop_escritorio(void)
                       (GetScreenHeight() - office_height) / 2.0f,
                       office_width, office_height};
 
-    DrawTexturePro(in_game_office, source, dest, (Vector2){0, 0}, 0.0f, color_to_fade);
+    // Sem nenhum número na tela: quanto mais tarde na campanha, mais escuro e mais alagado
+    float water_level = calendar_get_water_level(current_game_state_variables.current_day);
+    unsigned char brightness = (unsigned char)(255.0f - (OFFICE_MAX_DARKENING * water_level));
+    Color office_tint = {brightness, brightness, brightness, color_to_fade.a};
+
+    DrawTexturePro(in_game_office, source, dest, (Vector2){0, 0}, 0.0f, office_tint);
+
+    if (water_level > 0.0f)
+    {
+        float water_height = dest.height * water_level;
+        unsigned char water_alpha = (unsigned char)((WATER_ALPHA * color_to_fade.a) / 255);
+
+        DrawRectangleRec((Rectangle){dest.x, dest.y + dest.height - water_height, dest.width, water_height}, (Color){WATER_COLOR_RGB, water_alpha});
+    }
+}
+
+/**
+ * @brief Desenha um texto centralizado, reduzindo a fonte se ele não couber na janela.
+ */
+static void draw_transition_text(const char *text, float center_y, float font_size, Color color)
+{
+    float max_width = GetScreenWidth() * TRANSITION_TEXT_WIDTH_RATIO;
+    float width = MeasureTextEx(default_game_font, text, font_size, font_size * 0.04f).x;
+
+    if (width > max_width) font_size *= max_width / width;
+
+    Vector2 size = MeasureTextEx(default_game_font, text, font_size, font_size * 0.04f);
+
+    DrawTextEx(default_game_font, text, (Vector2){(GetScreenWidth() - size.x) / 2.0f, center_y - (size.y / 2.0f)}, font_size, font_size * 0.04f, color);
+}
+
+/**
+ * @brief Flash do dia e salto puro (RF06). O flash só avança ao toque do jogador, e o salto
+ * passa sozinho. Ainda não há imagens próprias: o flash usa o escritório do dia como imagem.
+ */
+static void handle_day_transition(void)
+{
+    int day = current_game_state_variables.current_day;
+    float scale = get_ui_scale();
+    float center_y = GetScreenHeight() / 2.0f;
+
+    transition_time += GetFrameTime();
+
+    if (current_game_state_variables.day_type == JUMP_DAY)
+    {
+        draw_transition_text(TextFormat("Dia %d", day), center_y, TITLE_FONT_SIZE * scale, WHITE);
+
+        if (transition_time >= jump_day_time) advance_to_next_day();
+        return;
+    }
+
+    color_to_fade.a = 255;
+    render_game_loop_escritorio();
+    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), (Color){0, 0, 0, FLASH_DIM_ALPHA});
+    draw_transition_text(TextFormat("Dia %d", day), center_y - (SUBTITLE_FONT_SIZE * scale * 3.0f), TITLE_FONT_SIZE * scale, WHITE);
+    draw_transition_text(calendar_get_flash_text(day), center_y, SUBTITLE_FONT_SIZE * scale, WHITE);
+
+    if (transition_time < FLASH_MIN_TIME) return;
+
+    draw_transition_text("ESPAÇO ou clique para continuar", center_y + (SUBTITLE_FONT_SIZE * scale * 3.0f), SUBTITLE_FONT_SIZE * scale * 0.7f, GRAY);
+
+    if (IsKeyPressed(KEY_SPACE) || IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) advance_to_next_day();
+}
+
+/**
+ * @brief Texto do contador de progresso da partida (GDD, P01). Não mostra nenhuma estatística oculta.
+ */
+static const char *get_day_counter_text(void)
+{
+    return TextFormat("Dia %d de %d", current_game_state_variables.current_day, TOTAL_GAME_DAYS);
+}
+
+/**
+ * @brief Desenha o contador de dias na margem de cima do mapa.
+ */
+static void render_day_counter(void)
+{
+    float scale = get_scale();
+    float font_size = DAY_COUNTER_FONT_AT_REFERENCE * scale;
+    float letter_spacing = font_size * 0.04f;
+    float office_top_y = (GetScreenHeight() - (in_game_office.height * scale)) / 2.0f;
+    float left_x = (GetScreenWidth() - (in_game_office.width * scale)) / 2.0f;
+    float y = (office_top_y - font_size) / 2.0f;
+
+    DrawTextEx(default_game_font, get_day_counter_text(), (Vector2){left_x, y}, font_size, letter_spacing, color_to_fade);
 }
 
 /**
@@ -795,40 +1107,23 @@ static void render_high_contrast_outlines(void)
 }
 
 /**
- * @brief Descarrega da memória de vídeo (GPU) todas as texturas pertencentes ao ambiente de jogo do escritório.
- */
-void unload_office(void)
-{
-    UnloadTexture(current_estagiario_texture_direction);
-    UnloadTexture(in_game_office);
-    UnloadTexture(arrow_down_texture); // Liberação da textura da seta flutuante
-
-    UnloadTexture(action_tip_texture);
-    UnloadTexture(move_tip_texture);
-    UnloadTexture(move_or_tip_texture);
-
-    // Iteração para liberar cada um dos sprites direcionais do jogador
-    for (int i = 0; i < DIRECTION_COUNT; i++)
-    {
-        UnloadTexture(estagiario_texture[i]);
-    }
-
-    // Frames do andar
-    for (int i = 0; i < DIRECTION_COUNT; i++)
-    {
-        for (int j = 0; j < WALK_FRAME_COUNT; j++)
-        {
-            UnloadTexture(walk_textures[i][j]);
-        }
-    }
-}
-
-/**
  * @brief Gerencia e executa a máquina de estados principal que controla qual tela do jogo
  * deve ser atualizada e renderizada a cada quadro (frame).
  */
 void handle_game_loop_screens(void)
 {
+    // Fora do quadro da cena: as texturas do computador ainda seriam usadas se fossem liberadas depois de desenhar
+    if (current_screen == COMPUTER_SCREEN && computer_exit_finished)
+    {
+        unload_computer_loop();
+        computer_loop_loaded = false;
+        walk_time = 0.0f;
+        current_screen = IN_GAME_SCREEN;
+
+        // No failsafe o expediente acaba ali mesmo, sem voltar ao mapa
+        if (computer_failsafe_triggered) finish_day();
+    }
+
     switch (current_screen)
     {
     case SCREEN_NONE:
@@ -844,6 +1139,7 @@ void handle_game_loop_screens(void)
         if (render_calendar_day_card_finished)
         {
             unload_calendar_day_textures();
+            color_to_fade.a = 0;
             current_screen = IN_GAME_SCREEN;
         }
         break;
@@ -879,17 +1175,24 @@ void handle_game_loop_screens(void)
         render_game_loop_escritorio();
         render_player();
         render_control_tips();
+        render_day_counter();
         render_high_contrast_outlines();
-        render_interact_arrow(estagiario_computer_collision_rectangle);
+        render_interact_arrow(get_next_objective_rectangle());
         if (is_near_hint) render_interact_arrow(hint_item_rectangle);
         render_debug_hitboxes();
         draw_hint_note();
 
         // Se a interação com o computador foi acionada, abre a cena do computador.
         // O escritório continua carregado: ele é o fundo da cena.
-        if (enter_computer_screen)
+        if (leave_office)
+        {
+            leave_office = false;
+            finish_day();
+        }
+        else if (enter_computer_screen)
         {
             initialize_computer_loop();
+            computer_loop_loaded = true;
             current_screen = COMPUTER_SCREEN;
             enter_computer_screen = false;
         }
@@ -905,6 +1208,38 @@ void handle_game_loop_screens(void)
         // O escritório fica ao fundo; o resto da cena é do módulo do computador
         render_computer_backdrop();
         handle_computer_loop();
+        break;
+
+    case DAY_END_CARD_SCREEN:
+        handle_calendar_day_card();
+
+        if (render_calendar_day_card_finished)
+        {
+            if (current_game_state_variables.current_day >= TOTAL_GAME_DAYS)
+            {
+                show_ending();
+            }
+            else
+            {
+                place_player_at_entrance();
+                update_collision_rec();
+                leave_office = false;
+                advance_to_next_day();
+            }
+        }
+        break;
+
+    case DAY_TRANSITION_SCREEN:
+        handle_day_transition();
+        break;
+
+    case ENDING_CARD_SCREEN:
+        handle_calendar_day_card();
+
+        if (render_calendar_day_card_finished)
+        {
+            game_loop_finished = true;
+        }
         break;
 
     default:
@@ -926,13 +1261,36 @@ void render_game_loop(void)
     end_game_drawing(); // Finaliza a renderização do frame e envia para o monitor (Swap Buffers)
 }
 
+bool is_computer_screen_open(void)
+{
+    return current_screen == COMPUTER_SCREEN;
+}
+
+bool is_game_loop_finished(void)
+{
+    return game_loop_finished;
+}
+
 /**
  * @brief Função global de encerramento do game loop.
  * Garante a liberação de todos os recursos de memória para evitar Memory Leaks ao fechar o jogo.
  */
 void unload_game_loop(void)
 {
-    // Limpeza de segurança das texturas do escritório e elementos gráficos
+    if (!game_loop_loaded) return;
+
+    game_loop_loaded = false;
+
+    // O cartão do dia pode não ter terminado se o jogo fechar antes dele
+    unload_calendar_day_textures();
+
+    if (computer_loop_loaded)
+    {
+        unload_computer_loop();
+        computer_loop_loaded = false;
+    }
+
+    // Texturas do escritório e elementos gráficos
     UnloadTexture(in_game_office);
     UnloadTexture(arrow_down_texture);
 

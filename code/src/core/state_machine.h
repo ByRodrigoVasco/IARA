@@ -24,4 +24,14 @@ void handle_state_initialization(void);
  */
 void handle_state_machine(void);
 
+/**
+ * @brief Informa se a tecla ESC fecha o jogo na tela atual. Créditos e configurações usam ESC para voltar ao menu.
+ */
+bool escape_closes_current_screen(void);
+
+/**
+ * @brief Libera as texturas da tela aberta. A main.c chama ao encerrar o jogo.
+ */
+void handle_state_shutdown(void);
+
 #endif // STATE_MACHINE_H

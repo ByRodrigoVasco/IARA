@@ -64,8 +64,6 @@ extern unsigned int middle_screen_y;
 #define PRE_MENU_SCREEN 0
 #define MENU_SCREEN 1
 #define PLAYING_SCREEN 2
-#define FLASHING_SCREEN 3
-#define JUMPING_SCREEN 4
 #define CREDITS_SCREEN 5
 #define SETTINGS_SCREEN 6
 
@@ -77,7 +75,7 @@ extern unsigned int middle_screen_y;
 
 // PATHS PARA ASSETS
 #define SPRITES_PATH "code/assets/sprites/"
-#define PERSONAGENS_PATH    SPRITES_PATH "personagens/"
+#define PERSONAGENS_PATH    SPRITES_PATH "PERSONAGENS/"
 #define IARA_NOME_PNG_PATH "code/assets/sprites/tela-inicial/iara-nome.png"
 #define ESCRITORIO_TELA_PNG_PATH "code/assets/sprites/tela-inicial/escritorio-tela-inicial.png"
 

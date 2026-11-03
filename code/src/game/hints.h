@@ -35,6 +35,11 @@ bool is_hitbox_on_hint(Rectangle hitbox, float scale, Vector2 center);
 /**
  * @brief Abre o bilhete, se estiver fechado, ou o fecha. Não altera a pontuação (US04).
  */
+/**
+ * @brief Troca o bilhete do mural pelo do dia. NULL volta ao bilhete do Dia 1.
+ */
+void set_hint_note_lines(const char *const *lines, int line_count);
+
 void toggle_hint_note(void);
 
 /**
