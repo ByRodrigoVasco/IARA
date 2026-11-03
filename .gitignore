@@ -29,6 +29,7 @@ cabal.project.local~
 # --- Saves/persistência local de teste ---
 # (ajustar quando o formato final de persistência for definido)
 *.save
+*.save.bak
 iara.ini
 *.sav
 save_*.txt

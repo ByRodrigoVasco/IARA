@@ -204,6 +204,14 @@ static bool apply_save_line(const char *key, const char *value,
     return true;
 }
 
+/**
+ * @brief Monta o caminho da cópia de segurança do save.
+ */
+static bool build_backup_path(const char *path, char *buffer, size_t size)
+{
+    return snprintf(buffer, size, "%s.bak", path) < (int)size;
+}
+
 // ---------------------------------------------------------------------------
 // SERIALIZAÇÃO
 // ---------------------------------------------------------------------------
@@ -298,14 +306,27 @@ save_result save_game_state(const char *path)
         return SAVE_IO_ERROR;
     }
 
-    // No Windows, rename() falha se o destino já existe, então o save antigo
-    // é removido antes. O arquivo novo já está completo no .tmp a essa altura.
-    remove(path);
-    if (rename(temp_path, path) != 0)
+    // No Windows, rename() falha se o destino já existe, então o save antigo sai
+    // do caminho antes. Ele vira cópia de segurança até o novo estar no lugar: se a
+    // troca falhar ele volta, e se o jogo cair no meio o carregamento o encontra.
+    char backup_path[512];
+    if (!build_backup_path(path, backup_path, sizeof(backup_path)))
     {
         remove(temp_path);
         return SAVE_IO_ERROR;
     }
+
+    remove(backup_path);
+    bool has_backup = rename(path, backup_path) == 0;
+
+    if (rename(temp_path, path) != 0)
+    {
+        remove(temp_path);
+        if (has_backup) rename(backup_path, path);
+        return SAVE_IO_ERROR;
+    }
+
+    remove(backup_path);
 
     return SAVE_OK;
 }
@@ -317,6 +338,16 @@ save_result save_game_state(const char *path)
 save_result load_game_state(const char *path)
 {
     FILE *file = fopen(path, "rb");
+    if (file == NULL)
+    {
+        // Sem o save, vale a cópia de segurança de uma gravação interrompida.
+        char backup_path[512];
+        if (build_backup_path(path, backup_path, sizeof(backup_path)))
+        {
+            file = fopen(backup_path, "rb");
+        }
+    }
+
     if (file == NULL)
     {
         return SAVE_NOT_FOUND;
