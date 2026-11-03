@@ -12,14 +12,16 @@ Atualizar a coluna Status conforme as issues forem corrigidas e fechadas.
 
 | ID | Problema | Gravidade | Issue | Status |
 |---|---|---|---|---|
-| BUG-01 | Fade in para em alpha 250 | Baixa | [#32](https://github.com/ByRodrigoVasco/IARA/issues/32) | Aberto |
-| BUG-02 | Voltar ao menu vaza memória | Alta | [#33](https://github.com/ByRodrigoVasco/IARA/issues/33) | Aberto |
-| BUG-03 | Textura do jogador liberada duas vezes | Média | [#34](https://github.com/ByRodrigoVasco/IARA/issues/34) | Aberto |
-| BUG-04 | Funções de unload nunca chamadas | Baixa | [#35](https://github.com/ByRodrigoVasco/IARA/issues/35) | Aberto |
-| BUG-05 | Desenho fora do `BeginDrawing`/`EndDrawing` | Baixa | [#36](https://github.com/ByRodrigoVasco/IARA/issues/36) | Aberto |
-| BUG-06 | Caminho de sprites em minúsculo | Média | [#37](https://github.com/ByRodrigoVasco/IARA/issues/37) | Aberto |
-| BUG-07 | Pré-menu não descarrega imagens | Média | [#38](https://github.com/ByRodrigoVasco/IARA/issues/38) | Aberto |
+| BUG-01 | Fade in para em alpha 250 | Baixa | [#32](https://github.com/ByRodrigoVasco/IARA/issues/32) | Corrigido na branch, falta publicar |
+| BUG-02 | Voltar ao menu vaza memória | Alta | [#33](https://github.com/ByRodrigoVasco/IARA/issues/33) | Corrigido na branch, falta publicar |
+| BUG-03 | Textura do jogador liberada duas vezes | Média | [#34](https://github.com/ByRodrigoVasco/IARA/issues/34) | Corrigido na branch, falta publicar |
+| BUG-04 | Funções de unload nunca chamadas | Baixa | [#35](https://github.com/ByRodrigoVasco/IARA/issues/35) | Corrigido na branch, falta publicar |
+| BUG-05 | Desenho fora do `BeginDrawing`/`EndDrawing` | Baixa | [#36](https://github.com/ByRodrigoVasco/IARA/issues/36) | Corrigido na branch, falta publicar |
+| BUG-06 | Caminho de sprites em minúsculo | Média | [#37](https://github.com/ByRodrigoVasco/IARA/issues/37) | Corrigido na branch, falta publicar |
+| BUG-07 | Pré-menu não descarrega imagens | Média | [#38](https://github.com/ByRodrigoVasco/IARA/issues/38) | Corrigido na branch, falta publicar |
 | BUG-08 | Texto do quiz vaza para fora da caixa | Média | [#39](https://github.com/ByRodrigoVasco/IARA/issues/39) | Corrigido na branch, falta publicar |
+
+**Sobre o BUG-02:** os dois vazamentos descritos abaixo já não existem. Restava uma carga duplicada do menu ao abrir o jogo, removida. O CT-24 oscilava porque media sem desenhar quadros, e o driver de vídeo só devolve uma textura apagada depois de um quadro. Com quadros, 400 voltas ao menu cresceram 19 MB (cerca de 0,05 MB por volta, contra os 7 MB originais).
 
 ---
 
