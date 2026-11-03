@@ -52,6 +52,10 @@ int main(void)
     current_game_state_variables.mode_type = true;
     current_game_state_variables.user_investigated = true;
     current_game_state_variables.is_resolved = true;
+    current_game_state_variables.has_cheat_sheet = true;
+    current_game_state_variables.evidence_mask = EVIDENCE_NO_HUMAN_ORDER;
+    current_game_state_variables.found_mariana = true;
+    current_game_state_variables.proof_succeeded = true;
     current_game_state_variables.resolved_puzzles[1] = true;
     current_game_state_variables.resolved_puzzles[3] = true;
     current_game_state_variables.resolved_puzzles[TOTAL_GAME_DAYS] = true;
@@ -71,6 +75,10 @@ int main(void)
     assert(current_game_state_variables.mode_type == true);
     assert(current_game_state_variables.user_investigated == true);
     assert(current_game_state_variables.is_resolved == true);
+    assert(current_game_state_variables.has_cheat_sheet == true);
+    assert(current_game_state_variables.evidence_mask == EVIDENCE_NO_HUMAN_ORDER);
+    assert(current_game_state_variables.found_mariana == true);
+    assert(current_game_state_variables.proof_succeeded == true);
     assert(current_game_state_variables.resolved_puzzles[1] == true);
     assert(current_game_state_variables.resolved_puzzles[2] == false);
     assert(current_game_state_variables.resolved_puzzles[3] == true);

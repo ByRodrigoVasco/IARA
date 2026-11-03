@@ -14,6 +14,7 @@
 #include <math.h>
 
 #include "raylib.h"
+#include "janela_de_teste.h"
 #include "game_state.h"
 
 /* A main.c define estas globais; aqui o teste assume esse papel. */
@@ -352,6 +353,8 @@ static void testar_dica(Vector2 spawn)
     initialize_hidden_statistic();
     struct hidden_statistic antes = current_hidden_statistic;
 
+    /* O mural so tem o que examinar nos dias com investigacao. */
+    current_game_state_variables.current_day = 1;
     current_estagiario_position = posicao_do_caminho(spawn, 0);
     update_collision_rec();
     handle_map_interactables();
@@ -573,7 +576,7 @@ int main(void)
     /* Sem logs da Raylib: o relatorio dos testes fica limpo para o screencast. */
     SetTraceLogLevel(LOG_WARNING);
 
-    InitWindow(LARGURA_JANELA, ALTURA_JANELA, "IARA - testes de sistema");
+    abrir_janela_de_teste(LARGURA_JANELA, ALTURA_JANELA, "IARA - testes de sistema");
 
     /* Mesmo ajuste que a main.c faz depois de abrir a janela. */
     screen_width = GetScreenWidth();
