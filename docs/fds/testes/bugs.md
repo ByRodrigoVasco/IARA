@@ -1,25 +1,32 @@
 # Bug tracker — bugs encontrados nos testes de sistema
 
-Oito problemas encontrados na execução dos testes de sistema de 22/10/2026
-(branch `develop`, commit `b366e7c`).
+Os BUG-01 a BUG-08 foram encontrados na execução dos testes de sistema de 22/10/2026
+(branch `develop`, commit `b366e7c`) e estão registrados como issue no repositório, com a
+label `bug`. Os BUG-09 a BUG-12 foram encontrados na revisão de 03/11/2026
+(branch `test/campanha-100-dias`) e ainda não têm issue.
 
-Todos os oito estão registrados como issue no repositório, com a label `bug`.
-Os blocos abaixo repetem o conteúdo de cada uma, para consulta sem sair do repositório.
+Os blocos abaixo repetem o conteúdo de cada um, para consulta sem sair do repositório.
 
 ## Status
 
-Atualizar a coluna Status conforme as issues forem corrigidas e fechadas.
+Atualizar a coluna Status conforme as issues forem corrigidas e fechadas. Conferido em 03/11/2026:
+os BUG-01 a BUG-08 ainda aparecem abertos no GitHub, mas o código da branch já os corrige. Nenhuma
+dessas correções está na `develop`.
 
 | ID | Problema | Gravidade | Issue | Status |
 |---|---|---|---|---|
-| BUG-01 | Fade in para em alpha 250 | Baixa | [#32](https://github.com/ByRodrigoVasco/IARA/issues/32) | Corrigido na branch, falta publicar |
-| BUG-02 | Voltar ao menu vaza memória | Alta | [#33](https://github.com/ByRodrigoVasco/IARA/issues/33) | Corrigido na branch, falta publicar |
-| BUG-03 | Textura do jogador liberada duas vezes | Média | [#34](https://github.com/ByRodrigoVasco/IARA/issues/34) | Corrigido na branch, falta publicar |
-| BUG-04 | Funções de unload nunca chamadas | Baixa | [#35](https://github.com/ByRodrigoVasco/IARA/issues/35) | Corrigido na branch, falta publicar |
-| BUG-05 | Desenho fora do `BeginDrawing`/`EndDrawing` | Baixa | [#36](https://github.com/ByRodrigoVasco/IARA/issues/36) | Corrigido na branch, falta publicar |
-| BUG-06 | Caminho de sprites em minúsculo | Média | [#37](https://github.com/ByRodrigoVasco/IARA/issues/37) | Corrigido na branch, falta publicar |
-| BUG-07 | Pré-menu não descarrega imagens | Média | [#38](https://github.com/ByRodrigoVasco/IARA/issues/38) | Corrigido na branch, falta publicar |
-| BUG-08 | Texto do quiz vaza para fora da caixa | Média | [#39](https://github.com/ByRodrigoVasco/IARA/issues/39) | Corrigido na branch, falta publicar |
+| BUG-01 | Fade in para em alpha 250 | Baixa | [#32](https://github.com/ByRodrigoVasco/IARA/issues/32) | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e fechar a issue |
+| BUG-02 | Voltar ao menu vaza memória | Alta | [#33](https://github.com/ByRodrigoVasco/IARA/issues/33) | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e fechar a issue |
+| BUG-03 | Textura do jogador liberada duas vezes | Média | [#34](https://github.com/ByRodrigoVasco/IARA/issues/34) | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e fechar a issue |
+| BUG-04 | Funções de unload nunca chamadas | Baixa | [#35](https://github.com/ByRodrigoVasco/IARA/issues/35) | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e fechar a issue |
+| BUG-05 | Desenho fora do `BeginDrawing`/`EndDrawing` | Baixa | [#36](https://github.com/ByRodrigoVasco/IARA/issues/36) | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e fechar a issue |
+| BUG-06 | Caminho de sprites em minúsculo | Média | [#37](https://github.com/ByRodrigoVasco/IARA/issues/37) | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e fechar a issue |
+| BUG-07 | Pré-menu não descarrega imagens | Média | [#38](https://github.com/ByRodrigoVasco/IARA/issues/38) | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e fechar a issue |
+| BUG-08 | Texto do quiz vaza para fora da caixa | Média | [#39](https://github.com/ByRodrigoVasco/IARA/issues/39) | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e fechar a issue |
+| BUG-09 | Rótulos das mesas vazam dos botões | Média | A abrir | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e abrir a issue |
+| BUG-10 | Falha ao trocar o save pode perder o progresso | Média | A abrir | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e abrir a issue |
+| BUG-11 | Fundo do cartão do dia é carregado e nunca desenhado | Baixa | A abrir | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e abrir a issue |
+| BUG-12 | Menu não tem como começar uma partida nova | Média | A abrir | Aberto: falta decidir onde fica a opção |
 
 **Sobre o BUG-02:** os dois vazamentos descritos abaixo já não existem. Restava uma carga duplicada do menu ao abrir o jogo, removida. O CT-24 oscilava porque media sem desenhar quadros, e o driver de vídeo só devolve uma textura apagada depois de um quadro. Com quadros, 400 voltas ao menu cresceram 19 MB (cerca de 0,05 MB por volta, contra os 7 MB originais).
 
@@ -276,3 +283,95 @@ primeira e a última letra fora da caixa cinza.
 **Onde:** `code/src/screens/computer_loop.c:266` (caixa) e
 `code/src/screens/computer_loop.c:350` (botões de alternativa)
 **Coberto por:** CT-35 (`code/tests/test_fluxo.c`)
+
+---
+
+<a id="bug-09"></a>
+
+## BUG-09 — Rótulos das mesas vazam dos botões
+
+**Labels:** `bug`, `ui`, `gravidade: média`
+
+Nas mesas dos dias seguintes, os botões de marcar usavam a fonte do quiz sem conferir se o
+texto cabia. O CT-35 não pegava o problema porque só media o roteiro do Dia 1 e não olhava
+esses botões.
+
+Medido em 6 tamanhos de janela, do mínimo (960x540) a 2560x1080:
+
+- `[Verdade]`, no Dia 27, passa cerca de 13% da largura do botão em todos os tamanhos
+  (75 px em 66 px na janela mínima);
+- `[Difere]`, no Dia 12, e `[Ativar]`, no Dia 58, ocupam o botão inteiro, sem margem;
+- no Dia 41, as linhas ficam mais baixas que a fonte (17,9 px para fonte de 19,5 px na janela
+  mínima), então o texto dos botões passa da altura deles.
+
+**Esperado:** o texto cabe nos botões das mesas, em qualquer dia e tamanho de janela.
+**Obtido:** o texto encosta na borda do botão ou passa dela.
+
+**Correção:** `get_board_button_font_size()` reduz a fonte para o texto caber na largura e na
+altura de cada botão da mesa.
+
+**Onde:** `draw_choice_button()` e `render_ticket_triage()` em `code/src/screens/computer_loop.c`
+**Coberto por:** CT-76 (`code/tests/test_fluxo.c`)
+
+---
+
+<a id="bug-10"></a>
+
+## BUG-10 — Falha ao trocar o save pode perder o progresso
+
+**Labels:** `bug`, `gravidade: média`
+
+`save_game_state()` grava o save novo em `iara.save.tmp`, apaga `iara.save` e só então renomeia
+o temporário. Se a troca falhasse depois de apagar o save antigo, o código apagava também o
+temporário e o jogador ficava sem nenhum dos dois. Se o jogo ou o computador caísse entre as
+duas etapas, o save antigo já não existia e o carregamento nem procurava o temporário.
+
+Achado por inspeção; a falha não foi reproduzida em uso real.
+
+**Esperado:** uma gravação interrompida deixa pelo menos o save anterior no disco.
+**Obtido:** o jogador podia perder toda a campanha.
+
+**Correção:** o save antigo vira `iara.save.bak` até o novo estar no lugar. Se a troca falhar,
+ele volta; se o jogo cair no meio, `load_game_state()` carrega a cópia de segurança.
+
+**Onde:** `save_game_state()` e `load_game_state()` em `code/src/core/save.c`
+**Coberto por:** `code/tests/test_save.c` cobre a queda no meio da troca. O retorno do save
+antigo quando o `rename()` falha não tem teste automatizado.
+
+---
+
+<a id="bug-11"></a>
+
+## BUG-11 — Fundo do cartão do dia é carregado e nunca desenhado
+
+**Labels:** `bug`, `limpeza`, `gravidade: baixa`
+
+`initialize_game_loop_variables()` carregava `second-background.png` para a placa de vídeo a cada
+início de partida, mas `render_calendar_day_card()` não desenha essa textura. O cartão continua
+igual sem ela.
+
+**Correção:** a textura e `unload_calendar_day_textures()` foram removidas.
+
+**Onde:** `code/src/screens/game_loop.c`
+**Coberto por:** nenhum teste automatizado (achado por inspeção)
+
+---
+
+<a id="bug-12"></a>
+
+## BUG-12 — Menu não tem como começar uma partida nova
+
+**Labels:** `bug`, `ui`, `gravidade: média`
+
+O menu só oferece `INICIAR`, `CRÉDITOS`, `CONFIGURAÇÕES` e `SAIR`. Com um save no disco, `INICIAR`
+sempre retoma a partida. Só dá para recomeçar terminando o Dia 100 ou apagando `iara.save` à mão,
+o que atrapalha quem vai testar a campanha mais de uma vez.
+
+**Esperado:** o jogador consegue começar do Dia 1, com uma confirmação para não perder a partida
+sem querer.
+**Obtido:** não há essa opção no jogo.
+
+**Em aberto:** decidir se a opção fica no menu ou em `CONFIGURAÇÕES`.
+
+**Onde:** `code/src/screens/menu.c` e `handle_menu_action()` em `code/src/core/state_machine.c`
+**Coberto por:** nenhum teste automatizado (achado por inspeção)

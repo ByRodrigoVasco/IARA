@@ -1,0 +1,264 @@
+
+========================================================================
+ IARA - SUITE DE TESTES
+ 03/11/2026 08:19
+========================================================================
+
+Compilando...
+  ok  test_collisions
+  ok  test_characters
+  ok  test_save
+  ok  test_hints
+  ok  test_sistema
+  ok  test_conteudo
+  ok  test_fluxo
+Todos os testes passaram
+Todos os testes passaram
+Todos os testes passaram
+
+  test_hints: todos os testes passaram
+
+
+========================================================================
+ IARA - TESTES DE SISTEMA | Bloco 1: partida, movimento e colisoes
+========================================================================
+
+  --- Recursos em disco (CT-01 a CT-03) ---
+
+  [ OK  ]  CT-01   Janela do jogo inicializa
+           fonte VT323 com 191 glifos; 16 de 16 acentos presentes
+  [ OK  ]  CT-02   Fonte do jogo cobre os acentos do portugues
+           25 de 25 arquivos de midia encontrados
+  [ OK  ]  CT-03   Todos os arquivos de midia usados pelo jogo existem
+
+  --- Carregamento da partida (CT-04 a CT-07) ---
+
+  [ OK  ]  CT-04   Mapa do escritorio carregado na placa de video
+           8 de 8 sprites direcionais do estagiario carregados
+  [ OK  ]  CT-05   Sprites das 8 direcoes do jogador carregados
+  [ OK  ]  CT-06   Frames do andar das 8 direcoes carregados
+  [ OK  ]  CT-07   Animacao do andar percorre os 4 frames em ciclo
+
+  --- Percurso real do jogador (CT-08) ---
+
+           caminho encontrado em 72 passos do jogador
+  [ OK  ]  CT-08   Jogador consegue ir do spawn ate o computador
+
+  --- Movimento e colisoes (CT-09 a CT-13) ---
+
+  [ OK  ]  CT-09   Jogador nasce livre, fora de qualquer obstaculo
+           20000 passos simulados; 0 invasoes de obstaculo, 0 saidas do mapa
+  [ OK  ]  CT-10   Jogador nunca entra em um obstaculo ao andar
+  [ OK  ]  CT-11   Jogador nunca sai dos limites do mapa
+  [ OK  ]  CT-12   Empurrar contra as 4 bordas nao atravessa a parede
+  [ OK  ]  CT-13   Zona do computador so acende com o jogador em cima
+
+  --- Dica no mural (CT-38 e CT-39) ---
+
+           caminho do spawn ate o mural: 246 passos
+  [ OK  ]  CT-38   Jogador consegue ir do spawn ate o item da dica
+  [ OK  ]  CT-39   Examinar a dica abre o bilhete e nao altera a pontuacao
+
+  --- Alto contraste com daltonismo simulado (CT-40) ---
+
+  [ OK  ]  CT-40   Contornos seguem distinguiveis com protanopia e deuteranopia simuladas
+
+  --- Redimensionamento da janela (CT-14) ---
+
+  [ OK  ]  CT-14   Redimensionar a janela mantem o jogador no mesmo ponto do mapa
+
+  --- Animacoes de transicao (CT-15 e CT-16) ---
+
+           fade in terminou com alpha = 255 (esperado 255)
+  [ OK  ]  CT-15   Fade in chega a opacidade total (alpha 255)
+           fade out terminou com alpha = 0 (esperado 0)
+  [ OK  ]  CT-16   Fade out chega a transparencia total (alpha 0)
+
+  Evidencia salva em docs/fds/testes/evidencias/percurso-e-colisoes.png
+
+------------------------------------------------------------------------
+ Bloco 1: 19 de 19 casos aprovados
+========================================================================
+
+
+========================================================================
+ IARA - TESTES DE SISTEMA | Bloco 2: quiz do computador e menu
+========================================================================
+
+  --- Roteiro do computador (CT-17 a CT-20) ---
+
+           8 passos no roteiro: 3 declaracoes e 5 perguntas
+  [ OK  ]  CT-17   Roteiro do computador integro (textos, opcoes e gabarito)
+  [ OK  ]  CT-18   Roteiro abre com uma tela de texto e fecha com o relatorio do dia
+           8 avancos ate o fim; 5 perguntas respondidas
+  [ OK  ]  CT-19   Jogador percorre o roteiro do inicio ao fim
+  [ OK  ]  CT-20   Fim do roteiro encerra a tela do computador
+
+  --- Formulas, mesa de triagem e memoria da IARA (CT-61 a CT-63) ---
+
+  [ OK  ]  CT-61   Avaliador acerta a tabela-verdade dos 5 conectivos e aplica modus ponens
+  [ OK  ]  CT-62   Mesa de triagem aceita uma unica combinacao, diz so quantos erros ha e a IARA erra a isca
+  [ OK  ]  CT-63   Memoria da IARA cai com o uso, a confianca sobe, e nova conversa recupera sem apagar o que vazou
+
+  --- Dias seguintes da campanha (CT-64 a CT-70) ---
+
+           9 dias jogaveis, 14 flashes, 77 saltos
+  [ OK  ]  CT-64   Calendario tem os 9 dias jogaveis do GDD, o Dia 2 e um flash e o Dia 4 abre um bloco de salto
+  [ OK  ]  CT-65   Avaliador reconhece equivalencia, tautologia, contradicao e silogismo valido
+           Dia 3: 1 marcacao(oes) aceita(s) de 32, IARA cheia acerta
+           Dia 12: 1 marcacao(oes) aceita(s) de 32, IARA cheia erra
+           Dia 27: 1 marcacao(oes) aceita(s) de 8, IARA cheia acerta
+           Dia 41: 1 marcacao(oes) aceita(s) de 64, IARA cheia erra
+           Dia 58: 1 marcacao(oes) aceita(s) de 32, IARA cheia erra
+           Dia 74: 1 marcacao(oes) aceita(s) de 16, IARA cheia erra
+           Dia 89: 1 marcacao(oes) aceita(s) de 16, IARA cheia erra
+           Dia 100: 3 marcacao(oes) aceita(s) de 64, IARA cheia erra
+  [ OK  ]  CT-66   Cada puzzle dos dias 3 a 100 tem gabarito calculado e unico, sem multipla escolha
+  [ OK  ]  CT-67   IARA acerta os dias 3 e 27, erra os outros com memoria cheia e erra todos sem memoria
+  [ OK  ]  CT-68   Treinos diferentes mudam o resultado da mini-IA, e o vies deixa a Periferia sem aprovacao
+  [ OK  ]  CT-69   Decisao do Dia 12 muda Automacao ou Percepcao, e dias delegados reduzem a memoria inicial da IARA
+  [ OK  ]  CT-70   Os 4 finais saem das condicoes do GDD, sem sorte, em todas as combinacoes
+  [ OK  ]  CT-74   Tres erros em qualquer puzzle acionam o failsafe, vao ao relatorio e nao contam como prova
+
+  --- Formas de resolver, pontuacao, erro e colinha (CT-47 a CT-52, CT-57 e CT-58) ---
+
+  [ OK  ]  CT-47   Resolver sozinho nao exige abrir a IARA e cada chamado vale 10 pontos
+  [ OK  ]  CT-48   Conferir a IARA vale o mesmo que resolver sozinho, e pegar erro dela soma 5 e Percepcao
+  [ OK  ]  CT-49   Enviar sem conferir nao trava, vale 0, soma Automacao e o erro aparece no relatorio
+  [ OK  ]  CT-50   Erro mostra dica, abre nova tentativa e o acerto zera a contagem
+  [ OK  ]  CT-51   Terceiro erro seguido aciona o failsafe: a IARA conclui o que falta e o jogador nao trava
+  [ OK  ]  CT-52   Colinha traz os 5 simbolos, comeca fora do monitor e nao altera a pontuacao
+  [ OK  ]  CT-57   Chamado com CPF pede a tarja, que vai ao relatorio sem mudar os pontos, e a chefia so pressiona
+  [ OK  ]  CT-58   Investigar soma 5 para quem resolveu, nao conta duas vezes e soma Percepcao em todo caso
+
+  --- Menu principal (CT-21 a CT-23) ---
+
+  [ OK  ]  CT-21   Menu abre em INICIAR, destravado
+  [ OK  ]  CT-22   Selecao do menu circula nos dois sentidos
+  [ OK  ]  CT-37   Alto contraste liga e desliga na tela de configuracoes
+  [ OK  ]  CT-41   Brilho respeita os limites e altera a imagem
+  [ OK  ]  CT-43   Preferencias voltam do arquivo e arquivo invalido nao quebra o jogo
+  [ OK  ]  CT-23   Confirmar guarda a opcao escolhida e fecha o menu
+
+  --- Reabertura do menu (CT-24) ---
+
+           trecho 1: 523 MB
+           trecho 2: 395 MB
+           trecho 3: 367 MB
+           trecho 4: 367 MB
+           trechos crescendo: 0 de 4 (limite por trecho: 16 MB)
+  [ OK  ]  CT-24   Abrir e fechar o menu varias vezes nao acumula memoria
+
+------------------------------------------------------------------------
+ Bloco 2: 30 de 30 casos aprovados
+========================================================================
+
+
+========================================================================
+ IARA - TESTES DE SISTEMA | Bloco 3: o jogo do inicio ao fim
+========================================================================
+
+  A janela do jogo mostra a partida de verdade durante este bloco.
+
+  --- Estado inicial da partida (CT-25 e CT-26) ---
+
+  [ OK  ]  CT-25   Partida comeca no dia 1, em um dia jogavel
+  [ OK  ]  CT-26   Estatisticas ocultas comecam no valor base
+
+  --- Abertura do jogo (CT-27) ---
+
+           [1/7] tela de abertura e menu principal
+                 abertura concluida em 281 quadros
+  [ OK  ]  CT-27   Abertura entrega o menu, que aguarda a escolha do jogador
+
+  --- Opcao CREDITOS (CT-28 e CT-29) ---
+
+           [2/7] escolhendo CREDITOS: a tela de creditos abre e o jogador volta ao menu
+  [ OK  ]  CT-28   Escolher CREDITOS abre a tela de creditos e ela permanece aberta
+  [ OK  ]  CT-29   Voltar dos creditos e tela desconhecida devolvem o jogador ao menu
+
+  --- Opcao INICIAR (CT-30) ---
+
+           [3/7] escolhendo INICIAR
+  [ OK  ]  CT-30   Escolher INICIAR no menu comeca a partida
+
+  --- Cartao do dia e escritorio (CT-31) ---
+
+           [4/7] cartao "Dia 1": leva cerca de 10s para sair
+                 escritorio na tela depois de 10.2s
+  [ OK  ]  CT-31   Cartao do dia termina e o escritorio aparece
+
+  --- Caminhada pelo escritorio (CT-32) ---
+
+           [5/7] o personagem anda, desvia dos moveis e vai ate o computador
+                 caminho de 53 passos ate o computador
+  [ OK  ]  CT-32   Personagem atravessa o escritorio ate o computador
+
+  --- Tela do computador (CT-33) ---
+
+           [6/7] apertando ESPACO no computador
+  [ OK  ]  CT-33   Interagir com o computador abre a tela do quiz
+
+  --- Chamados do dia inicial (CT-34) ---
+
+           [7/7] resolvendo os chamados ate o relatorio do dia
+                 chamado 1 resolvido na alternativa A
+                 chamado 2 resolvido na alternativa B
+                 chamado 3 resolvido na alternativa B
+                 chamado 4 resolvido na alternativa A
+                 mesa de triagem resolvida
+  [ OK  ]  CT-34   Jogador resolve todos os chamados e conclui o dia pelo relatorio
+
+  --- Layout da tela do computador (CT-35) ---
+
+  [ OK  ]  CT-35   Texto do computador cabe na caixa, nos botoes e na janela em 7 tamanhos
+  [ OK  ]  CT-76   Botoes das mesas de todos os dias cabem, com o texto legivel, em 7 tamanhos
+
+  --- Saida do quiz e fim do dia (CT-44 a CT-46) ---
+
+  [ OK  ]  CT-44   Concluir o quiz devolve o jogador ao mapa, andando e com a tarefa resolvida
+           caminho do computador ate a porta: 42 passos
+  [ OK  ]  CT-45   Jogador alcanca a porta, encerra o dia e segue para o Flash do Dia 2, com o Dia 1 salvo
+  [ OK  ]  CT-46   Flash do Dia 2 so avanca ao toque e abre o Dia 3, com a tarefa nova e o jogador na porta
+
+  --- Caminhos do Dia 1 na partida (CT-53 a CT-56) ---
+
+  [ OK  ]  CT-53   Contador mostra Dia 1 de 100 e ler o mural da a colinha e registra a investigacao, sem somar pontos ainda
+  [ OK  ]  CT-54   Colinha fica colada no canto inferior esquerdo do monitor, sem cobrir a janela da IARA
+  [ OK  ]  CT-55   Enviar sem conferir devolve o jogador ao mapa e o fim do dia conta que a IARA resolveu
+  [ OK  ]  CT-56   Failsafe passa pelo relatorio e encerra o dia direto no cartao, e recomecar nao acumula pontos
+
+  --- Sair do computador sem concluir (CT-59) ---
+
+  [ OK  ]  CT-59   Sair do computador volta ao mapa sem concluir, e voltar retoma o mesmo ponto com os pontos certos
+  [ OK  ]  CT-60   Partida nova recomeca os chamados do inicio
+
+  --- Campanha do Dia 1 ao Dia 100 (CT-71 e CT-72) ---
+
+           9 dias jogados, 14 flashes, 77 dias de salto, em 42s
+           Automacao 0, Percepcao 7, Vinculo 3, pontos 161
+  [ OK  ]  CT-71   Campanha passa pelos 100 dias em ordem: 9 jogaveis, 14 flashes e o resto em salto
+  [ OK  ]  CT-72   Investigar, conversar e fechar a prova leva ao Final D, com as 3 evidencias e a Mariana
+  [ OK  ]  CT-73   Depois do final, o jogo volta ao menu e INICIAR recomeca do Dia 1 sem herdar nada
+  [ OK  ]  CT-75   Save retoma no salto, no dia jogavel com o roteiro certo e depois de um dia ja encerrado
+  [ OK  ]  CT-42   Escolher CONFIGURACOES abre a tela e ela permanece aberta
+  [ OK  ]  CT-36   Escolher SAIR pede o fechamento e mantem a janela viva para o save
+
+------------------------------------------------------------------------
+ Bloco 3: 27 de 27 casos aprovados
+========================================================================
+
+========================================================================
+ RESUMO DA SUITE
+========================================================================
+  OK     test_collisions  Unidade: colisoes e movimento por eixo
+  OK     test_characters  Unidade: frames do andar
+  OK     test_save        Unidade: save e carregamento da partida
+  OK     test_hints       Unidade: dica no mural e pontuacao
+  OK     test_sistema     Sistema bloco 1: partida, movimento e colisoes
+  OK     test_conteudo    Sistema bloco 2: quiz do computador e menu
+  OK     test_fluxo       Sistema bloco 3: o jogo do inicio ao fim
+
+ Todos os 7 conjuntos passaram.
+========================================================================
+

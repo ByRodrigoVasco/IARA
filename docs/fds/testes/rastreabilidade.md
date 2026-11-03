@@ -1,8 +1,8 @@
 # Matriz de rastreabilidade
 
-Relação entre os requisitos do GDD (seção 8.4) e o código, conferida em 02/11/2026 na branch
-`feature/animacao-todas-direcoes`. O log da execução está em
-[`execucao-2026-11-02.txt`](evidencias/execucao-2026-11-02.txt): **75 de 75 casos aprovados**.
+Relação entre os requisitos do GDD (seção 8.4) e o código, conferida em 03/11/2026 na branch
+`test/campanha-100-dias`. O log da execução está em
+[`execucao-2026-11-03.txt`](evidencias/execucao-2026-11-03.txt): **76 de 76 casos aprovados**.
 
 **Situação:** ✅ implementado e testado · 🟡 parcial · ❌ não implementado.
 A coluna de issue traz só o que foi confirmado no Jira; as demais ficam para a equipe preencher.

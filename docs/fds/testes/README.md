@@ -11,6 +11,7 @@ simulando o uso real de um jogador.
 | **Resultado** | **32 de 35 casos aprovados** — 3 falhas, todas registradas como bug |
 | **Veredito** | **Aprovado com ressalvas**: nenhuma falha impede jogar |
 | **Atualização de 02/11/2026** | CT-06, CT-24 e CT-35 ampliados e CT-36 a CT-75 incluídos: **75 de 75 aprovados**. Os BUG-01 a BUG-08 estão corrigidos na branch. [Log da execução](evidencias/execucao-2026-11-02.txt) e [matriz de rastreabilidade](rastreabilidade.md) |
+| **Atualização de 03/11/2026** | Branch `test/campanha-100-dias`, com o CT-76 incluído: **76 de 76 aprovados**. BUG-09 a BUG-11 corrigidos e BUG-12 em aberto. [Log da execução](evidencias/execucao-2026-11-03.txt) |
 
 ## Como executar
 
@@ -31,7 +32,7 @@ A suíte monta o jogo de verdade — os mesmos módulos, os mesmos arquivos de m
 a mesma máquina de estados — e o conduz como um jogador faria. Não há simulação de
 fachada: `test_sistema` (CT-01 a CT-16) inclui `game_loop.c` para alcançar o estado
 interno real da partida, `test_conteudo` (CT-17 a CT-24, CT-37, CT-41, CT-43, CT-47 a CT-52, CT-57, CT-58, CT-61 a CT-70 e CT-74) percorre os chamados e o menu, e
-`test_fluxo` (CT-25 a CT-36, CT-42 e CT-44 a CT-46, CT-53 a CT-56, CT-59, CT-60, CT-71 a CT-73 e CT-75) monta o jogo inteiro menos a `main.c` e o percorre do
+`test_fluxo` (CT-25 a CT-36, CT-42 e CT-44 a CT-46, CT-53 a CT-56, CT-59, CT-60, CT-71 a CT-73, CT-75 e CT-76) monta o jogo inteiro menos a `main.c` e o percorre do
 começo ao fim com a janela à vista: abertura, menu, CRÉDITOS e a volta ao menu,
 INICIAR, cartão do dia, caminhada pelo escritório, tutorial, os cinco chamados (um deles conferindo a sugestão da IARA), o relatório do dia, a volta ao mapa e a saída pela porta, que encerra o dia. Depois repete o dia pelos outros caminhos: colinha do mural, tudo enviado sem conferir, failsafe e saída do computador no meio do dia. Junto rodam os testes de unidade
 `test_collisions`, `test_characters`, `test_save` e `test_hints`.
@@ -115,6 +116,7 @@ INICIAR, cartão do dia, caminhada pelo escritório, tutorial, os cinco chamados
 | CT-73 | Depois do final, o jogo volta ao menu e INICIAR recomeça do Dia 1 sem herdar nada | OK |
 | CT-74 | Três erros em qualquer puzzle acionam o failsafe, vão ao relatório e não contam como prova | OK |
 | CT-75 | Save retoma no salto, no dia jogável com o roteiro certo e depois de um dia já encerrado (CA4) | OK |
+| CT-76 | Botões das mesas de todos os dias cabem, com o texto legível, em 7 tamanhos de janela | OK |
 
 ## Evidência do percurso
 
@@ -200,8 +202,12 @@ estão em **[bugs.md](bugs.md)**.
 | [BUG-06](bugs.md#bug-06) | `PERSONAGENS_PATH` em minúsculo quebra o jogo fora do Windows | Média | Inspeção |
 | [BUG-07](bugs.md#bug-07) | Pré-menu nunca descarrega as imagens da memória RAM | Média | Inspeção |
 | [BUG-08](bugs.md#bug-08) | Texto do quiz vaza para fora da caixa e dos botões (corrigido) | Média | CT-35 |
+| [BUG-09](bugs.md#bug-09) | Rótulos das mesas vazam dos botões (corrigido) | Média | Medição, CT-76 |
+| [BUG-10](bugs.md#bug-10) | Falha ao trocar o save pode perder o progresso (corrigido) | Média | Inspeção, `test_save` |
+| [BUG-11](bugs.md#bug-11) | Fundo do cartão do dia é carregado e nunca desenhado (corrigido) | Baixa | Inspeção |
+| [BUG-12](bugs.md#bug-12) | Menu não tem como começar uma partida nova (aberto) | Média | Inspeção |
 
-Todos estão corrigidos na branch, e o status de cada um fica em [bugs.md](bugs.md). Nenhum deles impedia jogar: o jogo abre, o menu funciona, o
+Do BUG-01 ao BUG-11 estão corrigidos na branch, e o status de cada um fica em [bugs.md](bugs.md). Nenhum deles impedia jogar: o jogo abre, o menu funciona, o
 personagem anda, colide e chega ao computador, e o quiz vai até o fim.
 
 ## O que a suíte ainda não cobre
