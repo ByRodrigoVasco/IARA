@@ -3,14 +3,14 @@
 Os BUG-01 a BUG-08 foram encontrados na execução dos testes de sistema de 22/10/2026
 (branch `develop`, commit `b366e7c`) e estão registrados como issue no repositório, com a
 label `bug`. Os BUG-09 a BUG-12 foram encontrados na revisão de 03/11/2026
-(branch `test/campanha-100-dias`) e ainda não têm issue.
+(branch `test/campanha-100-dias`) e também têm issue.
 
 Os blocos abaixo repetem o conteúdo de cada um, para consulta sem sair do repositório.
 
 ## Status
 
 Atualizar a coluna Status conforme as issues forem corrigidas e fechadas. Conferido em 03/11/2026:
-os BUG-01 a BUG-08 ainda aparecem abertos no GitHub, mas o código da branch já os corrige. Nenhuma
+as issues seguem abertas no GitHub, com comentário do que já foi corrigido na branch. Nenhuma
 dessas correções está na `develop`.
 
 | ID | Problema | Gravidade | Issue | Status |
@@ -23,10 +23,10 @@ dessas correções está na `develop`.
 | BUG-06 | Caminho de sprites em minúsculo | Média | [#37](https://github.com/ByRodrigoVasco/IARA/issues/37) | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e fechar a issue |
 | BUG-07 | Pré-menu não descarrega imagens | Média | [#38](https://github.com/ByRodrigoVasco/IARA/issues/38) | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e fechar a issue |
 | BUG-08 | Texto do quiz vaza para fora da caixa | Média | [#39](https://github.com/ByRodrigoVasco/IARA/issues/39) | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e fechar a issue |
-| BUG-09 | Rótulos das mesas vazam dos botões | Média | A abrir | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e abrir a issue |
-| BUG-10 | Falha ao trocar o save pode perder o progresso | Média | A abrir | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e abrir a issue |
-| BUG-11 | Fundo do cartão do dia é carregado e nunca desenhado | Baixa | A abrir | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e abrir a issue |
-| BUG-12 | Menu não tem como começar uma partida nova | Média | A abrir | Aberto: falta decidir onde fica a opção |
+| BUG-09 | Rótulos das mesas vazam dos botões | Média | [#43](https://github.com/ByRodrigoVasco/IARA/issues/43) | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e fechar a issue |
+| BUG-10 | Falha ao trocar o save pode perder o progresso | Média | [#44](https://github.com/ByRodrigoVasco/IARA/issues/44) | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e fechar a issue |
+| BUG-11 | Fundo do cartão do dia é carregado e nunca desenhado | Baixa | [#45](https://github.com/ByRodrigoVasco/IARA/issues/45) | Corrigido em `test/campanha-100-dias`, falta chegar à `develop` e fechar a issue |
+| BUG-12 | Menu não tem como começar uma partida nova | Média | [#46](https://github.com/ByRodrigoVasco/IARA/issues/46) | Aberto: falta decidir onde fica a opção |
 
 **Sobre o BUG-02:** os dois vazamentos descritos abaixo já não existem. Restava uma carga duplicada do menu ao abrir o jogo, removida. O CT-24 oscilava porque media sem desenhar quadros, e o driver de vídeo só devolve uma textura apagada depois de um quadro. Com quadros, 400 voltas ao menu cresceram 19 MB (cerca de 0,05 MB por volta, contra os 7 MB originais).
 
