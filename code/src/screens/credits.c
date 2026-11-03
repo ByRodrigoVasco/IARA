@@ -2,6 +2,7 @@
 #include "credits.h"
 #include "fonts.h"
 #include "macros.h"
+#include "accessibility.h"
 
 #define CREDITS_MEMBER_COUNT 7
 #define CREDITS_TOP_ROW_COUNT 5
@@ -41,7 +42,9 @@ static void draw_member(const credits_member *member, float center_x, float top_
 
     DrawTexturePro(member->texture, source, destination, origin, 0, WHITE);
 
+    // O nome precisa caber na coluna também em janelas estreitas
     float font_size = screen_height * 0.036f;
+    if (font_size > screen_width * 0.02f) font_size = screen_width * 0.02f;
     float letter_spacing = font_size * 0.06f;
     Vector2 text_size = MeasureTextEx(default_game_font, member->name, font_size, letter_spacing);
     Vector2 text_position = {center_x - text_size.x / 2, top_y + image_height + screen_height * 0.004f};
@@ -68,6 +71,7 @@ bool render_credits_screen(void)
     bool is_back_button_hovered = IsWindowFocused() && CheckCollisionPointRec(mouse_position, back_button);
     bool is_back_button_clicked = is_back_button_hovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
     float button_font_size = screen_height * 0.04f;
+    if (button_font_size > screen_width * 0.022f) button_font_size = screen_width * 0.022f;
     const char *button_text = "VOLTAR AO MENU";
     float button_letter_spacing = button_font_size * 0.06f;
     Vector2 button_text_size = MeasureTextEx(default_game_font, button_text, button_font_size, button_letter_spacing);
@@ -77,7 +81,7 @@ bool render_credits_screen(void)
 
     SetMouseCursor(is_back_button_hovered ? MOUSE_CURSOR_POINTING_HAND : MOUSE_CURSOR_ARROW);
 
-    BeginDrawing();
+    begin_game_drawing();
     ClearBackground(BG_COLOR);
 
     float column_width = screen_width / (float)CREDITS_TOP_ROW_COUNT;
@@ -104,7 +108,7 @@ bool render_credits_screen(void)
     DrawRectangleRounded(back_button, 0.25f, 8, is_back_button_hovered ? (Color){96, 64, 96, 255} : (Color){48, 32, 48, 255});
     DrawTextEx(default_game_font, button_text, button_text_position, button_font_size, button_letter_spacing, WHITE);
 
-    EndDrawing();
+    end_game_drawing();
 
     return is_back_button_clicked || IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE);
 }
