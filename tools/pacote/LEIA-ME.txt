@@ -11,6 +11,9 @@ CONTROLES
 - WASD ou setas: andar e navegar nos menus.
 - F11: alterna entre janela e tela cheia.
 - CONFIGURACOES, no menu: alto contraste, brilho e tela cheia.
+- ESC: volta ao menu nos creditos e nas configuracoes, sai do computador e volta ao escritorio; nas outras telas, salva e fecha o jogo.
+- ESPACO: interage com o que estiver perto. No mural, voce pega a colinha,
+  que fica colada no monitor do computador.
 - As demais teclas aparecem na tela durante o jogo.
 
 PROGRESSO

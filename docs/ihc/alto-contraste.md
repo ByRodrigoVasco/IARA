@@ -16,7 +16,7 @@ A implementação usa o **filtro em tempo real**, como proposta, e **a decisão 
 
 ## Como funciona
 
-- **Ativação:** caixa **Alto contraste** na tela `CONFIGURAÇÕES` do menu, com efeito imediato. A preferência dura até fechar o jogo; ainda não fica no save.
+- **Ativação:** caixa **Alto contraste** na tela `CONFIGURAÇÕES` do menu, com efeito imediato. A preferência fica no arquivo `iara.ini`, junto com o brilho e a tela cheia, e volta ao abrir o jogo.
 - **Filtro:** aumenta o contraste de luminância em todas as telas ([`accessibility.c`](../../code/src/ui/accessibility.c)).
 - **Forma, não só cor:** no escritório, cada tipo de elemento ganha um contorno próprio.
 
