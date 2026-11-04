@@ -43,3 +43,33 @@ Os bugs ficam como issues no [GitHub](https://github.com/ByRodrigoVasco/IARA/iss
 | BUG-12 | Menu não tem como começar uma partida nova | [#46](https://github.com/ByRodrigoVasco/IARA/issues/46) | Aberto: falta decidir onde fica a opção |
 
 ![Bug tracker do GitHub com as 12 issues: BUG-12 aberto e BUG-01 a BUG-11 fechados](bug-tracker.png)
+
+## 4. Processo
+
+### Commits
+
+A equipe fez commits em todas as semanas da sprint, seguindo o padrão do [`CONTRIBUTING.md`](../../../CONTRIBUTING.md) (validado pelo hook `.githooks/commit-msg`):
+
+| Semana | Commits na `develop` | Destaques |
+|---|---|---|
+| 26/10 a 01/11 | 5 | Save automático ([PR #41](https://github.com/ByRodrigoVasco/IARA/pull/41)) |
+| 02/11 a 07/11 | 16 até 03/11 | Sprites em 8 direções, desktop e configurações, campanha do Dia 1 ao Dia 100, correções dos BUG-09 a BUG-11 ([PR #47](https://github.com/ByRodrigoVasco/IARA/pull/47)) |
+
+- Histórico: [commits da `develop`](https://github.com/ByRodrigoVasco/IARA/commits/develop)
+- Pull Requests: [PRs fechados](https://github.com/ByRodrigoVasco/IARA/pulls?q=is%3Apr+is%3Aclosed)
+
+### Programação em pares
+
+Na Sprint 02 a equipe **não fez sessões de programação em pares**. Cada integrante pegou uma história, implementou sozinho em uma branch própria e integrou o trabalho na `develop`, por merge da branch ou por Pull Request, seguindo o fluxo do [`CONTRIBUTING.md`](../../../CONTRIBUTING.md). As sessões em pares da equipe estão registradas no [report da Sprint 01](../sprint-01/README.md#programação-em-pares).
+
+### Prints da Sprint e do Backlog
+
+**Sprint 01 (Week 12 - Garantir Protótipo, 19/10 a 26/10/2026).** Relatório da sprint no Jira, com as 4 histórias concluídas e as que saíram da sprint sem concluir (PI2-164, PI2-165 e PI2-167 foram concluídas na Sprint 02):
+
+![Relatório da Week 12 no Jira: PI2-144, PI2-151, PI2-155 e PI2-166 concluídas; PI2-164, PI2-165, PI2-167 e PI2-168 removidas da sprint](sprint-01-week-12.png)
+
+**Sprint 02 (Week 13e14 - Ajustes pós teste, 26/10 a 06/11/2026).** Backlog do Jira com as 18 histórias da sprint e o status de cada uma:
+
+![Backlog do Jira, parte 1: início da Week 13e14](backlog-sprint-02-parte-1.png)
+
+![Backlog do Jira, parte 2: fim da Week 13e14, com as histórias de entrega PI2-282 a PI2-284](backlog-sprint-02-parte-2.png)
