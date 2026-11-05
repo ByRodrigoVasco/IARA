@@ -328,6 +328,29 @@ static void test_level_up(void)
     sv_game_update(1.0f / 60.0f, (Vector2){0, 0});
     check("SV-28", "com tudo no máximo, oferece marmita e Banco de Horas", sv_run.phase == SV_LEVELUP && sv_run.choice_count == 3 && sv_run.choices[sv_run.choice_count - 1].kind >= 4);
     sv_meta_reset();
+
+    // Cada poder dispara sem travar e causa dano: todos os 12, dois grupos de 6, no nível máximo
+    for (int group = 0; group < 2; group++)
+    {
+        int kills_before;
+        bool damaged;
+
+        sv_game_start(60 + (unsigned)group);
+        sv_run.player.hp = sv_run.player.max_hp = 1000000.0f;
+        sv_run.player.weapon_count = 0;
+        for (int i = 0; i < 6; i++) sv_run.player.weapons[sv_run.player.weapon_count++] = (SvWeapon){group * 6 + i, SV_WEAPON_MAX_LEVEL, 0.0f, 0.0f};
+        sv_run.time = 100.0f;
+        for (int i = 0; i < 30; i++) sv_spawn_enemy_at(EN_ESVAZIADO, Vector2Add(sv_run.player.pos, (Vector2){(float)(i % 6 - 3) * 25.0f, (float)(i / 6 - 2) * 25.0f}), false);
+        kills_before = sv_run.kills;
+        for (int frame = 0; frame < 60 * 20; frame++)
+        {
+            if (sv_run.phase == SV_LEVELUP) sv_game_choose(0);
+            sv_game_update(1.0f / 60.0f, (Vector2){0, 0});
+        }
+        damaged = sv_run.kills > kills_before;
+        check(group == 0 ? "SV-29" : "SV-30", "o grupo de poderes mata inimigos e não trava", damaged && isfinite(sv_run.player.hp));
+    }
+    sv_meta_reset();
 }
 
 int main(void)
