@@ -102,3 +102,7 @@ prompts/
 *.agent.md
 *.prompt.md
 *.chatmode.md
+
+# --- Progresso do Modo Sobrevivencia ---
+iara.survival
+iara.survival.tmp

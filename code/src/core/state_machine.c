@@ -9,6 +9,7 @@
 #include "game_loop.h"
 #include "credits.h"
 #include "settings.h"
+#include "survival.h"
 #include "preferences.h"
 #include "state_machine.h"
 
@@ -33,6 +34,11 @@ int handle_menu_action(int screen)
 
         initialize_game_loop_variables();
         return PLAYING_SCREEN;
+        break;
+
+    case SOBREVIVENCIA:
+        initialize_survival();
+        return SURVIVAL_SCREEN;
         break;
 
     case CREDITOS:
@@ -94,6 +100,15 @@ void handle_state_machine(void)
         }
         break;
 
+    case SURVIVAL_SCREEN:
+        if (render_survival())
+        {
+            unload_survival();
+            initialize_menu_variables();
+            current_game_state_variables.current_screen = MENU_SCREEN;
+        }
+        break;
+
     case CREDITS_SCREEN:
         if (render_credits_screen())
         {
@@ -125,7 +140,8 @@ bool escape_closes_current_screen(void)
 {
     int screen = current_game_state_variables.current_screen;
 
-    return screen != CREDITS_SCREEN && screen != SETTINGS_SCREEN && !is_computer_screen_open();
+    // No Modo Sobrevivência o ESC pausa a partida ou volta ao início do modo
+    return screen != CREDITS_SCREEN && screen != SETTINGS_SCREEN && screen != SURVIVAL_SCREEN && !is_computer_screen_open();
 }
 
 void handle_state_shutdown(void)
@@ -145,6 +161,10 @@ void handle_state_shutdown(void)
 
     case PLAYING_SCREEN:
         unload_game_loop();
+        break;
+
+    case SURVIVAL_SCREEN:
+        unload_survival();
         break;
 
     case CREDITS_SCREEN:

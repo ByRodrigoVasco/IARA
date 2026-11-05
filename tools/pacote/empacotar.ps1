@@ -27,11 +27,11 @@ if (Test-Path $zip) { Remove-Item -Force $zip }
 New-Item -ItemType Directory -Force -Path $pacote | Out-Null
 
 # ---------------------------------------------------------------- compilacao
-$fontes = @("code/src/*.c", "code/src/core/*.c", "code/src/screens/*.c", "code/src/ui/*.c", "code/src/game/*.c") |
+$fontes = @("code/src/*.c", "code/src/core/*.c", "code/src/screens/*.c", "code/src/ui/*.c", "code/src/game/*.c", "code/src/survival/*.c") |
     ForEach-Object { (Get-ChildItem $_).FullName }
 
 $argumentos = $fontes + @(
-    "-Icode/src", "-Icode/src/core", "-Icode/src/screens", "-Icode/src/ui", "-Icode/src/game",
+    "-Icode/src", "-Icode/src/core", "-Icode/src/screens", "-Icode/src/ui", "-Icode/src/game", "-Icode/src/survival",
     "-IC:/msys64/ucrt64/include", "-LC:/msys64/ucrt64/lib",
     "-O2", "-s", "-mwindows",
     "-o", (Join-Path $pacote "iara.exe"),

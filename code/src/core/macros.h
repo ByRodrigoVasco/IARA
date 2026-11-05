@@ -66,6 +66,7 @@ extern unsigned int middle_screen_y;
 #define PLAYING_SCREEN 2
 #define CREDITS_SCREEN 5
 #define SETTINGS_SCREEN 6
+#define SURVIVAL_SCREEN 7
 
 // TIPOS DE DIAS E TELAS DE GAME_LOOP
 #define NOT_YET_DEFINED 0

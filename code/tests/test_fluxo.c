@@ -57,6 +57,9 @@ static bool tecla_dos_creditos(int tecla)
 #include "credits.c"
 #undef IsKeyPressed
 
+/* O modo Sobrevivencia tambem entra direto, para o teste alcancar o estado interno das telas dele. */
+#include "survival.c"
+
 #define LARGURA_JANELA 1280
 #define ALTURA_JANELA 720
 
@@ -365,6 +368,40 @@ static void testar_creditos(void)
 
     checar("CT-29", "Voltar dos creditos e tela desconhecida devolvem o jogador ao menu",
            voltou_ao_menu && menu_aguarda && desconhecida_volta);
+}
+
+static void testar_sobrevivencia(void)
+{
+    titulo("Opcao SOBREVIVENCIA (CT-77 e CT-78)");
+    etapa("[2/7] escolhendo SOBREVIVENCIA: o modo abre, a partida roda sozinha e o jogador volta ao menu");
+
+    /* Sem som: o teste nao deve tocar nada no alto-falante de quem o roda. */
+    sv_audio_disable(true);
+
+    navegar_menu_ate(SOBREVIVENCIA);
+    confirm_menu_option();
+    handle_state_machine();
+    rodar_por(0.5);
+
+    checar("CT-77", "Escolher SOBREVIVENCIA abre o modo, que aguarda a escolha do jogador",
+           current_game_state_variables.current_screen == SURVIVAL_SCREEN && screen == SCREEN_HUB && !leave_to_menu);
+
+    /* JOGAR: a partida comeca e roda com a tela real, sem ninguem mexendo. */
+    start_run();
+    rodar_por(2.0);
+
+    bool partida_rodando = (current_game_state_variables.current_screen == SURVIVAL_SCREEN) &&
+                           (screen == SCREEN_RUN || screen == SCREEN_OVER) && sv_run.time > 1.0f && sv_run.enemy_count > 0;
+
+    /* ESC no inicio do modo devolve o jogador ao menu principal. */
+    screen = SCREEN_HUB;
+    leave_to_menu = true;
+    handle_state_machine();
+
+    checar("CT-78", "A partida roda com a tela real e sair do modo devolve o menu",
+           partida_rodando && current_game_state_variables.current_screen == MENU_SCREEN);
+
+    rodar_por(0.8);
 }
 
 static void testar_iniciar(void)
@@ -1438,6 +1475,7 @@ int main(void)
     testar_estado_inicial();
     testar_abertura();
     testar_creditos();
+    testar_sobrevivencia();
     testar_iniciar();
     testar_cartao_do_dia();
     testar_caminhada();

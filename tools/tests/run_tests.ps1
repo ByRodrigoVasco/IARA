@@ -64,7 +64,7 @@ New-Item -ItemType Directory -Force -Path (Join-Path $raiz "docs/fds/testes/evid
 
 $incluir = @(
     "-Icode/src", "-Icode/src/core", "-Icode/src/screens",
-    "-Icode/src/ui", "-Icode/src/game", "-Icode/tests"
+    "-Icode/src/ui", "-Icode/src/game", "-Icode/src/survival", "-Icode/tests"
 )
 
 $raylib = @(
@@ -132,7 +132,18 @@ $suite = @(
             "code/src/game/collisions.c", "code/src/game/characters.c",
             "code/src/ui/fonts.c", "code/src/ui/animations.c", "code/src/ui/button.c",
             "code/src/ui/accessibility.c", "code/src/game/hints.c", "code/src/screens/settings.c",
-            "code/src/core/preferences.c", "code/src/ui/cheat_sheet.c", "code/src/ui/logic_text.c", "code/src/game/logic.c", "code/src/game/calendar.c"
+            "code/src/core/preferences.c", "code/src/ui/cheat_sheet.c", "code/src/ui/logic_text.c", "code/src/game/logic.c", "code/src/game/calendar.c",
+            "code/src/survival/sv_game.c", "code/src/survival/sv_boss.c", "code/src/survival/sv_render.c",
+            "code/src/survival/sv_audio.c", "code/src/survival/sv_assets.c", "code/src/survival/sv_meta.c", "code/src/survival/sv_rules.c"
+        )
+    },
+    @{
+        Nome  = "test_survival"
+        Nota  = "Modo Sobrevivencia: regras, progresso e uma partida simulada"
+        Fonte = @(
+            "code/tests/test_survival.c",
+            "code/src/survival/sv_rules.c", "code/src/survival/sv_meta.c", "code/src/survival/sv_game.c",
+            "code/src/survival/sv_boss.c", "code/src/survival/sv_audio.c"
         )
     }
 )
