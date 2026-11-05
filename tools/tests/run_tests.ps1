@@ -134,7 +134,7 @@ $suite = @(
             "code/src/ui/accessibility.c", "code/src/game/hints.c", "code/src/screens/settings.c",
             "code/src/core/preferences.c", "code/src/ui/cheat_sheet.c", "code/src/ui/logic_text.c", "code/src/game/logic.c", "code/src/game/calendar.c",
             "code/src/survival/sv_game.c", "code/src/survival/sv_boss.c", "code/src/survival/sv_render.c",
-            "code/src/survival/sv_audio.c", "code/src/survival/sv_assets.c", "code/src/survival/sv_meta.c", "code/src/survival/sv_rules.c"
+            "code/src/survival/sv_audio.c", "code/src/survival/sv_map.c", "code/src/survival/sv_assets.c", "code/src/survival/sv_meta.c", "code/src/survival/sv_rules.c"
         )
     },
     @{
@@ -143,7 +143,7 @@ $suite = @(
         Fonte = @(
             "code/tests/test_survival.c",
             "code/src/survival/sv_rules.c", "code/src/survival/sv_meta.c", "code/src/survival/sv_game.c",
-            "code/src/survival/sv_boss.c", "code/src/survival/sv_audio.c"
+            "code/src/survival/sv_boss.c", "code/src/survival/sv_audio.c", "code/src/survival/sv_map.c"
         )
     }
 )

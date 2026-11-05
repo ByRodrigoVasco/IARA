@@ -3,6 +3,7 @@
 #include "raymath.h"
 #include "sv_game.h"
 #include "sv_audio.h"
+#include "sv_map.h"
 
 /*
  * Chefes e perigos. Todo golpe de chefe passa por sv_boss_hit_damage(), que o limita a 30% da vida base,
@@ -441,6 +442,7 @@ void sv_boss_update(float dt)
         else if (distance < stats->hold_distance - 30.0f && b->id != BOSS_DIEGO) b->pos = Vector2Subtract(b->pos, Vector2Scale(toward, stats->speed * 0.6f * dt));
     }
     b->pos = clamp_world(b->pos);
+    sv_map_collide(&b->pos, 12.0f, 18.0f);
 
     if (fabsf(toward.x) > fabsf(toward.y))
     {
@@ -544,7 +546,7 @@ void sv_hazards_update(float dt)
                 sv_hurt_player(h->damage, h->effect, h->effect_time);
                 h->alive = false;
             }
-            else if (h->life <= 0.0f || h->pos.x < -50 || h->pos.y < -50 || h->pos.x > SV_WORLD_W + 50 || h->pos.y > SV_WORLD_H + 50)
+            else if (h->life <= 0.0f || sv_map_point_blocked(h->pos, h->radius * 0.5f) || h->pos.x < -50 || h->pos.y < -50 || h->pos.x > SV_WORLD_W + 50 || h->pos.y > SV_WORLD_H + 50)
             {
                 h->alive = false;
             }
