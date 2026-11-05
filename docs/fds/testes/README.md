@@ -12,6 +12,7 @@ simulando o uso real de um jogador.
 | **Veredito** | **Aprovado com ressalvas**: nenhuma falha impede jogar |
 | **Atualização de 02/11/2026** | CT-06, CT-24 e CT-35 ampliados e CT-36 a CT-75 incluídos: **75 de 75 aprovados**. Os BUG-01 a BUG-08 estão corrigidos na branch. [Log da execução](evidencias/execucao-2026-11-02.txt) e [matriz de rastreabilidade](rastreabilidade.md) |
 | **Atualização de 03/11/2026** | Branch `test/campanha-100-dias`, com o CT-76 incluído: **76 de 76 aprovados**. BUG-09 a BUG-11 corrigidos e BUG-12 em aberto. [Log da execução](evidencias/execucao-2026-11-03.txt) |
+| **Screencast da Sprint 02** | Execução de 03/11/2026 sobre a `develop` (`63c2d01`), gravada: **76 de 76 aprovados**. [Vídeo](../sprint-02/screencast-testes.mp4) e [log](../sprint-02/execucao-screencast-2026-11-03.txt) |
 
 ## Como executar
 
