@@ -55,7 +55,7 @@ static const SpawnWeight act_spawns[SV_ACT_COUNT][8] = {
     {{EN_ECO, 20}, {EN_AUDITOR, 7}, {EN_AFOGADO, 20}, {EN_CRACHA, 15}, {EN_AUTORESPOSTA, 15}, {EN_ALUCINACAO, 12}, {EN_DADO, 10}, {-1, 0}},
 };
 
-static const char *weapon_names[W_COUNT] = {"Grampeador", "Ponteiro", "Caneca Arremessada", "Post-its Orbitais", "Não Perturbe", "Deploy em Produção", "Tarja Preta", "Modus Ponens"};
+static const char *weapon_names[W_COUNT] = {"Grampeador", "Ponteiro", "Caneca Arremessada", "Post-its Orbitais", "Não Perturbe", "Deploy em Produção", "Tarja Preta", "Modus Ponens", "Tabela-Verdade", "Colega de Plantão", "Nova Conversa", "Prompt da IARA"};
 static const char *weapon_descriptions[W_COUNT] = {
     "Tiros retos no inimigo mais próximo.",
     "Golpe em linha para os dois lados.",
@@ -64,8 +64,12 @@ static const char *weapon_descriptions[W_COUNT] = {
     "Aura de dano que afasta quem chega perto.",
     "Raios em alvos aleatórios, também distantes.",
     "Faixa que confunde quem atinge.",
-    "Se acerta A, salta para B, e assim por diante."};
-static const SvSpriteId weapon_icons[W_COUNT] = {SPR_ic_grampeador, SPR_ic_ponteiro, SPR_ic_caneca, SPR_ic_postits, SPR_ic_naoperturbe, SPR_ic_deploy, SPR_ic_tarja, SPR_ic_modus};
+    "Se acerta A, salta para B, e assim por diante.",
+    "Grade no chão que fere quem pisa nas casas acesas.",
+    "Um colega humano segue você e luta.",
+    "Empurra tudo e apaga tiros, com recarga longa.",
+    "Ataque muito forte em linha reta, com recarga longa."};
+static const SvSpriteId weapon_icons[W_COUNT] = {SPR_ic_grampeador, SPR_ic_ponteiro, SPR_ic_caneca, SPR_ic_postits, SPR_ic_naoperturbe, SPR_ic_deploy, SPR_ic_tarja, SPR_ic_modus, SPR_ic_tabela, SPR_ic_colega, SPR_ic_novaconversa, SPR_ic_prompt};
 
 static const char *passive_names[P_COUNT] = {"Café", "Manual", "Colinha", "Ergonomia", "Crachá", "Plano de Saúde", "Network", "Hora Extra"};
 static const char *passive_descriptions[P_COUNT] = {
@@ -756,6 +760,38 @@ static void fire_weapon(SvWeapon *w)
         else base_cd = 0.3f;
         break;
     }
+    case W_PROMPT:
+    {
+        Vector2 aim = aim_vector(420.0f);
+
+        base_cd = 7.0f - 0.6f * level;
+        angle = atan2f(aim.y, aim.x) * RAD2DEG;
+        add_strike_zone(p->pos, angle, 280.0f * p->area_mult, 14.0f * p->area_mult, 40.0f + 15.0f * level, 0.0f, ZK_PROMPT);
+        sv_sfx(SND_prompt);
+        break;
+    }
+    case W_NOVACONVERSA:
+    {
+        float radius = 260.0f * p->area_mult;
+
+        base_cd = 15.0f - 1.5f * level;
+        for (int i = 0; i < SV_MAX_ENEMIES; i++)
+        {
+            SvEnemy *e = &sv_run.enemies[i];
+
+            if (e->alive && Vector2Distance(e->pos, p->pos) < radius) damage_enemy(e, 6.0f + 2.0f * level, p->pos, 520.0f);
+        }
+        // Apaga os tiros inimigos que estão ao alcance
+        for (int i = 0; i < SV_MAX_HAZARDS; i++)
+        {
+            SvHazard *h = &sv_run.hazards[i];
+
+            if (h->alive && h->kind == HZ_PROJ && Vector2Distance(h->pos, p->pos) < radius) h->alive = false;
+        }
+        sv_spawn_fx(FX_WAVE, p->pos, 0.5f, radius / 36.0f);
+        sv_sfx(SND_novaconversa);
+        break;
+    }
     default:
         break;
     }
@@ -824,6 +860,88 @@ static void update_continuous_weapon(SvWeapon *w, float dt)
         }
         sv_sfx(SND_naoperturbe);
     }
+    else if (w->id == W_TABELA)
+    {
+        float radius = (46.0f + 6.0f * level) * p->area_mult;
+
+        w->angle += dt;
+        if (w->cooldown > 0.0f)
+        {
+            w->cooldown -= dt;
+            return;
+        }
+        w->cooldown = 0.6f * p->cooldown_mult;
+        w->level = level;
+        {
+            // As casas acendem em xadrez e trocam de cor a cada pulso
+            int phase = (int)(w->angle / 0.6f) % 2;
+
+            for (int i = 0; i < SV_MAX_ENEMIES; i++)
+            {
+                SvEnemy *e = &sv_run.enemies[i];
+                int cell;
+
+                if (!e->alive || fabsf(e->pos.x - p->pos.x) > radius || fabsf(e->pos.y - p->pos.y) > radius) continue;
+                cell = (int)floorf(e->pos.x / 18.0f) + (int)floorf(e->pos.y / 18.0f);
+                if (((cell % 2) + 2) % 2 == phase) damage_enemy(e, 4.0f + 2.0f * level, p->pos, 0.0f);
+            }
+            if (sv_run.boss.active && fabsf(sv_run.boss.pos.x - p->pos.x) < radius && fabsf(sv_run.boss.pos.y - p->pos.y) < radius)
+            {
+                sv_damage_boss((4.0f + 2.0f * level) * p->dmg_mult);
+            }
+        }
+        sv_sfx(SND_tabela);
+    }
+    else if (w->id == W_COLEGA)
+    {
+        int count = 1 + (level >= 3) + (level >= 5);
+        bool attacked = false;
+
+        w->angle += dt;
+        if (w->cooldown > 0.0f) w->cooldown -= dt;
+
+        for (int c = 0; c < count; c++)
+        {
+            Vector2 *pos = &sv_run.colega_pos[c];
+            float a = (float)c * 2.4f + w->angle * 0.4f;
+            Vector2 target = Vector2Add(p->pos, (Vector2){cosf(a) * 34.0f, sinf(a) * 24.0f});
+            Target near_enemy = nearest_target(*pos, 170.0f, NULL, 0);
+
+            if (near_enemy.found) target = near_enemy.pos;
+            if (Vector2Distance(*pos, p->pos) > 420.0f) *pos = p->pos;
+            if (Vector2Distance(*pos, target) > 14.0f)
+            {
+                float speed = near_enemy.found ? 130.0f : 150.0f + Vector2Distance(*pos, p->pos);
+
+                *pos = Vector2Add(*pos, Vector2Scale(Vector2Normalize(Vector2Subtract(target, *pos)), speed * dt));
+            }
+
+            if (w->cooldown <= 0.0f)
+            {
+                for (int i = 0; i < SV_MAX_ENEMIES; i++)
+                {
+                    SvEnemy *e = &sv_run.enemies[i];
+
+                    if (e->alive && Vector2Distance(e->pos, *pos) < 26.0f)
+                    {
+                        damage_enemy(e, 8.0f + 4.0f * level, *pos, 60.0f);
+                        attacked = true;
+                    }
+                }
+                if (sv_run.boss.active && Vector2Distance(sv_run.boss.pos, *pos) < 26.0f + sv_run.boss.radius)
+                {
+                    sv_damage_boss((8.0f + 4.0f * level) * p->dmg_mult);
+                    attacked = true;
+                }
+            }
+        }
+
+        if (attacked)
+        {
+            w->cooldown = 0.7f * p->cooldown_mult;
+            sv_sfx(SND_colega);
+        }
+    }
 }
 
 static void update_weapons(float dt)
@@ -834,7 +952,7 @@ static void update_weapons(float dt)
     {
         SvWeapon *w = &p->weapons[i];
 
-        if (w->id == W_POSTITS || w->id == W_NAOPERTURBE)
+        if (w->id == W_POSTITS || w->id == W_NAOPERTURBE || w->id == W_TABELA || w->id == W_COLEGA)
         {
             update_continuous_weapon(w, dt);
             continue;

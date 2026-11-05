@@ -114,6 +114,7 @@ static void draw_zones(void)
 
             progress = 1.0f - z->life / z->max_life;
             if (z->kind == ZK_TARJA) sv_draw_stretched(SPR_fx_tarja, (int)(progress * 4.0f), center, length, z->radius * 2.0f, z->angle, WHITE);
+            else if (z->kind == ZK_PROMPT) sv_draw_stretched(SPR_fx_prompt, (int)(progress * 4.0f), center, length, z->radius * 2.0f + 10.0f, z->angle, WHITE);
             else sv_draw_stretched(SPR_fx_ponteiro, (int)(progress * 4.0f), center, length, 13.0f, z->angle, WHITE);
             continue;
         }
@@ -187,6 +188,12 @@ static void draw_player(void)
 
             sv_draw(SPR_fx_naoperturbe, anim_frame(sv_run.time, 8.0f) % 4, p->pos, radius * 2.0f / 64.0f, 0.0f, false, (Color){255, 255, 255, 110});
         }
+        else if (w->id == W_TABELA)
+        {
+            float radius = (46.0f + 6.0f * w->level) * p->area_mult;
+
+            sv_draw(SPR_fx_tabela, anim_frame(sv_run.time, 3.0f) % 4, p->pos, radius * 2.0f / 61.0f, 0.0f, false, (Color){255, 255, 255, 150});
+        }
     }
 
     draw_shadow(p->pos, 10.0f);
@@ -195,6 +202,17 @@ static void draw_player(void)
     for (int i = 0; i < p->weapon_count; i++)
     {
         SvWeapon *w = &p->weapons[i];
+
+        if (w->id == W_COLEGA)
+        {
+            int count = 1 + (w->level >= 3) + (w->level >= 5);
+
+            for (int c = 0; c < count; c++)
+            {
+                draw_shadow(sv_run.colega_pos[c], 9.0f);
+                sv_draw(SPR_en_colega, 4 + anim_frame(sv_run.time, 6.0f + (float)c) % 4, sv_run.colega_pos[c], 1.0f, 0.0f, false, (Color){200, 255, 220, 255});
+            }
+        }
 
         if (w->id == W_POSTITS)
         {
@@ -332,6 +350,9 @@ static void draw_fx(void)
             sv_draw_stretched(SPR_fx_modus, (int)(progress * 8.0f) % 4, mid, length, 20.0f, angle, WHITE);
             break;
         }
+        case FX_WAVE:
+            sv_draw(SPR_fx_novaconversa, (int)(progress * 4.0f) % 4, fx->pos, fx->scale * (0.3f + 0.7f * progress), 0.0f, false, (Color){255, 255, 255, (unsigned char)(230 * (1.0f - progress))});
+            break;
         case FX_FLASH:
             DrawCircleV(fx->pos, 26.0f * (1.0f - progress), (Color){255, 255, 255, (unsigned char)(200 * (1.0f - progress))});
             break;
@@ -546,7 +567,7 @@ Rectangle sv_levelup_card(int index)
 
 static void draw_wrapped(const char *text, Rectangle area, float size, Color color)
 {
-    char line[200] = {0};
+    char line[260] = {0};
     int length = 0;
     float y = area.y;
     char word[48];

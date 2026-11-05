@@ -36,7 +36,8 @@ typedef enum { SV_PLAYING, SV_LEVELUP, SV_DEAD, SV_WON } SvPhase;
 
 typedef enum
 {
-    W_GRAMPEADOR, W_PONTEIRO, W_CANECA, W_POSTITS, W_NAOPERTURBE, W_DEPLOY, W_TARJA, W_MODUS, W_COUNT
+    W_GRAMPEADOR, W_PONTEIRO, W_CANECA, W_POSTITS, W_NAOPERTURBE, W_DEPLOY, W_TARJA, W_MODUS,
+    W_TABELA, W_COLEGA, W_NOVACONVERSA, W_PROMPT, W_COUNT
 } SvWeaponId;
 
 typedef enum
@@ -128,7 +129,7 @@ typedef struct
     bool alive;
 } SvGem;
 
-typedef enum { FX_DEATH, FX_EXPLOSION, FX_LINK, FX_FLASH } SvFxKind;
+typedef enum { FX_DEATH, FX_EXPLOSION, FX_LINK, FX_FLASH, FX_WAVE } SvFxKind;
 
 typedef struct
 {
@@ -210,6 +211,7 @@ typedef struct
     SvGem gems[SV_MAX_GEMS];
     SvFx fx[SV_MAX_FX];
     Vector2 trail[SV_TRAIL];
+    Vector2 colega_pos[3];  // Colegas de Plantão
     float trail_timer;
     SvChoice choices[3];
     int choice_count;
