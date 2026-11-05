@@ -184,13 +184,13 @@ static void draw_player(void)
 
         if (w->id == W_NAOPERTURBE)
         {
-            float radius = (52.0f + 8.0f * w->level) * p->area_mult;
+            float radius = sv_weapon_stat(W_NAOPERTURBE, WSTAT_AREA, w->level) * p->area_mult;
 
             sv_draw(SPR_fx_naoperturbe, anim_frame(sv_run.time, 8.0f) % 4, p->pos, radius * 2.0f / 64.0f, 0.0f, false, (Color){255, 255, 255, 110});
         }
         else if (w->id == W_TABELA)
         {
-            float radius = (46.0f + 6.0f * w->level) * p->area_mult;
+            float radius = sv_weapon_stat(W_TABELA, WSTAT_AREA, w->level) * p->area_mult;
 
             sv_draw(SPR_fx_tabela, anim_frame(sv_run.time, 3.0f) % 4, p->pos, radius * 2.0f / 61.0f, 0.0f, false, (Color){255, 255, 255, 150});
         }
@@ -205,7 +205,7 @@ static void draw_player(void)
 
         if (w->id == W_POSTITS)
         {
-            float radius = (50.0f + 4.0f * w->level) * p->area_mult;
+            float radius = sv_weapon_stat(W_POSTITS, WSTAT_AREA, w->level) * p->area_mult;
 
             sv_draw(SPR_fx_postits, anim_frame(sv_run.time, 6.0f) % 4, p->pos, radius / 22.0f, w->angle * RAD2DEG, false, WHITE);
         }
@@ -576,8 +576,9 @@ void sv_render_game(void)
     Camera2D camera = {0};
     float shake = sv_run.shake > 0.0f ? sv_run.shake * 18.0f : 0.0f;
 
-    camera.zoom = GetScreenHeight() / 540.0f;
-    if (camera.zoom < 1.0f) camera.zoom = 1.0f;
+    // Câmera mais aberta: aparecem 720 unidades de mundo na altura
+    camera.zoom = GetScreenHeight() / 720.0f;
+    if (camera.zoom < 0.75f) camera.zoom = 0.75f;
     camera.offset = (Vector2){GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f};
     camera.target = (Vector2){sv_run.player.pos.x + sinf(sv_run.time * 90.0f) * shake, sv_run.player.pos.y + cosf(sv_run.time * 80.0f) * shake};
 
@@ -619,10 +620,10 @@ void sv_render_game(void)
 Rectangle sv_levelup_card(int index)
 {
     float ui = sv_ui();
-    float card_w = 330.0f * ui, card_h = 400.0f * ui, gap = 36.0f * ui;
+    float card_w = 360.0f * ui, card_h = 500.0f * ui, gap = 30.0f * ui;
     float total = card_w * 3.0f + gap * 2.0f;
     float x = (GetScreenWidth() - total) / 2.0f + (float)index * (card_w + gap);
-    float y = GetScreenHeight() / 2.0f - card_h / 2.0f + 30.0f * ui;
+    float y = GetScreenHeight() / 2.0f - card_h / 2.0f + 70.0f * ui;
 
     return (Rectangle){x, y, card_w, card_h};
 }
@@ -671,8 +672,8 @@ void sv_render_levelup(int selected)
     float w = (float)GetScreenWidth();
 
     DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), (Color){4, 0, 8, 200});
-    sv_text_centered("NOVO NÍVEL", w / 2.0f, GetScreenHeight() / 2.0f - 300.0f * ui, 70.0f * ui, (Color){230, 40, 50, 255});
-    sv_text_centered("Escolha um poder. Setas ou 1, 2, 3 e Enter.", w / 2.0f, GetScreenHeight() / 2.0f - 220.0f * ui, 28.0f * ui, (Color){210, 200, 210, 255});
+    sv_text_centered("NOVO NÍVEL", w / 2.0f, GetScreenHeight() / 2.0f - 330.0f * ui, 70.0f * ui, (Color){230, 40, 50, 255});
+    sv_text_centered("Escolha um poder. Setas ou 1, 2, 3 e Enter.", w / 2.0f, GetScreenHeight() / 2.0f - 250.0f * ui, 28.0f * ui, (Color){210, 200, 210, 255});
 
     for (int i = 0; i < sv_run.choice_count; i++)
     {
@@ -685,15 +686,30 @@ void sv_render_levelup(int selected)
         DrawRectangleRec(card, is_selected ? (Color){60, 14, 24, 245} : (Color){24, 12, 28, 235});
         DrawRectangleLinesEx(card, is_selected ? 5.0f * ui : 2.0f * ui, is_selected ? (Color){240, 50, 60, 255} : (Color){110, 70, 90, 255});
 
-        sv_draw(sv_choice_icon(c), anim_frame(GetTime(), 4.0f) % 4, (Vector2){card.x + card.width / 2.0f, card.y + 90.0f * ui}, 4.0f * ui, 0.0f, false, WHITE);
-        sv_text_centered(sv_choice_title(c), card.x + card.width / 2.0f, card.y + 160.0f * ui, 32.0f * ui, WHITE);
+        sv_draw(sv_choice_icon(c), anim_frame(GetTime(), 4.0f) % 4, (Vector2){card.x + card.width / 2.0f, card.y + 80.0f * ui}, 4.0f * ui, 0.0f, false, WHITE);
+        sv_text_centered(sv_choice_title(c), card.x + card.width / 2.0f, card.y + 145.0f * ui, 31.0f * ui, WHITE);
 
         if (c->kind == 0 || c->kind == 2) snprintf(text, sizeof(text), "NOVO");
         else if (level > 0) snprintf(text, sizeof(text), "NÍVEL %d", level);
         else snprintf(text, sizeof(text), "BÔNUS");
-        sv_text_centered(text, card.x + card.width / 2.0f, card.y + 205.0f * ui, 26.0f * ui, (Color){255, 214, 80, 255});
+        sv_text_centered(text, card.x + card.width / 2.0f, card.y + 192.0f * ui, 25.0f * ui, (Color){255, 214, 80, 255});
 
-        draw_wrapped(sv_choice_text(c), (Rectangle){card.x + 20.0f * ui, card.y + 250.0f * ui, card.width - 40.0f * ui, 120.0f * ui}, 26.0f * ui, (Color){200, 195, 205, 255});
+        draw_wrapped(sv_choice_text(c), (Rectangle){card.x + 16.0f * ui, card.y + 240.0f * ui, card.width - 32.0f * ui, 70.0f * ui}, 21.0f * ui, (Color){170, 165, 178, 255});
+
+        // O que muda: atributo, de -> para
+        {
+            char changes[SV_CHOICE_LINES][96];
+            int n = sv_choice_lines(c, changes);
+
+            DrawRectangle((int)(card.x + 20.0f * ui), (int)(card.y + 318.0f * ui), (int)(card.width - 40.0f * ui), (int)(2.0f * ui), (Color){110, 70, 90, 255});
+            for (int k = 0; k < n; k++)
+            {
+                float size = 23.0f * ui;
+
+                while (size > 14.0f * ui && sv_text_width(changes[k], size) > card.width - 24.0f * ui) size -= 1.0f * ui;
+                sv_text_centered(changes[k], card.x + card.width / 2.0f, card.y + (332.0f + 28.0f * (float)k) * ui, size, (Color){255, 226, 120, 255});
+            }
+        }
 
         snprintf(text, sizeof(text), "%d", i + 1);
         sv_text(text, card.x + 12.0f * ui, card.y + 6.0f * ui, 28.0f * ui, (Color){150, 130, 150, 255});

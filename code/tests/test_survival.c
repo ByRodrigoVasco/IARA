@@ -30,7 +30,7 @@ static void test_rules(void)
 
     check("SV-01", "uma partida dura 10 minutos", SV_RUN_SECONDS == 600.0f);
     check("SV-02", "os 5 atos terminam nos chefes",
-          sv_act_at(0) == 0 && sv_act_at(119) == 0 && sv_act_at(120) == 1 && sv_act_at(270) == 2 && sv_act_at(420) == 3 && sv_act_at(540) == 4 && sv_act_at(599) == 4);
+          sv_act_at(0) == 0 && sv_act_at(179) == 0 && sv_act_at(180) == 1 && sv_act_at(285) == 2 && sv_act_at(390) == 3 && sv_act_at(495) == 4 && sv_act_at(599) == 4);
 
     {
         bool rising = true;
@@ -52,7 +52,10 @@ static void test_rules(void)
         check("SV-04", "cada nível pede mais XP que o anterior", ok);
     }
 
-    check("SV-05", "os chefes surgem em ordem, o último aos 10:00",
+    check("SV-05", "o primeiro chefe vem aos 3:00, há mais de 1:30 entre eles e o último surge aos 10:00",
+          sv_boss_spawn_time(BOSS_IMPRESSORA) >= 180.0f && sv_boss_spawn_time(BOSS_MODELO) - sv_boss_spawn_time(BOSS_IMPRESSORA) >= 100.0f &&
+          sv_boss_spawn_time(BOSS_DIEGO) - sv_boss_spawn_time(BOSS_MODELO) >= 100.0f && sv_boss_spawn_time(BOSS_RENE) - sv_boss_spawn_time(BOSS_DIEGO) >= 100.0f &&
+          sv_boss_spawn_time(BOSS_IARA) - sv_boss_spawn_time(BOSS_RENE) >= 100.0f &&
           sv_boss_spawn_time(BOSS_IMPRESSORA) < sv_boss_spawn_time(BOSS_MODELO) && sv_boss_spawn_time(BOSS_MODELO) < sv_boss_spawn_time(BOSS_DIEGO) &&
           sv_boss_spawn_time(BOSS_DIEGO) < sv_boss_spawn_time(BOSS_RENE) && sv_boss_spawn_time(BOSS_IARA) == SV_RUN_SECONDS);
 
@@ -252,7 +255,7 @@ static void test_simulation(void)
     sv_run.player.hp = sv_run.player.max_hp = 100000.0f;
     sv_run.time = sv_boss_spawn_time(BOSS_IMPRESSORA) - 0.05f;
     for (int i = 0; i < 10; i++) sv_game_update(1.0f / 60.0f, (Vector2){0, 0});
-    check("SV-18", "a Impressora surge aos 2:00", sv_run.boss.active && sv_run.boss.id == BOSS_IMPRESSORA);
+    check("SV-18", "a Impressora surge aos 3:00", sv_run.boss.active && sv_run.boss.id == BOSS_IMPRESSORA);
     check("SV-19", "o chefe perde vida e cai", sv_damage_boss(sv_run.boss.max_hp * 2.0f) && !sv_run.boss.active && sv_run.bosses_defeated == 1);
 
     // Derrotar a IARA vence a partida
@@ -384,6 +387,79 @@ static void test_map(void)
     sv_meta_reset();
 }
 
+static void test_choices(void)
+{
+    char lines[SV_CHOICE_LINES][96];
+    int n;
+
+    printf("\nO que cada escolha muda\n");
+
+    sv_meta_reset();
+    sv_game_start(41);
+
+    // Evoluir o Grampeador do nível 1 para o 2: dano igual, recarga e perfuração mudam
+    {
+        SvChoice up = {1, W_GRAMPEADOR};
+
+        n = sv_choice_lines(&up, lines);
+        check("SV-35", "evoluir um poder mostra só o que muda, de -> para",
+              n == 2 && strstr(lines[0], "Recarga: 0,7 s -> 0,6 s") && strstr(lines[1], "Perfuração: 1 -> 2"));
+    }
+
+    {
+        SvChoice fresh = {0, W_TABELA};
+
+        n = sv_choice_lines(&fresh, lines);
+        check("SV-36", "poder novo mostra os atributos do nível 1", n >= 3 && strstr(lines[0], "Dano: 6") && !strstr(lines[0], "->"));
+    }
+
+    {
+        SvChoice pas = {2, P_SAUDE};
+        SvChoice pas_up = {3, P_SAUDE};
+
+        n = sv_choice_lines(&pas, lines);
+        check("SV-37", "passivo novo mostra o ganho do nível 1", n == 1 && strstr(lines[0], "Vida máxima: +12"));
+        sv_run.player.passives[sv_run.player.passive_count++] = (SvPassive){P_SAUDE, 1};
+        n = sv_choice_lines(&pas_up, lines);
+        check("SV-38", "evoluir passivo mostra de -> para", n == 1 && strstr(lines[0], "+12 -> +24"));
+    }
+
+    // Os números mostrados são os que valem: com 3 níveis de Foco o dano mostrado já inclui o bônus
+    {
+        SvChoice up = {1, W_GRAMPEADOR};
+
+        sv_run.player.passives[sv_run.player.passive_count++] = (SvPassive){P_FOCO, 3};
+        sv_run.player.weapons[0].level = 2;
+        sv_run.player.dmg_mult = 1.18f;
+        n = sv_choice_lines(&up, lines);
+        check("SV-39", "os valores da carta incluem os bônus do jogador", n >= 1 && strstr(lines[0], "Dano: 11,8 -> 16,5"));
+    }
+
+    // Cada poder muda atributos diferentes ao longo dos 5 níveis e todos melhoram
+    {
+        bool ok = true;
+
+        for (int w = 0; w < W_COUNT; w++)
+        {
+            for (int level = 1; level < SV_WEAPON_MAX_LEVEL; level++)
+            {
+                bool changed = false;
+
+                for (int stat = 0; stat < 5; stat++)
+                {
+                    float a = sv_weapon_stat(w, stat, level), b = sv_weapon_stat(w, stat, level + 1);
+
+                    if (stat == WSTAT_COOLDOWN ? b > a : b < a) ok = false;
+                    if (a != b) changed = true;
+                }
+                if (!changed) ok = false;
+            }
+        }
+        check("SV-40", "cada nível de cada poder melhora algum atributo e nenhum piora", ok);
+    }
+    sv_meta_reset();
+}
+
 static void test_level_up(void)
 {
     printf("\nSubir de nível\n");
@@ -455,6 +531,7 @@ int main(void)
     test_meta();
     test_simulation();
     test_map();
+    test_choices();
     test_level_up();
 
     printf("\n%d verificacoes, todas passaram.\n", checks);

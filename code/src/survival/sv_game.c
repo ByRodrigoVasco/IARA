@@ -1,4 +1,5 @@
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
 #include "raymath.h"
 #include "characters.h"
@@ -72,14 +73,79 @@ static const char *weapon_descriptions[W_COUNT] = {
     "Ataque muito forte em linha reta, com recarga longa."};
 static const SvSpriteId weapon_icons[W_COUNT] = {SPR_ic_grampeador, SPR_ic_ponteiro, SPR_ic_caneca, SPR_ic_postits, SPR_ic_naoperturbe, SPR_ic_deploy, SPR_ic_tarja, SPR_ic_modus, SPR_ic_tabela, SPR_ic_colega, SPR_ic_novaconversa, SPR_ic_prompt};
 
-static const char *passive_names[P_COUNT] = {"Café", "Manual", "Colinha", "Ergonomia", "Crachá", "Plano de Saúde", "Network", "Hora Extra"};
+static const char *passive_names[P_COUNT] = {"Café", "Manual", "Colinha", "Ergonomia", "Crachá", "Plano de Saúde", "Network", "Hora Extra", "Marmita Térmica", "Sorte de Principiante", "Espinhos Corporativos", "Foco"};
 static const char *passive_descriptions[P_COUNT] = {
     "Recarga mais rápida.", "Mais área nos poderes.", "Mais XP dos chips.", "Mais velocidade.",
-    "Menos dano recebido.", "Mais vida máxima.", "Pega os itens de mais longe.", "Poderes duram mais."};
-static const SvSpriteId passive_icons[P_COUNT] = {SPR_ps_cafe, SPR_ps_manual, SPR_ps_colinha, SPR_ps_ergonomia, SPR_ps_cracha, SPR_ps_saude, SPR_ps_network, SPR_ps_horaextra};
+    "Menos dano recebido.", "Mais vida máxima.", "Pega os itens de mais longe.", "Poderes duram mais.",
+    "Recupera vida sozinho, aos poucos.", "Mais chance de Banco de Horas e marmita.", "Quem encosta em você leva dano.", "Mais dano em tudo."};
+static const SvSpriteId passive_icons[P_COUNT] = {SPR_ps_cafe, SPR_ps_manual, SPR_ps_colinha, SPR_ps_ergonomia, SPR_ps_cracha, SPR_ps_saude, SPR_ps_network, SPR_ps_horaextra, SPR_it_marmita, SPR_it_moeda, SPR_ic_tarja, SPR_ic_prompt};
 
 static const char *boss_names[BOSS_COUNT] = {"Impressora de Rescisões", "Modelo Enviesado", "Diego, o Crachá Ativo", "Renê, na cabeceira", "IARA, a Mãe-d'Água"};
 static const char *act_names[SV_ACT_COUNT] = {"ATO I", "ATO II", "ATO III", "ATO IV", "ATO V"};
+
+
+// -----------------------------------------------------------------------------
+// Poderes: cada nível muda atributos próprios (os valores abaixo são os do nível 1 a 5)
+// -----------------------------------------------------------------------------
+
+typedef struct
+{
+    float dmg[5], cd[5], n[5], area[5], extra[5];
+} WeaponDef;
+
+typedef struct
+{
+    const char *cd_name, *n_name, *area_name, *extra_name;
+    bool extra_is_time, area_scaled, extra_scaled;
+} WeaponInfo;
+
+static const WeaponDef weapon_defs[W_COUNT] = {
+    [W_GRAMPEADOR]   = {{10, 10, 14, 14, 20}, {0.70f, 0.60f, 0.60f, 0.50f, 0.45f}, {1, 1, 2, 2, 3}, {0, 0, 0, 0, 0}, {1, 2, 2, 3, 3}},
+    [W_PONTEIRO]     = {{14, 14, 20, 20, 28}, {1.60f, 1.45f, 1.45f, 1.25f, 1.10f}, {0, 0, 0, 0, 0}, {60, 70, 70, 85, 100}, {10, 10, 13, 13, 16}},
+    [W_CANECA]       = {{20, 20, 26, 26, 36}, {2.20f, 2.00f, 2.00f, 1.80f, 1.60f}, {1, 1, 2, 2, 3}, {40, 46, 46, 52, 58}, {0, 0, 0, 0, 0}},
+    [W_POSTITS]      = {{7, 7, 10, 10, 15}, {0.50f, 0.45f, 0.45f, 0.40f, 0.35f}, {0, 0, 0, 0, 0}, {54, 60, 60, 68, 76}, {0, 0, 0, 0, 0}},
+    [W_NAOPERTURBE]  = {{5, 5, 8, 8, 12}, {0.50f, 0.45f, 0.45f, 0.40f, 0.35f}, {0, 0, 0, 0, 0}, {58, 66, 66, 76, 86}, {0, 0, 0, 0, 0}},
+    [W_DEPLOY]       = {{28, 28, 36, 36, 48}, {2.60f, 2.40f, 2.40f, 2.10f, 1.80f}, {1, 1, 2, 2, 3}, {28, 32, 32, 36, 40}, {0, 0, 0, 0, 0}},
+    [W_TARJA]        = {{7, 7, 10, 10, 14}, {3.20f, 3.00f, 3.00f, 2.70f, 2.40f}, {0, 0, 0, 0, 0}, {120, 135, 135, 150, 170}, {2.0f, 2.5f, 2.5f, 3.0f, 3.5f}},
+    [W_MODUS]        = {{14, 14, 18, 18, 24}, {1.80f, 1.65f, 1.65f, 1.45f, 1.30f}, {3, 3, 4, 4, 5}, {170, 185, 185, 200, 220}, {0, 0, 0, 0, 0}},
+    [W_TABELA]       = {{6, 6, 9, 9, 13}, {0.60f, 0.55f, 0.55f, 0.50f, 0.45f}, {0, 0, 0, 0, 0}, {50, 56, 56, 64, 72}, {0, 0, 0, 0, 0}},
+    [W_COLEGA]       = {{10, 10, 14, 14, 20}, {0.80f, 0.70f, 0.70f, 0.60f, 0.55f}, {1, 1, 2, 2, 3}, {26, 28, 28, 32, 36}, {0, 0, 0, 0, 0}},
+    [W_NOVACONVERSA] = {{8, 8, 12, 12, 18}, {15.0f, 13.5f, 13.5f, 12.0f, 10.0f}, {0, 0, 0, 0, 0}, {240, 270, 270, 300, 330}, {0, 0, 0, 0, 0}},
+    [W_PROMPT]       = {{50, 50, 70, 70, 100}, {7.0f, 6.2f, 6.2f, 5.4f, 4.6f}, {0, 0, 0, 0, 0}, {280, 300, 300, 330, 360}, {14, 16, 16, 18, 20}},
+};
+
+static const WeaponInfo weapon_infos[W_COUNT] = {
+    [W_GRAMPEADOR]   = {"Recarga", "Projéteis", NULL, "Perfuração", false, false, false},
+    [W_PONTEIRO]     = {"Recarga", NULL, "Alcance", "Largura", false, true, true},
+    [W_CANECA]       = {"Recarga", "Canecas", "Raio", NULL, false, true, false},
+    [W_POSTITS]      = {"Intervalo", NULL, "Raio", NULL, false, true, false},
+    [W_NAOPERTURBE]  = {"Intervalo", NULL, "Raio", NULL, false, true, false},
+    [W_DEPLOY]       = {"Recarga", "Raios", "Raio", NULL, false, true, false},
+    [W_TARJA]        = {"Recarga", NULL, "Comprimento", "Confusão", true, true, false},
+    [W_MODUS]        = {"Recarga", "Saltos", "Alcance do salto", NULL, false, false, false},
+    [W_TABELA]       = {"Intervalo", NULL, "Lado", NULL, false, true, false},
+    [W_COLEGA]       = {"Intervalo", "Colegas", "Alcance", NULL, false, false, false},
+    [W_NOVACONVERSA] = {"Recarga", NULL, "Raio", NULL, false, true, false},
+    [W_PROMPT]       = {"Recarga", NULL, "Comprimento", "Largura", false, true, true},
+};
+
+float sv_weapon_stat(int weapon, int stat, int level)
+{
+    const WeaponDef *def = &weapon_defs[weapon];
+
+    if (level < 1) level = 1;
+    if (level > SV_WEAPON_MAX_LEVEL) level = SV_WEAPON_MAX_LEVEL;
+    switch (stat)
+    {
+    case WSTAT_DAMAGE: return def->dmg[level - 1];
+    case WSTAT_COOLDOWN: return def->cd[level - 1];
+    case WSTAT_COUNT: return def->n[level - 1];
+    case WSTAT_AREA: return def->area[level - 1];
+    default: return def->extra[level - 1];
+    }
+}
+
+#define WS(id, stat, level) sv_weapon_stat((id), (stat), (level))
 
 const char *sv_weapon_name(int weapon) { return weapon_names[weapon]; }
 const char *sv_weapon_description(int weapon) { return weapon_descriptions[weapon]; }
@@ -219,6 +285,8 @@ static void recompute_stats(void)
     p->xp_mult = 1.0f + 0.05f * u[UPG_XP] + 0.10f * passive_level(P_COLINHA);
     p->armor = (float)u[UPG_ARMADURA] + (float)passive_level(P_CRACHA);
     p->duration_mult = 1.0f + 0.10f * passive_level(P_HORAEXTRA);
+    p->dmg_mult += 0.06f * passive_level(P_FOCO);
+    p->regen = 0.4f * passive_level(P_REGEN);
 
     if (old_max > 0.0f) p->hp += p->max_hp - old_max;
     if (p->hp > p->max_hp) p->hp = p->max_hp;
@@ -340,7 +408,7 @@ static int spawn_event(void)
     Vector2 origin;
     int count = 1;
 
-    spawn_ring_position(520.0f + sv_rand() * 60.0f, &origin);
+    spawn_ring_position(800.0f + sv_rand() * 60.0f, &origin);
 
     if (type == EN_CHAMADO)
     {
@@ -397,7 +465,7 @@ static int spawn_event(void)
 
 static void kill_enemy(SvEnemy *e)
 {
-    int coin_chance = 4 + sv_run.act;
+    int coin_chance = 4 + sv_run.act + 2 * passive_level(P_SORTE);
 
     e->alive = false;
     sv_run.enemy_count--;
@@ -408,7 +476,7 @@ static void kill_enemy(SvEnemy *e)
     if (e->fake) return;
 
     if (e->type == EN_CHAMADO) sv_sfx(SND_chamadoMorre);
-    sv_add_gem(e->pos, 0, (float)enemy_stats[e->type].xp);
+    sv_add_gem(e->pos, 0, (float)(enemy_stats[e->type].xp * 2)); // cada chip vale o dobro do XP do inimigo
 
     if (e->type == EN_AUTORESPOSTA)
     {
@@ -425,7 +493,7 @@ static void kill_enemy(SvEnemy *e)
     {
         sv_add_gem(Vector2Add(e->pos, (Vector2){8, 4}), 1, 1.0f);
     }
-    else if ((int)(sv_rand() * 1000.0f) < 9)
+    else if ((int)(sv_rand() * 1000.0f) < 9 + 3 * passive_level(P_SORTE))
     {
         sv_add_gem(Vector2Add(e->pos, (Vector2){-8, 4}), 2, 25.0f);
     }
@@ -645,11 +713,11 @@ static void fire_weapon(SvWeapon *w)
     {
     case W_GRAMPEADOR:
     {
-        int count = 1 + (level >= 3) + (level >= 5);
+        int count = (int)WS(W_GRAMPEADOR, WSTAT_COUNT, level);
         Vector2 aim = aim_vector(380.0f);
         float base_angle = atan2f(aim.y, aim.x);
 
-        base_cd = 0.75f - 0.06f * level;
+        base_cd = WS(W_GRAMPEADOR, WSTAT_COOLDOWN, level);
         for (int i = 0; i < count; i++)
         {
             SvShot *s = new_shot();
@@ -658,31 +726,31 @@ static void fire_weapon(SvWeapon *w)
             if (!s) break;
             s->pos = p->pos;
             s->vel = (Vector2){cosf(a) * 380.0f, sinf(a) * 380.0f};
-            s->damage = 7.0f + 3.0f * level;
+            s->damage = WS(W_GRAMPEADOR, WSTAT_DAMAGE, level);
             s->radius = 7.0f;
             s->life = 1.3f * p->duration_mult;
-            s->pierce = level >= 4 ? 2 : 1;
+            s->pierce = (int)WS(W_GRAMPEADOR, WSTAT_EXTRA, level);
         }
         sv_sfx(SND_grampeador);
         break;
     }
     case W_PONTEIRO:
     {
-        float reach = (56.0f + 10.0f * level) * p->area_mult;
-        float width = (10.0f + 1.5f * level) * p->area_mult;
+        float reach = WS(W_PONTEIRO, WSTAT_AREA, level) * p->area_mult;
+        float width = WS(W_PONTEIRO, WSTAT_EXTRA, level) * p->area_mult;
 
-        base_cd = 1.7f - 0.13f * level;
+        base_cd = WS(W_PONTEIRO, WSTAT_COOLDOWN, level);
         angle = atan2f(p->facing_vector.y, p->facing_vector.x) * RAD2DEG;
-        add_strike_zone(p->pos, angle, reach, width, 12.0f + 5.0f * level, 0.0f, ZK_PONTEIRO);
-        add_strike_zone(p->pos, angle + 180.0f, reach, width, 12.0f + 5.0f * level, 0.0f, ZK_PONTEIRO);
+        add_strike_zone(p->pos, angle, reach, width, WS(W_PONTEIRO, WSTAT_DAMAGE, level), 0.0f, ZK_PONTEIRO);
+        add_strike_zone(p->pos, angle + 180.0f, reach, width, WS(W_PONTEIRO, WSTAT_DAMAGE, level), 0.0f, ZK_PONTEIRO);
         sv_sfx(SND_ponteiro);
         break;
     }
     case W_CANECA:
     {
-        int count = 1 + (level >= 3) + (level >= 5);
+        int count = (int)WS(W_CANECA, WSTAT_COUNT, level);
 
-        base_cd = 2.3f - 0.15f * level;
+        base_cd = WS(W_CANECA, WSTAT_COOLDOWN, level);
         for (int i = 0; i < count; i++)
         {
             bool found;
@@ -693,8 +761,8 @@ static void fire_weapon(SvWeapon *w)
             z->shape = ZONE_CIRCLE;
             z->kind = ZK_CANECA;
             z->pos = target;
-            z->radius = (36.0f + 5.0f * level) * p->area_mult;
-            z->damage = 14.0f + 6.0f * level;
+            z->radius = WS(W_CANECA, WSTAT_AREA, level) * p->area_mult;
+            z->damage = WS(W_CANECA, WSTAT_DAMAGE, level);
             z->delay = 0.65f;
             z->life = z->max_life = 0.65f + 0.35f;
         }
@@ -703,9 +771,9 @@ static void fire_weapon(SvWeapon *w)
     }
     case W_DEPLOY:
     {
-        int count = 1 + level / 2;
+        int count = (int)WS(W_DEPLOY, WSTAT_COUNT, level);
 
-        base_cd = 2.7f - 0.2f * level;
+        base_cd = WS(W_DEPLOY, WSTAT_COOLDOWN, level);
         for (int i = 0; i < count; i++)
         {
             bool found;
@@ -716,8 +784,8 @@ static void fire_weapon(SvWeapon *w)
             z->shape = ZONE_CIRCLE;
             z->kind = ZK_DEPLOY;
             z->pos = target;
-            z->radius = (26.0f + 3.0f * level) * p->area_mult;
-            z->damage = 20.0f + 8.0f * level;
+            z->radius = WS(W_DEPLOY, WSTAT_AREA, level) * p->area_mult;
+            z->damage = WS(W_DEPLOY, WSTAT_DAMAGE, level);
             z->delay = 0.4f;
             z->life = z->max_life = 0.4f + 0.45f;
         }
@@ -725,24 +793,24 @@ static void fire_weapon(SvWeapon *w)
     }
     case W_TARJA:
     {
-        float length = (110.0f + 14.0f * level) * p->area_mult;
+        float length = WS(W_TARJA, WSTAT_AREA, level) * p->area_mult;
 
-        base_cd = 3.3f - 0.2f * level;
+        base_cd = WS(W_TARJA, WSTAT_COOLDOWN, level);
         angle = atan2f(p->facing_vector.y, p->facing_vector.x) * RAD2DEG;
-        add_strike_zone(p->pos, angle, length, 17.0f * p->area_mult, 5.0f + 2.0f * level, 2.0f + 0.3f * level, ZK_TARJA);
+        add_strike_zone(p->pos, angle, length, 17.0f * p->area_mult, WS(W_TARJA, WSTAT_DAMAGE, level), WS(W_TARJA, WSTAT_EXTRA, level), ZK_TARJA);
         sv_sfx(SND_tarja);
         break;
     }
     case W_MODUS:
     {
-        int hops = 2 + level;
+        int hops = (int)WS(W_MODUS, WSTAT_COUNT, level);
         unsigned hit[8];
         int hit_count = 0;
         Vector2 from = p->pos;
         float range = 300.0f;
-        float damage = 10.0f + 4.0f * level;
+        float damage = WS(W_MODUS, WSTAT_DAMAGE, level);
 
-        base_cd = 1.9f - 0.14f * level;
+        base_cd = WS(W_MODUS, WSTAT_COOLDOWN, level);
         for (int i = 0; i < hops && hit_count < 8; i++)
         {
             Target t = nearest_target(from, range, hit, hit_count);
@@ -752,7 +820,7 @@ static void fire_weapon(SvWeapon *w)
             spawn_link(from, t.pos);
             damage_target(&t, damage, from, 20.0f);
             from = t.pos;
-            range = 170.0f;
+            range = WS(W_MODUS, WSTAT_AREA, level);
         }
         if (hit_count > 0) sv_sfx(SND_modus);
         else base_cd = 0.3f;
@@ -762,22 +830,22 @@ static void fire_weapon(SvWeapon *w)
     {
         Vector2 aim = aim_vector(420.0f);
 
-        base_cd = 7.0f - 0.6f * level;
+        base_cd = WS(W_PROMPT, WSTAT_COOLDOWN, level);
         angle = atan2f(aim.y, aim.x) * RAD2DEG;
-        add_strike_zone(p->pos, angle, 280.0f * p->area_mult, 14.0f * p->area_mult, 40.0f + 15.0f * level, 0.0f, ZK_PROMPT);
+        add_strike_zone(p->pos, angle, WS(W_PROMPT, WSTAT_AREA, level) * p->area_mult, WS(W_PROMPT, WSTAT_EXTRA, level) * p->area_mult, WS(W_PROMPT, WSTAT_DAMAGE, level), 0.0f, ZK_PROMPT);
         sv_sfx(SND_prompt);
         break;
     }
     case W_NOVACONVERSA:
     {
-        float radius = 260.0f * p->area_mult;
+        float radius = WS(W_NOVACONVERSA, WSTAT_AREA, level) * p->area_mult;
 
-        base_cd = 15.0f - 1.5f * level;
+        base_cd = WS(W_NOVACONVERSA, WSTAT_COOLDOWN, level);
         for (int i = 0; i < SV_MAX_ENEMIES; i++)
         {
             SvEnemy *e = &sv_run.enemies[i];
 
-            if (e->alive && Vector2Distance(e->pos, p->pos) < radius) damage_enemy(e, 6.0f + 2.0f * level, p->pos, 520.0f);
+            if (e->alive && Vector2Distance(e->pos, p->pos) < radius) damage_enemy(e, WS(W_NOVACONVERSA, WSTAT_DAMAGE, level), p->pos, 520.0f);
         }
         // Apaga os tiros inimigos que estão ao alcance
         for (int i = 0; i < SV_MAX_HAZARDS; i++)
@@ -804,8 +872,9 @@ static void update_continuous_weapon(SvWeapon *w, float dt)
 
     if (w->id == W_POSTITS)
     {
-        float radius = (50.0f + 4.0f * level) * p->area_mult;
-        float damage = 5.0f + 2.0f * level;
+        float radius = WS(W_POSTITS, WSTAT_AREA, level) * p->area_mult;
+        float damage = WS(W_POSTITS, WSTAT_DAMAGE, level);
+        float tick = WS(W_POSTITS, WSTAT_COOLDOWN, level) * p->cooldown_mult;
 
         w->angle += dt * 2.6f;
         for (int i = 0; i < SV_MAX_ENEMIES; i++)
@@ -817,7 +886,7 @@ static void update_continuous_weapon(SvWeapon *w, float dt)
             d = Vector2Distance(e->pos, p->pos);
             if (fabsf(d - radius) < 13.0f + enemy_stats[e->type].radius)
             {
-                e->wcd[W_POSTITS] = 0.45f;
+                e->wcd[W_POSTITS] = tick;
                 sv_sfx(SND_postits);
                 damage_enemy(e, damage, p->pos, 40.0f);
             }
@@ -826,7 +895,7 @@ static void update_continuous_weapon(SvWeapon *w, float dt)
         {
             if (w->cooldown <= 0.0f)
             {
-                w->cooldown = 0.45f;
+                w->cooldown = tick;
                 sv_damage_boss(damage * p->dmg_mult);
             }
         }
@@ -834,7 +903,7 @@ static void update_continuous_weapon(SvWeapon *w, float dt)
     }
     else if (w->id == W_NAOPERTURBE)
     {
-        float radius = (52.0f + 8.0f * level) * p->area_mult;
+        float radius = WS(W_NAOPERTURBE, WSTAT_AREA, level) * p->area_mult;
 
         w->angle += dt;
         if (w->cooldown > 0.0f)
@@ -842,25 +911,25 @@ static void update_continuous_weapon(SvWeapon *w, float dt)
             w->cooldown -= dt;
             return;
         }
-        w->cooldown = 0.5f * p->cooldown_mult;
+        w->cooldown = WS(W_NAOPERTURBE, WSTAT_COOLDOWN, level) * p->cooldown_mult;
         for (int i = 0; i < SV_MAX_ENEMIES; i++)
         {
             SvEnemy *e = &sv_run.enemies[i];
 
             if (e->alive && Vector2Distance(e->pos, p->pos) < radius + enemy_stats[e->type].radius)
             {
-                damage_enemy(e, 3.0f + 2.0f * level, p->pos, 90.0f);
+                damage_enemy(e, WS(W_NAOPERTURBE, WSTAT_DAMAGE, level), p->pos, 90.0f);
             }
         }
         if (sv_run.boss.active && Vector2Distance(sv_run.boss.pos, p->pos) < radius + sv_run.boss.radius)
         {
-            sv_damage_boss((3.0f + 2.0f * level) * p->dmg_mult);
+            sv_damage_boss(WS(W_NAOPERTURBE, WSTAT_DAMAGE, level) * p->dmg_mult);
         }
         sv_sfx(SND_naoperturbe);
     }
     else if (w->id == W_TABELA)
     {
-        float radius = (46.0f + 6.0f * level) * p->area_mult;
+        float radius = WS(W_TABELA, WSTAT_AREA, level) * p->area_mult;
 
         w->angle += dt;
         if (w->cooldown > 0.0f)
@@ -868,11 +937,11 @@ static void update_continuous_weapon(SvWeapon *w, float dt)
             w->cooldown -= dt;
             return;
         }
-        w->cooldown = 0.6f * p->cooldown_mult;
+        w->cooldown = WS(W_TABELA, WSTAT_COOLDOWN, level) * p->cooldown_mult;
         w->level = level;
         {
             // As casas acendem em xadrez e trocam de cor a cada pulso
-            int phase = (int)(w->angle / 0.6f) % 2;
+            int phase = (int)(w->angle / WS(W_TABELA, WSTAT_COOLDOWN, level)) % 2;
 
             for (int i = 0; i < SV_MAX_ENEMIES; i++)
             {
@@ -881,18 +950,19 @@ static void update_continuous_weapon(SvWeapon *w, float dt)
 
                 if (!e->alive || fabsf(e->pos.x - p->pos.x) > radius || fabsf(e->pos.y - p->pos.y) > radius) continue;
                 cell = (int)floorf(e->pos.x / 18.0f) + (int)floorf(e->pos.y / 18.0f);
-                if (((cell % 2) + 2) % 2 == phase) damage_enemy(e, 4.0f + 2.0f * level, p->pos, 0.0f);
+                if (((cell % 2) + 2) % 2 == phase) damage_enemy(e, WS(W_TABELA, WSTAT_DAMAGE, level), p->pos, 0.0f);
             }
             if (sv_run.boss.active && fabsf(sv_run.boss.pos.x - p->pos.x) < radius && fabsf(sv_run.boss.pos.y - p->pos.y) < radius)
             {
-                sv_damage_boss((4.0f + 2.0f * level) * p->dmg_mult);
+                sv_damage_boss(WS(W_TABELA, WSTAT_DAMAGE, level) * p->dmg_mult);
             }
         }
         sv_sfx(SND_tabela);
     }
     else if (w->id == W_COLEGA)
     {
-        int count = 1 + (level >= 3) + (level >= 5);
+        int count = (int)WS(W_COLEGA, WSTAT_COUNT, level);
+        float reach = WS(W_COLEGA, WSTAT_AREA, level);
         bool attacked = false;
 
         w->angle += dt;
@@ -921,15 +991,15 @@ static void update_continuous_weapon(SvWeapon *w, float dt)
                 {
                     SvEnemy *e = &sv_run.enemies[i];
 
-                    if (e->alive && Vector2Distance(e->pos, *pos) < 26.0f)
+                    if (e->alive && Vector2Distance(e->pos, *pos) < reach)
                     {
-                        damage_enemy(e, 8.0f + 4.0f * level, *pos, 60.0f);
+                        damage_enemy(e, WS(W_COLEGA, WSTAT_DAMAGE, level), *pos, 60.0f);
                         attacked = true;
                     }
                 }
-                if (sv_run.boss.active && Vector2Distance(sv_run.boss.pos, *pos) < 26.0f + sv_run.boss.radius)
+                if (sv_run.boss.active && Vector2Distance(sv_run.boss.pos, *pos) < reach + sv_run.boss.radius)
                 {
-                    sv_damage_boss((8.0f + 4.0f * level) * p->dmg_mult);
+                    sv_damage_boss(WS(W_COLEGA, WSTAT_DAMAGE, level) * p->dmg_mult);
                     attacked = true;
                 }
             }
@@ -937,7 +1007,7 @@ static void update_continuous_weapon(SvWeapon *w, float dt)
 
         if (attacked)
         {
-            w->cooldown = 0.7f * p->cooldown_mult;
+            w->cooldown = WS(W_COLEGA, WSTAT_COOLDOWN, level) * p->cooldown_mult;
             sv_sfx(SND_colega);
         }
     }
@@ -1175,7 +1245,7 @@ static void update_enemies(float dt)
         }
 
         // Quem ficou longe demais volta para a borda da tela, como em todo jogo do gênero
-        if (distance > 900.0f)
+        if (distance > 1150.0f)
         {
             if (e->wall)
             {
@@ -1183,7 +1253,7 @@ static void update_enemies(float dt)
                 sv_run.enemy_count--;
                 continue;
             }
-            spawn_ring_position(560.0f, &e->pos);
+            spawn_ring_position(820.0f, &e->pos);
             distance = Vector2Distance(e->pos, p->pos);
         }
 
@@ -1246,6 +1316,13 @@ static void update_enemies(float dt)
                 continue;
             }
             sv_hurt_player(stats->damage * danger_scale, EFF_NONE, 0.0f);
+
+            // Espinhos Corporativos: quem encosta também leva dano
+            if (passive_level(P_ESPINHOS) > 0 && e->wcd[W_GRAMPEADOR] <= 0.0f)
+            {
+                e->wcd[W_GRAMPEADOR] = 0.5f;
+                damage_enemy(e, 8.0f * (float)passive_level(P_ESPINHOS), p->pos, 80.0f);
+            }
         }
     }
 
@@ -1369,6 +1446,173 @@ static void build_choices(void)
     if (sv_run.choice_count < 3) sv_run.choices[sv_run.choice_count++] = (SvChoice){4, 0};
     if (sv_run.choice_count < 3) sv_run.choices[sv_run.choice_count++] = (SvChoice){5, 0};
     if (sv_run.choice_count < 3) sv_run.choices[sv_run.choice_count++] = (SvChoice){6, 0};
+}
+
+// -----------------------------------------------------------------------------
+// O que cada escolha muda (mostrado na carta: atributo, de -> para)
+// -----------------------------------------------------------------------------
+
+typedef struct
+{
+    const char *label;
+    float step;       // quanto cada nível soma
+    int kind;         // 0 percentual, 1 inteiro, 2 com uma casa decimal, 3 percentual negativo
+} PassiveDef;
+
+static const PassiveDef passive_defs[P_COUNT] = {
+    [P_CAFE] = {"Recarga", 6.0f, 3},
+    [P_MANUAL] = {"Área dos poderes", 8.0f, 0},
+    [P_COLINHA] = {"XP ganho", 10.0f, 0},
+    [P_ERGONOMIA] = {"Velocidade", 6.0f, 0},
+    [P_CRACHA] = {"Dano a menos por golpe", 1.0f, 1},
+    [P_SAUDE] = {"Vida máxima", 12.0f, 1},
+    [P_NETWORK] = {"Alcance de coleta", 20.0f, 0},
+    [P_HORAEXTRA] = {"Duração dos poderes", 10.0f, 0},
+    [P_REGEN] = {"Vida por segundo", 0.4f, 2},
+    [P_SORTE] = {"Chance de Banco de Horas", 2.0f, 0},
+    [P_ESPINHOS] = {"Dano a quem encosta", 8.0f, 1},
+    [P_FOCO] = {"Dano", 6.0f, 0},
+};
+
+// Escreve um número com vírgula, sem zeros sobrando
+static void format_number(char *out, size_t size, float value)
+{
+    char text[32];
+    char *dot;
+
+    if (fabsf(value - roundf(value)) < 0.05f) snprintf(text, sizeof(text), "%.0f", value);
+    else if (fabsf(value * 10.0f - roundf(value * 10.0f)) < 0.05f) snprintf(text, sizeof(text), "%.1f", value);
+    else snprintf(text, sizeof(text), "%.2f", value);
+    dot = strchr(text, '.');
+    if (dot) *dot = ',';
+    snprintf(out, size, "%s", text);
+}
+
+static void format_passive_value(char *out, size_t size, int passive, int level)
+{
+    const PassiveDef *def = &passive_defs[passive];
+    float value = def->step * (float)level;
+    char number[32];
+
+    format_number(number, sizeof(number), value);
+    switch (def->kind)
+    {
+    case 0: snprintf(out, size, "+%s%%", number); break;
+    case 3: snprintf(out, size, "-%s%%", number); break;
+    case 2: snprintf(out, size, "+%s", number); break;
+    default: snprintf(out, size, "+%s", number); break;
+    }
+}
+
+// Valor efetivo de um atributo do poder, já com os bônus do jogador
+static float weapon_effective(int weapon, int stat, int level)
+{
+    const WeaponInfo *info = &weapon_infos[weapon];
+    SvPlayer *p = &sv_run.player;
+    float value = sv_weapon_stat(weapon, stat, level);
+
+    switch (stat)
+    {
+    case WSTAT_DAMAGE: return value * p->dmg_mult;
+    case WSTAT_COOLDOWN: return value * p->cooldown_mult;
+    case WSTAT_AREA: return info->area_scaled ? value * p->area_mult : value;
+    case WSTAT_EXTRA: return info->extra_scaled ? value * p->area_mult : value;
+    default: return value;
+    }
+}
+
+static const char *weapon_stat_label(int weapon, int stat)
+{
+    const WeaponInfo *info = &weapon_infos[weapon];
+
+    switch (stat)
+    {
+    case WSTAT_DAMAGE: return "Dano";
+    case WSTAT_COOLDOWN: return info->cd_name;
+    case WSTAT_COUNT: return info->n_name;
+    case WSTAT_AREA: return info->area_name;
+    default: return info->extra_name;
+    }
+}
+
+int sv_choice_lines(const SvChoice *c, char lines[SV_CHOICE_LINES][96])
+{
+    int count = 0;
+    char a[32], b[32];
+
+    if (c->kind == 0 || c->kind == 1)
+    {
+        SvWeapon *owned = find_weapon(c->id);
+        int to = c->kind == 0 ? 1 : (owned ? owned->level + 1 : 1);
+        int from = to - 1;
+
+        for (int stat = 0; stat < 5 && count < SV_CHOICE_LINES; stat++)
+        {
+            const char *label = weapon_stat_label(c->id, stat);
+            float now, next;
+            bool is_time;
+
+            if (!label) continue;
+            next = weapon_effective(c->id, stat, to);
+            now = from >= 1 ? weapon_effective(c->id, stat, from) : next;
+            is_time = stat == WSTAT_COOLDOWN || (stat == WSTAT_EXTRA && weapon_infos[c->id].extra_is_time);
+
+            // Alcances, raios e contagens aparecem arredondados
+            if (stat == WSTAT_AREA || stat == WSTAT_COUNT || (stat == WSTAT_EXTRA && !is_time && weapon_infos[c->id].extra_scaled))
+            {
+                now = roundf(now);
+                next = roundf(next);
+            }
+
+            if (from >= 1 && fabsf(now - next) < 0.001f) continue; // só o que muda
+
+            format_number(a, sizeof(a), now);
+            format_number(b, sizeof(b), next);
+            if (from < 1) snprintf(lines[count++], 96, "%s: %s%s", label, b, is_time ? " s" : "");
+            else snprintf(lines[count++], 96, "%.20s: %s%s -> %s%s", label, a, is_time ? " s" : "", b, is_time ? " s" : "");
+        }
+        return count;
+    }
+
+    if (c->kind == 2 || c->kind == 3)
+    {
+        int to = passive_level(c->id) + 1;
+        char text_a[32], text_b[32];
+
+        format_passive_value(text_b, sizeof(text_b), c->id, to);
+        if (c->kind == 2) snprintf(lines[count++], 96, "%s: %s", passive_defs[c->id].label, text_b);
+        else
+        {
+            format_passive_value(text_a, sizeof(text_a), c->id, to - 1);
+            snprintf(lines[count++], 96, "%s: %s -> %s", passive_defs[c->id].label, text_a, text_b);
+        }
+        return count;
+    }
+
+    if (c->kind == 4)
+    {
+        SvPlayer *p = &sv_run.player;
+        float after = fminf(p->max_hp, p->hp + p->max_hp * 0.4f);
+
+        format_number(a, sizeof(a), ceilf(p->hp));
+        format_number(b, sizeof(b), ceilf(after));
+        snprintf(lines[count++], 96, "Vida: %s -> %s", a, b);
+    }
+    else if (c->kind == 5)
+    {
+        format_number(a, sizeof(a), (float)sv_run.coins);
+        format_number(b, sizeof(b), (float)(sv_run.coins + 15));
+        snprintf(lines[count++], 96, "Banco de Horas: %s -> %s", a, b);
+    }
+    else
+    {
+        SvPlayer *p = &sv_run.player;
+
+        format_number(a, sizeof(a), floorf(p->xp));
+        format_number(b, sizeof(b), floorf(p->xp + p->xp_needed * 0.5f));
+        snprintf(lines[count++], 96, "XP: %s -> %s", a, b);
+    }
+    return count;
 }
 
 const char *sv_choice_title(const SvChoice *c)
@@ -1570,6 +1814,7 @@ static void update_player(float dt, Vector2 move)
     p->root = p->root > dt ? p->root - dt : 0.0f;
     p->invert = p->invert > dt ? p->invert - dt : 0.0f;
     if (p->invulnerable > 0.0f) p->invulnerable -= dt;
+    if (p->regen > 0.0f && p->hp < p->max_hp) p->hp = fminf(p->max_hp, p->hp + p->regen * dt);
     if (p->hurt_flash > 0.0f) p->hurt_flash -= dt;
 
     if (length > 0.05f)
