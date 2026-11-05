@@ -64,7 +64,7 @@ cd IARA
 ### 5. Compilar
 
 ```bash
-gcc code/src/*.c code/src/*/*.c -Icode/src -Icode/src/core -Icode/src/screens -Icode/src/ui -Icode/src/game -o iara.exe -lraylib -lopengl32 -lgdi32 -lwinmm
+gcc code/src/*.c code/src/*/*.c -Icode/src -Icode/src/core -Icode/src/screens -Icode/src/ui -Icode/src/game -Icode/src/survival -o iara.exe -lraylib -lopengl32 -lgdi32 -lwinmm
 ```
 Ou, no VS Code com a pasta `IARA` aberta, aperte `Ctrl + Shift + B`: ele compila e já abre o jogo.
 
@@ -75,6 +75,12 @@ Ou, no VS Code com a pasta `IARA` aberta, aperte `Ctrl + Shift + B`: ele compila
 ```
 
 O jogo abre em janela, que pode ser redimensionada. **F11** ou a caixa **Tela cheia**, em `CONFIGURAÇÕES` no menu, alternam entre janela e tela cheia. A mesma tela ajusta o brilho e o alto contraste, e as escolhas ficam salvas em `iara.ini`. **ESC** sai do computador e volta ao escritório, e volta ao menu nos créditos e nas configurações; nas outras telas, salva e fecha o jogo.
+
+### Modo Sobrevivência
+
+`SOBREVIVÊNCIA` no menu abre um modo separado da campanha: dez minutos de expediente em um mapa grande de 15 áreas do escritório, com cinco atos e cinco chefes, do Impressora de Rescisões à própria IARA. Mova a Estagiária com **WASD** ou as setas. Os poderes atacam sozinhos, e cada nível dá a escolha de um poder novo ou de um upgrade. **ESC** pausa.
+
+O Banco de Horas coletado na partida, mesmo que você perca, compra upgrades permanentes no `PLANO DE CARREIRA`. O progresso fica em `iara.survival`, ao lado do executável. Sprites e sons vêm de `code/assets/sprites/sobrevivencia` e `code/assets/audio`, e o áudio segue as regras de mistura em `code/src/survival/sv_audio.h`.
 
 > **Versão para terminal (PIF):** em desenvolvimento.
 

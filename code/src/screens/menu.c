@@ -36,16 +36,19 @@ static float menu_font_size;
 static float menu_letter_spacing;
 
 static Vector2 iniciar_text_size;
+static Vector2 sobrevivencia_text_size;
 static Vector2 creditos_text_size;
 static Vector2 configuracoes_text_size;
 static Vector2 sair_text_size;
 
 static Vector2 iniciar_text_target_position;
+static Vector2 sobrevivencia_text_target_position;
 static Vector2 creditos_text_target_position;
 static Vector2 configuracoes_text_target_position;
 static Vector2 sair_text_target_position;
 
 static Rectangle iniciar_text_rectangle;
+static Rectangle sobrevivencia_text_rectangle;
 static Rectangle creditos_text_rectangle;
 static Rectangle configuracoes_text_rectangle;
 static Rectangle sair_text_rectangle;
@@ -63,13 +66,14 @@ static void initialize_menu_textures(void)
 static void update_menu_layout(void)
 {
     menu_scale = get_ui_scale();
-    menu_font_size = DEFAULT_MENU_FONT_SIZE * menu_scale;
+    menu_font_size = DEFAULT_MENU_FONT_SIZE * 0.8f * menu_scale;
     menu_letter_spacing = DEFAULT_LETTER_SPACING * menu_scale;
 
     float margin_x = TEXT_HORIZONTAL_MARGIN * menu_scale;
-    float margin_y = TEXT_VERTICAL_MARGIN * menu_scale;
+    float margin_y = TEXT_VERTICAL_MARGIN * 0.8f * menu_scale;
 
     iniciar_text_size = MeasureTextEx(default_game_font, "INICIAR", menu_font_size, menu_letter_spacing);
+    sobrevivencia_text_size = MeasureTextEx(default_game_font, "SOBREVIVÊNCIA", menu_font_size, menu_letter_spacing);
     creditos_text_size = MeasureTextEx(default_game_font, "CRÉDITOS", menu_font_size, menu_letter_spacing);
     configuracoes_text_size = MeasureTextEx(default_game_font, "CONFIGURAÇÕES", menu_font_size, menu_letter_spacing);
     sair_text_size = MeasureTextEx(default_game_font, "SAIR", menu_font_size, menu_letter_spacing);
@@ -78,11 +82,13 @@ static void update_menu_layout(void)
     float start_y = GetScreenHeight() / 2.0f;
 
     iniciar_text_target_position = (Vector2){margin_x, start_y};
-    creditos_text_target_position = (Vector2){margin_x, iniciar_text_target_position.y + iniciar_text_size.y + margin_y};
+    sobrevivencia_text_target_position = (Vector2){margin_x, iniciar_text_target_position.y + iniciar_text_size.y + margin_y};
+    creditos_text_target_position = (Vector2){margin_x, sobrevivencia_text_target_position.y + sobrevivencia_text_size.y + margin_y};
     configuracoes_text_target_position = (Vector2){margin_x, creditos_text_target_position.y + creditos_text_size.y + margin_y};
     sair_text_target_position = (Vector2){margin_x, configuracoes_text_target_position.y + configuracoes_text_size.y + margin_y};
 
     iniciar_text_rectangle = (Rectangle){iniciar_text_target_position.x, iniciar_text_target_position.y, iniciar_text_size.x, iniciar_text_size.y};
+    sobrevivencia_text_rectangle = (Rectangle){sobrevivencia_text_target_position.x, sobrevivencia_text_target_position.y, sobrevivencia_text_size.x, sobrevivencia_text_size.y};
     creditos_text_rectangle = (Rectangle){creditos_text_target_position.x, creditos_text_target_position.y, creditos_text_size.x, creditos_text_size.y};
     configuracoes_text_rectangle = (Rectangle){configuracoes_text_target_position.x, configuracoes_text_target_position.y, configuracoes_text_size.x, configuracoes_text_size.y};
     sair_text_rectangle = (Rectangle){sair_text_target_position.x, sair_text_target_position.y, sair_text_size.x, sair_text_size.y};
@@ -171,6 +177,11 @@ static int get_option_under_mouse(void)
         return INICIAR;
     }
 
+    if (check_mouse_hover(sobrevivencia_text_rectangle))
+    {
+        return SOBREVIVENCIA;
+    }
+
     if (check_mouse_hover(creditos_text_rectangle))
     {
         return CREDITOS;
@@ -231,6 +242,9 @@ void handle_render_arrow()
     case INICIAR:
         selected_rectangle = iniciar_text_rectangle;
         break;
+    case SOBREVIVENCIA:
+        selected_rectangle = sobrevivencia_text_rectangle;
+        break;
     case CREDITOS:
         selected_rectangle = creditos_text_rectangle;
         break;
@@ -282,6 +296,7 @@ void render_menu(void)
     DrawTexturePro(iara_name_texture, name_source, name_dest, (Vector2){0, 0}, 0.0f, texture_color_to_fade);
 
     DrawTextEx(default_game_font, "INICIAR", iniciar_text_target_position, menu_font_size, menu_letter_spacing, texture_color_to_fade);
+    DrawTextEx(default_game_font, "SOBREVIVÊNCIA", sobrevivencia_text_target_position, menu_font_size, menu_letter_spacing, texture_color_to_fade);
     DrawTextEx(default_game_font, "CRÉDITOS", creditos_text_target_position, menu_font_size, menu_letter_spacing, texture_color_to_fade);
     DrawTextEx(default_game_font, "CONFIGURAÇÕES", configuracoes_text_target_position, menu_font_size, menu_letter_spacing, texture_color_to_fade);
     DrawTextEx(default_game_font, "SAIR", sair_text_target_position, menu_font_size, menu_letter_spacing, texture_color_to_fade);
