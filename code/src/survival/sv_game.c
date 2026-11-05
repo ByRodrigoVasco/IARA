@@ -5,6 +5,7 @@
 #include "sv_game.h"
 #include "sv_meta.h"
 #include "sv_audio.h"
+#include "sv_map.h"
 
 SvRun sv_run;
 
@@ -104,9 +105,6 @@ static const int area_grid[SV_ROWS][SV_COLS] = {
 // Ambiente sonoro de cada área, na ordem de sv_audio.c.
 static const int area_ambient[14] = {0, 1, 2, 3, 4, 5, 0, 6, 7, 8, 9, 10, 11, 12};
 
-static const SvSpriteId area_rooms[14] = {
-    SPR_rm_openspace, SPR_rm_copa, SPR_rm_reunioes, SPR_rm_diretoria, SPR_rm_datacenter, SPR_rm_treino, SPR_rm_financeiro,
-    SPR_rm_arquivo, SPR_rm_suporte, SPR_rm_rh, SPR_rm_catracas, SPR_rm_recepcao, SPR_rm_ala, SPR_rm_fundo};
 
 int sv_area_ambient(int area)
 {
@@ -117,8 +115,8 @@ int sv_area_room(int row, int col)
 {
     int area = area_grid[row][col];
 
-    if (area == A_OPE && (row + col) % 2) return SPR_rm_openspace2;
-    return area_rooms[area];
+    (void)area;
+    return SPR_fl_0_0 + row * SV_COLS + col;
 }
 
 // -----------------------------------------------------------------------------
@@ -915,6 +913,7 @@ static void update_continuous_weapon(SvWeapon *w, float dt)
 
                 *pos = Vector2Add(*pos, Vector2Scale(Vector2Normalize(Vector2Subtract(target, *pos)), speed * dt));
             }
+            sv_map_collide(pos, 6.0f, 8.0f);
 
             if (w->cooldown <= 0.0f)
             {
@@ -1059,6 +1058,11 @@ static void update_shots(float dt)
         if (!s->alive) continue;
 
         s->pos = Vector2Add(s->pos, Vector2Scale(s->vel, dt));
+        if (sv_map_point_blocked(s->pos, 2.0f))
+        {
+            s->alive = false;
+            continue;
+        }
         s->life -= dt;
         if (s->life <= 0.0f)
         {
@@ -1135,9 +1139,30 @@ static void update_enemies(float dt)
             desired = Vector2Add(desired, Vector2Scale(perpendicular, sinf(e->timer * 6.0f) * 0.9f));
         }
 
+        // Bateu em um objeto há pouco: contorna por um lado em vez de empurrar de frente
+        if (e->detour > 0.0f)
+        {
+            Vector2 side = {-toward.y * (float)e->detour_sign, toward.x * (float)e->detour_sign};
+
+            e->detour -= dt;
+            desired = Vector2Normalize(Vector2Add(Vector2Scale(desired, 0.4f), Vector2Scale(side, 0.9f)));
+        }
+
         e->pos = Vector2Add(e->pos, Vector2Scale(desired, stats->speed * dt));
         e->pos = Vector2Add(e->pos, Vector2Scale(e->vel, dt));
         e->vel = Vector2Scale(e->vel, expf(-8.0f * dt));
+
+        // O Dado Enviesado e o Crachá Fantasma atravessam objetos; os outros batem neles
+        if (!e->wall && e->type != EN_CRACHA)
+        {
+            float pushed = sv_map_collide(&e->pos, stats->radius * 0.7f, 10.0f);
+
+            if (pushed > 0.4f && e->detour <= 0.0f)
+            {
+                e->detour = 0.6f;
+                e->detour_sign = (e->id & 1u) ? 1 : -1;
+            }
+        }
 
         if (fabsf(desired.x) > fabsf(desired.y))
         {
@@ -1477,6 +1502,7 @@ void sv_game_start(unsigned seed)
 {
     SvPlayer *p;
 
+    sv_map_init();
     memset(&sv_run, 0, sizeof(sv_run));
     finished_flag = false;
     sv_run.rng = seed ? seed : 2463534242u;
@@ -1567,6 +1593,7 @@ static void update_player(float dt, Vector2 move)
     }
 
     p->pos = clamp_to_world(p->pos, 18.0f);
+    sv_map_collide(&p->pos, 7.0f, 10.0f);
 
     // Rastro dos últimos passos (o Modelo Enviesado o usa)
     sv_run.trail_timer -= dt;

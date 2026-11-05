@@ -62,6 +62,8 @@ typedef struct
     float confused;       // Segundos de confusão (Tarja Preta)
     float wcd[W_COUNT];   // Intervalo de dano de cada arma sobre este inimigo
     float aux_angle;      // Direção fixa (Dado Enviesado)
+    float detour;         // Segundos desviando de um objeto
+    int detour_sign;
     int type;
     int facing;           // 0 frente, 1 lado, 2 costas
     bool flip;

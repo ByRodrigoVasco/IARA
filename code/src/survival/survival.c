@@ -125,7 +125,7 @@ static void draw_backdrop(void)
     float ui = sv_ui();
 
     ClearBackground((Color){8, 4, 12, 255});
-    sv_draw(SPR_rm_fundo, 0, (Vector2){GetScreenWidth() * 0.5f, GetScreenHeight() * 0.5f}, GetScreenHeight() / 438.0f * 1.05f, 0.0f, false, (Color){70, 40, 60, 255});
+    sv_draw(SPR_fl_4_6, 0, (Vector2){GetScreenWidth() * 0.5f, GetScreenHeight() * 0.5f}, GetScreenHeight() / 438.0f * 1.05f, 0.0f, false, (Color){70, 40, 60, 255});
     DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), (Color){6, 2, 10, 150});
     (void)ui;
 }

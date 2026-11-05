@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include "raymath.h"
 #include "characters.h"
 #include "fonts.h"
@@ -8,6 +9,7 @@
 #include "macros.h"
 #include "sv_render.h"
 #include "sv_meta.h"
+#include "sv_map.h"
 
 static const SvSpriteId boss_sprites[BOSS_COUNT] = {SPR_bo_impressora, SPR_bo_modelo, SPR_bo_diego, SPR_bo_rene, SPR_bo_iara};
 
@@ -149,20 +151,18 @@ static void draw_zones(void)
     }
 }
 
-static void draw_enemies(void)
+static void draw_enemy(SvEnemy *e)
 {
-    for (int i = 0; i < SV_MAX_ENEMIES; i++)
     {
-        SvEnemy *e = &sv_run.enemies[i];
         Color tint = WHITE;
         int frame;
 
-        if (!e->alive) continue;
         if (e->hurt_flash > 0.0f) tint = (Color){255, 140, 140, 255};
         else if (e->confused > 0.0f) tint = (Color){190, 150, 255, 255};
 
         frame = e->facing * 4 + anim_frame(e->anim, 6.0f) % 4;
         draw_shadow(e->pos, 9.0f);
+        if (e->type == EN_CRACHA) tint.a = 190; // atravessa objetos
         sv_draw(sv_enemy_sprite(e->type), frame, e->pos, 1.0f, 0.0f, e->facing == 1 && e->flip, tint);
     }
 }
@@ -203,22 +203,86 @@ static void draw_player(void)
     {
         SvWeapon *w = &p->weapons[i];
 
-        if (w->id == W_COLEGA)
-        {
-            int count = 1 + (w->level >= 3) + (w->level >= 5);
-
-            for (int c = 0; c < count; c++)
-            {
-                draw_shadow(sv_run.colega_pos[c], 9.0f);
-                sv_draw(SPR_en_colega, 4 + anim_frame(sv_run.time, 6.0f + (float)c) % 4, sv_run.colega_pos[c], 1.0f, 0.0f, false, (Color){200, 255, 220, 255});
-            }
-        }
-
         if (w->id == W_POSTITS)
         {
             float radius = (50.0f + 4.0f * w->level) * p->area_mult;
 
             sv_draw(SPR_fx_postits, anim_frame(sv_run.time, 6.0f) % 4, p->pos, radius / 22.0f, w->angle * RAD2DEG, false, WHITE);
+        }
+    }
+}
+
+static void draw_boss(void);
+static void draw_colega(int c)
+{
+    draw_shadow(sv_run.colega_pos[c], 9.0f);
+    sv_draw(SPR_en_colega, 4 + anim_frame(sv_run.time, 6.0f + (float)c) % 4, sv_run.colega_pos[c], 1.0f, 0.0f, false, (Color){200, 255, 220, 255});
+}
+
+static void draw_prop(const SvMapProp *p)
+{
+    SvSprite *sprite = &sv_sprites[p->sprite];
+
+    sv_draw((SvSpriteId)p->sprite, 0, (Vector2){p->x, p->y - sprite->frame_height / 2.0f}, 1.0f, 0.0f, false, WHITE);
+}
+
+// Tudo o que tem altura (objetos, inimigos, chefe, jogador e colegas) é desenhado de cima para baixo pela base
+typedef struct { float y; int kind; int index; } Drawable;
+enum { DR_PROP, DR_ENEMY, DR_BOSS, DR_PLAYER, DR_COLEGA };
+
+static int compare_drawables(const void *a, const void *b)
+{
+    float d = ((const Drawable *)a)->y - ((const Drawable *)b)->y;
+
+    return d < 0 ? -1 : (d > 0 ? 1 : 0);
+}
+
+static void draw_world_objects(Camera2D camera)
+{
+    static Drawable list[1200];
+    int count = 0;
+    float half_w = GetScreenWidth() / 2.0f / camera.zoom + 120.0f;
+    float half_h = GetScreenHeight() / 2.0f / camera.zoom + 120.0f;
+    SvPlayer *player = &sv_run.player;
+
+    for (int i = 0; i < sv_map_prop_count() && count < 1100; i++)
+    {
+        const SvMapProp *p = sv_map_prop(i);
+
+        if (fabsf(p->x - camera.target.x) < half_w + 100.0f && p->y > camera.target.y - half_h && p->y < camera.target.y + half_h + 120.0f) list[count++] = (Drawable){p->y, DR_PROP, i};
+    }
+
+    for (int i = 0; i < SV_MAX_ENEMIES && count < 1190; i++)
+    {
+        SvEnemy *e = &sv_run.enemies[i];
+
+        if (e->alive) list[count++] = (Drawable){e->pos.y + 10.0f, DR_ENEMY, i};
+    }
+
+    if (sv_run.boss.active) list[count++] = (Drawable){sv_run.boss.pos.y + 18.0f, DR_BOSS, 0};
+    list[count++] = (Drawable){player->pos.y + 10.0f, DR_PLAYER, 0};
+
+    for (int i = 0; i < player->weapon_count; i++)
+    {
+        if (player->weapons[i].id == W_COLEGA)
+        {
+            int n = 1 + (player->weapons[i].level >= 3) + (player->weapons[i].level >= 5);
+
+            for (int c = 0; c < n; c++) list[count++] = (Drawable){sv_run.colega_pos[c].y + 8.0f, DR_COLEGA, c};
+        }
+    }
+
+    qsort(list, (size_t)count, sizeof(Drawable), compare_drawables);
+
+    for (int i = 0; i < count; i++)
+    {
+        switch (list[i].kind)
+        {
+        case DR_PROP: draw_prop(sv_map_prop(list[i].index)); break;
+        case DR_ENEMY: draw_enemy(&sv_run.enemies[list[i].index]); break;
+        case DR_BOSS: draw_boss(); break;
+        case DR_PLAYER: draw_player(); break;
+        default: draw_colega(list[i].index); break;
         }
     }
 }
@@ -536,9 +600,7 @@ void sv_render_game(void)
     {
         if (sv_run.hazards[i].alive && sv_run.hazards[i].kind != HZ_PROJ) draw_hazard(&sv_run.hazards[i]);
     }
-    draw_enemies();
-    draw_boss();
-    draw_player();
+    draw_world_objects(camera);
     draw_shots();
     for (int i = 0; i < SV_MAX_HAZARDS; i++)
     {

@@ -10,6 +10,7 @@
 #include "raymath.h"
 #include "sv_game.h"
 #include "sv_meta.h"
+#include "sv_map.h"
 #include "sv_rules.h"
 
 #define TEST_META_PATH "test_iara.survival"
@@ -290,6 +291,99 @@ static void test_simulation(void)
     sv_meta_reset();
 }
 
+static void test_map(void)
+{
+    printf("\nMapa e colisao\n");
+
+    sv_map_init();
+    check("SV-31", "o mapa tem objetos soltos", sv_map_prop_count() > 200);
+
+    // Nenhuma passagem falsa: o vão entre duas caixas é zero (encostadas) ou largo o bastante para andar
+    {
+        int narrow = 0;
+
+        for (int i = 0; i < sv_map_prop_count(); i++)
+        {
+            for (int j = i + 1; j < sv_map_prop_count(); j++)
+            {
+                const SvMapProp *a = sv_map_prop(i), *b = sv_map_prop(j);
+                float dx = fmaxf(0.0f, fmaxf(a->rx - (b->rx + b->rw), b->rx - (a->rx + a->rw)));
+                float dy = fmaxf(0.0f, fmaxf(a->ry - (b->ry + b->rh), b->ry - (a->ry + a->rh)));
+                float gap = sqrtf(dx * dx + dy * dy);
+
+                if (gap > 0.5f && gap < 20.0f) narrow++;
+            }
+        }
+        check("SV-32", "não há vão estreito entre objetos (só encostados ou passagem larga)", narrow == 0);
+    }
+
+    // O jogador empurrado contra cada objeto nunca entra nele
+    {
+        bool inside = false;
+
+        for (int i = 0; i < sv_map_prop_count() && !inside; i += 7)
+        {
+            const SvMapProp *p = sv_map_prop(i);
+            Vector2 pos = {p->rx + p->rw / 2.0f, p->ry - 12.0f};
+
+            sv_game_start(31);
+            sv_run.player.pos = (Vector2){pos.x, pos.y - 10.0f};
+            for (int f = 0; f < 90; f++) sv_game_update(1.0f / 60.0f, (Vector2){0.0f, 1.0f});
+            {
+                float fx = sv_run.player.pos.x, fy = sv_run.player.pos.y + 10.0f;
+
+                for (int k = 0; k < sv_map_prop_count(); k++)
+                {
+                    const SvMapProp *q = sv_map_prop(k);
+
+                    if (fx > q->rx + 1.0f && fx < q->rx + q->rw - 1.0f && fy > q->ry + 1.0f && fy < q->ry + q->rh - 1.0f) inside = true;
+                }
+            }
+        }
+        check("SV-33", "andar contra os objetos não atravessa nenhum", !inside);
+    }
+
+    // Todo espaço livre é alcançável a partir do ponto de partida (sem bolsões fechados)
+    {
+        enum { STEP = 12, GW = SV_WORLD_W / STEP, GH = SV_WORLD_H / STEP };
+        static unsigned char free_cell[GW * GH], seen[GW * GH];
+        static int queue[GW * GH];
+        int head = 0, tail = 0, free_count = 0, reached = 0;
+        int start = ((int)(3.5f * SV_CELL_H / STEP)) * 0 + (int)(2.5f * SV_CELL_H / STEP) * GW + (int)(3.5f * SV_CELL_W / STEP);
+
+        for (int y = 2; y < GH - 2; y++)
+        {
+            for (int x = 2; x < GW - 2; x++)
+            {
+                Vector2 p = {(float)x * STEP, (float)y * STEP - 10.0f};
+
+                free_cell[y * GW + x] = sv_map_collide(&p, 8.0f, 10.0f) == 0.0f;
+                if (free_cell[y * GW + x]) free_count++;
+            }
+        }
+
+        seen[start] = 1;
+        queue[tail++] = start;
+        while (head < tail)
+        {
+            int cell = queue[head++], x = cell % GW, y = cell / GW;
+            int next[4] = {cell - 1, cell + 1, cell - GW, cell + GW};
+
+            reached++;
+            for (int n = 0; n < 4; n++)
+            {
+                if (next[n] < 0 || next[n] >= GW * GH || (n < 2 && next[n] / GW != y) || !free_cell[next[n]] || seen[next[n]]) continue;
+                seen[next[n]] = 1;
+                queue[tail++] = next[n];
+            }
+            (void)x;
+        }
+        printf("      %d de %d casas livres alcançáveis\n", reached, free_count);
+        check("SV-34", "o espaço livre é um só (sem bolsões fechados)", free_count > 0 && reached >= free_count * 99 / 100);
+    }
+    sv_meta_reset();
+}
+
 static void test_level_up(void)
 {
     printf("\nSubir de nível\n");
@@ -360,6 +454,7 @@ int main(void)
     test_rules();
     test_meta();
     test_simulation();
+    test_map();
     test_level_up();
 
     printf("\n%d verificacoes, todas passaram.\n", checks);
