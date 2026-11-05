@@ -42,7 +42,8 @@ typedef enum
 
 typedef enum
 {
-    P_CAFE, P_MANUAL, P_COLINHA, P_ERGONOMIA, P_CRACHA, P_SAUDE, P_NETWORK, P_HORAEXTRA, P_COUNT
+    P_CAFE, P_MANUAL, P_COLINHA, P_ERGONOMIA, P_CRACHA, P_SAUDE, P_NETWORK, P_HORAEXTRA,
+    P_REGEN, P_SORTE, P_ESPINHOS, P_FOCO, P_COUNT
 } SvPassiveId;
 
 typedef enum
@@ -184,6 +185,7 @@ typedef struct
     bool revive_ready;
     float dmg_mult, cooldown_mult, area_mult, speed_mult, xp_mult, magnet_range, armor, duration_mult;
     float step_timer;
+    float regen;           // Vida recuperada por segundo
     SvWeapon weapons[SV_MAX_WEAPONS];
     int weapon_count;
     SvPassive passives[SV_MAX_PASSIVES];
@@ -239,6 +241,10 @@ void sv_game_choose(int index);
 /** @brief Coloca no Banco de Horas o que a partida rendeu e atualiza os recordes. Chamar uma vez ao fim. */
 int sv_game_finish(void);
 
+// Atributos dos poderes por nível (valores base, sem os bônus do jogador).
+typedef enum { WSTAT_DAMAGE, WSTAT_COOLDOWN, WSTAT_COUNT, WSTAT_AREA, WSTAT_EXTRA } SvWeaponStat;
+float sv_weapon_stat(int weapon, int stat, int level);
+
 // Dados para os menus e o desenho.
 const char *sv_weapon_name(int weapon);
 const char *sv_weapon_description(int weapon);
@@ -248,6 +254,10 @@ const char *sv_passive_description(int passive);
 SvSpriteId sv_passive_icon(int passive);
 const char *sv_choice_title(const SvChoice *choice);
 const char *sv_choice_text(const SvChoice *choice);
+
+// Linhas "Atributo: de -> para" do que a escolha muda (até 6 linhas). Devolve quantas.
+#define SV_CHOICE_LINES 6
+int sv_choice_lines(const SvChoice *choice, char lines[SV_CHOICE_LINES][96]);
 SvSpriteId sv_choice_icon(const SvChoice *choice);
 int sv_choice_level(const SvChoice *choice);
 const char *sv_boss_name(int boss);

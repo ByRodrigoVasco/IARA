@@ -1,7 +1,7 @@
 #include <math.h>
 #include "sv_rules.h"
 
-static const float boss_time[BOSS_COUNT] = {120.0f, 270.0f, 420.0f, 540.0f, 600.0f};
+static const float boss_time[BOSS_COUNT] = {180.0f, 285.0f, 390.0f, 495.0f, 600.0f};
 static const float boss_hp_table[BOSS_COUNT] = {1100.0f, 2600.0f, 4600.0f, 7600.0f, 13000.0f};
 
 float sv_boss_spawn_time(SvBossId boss)
@@ -18,11 +18,11 @@ float sv_boss_hp(SvBossId boss)
 
 int sv_act_at(float seconds)
 {
-    // Os atos terminam nos chefes: 2:00, 4:30, 7:00 e 9:00
-    if (seconds < 120.0f) return 0;
-    if (seconds < 270.0f) return 1;
-    if (seconds < 420.0f) return 2;
-    if (seconds < 540.0f) return 3;
+    // Os atos terminam nos chefes: 3:00, 4:45, 6:30 e 8:15, com 1:45 entre um e outro
+    if (seconds < 180.0f) return 0;
+    if (seconds < 285.0f) return 1;
+    if (seconds < 390.0f) return 2;
+    if (seconds < 495.0f) return 3;
     return 4;
 }
 
