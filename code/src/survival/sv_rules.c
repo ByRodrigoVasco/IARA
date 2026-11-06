@@ -2,7 +2,7 @@
 #include "sv_rules.h"
 
 static const float boss_time[BOSS_COUNT] = {180.0f, 285.0f, 390.0f, 495.0f, 600.0f};
-static const float boss_hp_table[BOSS_COUNT] = {1100.0f, 2600.0f, 4600.0f, 7600.0f, 13000.0f};
+static const float boss_hp_table[BOSS_COUNT] = {700.0f, 1800.0f, 3200.0f, 7000.0f, 14000.0f};
 
 float sv_boss_spawn_time(SvBossId boss)
 {
@@ -30,13 +30,13 @@ float sv_spawn_rate(float seconds)
 {
     float minutes = seconds / 60.0f;
 
-    // Começa leve e sobe sem parar: 1,2 por segundo no início e perto de 8 no fim
-    return 1.2f + 0.45f * minutes + 0.055f * minutes * minutes;
+    // Começa leve e sobe sem parar: 1,2 por segundo no início e perto de 10 no fim
+    return 1.2f + 0.45f * minutes + 0.045f * minutes * minutes;
 }
 
 float sv_enemy_hp_scale(float seconds)
 {
-    return 1.0f + seconds / 75.0f;
+    return 1.0f + seconds / 90.0f;
 }
 
 int sv_xp_to_next(int level)
