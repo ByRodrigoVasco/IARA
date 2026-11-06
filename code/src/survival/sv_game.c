@@ -288,6 +288,24 @@ static void recompute_stats(void)
     p->dmg_mult += 0.06f * passive_level(P_FOCO);
     p->regen = 0.4f * passive_level(P_REGEN);
 
+    // Habilidade do personagem escolhido
+    {
+        const SvCharacter *c = sv_character(p->character);
+
+        p->max_hp += c->hp_bonus;
+        p->armor += c->armor_bonus;
+        p->speed_mult *= c->speed_mult;
+        p->cooldown_mult *= c->cooldown_mult;
+        if (p->cooldown_mult < 0.4f) p->cooldown_mult = 0.4f;
+        p->duration_mult *= c->duration_mult;
+        p->magnet_range *= c->magnet_mult;
+        p->xp_mult *= c->xp_mult;
+        p->dmg_mult *= c->damage_mult;
+        p->crit_chance = c->crit_chance;
+        p->coin_mult = c->coin_mult;
+        p->coin_luck = c->coin_luck;
+    }
+
     if (old_max > 0.0f) p->hp += p->max_hp - old_max;
     if (p->hp > p->max_hp) p->hp = p->max_hp;
 }
@@ -465,7 +483,7 @@ static int spawn_event(void)
 
 static void kill_enemy(SvEnemy *e)
 {
-    int coin_chance = 4 + sv_run.act + 2 * passive_level(P_SORTE);
+    int coin_chance = 4 + sv_run.act + 2 * passive_level(P_SORTE) + sv_run.player.coin_luck;
 
     e->alive = false;
     sv_run.enemy_count--;
@@ -510,7 +528,9 @@ static void damage_enemy(SvEnemy *e, float damage, Vector2 from, float knockback
         return;
     }
 
-    e->hp -= damage * sv_run.player.dmg_mult;
+    damage *= sv_run.player.dmg_mult;
+    if (sv_run.player.crit_chance > 0.0f && sv_rand() < sv_run.player.crit_chance) damage *= 2.0f;
+    e->hp -= damage;
     e->hurt_flash = 0.1f;
     sv_sfx(SND_acertaInimigo);
 
@@ -1759,13 +1779,16 @@ void sv_game_start(unsigned seed)
     p->direction = SOUTH;
     p->level = 1;
     p->xp_needed = sv_xp_to_next(1);
-    p->weapons[0] = (SvWeapon){W_GRAMPEADOR, 1, 0.5f, 0.0f};
+
+    // Personagem ainda bloqueado volta para o Estagiário
+    p->character = sv_character_unlocked(sv_meta.character, sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills) ? sv_meta.character : CH_ESTAGIARIO;
+    p->weapons[0] = (SvWeapon){sv_character(p->character)->start_weapon, 1, 0.5f, 0.0f};
     p->weapon_count = 1;
     p->hp = 0.0f;
     p->max_hp = 0.0f;
     recompute_stats();
     p->hp = p->max_hp;
-    p->revive_ready = sv_meta.upgrades[UPG_RECOMECO] > 0;
+    p->revive_ready = sv_meta.upgrades[UPG_RECOMECO] > 0 || sv_character(p->character)->free_revive;
 
     sv_run.act = 0;
     sv_banner("ATO I", 3.0f);
@@ -1959,6 +1982,7 @@ int sv_game_finish(void)
     finished_flag = true;
 
     earned = sv_run.coins + (int)(sv_run.time / 10.0f) + sv_run.bosses_defeated * 30 + (sv_run.phase == SV_WON ? 300 : 0);
+    if (sv_run.player.coin_mult > 0.0f) earned = (int)((float)earned * sv_run.player.coin_mult + 0.5f);
     sv_meta.coins += earned;
     sv_meta.runs++;
     sv_meta.kills += sv_run.kills;

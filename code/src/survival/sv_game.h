@@ -186,6 +186,10 @@ typedef struct
     float dmg_mult, cooldown_mult, area_mult, speed_mult, xp_mult, magnet_range, armor, duration_mult;
     float step_timer;
     float regen;           // Vida recuperada por segundo
+    int character;         // SvCharacterId em uso nesta partida
+    float crit_chance;     // Chance de golpe crítico (dobro do dano)
+    float coin_mult;       // Multiplica o Banco de Horas ganho ao fim
+    int coin_luck;         // Pontos percentuais extras na chance de soltar Banco de Horas
     SvWeapon weapons[SV_MAX_WEAPONS];
     int weapon_count;
     SvPassive passives[SV_MAX_PASSIVES];
