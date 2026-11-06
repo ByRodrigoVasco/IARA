@@ -48,6 +48,21 @@ static SvHazard *new_hazard(void)
     return NULL;
 }
 
+// Os primeiros chefes batem mais leve, para o jogador sem upgrades chegar ao fim do ato
+static const float boss_damage_scale[BOSS_COUNT] = {0.65f, 0.7f, 0.55f, 0.95f, 1.1f};
+
+static float boss_hit(float percent)
+{
+    int id = sv_run.boss.id;
+
+    if (id < 0 || id >= BOSS_COUNT) id = BOSS_COUNT - 1;
+    float damage = sv_boss_hit_damage(percent) * boss_damage_scale[id];
+
+    // Ajustar a dificuldade nunca fura o teto de 30% da vida base
+    if (damage > SV_BASE_HP * SV_BOSS_HIT_CAP) damage = SV_BASE_HP * SV_BOSS_HIT_CAP;
+    return damage;
+}
+
 static SvHazard *add_circle(Vector2 pos, float radius, float warn, float life, float percent, int effect, float effect_time, int sprite)
 {
     SvHazard *h = new_hazard();
@@ -59,7 +74,7 @@ static SvHazard *add_circle(Vector2 pos, float radius, float warn, float life, f
     h->radius = radius;
     h->warn = h->warn_total = warn;
     h->life = h->max_life = life;
-    h->damage = sv_boss_hit_damage(percent);
+    h->damage = boss_hit(percent);
     h->effect = effect;
     h->effect_time = effect_time;
     return h;
@@ -76,7 +91,7 @@ static SvHazard *add_projectile(Vector2 pos, Vector2 velocity, float radius, flo
     h->vel = velocity;
     h->radius = radius;
     h->life = h->max_life = life;
-    h->damage = sv_boss_hit_damage(percent);
+    h->damage = boss_hit(percent);
     h->angle = atan2f(velocity.y, velocity.x) * RAD2DEG;
     return h;
 }
@@ -94,7 +109,7 @@ static SvHazard *add_beam(Vector2 pos, float angle, float length, float half_wid
     h->radius = half_width;
     h->warn = h->warn_total = warn;
     h->life = h->max_life = life;
-    h->damage = sv_boss_hit_damage(percent);
+    h->damage = boss_hit(percent);
     h->tick = tick;
     return h;
 }
@@ -272,7 +287,7 @@ static void cast_pattern(SvBoss *b, int pattern)
     case BOSS_DIEGO:
         if (pattern == 0) // Crachás Fantasmas
         {
-            for (int i = 0; i < 4; i++) sv_spawn_enemy_at(EN_CRACHA, Vector2Add(b->pos, (Vector2){cosf(PI * 0.5f * (float)i) * 40.0f, sinf(PI * 0.5f * (float)i) * 40.0f}), false);
+            for (int i = 0; i < 3; i++) sv_spawn_enemy_at(EN_CRACHA, Vector2Add(b->pos, (Vector2){cosf(PI * 0.667f * (float)i) * 40.0f, sinf(PI * 0.667f * (float)i) * 40.0f}), false);
             sv_sfx(SND_diegoFantasmas);
         }
         else if (pattern == 1) // Porta das 03:12

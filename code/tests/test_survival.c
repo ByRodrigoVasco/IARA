@@ -588,6 +588,20 @@ static void test_characters(void)
     sv_meta_reset();
 }
 
+static void test_boss_balance(void)
+{
+    bool rising = true;
+
+    printf("\nEquilibrio dos chefes\n");
+    for (int b = 1; b < BOSS_COUNT; b++)
+    {
+        if (sv_boss_hp((SvBossId)b) <= sv_boss_hp((SvBossId)(b - 1))) rising = false;
+        if (sv_boss_spawn_time((SvBossId)b) - sv_boss_spawn_time((SvBossId)(b - 1)) < 100.0f) rising = false;
+    }
+    check("SV-56", "cada chefe tem mais vida que o anterior e pelo menos 1:40 de intervalo", rising && sv_boss_spawn_time(BOSS_IMPRESSORA) == 180.0f);
+    check("SV-57", "os inimigos comuns ficam mais fortes aos poucos, sem salto", sv_enemy_hp_scale(0.0f) == 1.0f && sv_enemy_hp_scale(600.0f) < 8.0f && sv_spawn_rate(600.0f) < 11.0f);
+}
+
 static void test_level_up(void)
 {
     printf("\nSubir de nível\n");
@@ -662,6 +676,7 @@ int main(void)
     test_choices();
     test_level_up();
     test_characters();
+    test_boss_balance();
 
     printf("\n%d verificacoes, todas passaram.\n", checks);
     return 0;

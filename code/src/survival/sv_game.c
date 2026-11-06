@@ -1952,7 +1952,7 @@ void sv_game_update(float dt, Vector2 move)
     update_player(dt, move);
 
     // Nascimentos
-    sv_run.spawn_accumulator += sv_spawn_rate(sv_run.time) * dt * (sv_run.boss.active ? 0.5f : 1.0f);
+    sv_run.spawn_accumulator += sv_spawn_rate(sv_run.time) * dt * (sv_run.boss.active ? 0.25f : 1.0f);
     budget = 6;
     while (sv_run.spawn_accumulator >= 1.0f && budget-- > 0 && sv_run.enemy_count < SV_MAX_ENEMIES - 20)
     {
