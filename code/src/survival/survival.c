@@ -8,13 +8,19 @@
 #include "sv_meta.h"
 #include "sv_audio.h"
 #include "sv_assets.h"
+#include "characters.h"
+#include "macros.h"
 
-typedef enum { SCREEN_HUB, SCREEN_SHOP, SCREEN_RUN, SCREEN_PAUSE, SCREEN_OVER } SvScreen;
+typedef enum { SCREEN_HUB, SCREEN_SHOP, SCREEN_CHARS, SCREEN_RUN, SCREEN_PAUSE, SCREEN_OVER } SvScreen;
 
 static SvScreen screen = SCREEN_HUB;
 static bool loaded = false;
 static bool leave_to_menu = false;
 static int hub_selected = 0;
+static int char_cursor = 0;
+static Texture2D roster_icons[CH_COUNT];
+static float char_message_timer = 0.0f;
+static const char *char_message = "";
 static int shop_selected = 0;
 static int levelup_selected = 0;
 static int pause_selected = 0;
@@ -29,14 +35,21 @@ static const char *upgrade_descriptions[UPG_COUNT] = {
     "+10 de vida máxima por nível", "+5% de dano por nível", "+4% de velocidade por nível", "-4% de recarga por nível", "+5% de área por nível",
     "+15% de alcance de coleta por nível", "+5% de XP por nível", "-1 de dano em cada golpe por nível", "Ao morrer, volta uma vez com 50% da vida"};
 
-#define HUB_OPTIONS 3
-static const char *hub_labels[HUB_OPTIONS] = {"JOGAR", "PLANO DE CARREIRA", "VOLTAR"};
+#define HUB_OPTIONS 4
+static const char *hub_labels[HUB_OPTIONS] = {"JOGAR", "PERSONAGEM", "PLANO DE CARREIRA", "VOLTAR"};
 
 void initialize_survival(void)
 {
     sv_meta_load(SV_SAVE_PATH);
     sv_load_sprites();
-    sv_load_player();
+    if (sv_meta.character < 0 || sv_meta.character >= CH_COUNT || !sv_character_unlocked(sv_meta.character, sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills)) sv_meta.character = CH_ESTAGIARIO;
+    char_cursor = sv_meta.character;
+    sv_load_player(sv_meta.character);
+    for (int i = 0; i < CH_COUNT; i++)
+    {
+        roster_icons[i] = LoadTexture(TextFormat("%s%s/walk/south-0.png", PERSONAGENS_PATH, sv_character(i)->folder));
+        if (roster_icons[i].id) SetTextureFilter(roster_icons[i], TEXTURE_FILTER_POINT);
+    }
     sv_audio_init();
     loaded = true;
     leave_to_menu = false;
@@ -54,6 +67,11 @@ void unload_survival(void)
     // Quem sai no meio da partida leva o que juntou até aqui
     if (screen == SCREEN_RUN || screen == SCREEN_PAUSE) sv_game_finish();
 
+    for (int i = 0; i < CH_COUNT; i++)
+    {
+        if (roster_icons[i].id) UnloadTexture(roster_icons[i]);
+        roster_icons[i] = (Texture2D){0};
+    }
     sv_audio_close();
     sv_unload_player();
     sv_unload_sprites();
@@ -148,7 +166,8 @@ static void render_hub(void)
     {
         sv_sfx(SND_confirma);
         if (hub_selected == 0) start_run();
-        else if (hub_selected == 1) { screen = SCREEN_SHOP; shop_selected = 0; sv_music_play(MUS_LOJA); }
+        else if (hub_selected == 1) { screen = SCREEN_CHARS; char_cursor = sv_meta.character; char_message_timer = 0.0f; }
+        else if (hub_selected == 2) { screen = SCREEN_SHOP; shop_selected = 0; sv_music_play(MUS_LOJA); }
         else leave_to_menu = true;
     }
 
@@ -175,6 +194,132 @@ static void render_hub(void)
         if (selected) DrawRectangleRec(row, (Color){70, 14, 26, 220});
         sv_text_centered(hub_labels[i], w / 2.0f, row.y + 8.0f * ui, 52.0f * ui, selected ? (Color){255, 70, 80, 255} : (Color){225, 215, 225, 255});
     }
+
+    end_game_drawing();
+}
+
+// -----------------------------------------------------------------------------
+// Escolha do personagem
+// -----------------------------------------------------------------------------
+
+static bool character_unlocked(int id)
+{
+    return sv_character_unlocked(id, sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills);
+}
+
+static Rectangle roster_cell(int index)
+{
+    float ui = sv_ui();
+    float cell_w = 210.0f * ui;
+    float total = cell_w * CH_COUNT;
+
+    return (Rectangle){(GetScreenWidth() - total) / 2.0f + cell_w * (float)index, 790.0f * ui, cell_w - 10.0f * ui, 190.0f * ui};
+}
+
+static void choose_character(int id)
+{
+    if (id == char_cursor) return;
+    char_cursor = id;
+    sv_load_player(id);
+    sv_sfx(SND_escolha);
+}
+
+static void render_characters(void)
+{
+    float ui = sv_ui();
+    float w = (float)GetScreenWidth();
+    const SvCharacter *c = sv_character(char_cursor);
+    bool unlocked = character_unlocked(char_cursor);
+    Vector2 mouse = GetMousePosition();
+    bool confirm = pressed_confirm();
+    int frame = get_walk_frame((float)GetTime());
+
+    if (pressed_right()) choose_character((char_cursor + 1) % CH_COUNT);
+    if (pressed_left()) choose_character((char_cursor + CH_COUNT - 1) % CH_COUNT);
+
+    for (int i = 0; i < CH_COUNT; i++)
+    {
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse, roster_cell(i)))
+        {
+            choose_character(i);
+            confirm = true;
+        }
+    }
+    c = sv_character(char_cursor);
+    unlocked = character_unlocked(char_cursor);
+
+    if (confirm)
+    {
+        if (!unlocked)
+        {
+            char_message = "Personagem bloqueado.";
+            sv_sfx(SND_semSaldo);
+        }
+        else
+        {
+            sv_meta.character = char_cursor;
+            sv_meta_save(SV_SAVE_PATH);
+            char_message = "Personagem escolhido.";
+            sv_sfx(SND_confirma);
+        }
+        char_message_timer = 2.0f;
+    }
+
+    if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_BACKSPACE))
+    {
+        // Quem sai sem escolher volta ao personagem salvo
+        if (char_cursor != sv_meta.character) sv_load_player(sv_meta.character);
+        screen = SCREEN_HUB;
+        sv_sfx(SND_confirma);
+    }
+
+    if (char_message_timer > 0.0f) char_message_timer -= GetFrameTime();
+
+    begin_game_drawing();
+    draw_backdrop();
+
+    sv_text_centered("PERSONAGEM", w / 2.0f, 40.0f * ui, 80.0f * ui, (Color){230, 40, 50, 255});
+
+    // Retrato grande. Bloqueado aparece como silhueta.
+    DrawRectangleRounded((Rectangle){w / 2.0f - 170.0f * ui, 150.0f * ui, 340.0f * ui, 300.0f * ui}, 0.08f, 8, (Color){18, 8, 22, 220});
+    sv_draw_player(SOUTH, unlocked ? frame : 0, (Vector2){w / 2.0f, 300.0f * ui}, 8.0f * ui, unlocked ? WHITE : (Color){12, 8, 18, 255});
+
+    sv_text_centered(unlocked ? c->name : "???", w / 2.0f, 465.0f * ui, 64.0f * ui, WHITE);
+    sv_text_centered(c->title, w / 2.0f, 535.0f * ui, 30.0f * ui, (Color){180, 170, 185, 255});
+
+    sv_text_centered(c->ability_name, w / 2.0f, 600.0f * ui, 38.0f * ui, (Color){255, 214, 80, 255});
+    sv_text_centered(c->ability_text, w / 2.0f, 650.0f * ui, 26.0f * ui, (Color){225, 215, 225, 255});
+
+    if (unlocked) sv_text_centered(char_cursor == sv_meta.character ? "EM USO" : "ENTER para escolher", w / 2.0f, 715.0f * ui, 30.0f * ui, char_cursor == sv_meta.character ? (Color){120, 230, 140, 255} : (Color){190, 180, 195, 255});
+    else
+    {
+        char text[160];
+
+        snprintf(text, sizeof(text), "BLOQUEADO: %s", c->unlock_text);
+        sv_text_centered(text, w / 2.0f, 715.0f * ui, 30.0f * ui, (Color){240, 90, 90, 255});
+    }
+
+    for (int i = 0; i < CH_COUNT; i++)
+    {
+        Rectangle cell = roster_cell(i);
+        bool open = character_unlocked(i);
+        bool selected = i == char_cursor;
+
+        DrawRectangleRec(cell, selected ? (Color){70, 14, 26, 230} : (Color){18, 8, 22, 200});
+        if (selected) DrawRectangleLinesEx(cell, 3.0f * ui, (Color){240, 50, 60, 255});
+        if (i == sv_meta.character) DrawRectangleLinesEx(cell, 3.0f * ui, (Color){120, 230, 140, 255});
+
+        if (roster_icons[i].id)
+        {
+            float size = 96.0f * ui;
+
+            DrawTexturePro(roster_icons[i], (Rectangle){0, 0, (float)roster_icons[i].width, (float)roster_icons[i].height}, (Rectangle){cell.x + (cell.width - size) / 2.0f, cell.y + 20.0f * ui, size, size}, (Vector2){0, 0}, 0.0f, open ? WHITE : (Color){12, 8, 18, 255});
+        }
+        sv_text_centered(open ? sv_character(i)->name : "Bloqueado", cell.x + cell.width / 2.0f, cell.y + 145.0f * ui, 28.0f * ui, open ? WHITE : (Color){120, 100, 125, 255});
+    }
+
+    sv_text_centered("Setas ou A/D trocam. Enter escolhe. ESC volta.", w / 2.0f, GetScreenHeight() - 60.0f * ui, 26.0f * ui, (Color){190, 180, 195, 255});
+    if (char_message_timer > 0.0f) sv_text_centered(char_message, w / 2.0f, GetScreenHeight() - 105.0f * ui, 30.0f * ui, (Color){255, 214, 80, 255});
 
     end_game_drawing();
 }
@@ -416,6 +561,10 @@ bool render_survival(void)
     case SCREEN_SHOP:
         sv_audio_update(GetFrameTime());
         render_shop();
+        break;
+    case SCREEN_CHARS:
+        sv_audio_update(GetFrameTime());
+        render_characters();
         break;
     case SCREEN_RUN:
         render_run();

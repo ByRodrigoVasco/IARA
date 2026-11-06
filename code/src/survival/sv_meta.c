@@ -35,6 +35,7 @@ bool sv_meta_load(const char *path)
         else if (!strcmp(line, "wins")) sv_meta.wins = value;
         else if (!strcmp(line, "best_seconds")) sv_meta.best_seconds = value;
         else if (!strcmp(line, "kills")) sv_meta.kills = value;
+        else if (!strcmp(line, "character")) sv_meta.character = value < CH_COUNT ? value : 0;
         else
         {
             for (int i = 0; i < UPG_COUNT; i++)
@@ -57,7 +58,7 @@ bool sv_meta_save(const char *path)
     file = fopen(temp_path, "w");
     if (!file) return false;
 
-    fprintf(file, "coins=%d\nruns=%d\nwins=%d\nbest_seconds=%d\nkills=%d\n", sv_meta.coins, sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills);
+    fprintf(file, "coins=%d\nruns=%d\nwins=%d\nbest_seconds=%d\nkills=%d\ncharacter=%d\n", sv_meta.coins, sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills, sv_meta.character);
     for (int i = 0; i < UPG_COUNT; i++) fprintf(file, "%s=%d\n", upgrade_keys[i], sv_meta.upgrades[i]);
 
     if (fclose(file) != 0) return false;

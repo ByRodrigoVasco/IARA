@@ -460,6 +460,134 @@ static void test_choices(void)
     sv_meta_reset();
 }
 
+static void unlock_everything(void)
+{
+    sv_meta.runs = 99;
+    sv_meta.wins = 9;
+    sv_meta.best_seconds = 600;
+    sv_meta.kills = 99999;
+}
+
+static void test_characters(void)
+{
+    printf("\nPersonagens\n");
+
+    {
+        bool distinct = true, weapons_ok = true;
+
+        for (int a = 0; a < CH_COUNT; a++)
+        {
+            const SvCharacter *ca = sv_character(a);
+
+            if (ca->start_weapon < 0 || ca->start_weapon >= W_COUNT) weapons_ok = false;
+            for (int b = a + 1; b < CH_COUNT; b++)
+            {
+                const SvCharacter *cb = sv_character(b);
+
+                if (!strcmp(ca->folder, cb->folder) || !strcmp(ca->name, cb->name) || ca->start_weapon == cb->start_weapon) distinct = false;
+            }
+        }
+        check("SV-41", "os 8 personagens têm pasta, nome e poder inicial próprios", CH_COUNT == 8 && distinct && weapons_ok);
+    }
+
+    check("SV-42", "só o Estagiário vem liberado; os outros abrem com o progresso",
+          sv_character_unlocked(CH_ESTAGIARIO, 0, 0, 0, 0) && !sv_character_unlocked(CH_LAURA, 0, 0, 0, 0) &&
+          !sv_character_unlocked(CH_LAURA, 0, 0, 179, 0) && sv_character_unlocked(CH_LAURA, 0, 0, 180, 0) &&
+          sv_character_unlocked(CH_ANDERSON, 0, 0, 0, 500) && sv_character_unlocked(CH_JULIO, 5, 0, 0, 0) &&
+          sv_character_unlocked(CH_NICOLLAS, 0, 0, 390, 0) && sv_character_unlocked(CH_VASCO, 0, 0, 0, 3000) &&
+          sv_character_unlocked(CH_ZITO, 15, 0, 0, 0) && !sv_character_unlocked(CH_JV, 99, 0, 600, 99999) && sv_character_unlocked(CH_JV, 0, 1, 0, 0));
+
+    {
+        bool all_open = true;
+
+        for (int i = 0; i < CH_COUNT; i++) all_open = all_open && sv_character_unlocked(i, 99, 9, 600, 99999);
+        check("SV-43", "com o progresso máximo todos estão liberados; id inválido cai no Estagiário", all_open && sv_character(-1) == sv_character(CH_ESTAGIARIO) && sv_character(99) == sv_character(CH_ESTAGIARIO));
+    }
+
+    sv_meta_reset();
+    sv_game_start(7);
+    {
+        float base_hp = sv_run.player.max_hp, base_speed = sv_run.player.speed_mult, base_magnet = sv_run.player.magnet_range;
+
+        check("SV-44", "o Estagiário começa com o Grampeador e sem bônus de vida", sv_run.player.weapons[0].id == W_GRAMPEADOR && base_hp == SV_BASE_HP && sv_run.player.character == CH_ESTAGIARIO);
+
+        sv_meta_reset();
+        unlock_everything();
+        sv_meta.character = CH_ANDERSON;
+        sv_game_start(7);
+        check("SV-45", "Anderson: +40 de vida, +1 de armadura, mais lento, poder inicial próprio",
+              sv_run.player.max_hp == base_hp + 40.0f && sv_run.player.armor == 1.0f && sv_run.player.speed_mult < base_speed && sv_run.player.weapons[0].id == sv_character(CH_ANDERSON)->start_weapon);
+
+        sv_meta.character = CH_JULIO;
+        sv_game_start(7);
+        check("SV-46", "Julio: mais rápido e com menos vida", sv_run.player.speed_mult > base_speed * 1.17f && sv_run.player.max_hp == base_hp - 10.0f);
+
+        sv_meta.character = CH_VASCO;
+        sv_game_start(7);
+        check("SV-47", "Vasco: coleta maior e mais XP", sv_run.player.magnet_range > base_magnet * 1.7f && sv_run.player.xp_mult > 1.19f);
+
+        sv_meta.character = CH_NICOLLAS;
+        sv_game_start(7);
+        check("SV-48", "Nicollas: recarga menor e poderes mais longos", sv_run.player.cooldown_mult < 0.9f && sv_run.player.duration_mult > 1.09f);
+
+        sv_meta.character = CH_LAURA;
+        sv_game_start(7);
+        check("SV-49", "Laura: chance de crítico", sv_run.player.crit_chance > 0.14f && sv_run.player.max_hp == base_hp - 10.0f);
+
+        sv_meta.character = CH_JV;
+        sv_game_start(7);
+        check("SV-50", "JV começa com o Ctrl+Z ativo", sv_run.player.revive_ready);
+
+        sv_meta.character = CH_ZITO;
+        sv_game_start(7);
+        sv_run.coins = 100;
+        sv_run.time = 0.0f;
+        {
+            int before = sv_meta.coins;
+            int earned = sv_game_finish();
+
+            check("SV-51", "Zito ganha 25% a mais de Banco de Horas ao fim da partida", earned == 125 && sv_meta.coins == before + 125);
+        }
+    }
+
+    // Personagem bloqueado salvo no arquivo volta para o Estagiário
+    sv_meta_reset();
+    sv_meta.character = CH_JV;
+    sv_game_start(7);
+    check("SV-52", "personagem bloqueado não entra na partida", sv_run.player.character == CH_ESTAGIARIO);
+
+    sv_meta_reset();
+    unlock_everything();
+    sv_meta.character = CH_VASCO;
+    check("SV-53", "o personagem escolhido é salvo e lido de volta", sv_meta_save(TEST_META_PATH));
+    sv_meta_reset();
+    check("SV-54", "o arquivo devolve o mesmo personagem", sv_meta_load(TEST_META_PATH) && sv_meta.character == CH_VASCO);
+    remove(TEST_META_PATH);
+
+    {
+        bool survived = true;
+
+        for (int ch = 0; ch < CH_COUNT; ch++)
+        {
+            sv_meta_reset();
+            unlock_everything();
+            sv_meta.character = ch;
+            sv_game_start(100 + (unsigned)ch);
+            for (int frame = 0; frame < 60 * 90; frame++)
+            {
+                float angle = (float)frame * 0.02f;
+
+                sv_game_update(1.0f / 60.0f, (Vector2){cosf(angle), sinf(angle)});
+                if (sv_run.phase == SV_LEVELUP) sv_game_choose(0);
+                if (sv_run.phase != SV_PLAYING && sv_run.phase != SV_LEVELUP) break;
+                if (!isfinite(sv_run.player.pos.x) || !isfinite(sv_run.player.hp)) survived = false;
+            }
+        }
+        check("SV-55", "os 8 personagens jogam 90 segundos sem valores inválidos", survived);
+    }
+    sv_meta_reset();
+}
+
 static void test_level_up(void)
 {
     printf("\nSubir de nível\n");
@@ -533,6 +661,7 @@ int main(void)
     test_map();
     test_choices();
     test_level_up();
+    test_characters();
 
     printf("\n%d verificacoes, todas passaram.\n", checks);
     return 0;

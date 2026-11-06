@@ -6,6 +6,8 @@
  * Ficam separadas para os testes automáticos rodarem sem abrir o jogo.
  */
 
+#include <stdbool.h>
+
 #define SV_RUN_SECONDS 600.0f   // Uma partida dura 10 minutos
 #define SV_ACT_COUNT 5          // Atos I a V
 #define SV_BASE_HP 100.0f       // "Vida base": o teto de dano dos chefes é percentual dela
@@ -46,5 +48,40 @@ int sv_upgrade_cost(SvUpgradeId id, int current_level);
 
 // Dano de cada golpe de chefe em pontos de vida: percentual da vida base, nunca acima do teto.
 float sv_boss_hit_damage(float percent_of_base_hp);
+
+// Personagens jogáveis. O primeiro está sempre liberado; os outros abrem com o progresso permanente.
+typedef enum
+{
+    CH_ESTAGIARIO, CH_LAURA, CH_ANDERSON, CH_JULIO, CH_NICOLLAS, CH_VASCO, CH_ZITO, CH_JV, CH_COUNT
+} SvCharacterId;
+
+typedef struct
+{
+    const char *folder;        // Pasta dos sprites em PERSONAGENS
+    const char *name;
+    const char *title;         // Cargo, em tom de brincadeira
+    const char *ability_name;
+    const char *ability_text;
+    const char *unlock_text;   // Como liberar
+    int start_weapon;          // Índice do poder inicial (mesma ordem de SvWeaponId)
+    float hp_bonus;            // Soma na vida máxima
+    float armor_bonus;         // Soma na armadura
+    float speed_mult;          // Multiplicadores (1,0 = sem mudança)
+    float cooldown_mult;
+    float duration_mult;
+    float magnet_mult;
+    float xp_mult;
+    float damage_mult;
+    float crit_chance;         // 0 a 1; o golpe crítico causa o dobro de dano
+    float coin_mult;           // Multiplica o Banco de Horas ganho ao fim da partida
+    int coin_luck;             // Soma, em pontos percentuais, na chance de um inimigo soltar Banco de Horas
+    bool free_revive;          // Começa com o Ctrl+Z já ativo
+} SvCharacter;
+
+// Dados do personagem. Um id inválido devolve o Estagiário.
+const SvCharacter *sv_character(int id);
+
+// Se o personagem está liberado para o progresso informado.
+bool sv_character_unlocked(int id, int runs, int wins, int best_seconds, int kills);
 
 #endif // SV_RULES_H

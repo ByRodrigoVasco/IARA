@@ -19,6 +19,7 @@ typedef struct
     int wins;                   // Vezes que a IARA foi derrotada
     int best_seconds;           // Maior tempo de sobrevivência
     int kills;                  // Inimigos eliminados no total
+    int character;              // Personagem escolhido (SvCharacterId)
 } SvMeta;
 
 extern SvMeta sv_meta;

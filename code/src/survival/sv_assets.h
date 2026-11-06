@@ -42,8 +42,9 @@ void sv_draw(SvSpriteId id, int frame, Vector2 center, float scale, float rotati
 /** @brief Desenha um quadro esticado em largura e altura próprias (feixes e linhas). */
 void sv_draw_stretched(SvSpriteId id, int frame, Vector2 center, float width, float height, float rotation, Color tint);
 
-// A Estagiária usa os quadros do andar que já existem no jogo.
-void sv_load_player(void);
+// O personagem usa os quadros do andar que já existem no jogo (pasta em PERSONAGENS).
+// Carregar outro personagem descarrega o anterior.
+void sv_load_player(int character);
 void sv_unload_player(void);
 void sv_draw_player(int direction, int frame, Vector2 center, float scale, Color tint);
 

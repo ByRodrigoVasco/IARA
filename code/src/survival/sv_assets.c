@@ -1,5 +1,6 @@
 #include "sv_assets.h"
 #include "characters.h"
+#include "sv_rules.h"
 
 SvSprite sv_sprites[SPR_COUNT];
 
@@ -60,13 +61,15 @@ void sv_draw_stretched(SvSpriteId id, int frame, Vector2 center, float width, fl
     DrawTexturePro(sprite->texture, source, dest, (Vector2){width / 2.0f, height / 2.0f}, rotation, tint);
 }
 
-void sv_load_player(void)
+void sv_load_player(int character)
 {
-    if (player_loaded) return;
+    const char *folder = sv_character(character)->folder;
+
+    sv_unload_player();
 
     for (int d = 0; d < DIRECTION_COUNT; d++)
     {
-        if (!load_walk_frames("Estagiarios", d, player_frames[d]))
+        if (!load_walk_frames(folder, d, player_frames[d]))
         {
             for (int f = 0; f < WALK_FRAME_COUNT; f++) player_frames[d][f] = (Texture2D){0};
         }
