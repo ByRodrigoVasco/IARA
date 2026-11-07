@@ -8,7 +8,7 @@
 #define PREFERENCES_FILE_PATH "iara.ini"
 
 /**
- * @brief Lê o arquivo e aplica alto contraste, brilho e tela cheia. Exige a janela aberta.
+ * @brief Lê o arquivo e aplica alto contraste, brilho, volume e tela cheia. Exige janela e áudio inicializados.
  *
  * Linhas inválidas são ignoradas: o jogo continua com o valor atual daquela opção.
  *
@@ -18,7 +18,7 @@
 bool load_preferences(const char *path);
 
 /**
- * @brief Grava o alto contraste, o brilho e a tela cheia atuais.
+ * @brief Grava o alto contraste, o brilho, o volume e a tela cheia atuais.
  *
  * @param path Caminho do arquivo.
  * @return true se conseguiu gravar.

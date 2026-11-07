@@ -88,6 +88,14 @@ extern unsigned int middle_screen_y;
 // Icon de indicação de interação com o computador
 #define ARROW_DOWN_PNG_PATH  "code/assets/icons/arrow-down.png"
 
+// PATHS PARA ÁUDIO
+#define SOUNDS_PATH "code/assets/sounds/"
+#define MENU_MUSIC_PATH SOUNDS_PATH "DEMO -  MENU.mp3"
+#define GAME_MUSIC_PATH SOUNDS_PATH "DEMO - GAME.mp3"
+#define MOUSE_CLICK_SOUND_PATH SOUNDS_PATH "CLICK MOUSE.mp3"
+#define IARA_VOICE_SOUND_PATH SOUNDS_PATH "ARI VOICE BLIP.mp3"
+#define PLAYER_FOOTSTEPS_SOUND_PATH SOUNDS_PATH "SOM DE PASSOS.mp3"
+
 // PATHS PARA O COMPUTADOR
 #define COMPUTER_ASSETS_PATH           "code/assets/sprites/computer/"
 #define COMPUTER_WINDOW_PNG_PATH       COMPUTER_ASSETS_PATH "computer-window.png"
