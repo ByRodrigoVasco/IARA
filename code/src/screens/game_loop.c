@@ -14,6 +14,7 @@
 #include "hints.h"
 #include "accessibility.h"
 #include "calendar.h"
+#include "audio.h"
 
 // Valor de sentinela para indicar que o temporizador do cartão de introdução ainda não começou a contar
 #define DID_NOT_START -30
@@ -1095,6 +1096,8 @@ static void render_high_contrast_outlines(void)
  */
 void handle_game_loop_screens(void)
 {
+    if (current_screen != IN_GAME_SCREEN) update_player_footstep_audio(false);
+
     // Fora do quadro da cena: as texturas do computador ainda seriam usadas se fossem liberadas depois de desenhar
     if (current_screen == COMPUTER_SCREEN && computer_exit_finished)
     {
@@ -1136,6 +1139,7 @@ void handle_game_loop_screens(void)
 
         // Processa lógica de comandos do jogador, interações e colisões com o mapa.
         // Enquanto lê o bilhete, o jogador fica parado.
+        Vector2 previous_player_position = current_estagiario_position;
         if (is_hint_note_open())
         {
             walk_time = 0.0f;
@@ -1147,6 +1151,9 @@ void handle_game_loop_screens(void)
 
         handle_map_interactables();
         handle_map_collisions();
+        bool player_moved = current_estagiario_position.x != previous_player_position.x ||
+                            current_estagiario_position.y != previous_player_position.y;
+        update_player_footstep_audio(player_moved && !leave_office && !enter_computer_screen);
 
         // ORDEM DE RENDERIZAÇÃO (Layering / Z-Index):
         // 1º O mapa de fundo (Escritório)
@@ -1261,6 +1268,7 @@ void unload_game_loop(void)
 {
     if (!game_loop_loaded) return;
 
+    update_player_footstep_audio(false);
     game_loop_loaded = false;
 
     if (computer_loop_loaded)
