@@ -1280,10 +1280,12 @@ void handle_game_loop_screens(void)
 
         hint_item_rectangle = get_hint_item_rectangle(get_scale(), get_map_center());
 
-        // Durante uma leitura, tanto o jogador quanto os NPCs aguardam a próxima interação.
         Vector2 previous_player_position = current_estagiario_position;
         bool interaction_open = is_hint_note_open() || active_npc_id >= 0;
-        if (interaction_open)
+
+        // Processa lógica de comandos do jogador, interações e colisões com o mapa.
+        // Enquanto lê o bilhete, o jogador fica parado.
+        if (is_hint_note_open())
         {
             walk_time = 0.0f;
         }
