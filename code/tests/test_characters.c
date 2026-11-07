@@ -16,8 +16,8 @@ int main(void)
     assert(!load_walk_frames("Inexistente", EAST, frames));
 
     // Todo personagem tem os 4 frames nas 8 direções (rodar na raiz do repositório)
-    const char *characters[] = {"Anderson", "Estagiarios", "JP", "Julio", "JV", "Laura", "Nicollas", "Vasco", "Zito"};
-    for (int c = 0; c < 9; c++)
+    const char *characters[] = {"Anderson", "Estagiarios", "Julio", "JV", "Laura", "Nicollas", "Vasco", "Zito"};
+    for (int c = 0; c < 8; c++)
     {
         for (int direction = 0; direction < DIRECTION_COUNT; direction++)
         {
