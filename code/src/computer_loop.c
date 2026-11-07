@@ -7,6 +7,7 @@
 #include "animations.h"
 #include "button.h"
 #include "fonts.h"
+#include "audio.h"
 
 #define MAX_LINES 4
 #define MAX_LINE_LEN 64
@@ -198,11 +199,20 @@ void render_current_step(void)
     // Se ultrapassou o último passo, marca como finalizado
     if (current_step_index >= TOTAL_STEPS)
     {
+        audio_voice_stop(); // Acabou o diálogo: corta a voz.
         computer_tasks_finished = true;
         return;
     }
 
     DialogStep *step = &sequence[current_step_index];
+
+    // Toca a voz do NPC UMA vez cada vez que uma fala nova aparece na tela.
+    static int last_spoken_step = -1;
+    if (current_step_index != last_spoken_step)
+    {
+        last_spoken_step = current_step_index;
+        audio_voice_start();
+    }
 
     // 1. Obtém as dimensões atuais da janela (Texture2D)
     float win_w = (float)window_texture.width;

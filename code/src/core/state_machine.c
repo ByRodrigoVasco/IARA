@@ -8,6 +8,7 @@
 #include "menu.h"
 #include "game_loop.h"
 #include "state_machine.h"
+#include "audio.h"
 
 void handle_state_initialization(void)
 {
@@ -20,6 +21,7 @@ int handle_menu_action(int screen)
     {
     case INICIAR:
         initialize_game_loop_variables();
+        audio_play_music_game(); // Troca a música do menu pela música do jogo.
         return PLAYING_SCREEN;
         break;
 
@@ -48,6 +50,7 @@ void handle_state_machine(void)
         {
             unload_pre_menu_textures();
             initialize_menu_variables();
+            audio_play_music_menu(); // Começa a música do menu.
 
             current_game_state_variables.current_screen = MENU_SCREEN;
         }
@@ -79,12 +82,14 @@ void handle_state_machine(void)
     case CREDITS_SCREEN:
         // Tela de créditos ainda não implementada: volta para o menu.
         initialize_menu_variables();
+        audio_play_music_menu(); // Se o menu já está tocando, não reinicia.
         current_game_state_variables.current_screen = MENU_SCREEN;
         break;
 
     default:
         // Tela desconhecida: volta para o menu por segurança.
         initialize_menu_variables();
+        audio_play_music_menu();
         current_game_state_variables.current_screen = MENU_SCREEN;
         break;
     }

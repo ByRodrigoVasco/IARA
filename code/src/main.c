@@ -4,6 +4,7 @@
 #include "menu.h"
 #include "fonts.h"
 #include "macros.h"
+#include "audio.h"
 
 unsigned int screen_width = 0;
 unsigned int screen_height = 0;
@@ -37,6 +38,9 @@ int main(void)
 
     SetTargetFPS(60);
 
+    // Abre o áudio e carrega os efeitos sonoros (código em audio.c).
+    audio_init();
+
     // A ORDEM IMPORTA. NÃO MUDE.
     initialize_fonts();
     
@@ -50,10 +54,12 @@ int main(void)
 
     while (!WindowShouldClose())
     {
+        audio_update(); // Mantém a música tocando e toca o clique do mouse.
         handle_state_machine();
     }
 
     unload_fonts();
+    audio_close();
     CloseWindow();
     return 0;
 }
