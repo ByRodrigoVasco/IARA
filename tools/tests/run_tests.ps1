@@ -106,7 +106,8 @@ $suite = @(
             "code/src/ui/fonts.c", "code/src/ui/animations.c", "code/src/ui/button.c",
             "code/src/core/helper.c", "code/src/core/game_state.c",
             "code/src/ui/accessibility.c", "code/src/game/hints.c",
-            "code/src/screens/computer_loop.c", "code/src/ui/cheat_sheet.c", "code/src/ui/logic_text.c", "code/src/game/logic.c", "code/src/game/calendar.c"
+            "code/src/screens/computer_loop.c", "code/src/ui/cheat_sheet.c", "code/src/ui/logic_text.c", "code/src/game/logic.c", "code/src/game/calendar.c",
+            "code/src/core/audio.c"
         )
     },
     @{
@@ -116,7 +117,8 @@ $suite = @(
             "code/tests/test_conteudo.c",
             "code/src/ui/fonts.c", "code/src/ui/animations.c", "code/src/ui/button.c",
             "code/src/core/helper.c", "code/src/core/game_state.c", "code/src/ui/accessibility.c",
-            "code/src/screens/settings.c", "code/src/core/preferences.c", "code/src/ui/cheat_sheet.c", "code/src/ui/logic_text.c", "code/src/game/logic.c", "code/src/game/calendar.c"
+            "code/src/screens/settings.c", "code/src/core/preferences.c", "code/src/ui/cheat_sheet.c", "code/src/ui/logic_text.c", "code/src/game/logic.c", "code/src/game/calendar.c",
+            "code/src/core/audio.c"
         )
     },
     @{
@@ -132,7 +134,8 @@ $suite = @(
             "code/src/game/collisions.c", "code/src/game/characters.c",
             "code/src/ui/fonts.c", "code/src/ui/animations.c", "code/src/ui/button.c",
             "code/src/ui/accessibility.c", "code/src/game/hints.c", "code/src/screens/settings.c",
-            "code/src/core/preferences.c", "code/src/ui/cheat_sheet.c", "code/src/ui/logic_text.c", "code/src/game/logic.c", "code/src/game/calendar.c"
+            "code/src/core/preferences.c", "code/src/ui/cheat_sheet.c", "code/src/ui/logic_text.c", "code/src/game/logic.c", "code/src/game/calendar.c",
+            "code/src/core/audio.c"
         )
     }
 )
