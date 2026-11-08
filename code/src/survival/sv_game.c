@@ -46,6 +46,9 @@ SvSpriteId sv_enemy_sprite(int type)
     return enemy_sprites[type];
 }
 
+// Ponteiro: distância em que ele procura o inimigo para mirar
+#define PONTEIRO_RANGE 320.0f
+
 // Deploy em Produção: alcance de mira
 #define DEPLOY_RANGE 300.0f
 
@@ -70,7 +73,7 @@ static const SpawnWeight act_spawns[SV_ACT_COUNT][8] = {
 static const char *weapon_names[W_COUNT] = {"Grampeador", "Ponteiro", "Caneca Arremessada", "Post-its Orbitais", "Não Perturbe", "Deploy em Produção", "Tarja Preta", "Modus Ponens", "Tabela-Verdade", "Colega de Plantão", "Nova Conversa", "Prompt da IARA", "Vera Fischer"};
 static const char *weapon_descriptions[W_COUNT] = {
     "Tiros retos no inimigo mais próximo.",
-    "Golpe em linha para os dois lados.",
+    "Golpe em linha, para os dois lados, na direção do inimigo mais próximo.",
     "Cai sobre os inimigos mais próximos e derrama café quente em área.",
     "Giram ao seu redor e protegem de perto.",
     "Aura de dano que afasta quem chega perto.",
@@ -112,7 +115,7 @@ typedef struct
 
 static const WeaponDef weapon_defs[W_COUNT] = {
     [W_GRAMPEADOR]   = {{10, 10, 14, 14, 20}, {0.70f, 0.60f, 0.60f, 0.50f, 0.45f}, {1, 1, 2, 2, 3}, {0, 0, 0, 0, 0}, {1, 2, 2, 3, 3}},
-    [W_PONTEIRO]     = {{14, 14, 20, 20, 28}, {1.60f, 1.45f, 1.45f, 1.25f, 1.10f}, {0, 0, 0, 0, 0}, {60, 70, 70, 85, 100}, {10, 10, 13, 13, 16}},
+    [W_PONTEIRO]     = {{14, 14, 20, 20, 28}, {1.60f, 1.45f, 1.45f, 1.25f, 1.10f}, {0, 0, 0, 0, 0}, {85, 95, 95, 110, 125}, {14, 14, 17, 17, 20}},
     [W_CANECA]       = {{20, 20, 26, 26, 36}, {2.20f, 2.00f, 2.00f, 1.80f, 1.60f}, {1, 1, 2, 2, 3}, {40, 46, 46, 52, 58}, {0, 0, 0, 0, 0}},
     [W_POSTITS]      = {{7, 7, 10, 10, 15}, {0.50f, 0.45f, 0.45f, 0.40f, 0.35f}, {0, 0, 0, 0, 0}, {54, 60, 60, 68, 76}, {0, 0, 0, 0, 0}},
     [W_NAOPERTURBE]  = {{5, 5, 8, 8, 12}, {0.50f, 0.45f, 0.45f, 0.40f, 0.35f}, {0, 0, 0, 0, 0}, {58, 66, 66, 76, 86}, {0, 0, 0, 0, 0}},
@@ -318,6 +321,8 @@ static void recompute_stats(void)
         p->coin_mult = c->coin_mult;
         p->coin_luck = c->coin_luck;
         p->move_recharge = c->move_recharge;
+        p->kill_heal = c->kill_heal;
+        p->kill_heal_every = c->kill_heal_every;
     }
 
     if (old_max > 0.0f) p->hp += p->max_hp - old_max;
@@ -502,6 +507,13 @@ static void kill_enemy(SvEnemy *e)
     e->alive = false;
     sv_run.enemy_count--;
     sv_run.kills++;
+
+    // Nicollas: a cada tantos chamados atendidos, recupera um pouco de vida
+    if (!e->fake && sv_run.player.kill_heal_every > 0 && ++sv_run.player.kills_since_heal >= sv_run.player.kill_heal_every)
+    {
+        sv_run.player.kills_since_heal = 0;
+        sv_run.player.hp = fminf(sv_run.player.max_hp, sv_run.player.hp + sv_run.player.kill_heal);
+    }
 
     sv_spawn_fx(FX_DEATH, e->pos, 0.35f, 1.0f);
 
@@ -792,8 +804,10 @@ static void fire_weapon(SvWeapon *w)
         float reach = WS(W_PONTEIRO, WSTAT_AREA, level) * p->area_mult;
         float width = WS(W_PONTEIRO, WSTAT_EXTRA, level) * p->area_mult;
 
+        Vector2 aim = aim_vector(PONTEIRO_RANGE);
+
         base_cd = WS(W_PONTEIRO, WSTAT_COOLDOWN, level);
-        angle = atan2f(p->facing_vector.y, p->facing_vector.x) * RAD2DEG;
+        angle = atan2f(aim.y, aim.x) * RAD2DEG;
         add_strike_zone(p->pos, angle, reach, width, WS(W_PONTEIRO, WSTAT_DAMAGE, level), 0.0f, ZK_PONTEIRO);
         add_strike_zone(p->pos, angle + 180.0f, reach, width, WS(W_PONTEIRO, WSTAT_DAMAGE, level), 0.0f, ZK_PONTEIRO);
         sv_sfx(SND_ponteiro);

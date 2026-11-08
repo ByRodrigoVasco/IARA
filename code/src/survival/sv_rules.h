@@ -77,6 +77,8 @@ typedef struct
     int coin_luck;             // Soma, em pontos percentuais, na chance de um inimigo soltar Banco de Horas
     bool free_revive;          // Começa com o Ctrl+Z já ativo
     float move_recharge;       // Poderes recarregam mais rápido enquanto o personagem anda (0,12 = 12%)
+    float kill_heal;           // Vida recuperada a cada kill_heal_every inimigos derrotados
+    int kill_heal_every;       // 0 = sem recuperação por abates
 } SvCharacter;
 
 // Dados do personagem. Um id inválido devolve o Estagiário.
