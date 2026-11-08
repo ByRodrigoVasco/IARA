@@ -32,6 +32,24 @@ float get_ui_scale(void);
 Texture2D load_smooth_texture(const char *path);
 
 /*
+ * @brief Como load_smooth_texture, mas cada imagem carrega uma vez só: quem pede de novo uma imagem que já está
+ * na memória recebe a mesma textura, sem decodificar nem enviar à placa de vídeo outra vez (o que custava
+ * mais de 100 ms por imagem grande). Devolva com release_smooth_texture.
+ */
+Texture2D acquire_smooth_texture(const char *path);
+
+/*
+ * @brief Devolve uma textura de acquire_smooth_texture. Ela só sai da memória quando ninguém mais a usa.
+ * Textura vazia (id 0) é ignorada, então a variável deve ser zerada depois de devolvida.
+ */
+void release_smooth_texture(Texture2D texture);
+
+/*
+ * @brief Quantos usos a imagem tem agora (0 se não está carregada). Serve aos testes.
+ */
+int shared_texture_users(const char *path);
+
+/*
  * @brief Desenha a textura cobrindo dest sem deformar: o que sobra é cortado igualmente dos lados.
  */
 void draw_texture_cover(Texture2D texture, Rectangle dest, Color tint);

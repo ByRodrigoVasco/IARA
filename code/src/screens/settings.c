@@ -209,7 +209,8 @@ static void draw_brightness_slider(Rectangle row, float font_size)
 
 void initialize_settings_screen(void)
 {
-    settings_background = load_smooth_texture(ESCRITORIO_TELA_PNG_PATH);
+    // O menu já mantém o escritório na memória: abrir as configurações não decodifica a imagem de novo
+    settings_background = acquire_smooth_texture(ESCRITORIO_TELA_PNG_PATH);
     selected_option = SETTINGS_CONTRAST;
 }
 
@@ -272,5 +273,6 @@ bool render_settings_screen(void)
 void unload_settings_screen(void)
 {
     SetMouseCursor(MOUSE_CURSOR_ARROW);
-    UnloadTexture(settings_background);
+    release_smooth_texture(settings_background);
+    settings_background = (Texture2D){0};
 }

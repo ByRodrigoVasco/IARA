@@ -63,16 +63,17 @@ float menu_preload_step(void)
     switch (menu_textures_loaded)
     {
     case 0:
-        arrow_icon_texture = load_smooth_texture("code/assets/icons/arrow-icon.png");
+        arrow_icon_texture = acquire_smooth_texture("code/assets/icons/arrow-icon.png");
         break;
     case 1:
-        bg_office_texture = load_smooth_texture("code/assets/sprites/tela-inicial/escritorio-tela-inicial.png");
+        // O escritório e o nome IARA já foram carregados pela abertura: aqui só se pega a mesma textura
+        bg_office_texture = acquire_smooth_texture("code/assets/sprites/tela-inicial/escritorio-tela-inicial.png");
         break;
     case 2:
-        iara_name_texture = load_smooth_texture("code/assets/sprites/tela-inicial/iara-nome.png");
+        iara_name_texture = acquire_smooth_texture("code/assets/sprites/tela-inicial/iara-nome.png");
         break;
     default:
-        second_bg_texture = load_smooth_texture("code/assets/background/second-background.png");
+        second_bg_texture = acquire_smooth_texture("code/assets/background/second-background.png");
         break;
     }
 
@@ -94,10 +95,11 @@ static void initialize_menu_textures(void)
 void unload_menu_textures(void)
 {
     if (menu_textures_loaded == 0) return;
-    if (menu_textures_loaded > 0) UnloadTexture(arrow_icon_texture);
-    if (menu_textures_loaded > 1) UnloadTexture(bg_office_texture);
-    if (menu_textures_loaded > 2) UnloadTexture(iara_name_texture);
-    if (menu_textures_loaded > 3) UnloadTexture(second_bg_texture);
+    if (menu_textures_loaded > 0) release_smooth_texture(arrow_icon_texture);
+    if (menu_textures_loaded > 1) release_smooth_texture(bg_office_texture);
+    if (menu_textures_loaded > 2) release_smooth_texture(iara_name_texture);
+    if (menu_textures_loaded > 3) release_smooth_texture(second_bg_texture);
+    arrow_icon_texture = bg_office_texture = iara_name_texture = second_bg_texture = (Texture2D){0};
     menu_textures_loaded = 0;
 }
 

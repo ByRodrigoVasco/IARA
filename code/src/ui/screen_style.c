@@ -77,7 +77,7 @@ Rectangle style_row(float y, const char *label, const char *detail, bool selecte
 
     if (selected)
     {
-        if (!arrow_texture.id) arrow_texture = load_smooth_texture(ARROW_ICON_PATH);
+        if (!arrow_texture.id) arrow_texture = acquire_smooth_texture(ARROW_ICON_PATH);
         if (arrow_texture.id)
         {
             float arrow_width = (arrow_texture.width / ARROW_ICON_SCALE_DIVISOR) * scale;
@@ -222,7 +222,7 @@ void style_unload(void)
 {
     if (arrow_texture.id)
     {
-        UnloadTexture(arrow_texture);
+        release_smooth_texture(arrow_texture);
         arrow_texture = (Texture2D){0};
     }
 }

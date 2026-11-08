@@ -358,7 +358,7 @@ static void testar_estado_inicial(void)
 
 static void testar_abertura(void)
 {
-    titulo("Abertura do jogo (CT-27)");
+    titulo("Abertura do jogo e imagens compartilhadas (CT-27, CT-89 a CT-91)");
     etapa("[1/7] tela de abertura e menu principal");
 
     handle_state_initialization();
@@ -384,6 +384,37 @@ static void testar_abertura(void)
            entregou_o_menu && quadros < LIMITE_DE_QUADROS &&
            current_game_state_variables.current_screen == MENU_SCREEN &&
            is_menu_to_close == false);
+
+    /* A abertura e o menu usam as mesmas imagens grandes (o escritorio e o nome IARA): cada uma carrega
+     * uma vez so, e a abertura, ao terminar, entrega a imagem ao menu em vez de descarregar. */
+    checar("CT-89", "A abertura e o menu dividem as imagens grandes: cada uma carrega uma vez so e fica com o menu",
+           shared_texture_users(ESCRITORIO_TELA_PNG_PATH) == 1 &&
+           shared_texture_users("code/assets/sprites/tela-inicial/iara-nome.png") == 1 &&
+           shared_texture_users("code/assets/background/second-background.png") == 1);
+
+    /* Abrir as configuracoes pega o escritorio que o menu ja mantem, sem decodificar de novo, e fechar nao o derruba. */
+    initialize_settings_screen();
+    bool configuracoes_dividem = shared_texture_users(ESCRITORIO_TELA_PNG_PATH) == 2;
+    unload_settings_screen();
+    checar("CT-90", "As configuracoes reaproveitam o escritorio do menu, e ele continua carregado depois de fechadas",
+           configuracoes_dividem && shared_texture_users(ESCRITORIO_TELA_PNG_PATH) == 1 &&
+           menu_textures_loaded == MENU_TEXTURE_COUNT);
+
+    /* A tabela conta os usos: a mesma imagem pedida duas vezes e uma textura so, e ela so sai da memoria na ultima devolucao. */
+    {
+        const char *caminho = "code/assets/icons/arrow-down.png";
+        Texture2D primeira = acquire_smooth_texture(caminho);
+        Texture2D segunda = acquire_smooth_texture(caminho);
+        bool mesma_textura = primeira.id != 0 && primeira.id == segunda.id && shared_texture_users(caminho) == 2;
+        bool ainda_carregada;
+
+        release_smooth_texture(primeira);
+        ainda_carregada = shared_texture_users(caminho) == 1;
+        release_smooth_texture(segunda);
+        release_smooth_texture((Texture2D){0});   /* textura vazia e ignorada */
+        checar("CT-91", "A mesma imagem pedida duas vezes e uma textura so, e sai da memoria so quando o ultimo devolve",
+               mesma_textura && ainda_carregada && shared_texture_users(caminho) == 0);
+    }
 }
 
 static void testar_creditos(void)

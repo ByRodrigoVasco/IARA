@@ -38,8 +38,9 @@ void initialize_pre_menu_textures(void)
 {
     bg_color = GetColor(BG_COLOR_HEX);
 
-    bg_office_texture = load_smooth_texture("code/assets/sprites/tela-inicial/escritorio-tela-inicial.png");
-    iara_name_texture = load_smooth_texture("code/assets/sprites/tela-inicial/iara-nome.png");
+    // O menu usa as mesmas duas imagens: elas carregam aqui e o menu só pega as que já estão na memória
+    bg_office_texture = acquire_smooth_texture("code/assets/sprites/tela-inicial/escritorio-tela-inicial.png");
+    iara_name_texture = acquire_smooth_texture("code/assets/sprites/tela-inicial/iara-nome.png");
 }
 
 // Desenha o fundo cobrindo a janela e o nome IARA centralizado, conforme o tamanho atual da janela.
@@ -85,6 +86,10 @@ void render_pre_menu(void)
 
 void unload_pre_menu_textures(void)
 {
-    UnloadTexture(bg_office_texture);
-    UnloadTexture(iara_name_texture);
+    release_smooth_texture(bg_office_texture);
+    release_smooth_texture(iara_name_texture);
+
+    // Zeradas: devolver de novo (a abertura pode ser descarregada pelo menu e pelo encerramento) não conta duas vezes
+    bg_office_texture = (Texture2D){0};
+    iara_name_texture = (Texture2D){0};
 }
