@@ -125,10 +125,34 @@ static void draw_zones(void)
         {
             if (z->delay > 0.0f)
             {
-                float t = z->delay / 0.65f;
+                float t = z->delay / 0.5f;
 
                 DrawCircleLinesV(z->pos, z->radius, (Color){255, 200, 120, 120});
                 sv_draw(SPR_fx_caneca, t > 0.5f ? 0 : 1, (Vector2){z->pos.x, z->pos.y - t * 90.0f}, 1.0f, 0.0f, false, WHITE);
+            }
+            else
+            {
+                // Respingo de café: a poça cresce no impacto e depois espirra para os lados. O desenho tem 38 px de largura
+                float t = 1.0f - z->life / 0.35f;
+                float scale = z->radius * 2.0f / 38.0f;
+                Color tint = WHITE;
+
+                if (t > 0.6f) tint.a = (unsigned char)(255.0f * (1.0f - (t - 0.6f) / 0.4f));
+                sv_draw(SPR_fx_caneca, t < 0.35f ? 2 : 3, z->pos, scale, 0.0f, false, tint);
+            }
+        }
+        else if (z->kind == ZK_VERA)
+        {
+            // Onda de "falso": o anel abre a partir de quem foi atingido e some
+            if (z->delay <= 0.0f)
+            {
+                float t = 1.0f - z->life / 0.3f;
+                float radius = z->radius * (0.35f + 0.65f * t);
+                unsigned char fade = (unsigned char)(255.0f * (1.0f - t));
+
+                DrawCircleV(z->pos, radius, (Color){90, 210, 255, (unsigned char)(fade / 6)});
+                DrawCircleLinesV(z->pos, radius, (Color){170, 240, 255, fade});
+                DrawCircleLinesV(z->pos, radius * 0.82f, (Color){90, 210, 255, (unsigned char)(fade / 2)});
             }
         }
         else if (z->kind == ZK_DEPLOY)
@@ -198,6 +222,13 @@ static void draw_player(void)
 
     draw_shadow(p->pos, 10.0f);
     sv_draw_player(p->direction, frame, p->pos, 1.0f, tint);
+
+    // Vera Fischer: o anel mostra que ela está armada e o próximo golpe será anulado; o aviso aparece quando acontece
+    for (int i = 0; i < p->weapon_count; i++)
+    {
+        if (p->weapons[i].id == W_VERA && p->weapons[i].cooldown <= 0.0f) DrawCircleLinesV(p->pos, 16.0f + sinf(sv_run.time * 5.0f), (Color){120, 230, 255, 170});
+    }
+    if (p->negate_flash > 0.0f) sv_text_centered("V -> F = F", p->pos.x, p->pos.y - 46.0f - (0.9f - p->negate_flash) * 14.0f, 13.0f, (Color){160, 240, 255, (unsigned char)(255.0f * fminf(1.0f, p->negate_flash * 2.5f))});
 
     for (int i = 0; i < p->weapon_count; i++)
     {

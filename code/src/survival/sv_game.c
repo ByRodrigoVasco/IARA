@@ -46,6 +46,13 @@ SvSpriteId sv_enemy_sprite(int type)
     return enemy_sprites[type];
 }
 
+// Vera Fischer: distância em que um inimigo dispara a onda sozinho
+#define VERA_TRIGGER 44.0f
+
+// Caneca Arremessada: alcance de mira e tempo entre o arremesso e o impacto
+#define CANECA_RANGE 260.0f
+#define CANECA_DELAY 0.5f
+
 // Pesos de nascimento por ato.
 typedef struct { int type; int weight; } SpawnWeight;
 
@@ -57,11 +64,11 @@ static const SpawnWeight act_spawns[SV_ACT_COUNT][8] = {
     {{EN_ECO, 20}, {EN_AUDITOR, 7}, {EN_AFOGADO, 20}, {EN_CRACHA, 15}, {EN_AUTORESPOSTA, 15}, {EN_ALUCINACAO, 12}, {EN_DADO, 10}, {-1, 0}},
 };
 
-static const char *weapon_names[W_COUNT] = {"Grampeador", "Ponteiro", "Caneca Arremessada", "Post-its Orbitais", "Não Perturbe", "Deploy em Produção", "Tarja Preta", "Modus Ponens", "Tabela-Verdade", "Colega de Plantão", "Nova Conversa", "Prompt da IARA"};
+static const char *weapon_names[W_COUNT] = {"Grampeador", "Ponteiro", "Caneca Arremessada", "Post-its Orbitais", "Não Perturbe", "Deploy em Produção", "Tarja Preta", "Modus Ponens", "Tabela-Verdade", "Colega de Plantão", "Nova Conversa", "Prompt da IARA", "Vera Fischer"};
 static const char *weapon_descriptions[W_COUNT] = {
     "Tiros retos no inimigo mais próximo.",
     "Golpe em linha para os dois lados.",
-    "Sobe em arco e cai com dano em área.",
+    "Cai sobre os inimigos mais próximos e derrama café quente em área.",
     "Giram ao seu redor e protegem de perto.",
     "Aura de dano que afasta quem chega perto.",
     "Raios em alvos aleatórios, também distantes.",
@@ -70,8 +77,9 @@ static const char *weapon_descriptions[W_COUNT] = {
     "Grade no chão que fere quem pisa nas casas acesas.",
     "Um colega humano segue você e luta.",
     "Empurra tudo e apaga tiros, com recarga longa.",
-    "Ataque muito forte em linha reta, com recarga longa."};
-static const SvSpriteId weapon_icons[W_COUNT] = {SPR_ic_grampeador, SPR_ic_ponteiro, SPR_ic_caneca, SPR_ic_postits, SPR_ic_naoperturbe, SPR_ic_deploy, SPR_ic_tarja, SPR_ic_modus, SPR_ic_tabela, SPR_ic_colega, SPR_ic_novaconversa, SPR_ic_prompt};
+    "Ataque muito forte em linha reta, com recarga longa.",
+    "Se um golpe te acerta (V), o dano é falso (F): ele é anulado e solta uma onda. Também dispara sozinha quando alguém chega perto."};
+static const SvSpriteId weapon_icons[W_COUNT] = {SPR_ic_grampeador, SPR_ic_ponteiro, SPR_ic_caneca, SPR_ic_postits, SPR_ic_naoperturbe, SPR_ic_deploy, SPR_ic_tarja, SPR_ic_modus, SPR_ic_tabela, SPR_ic_colega, SPR_ic_novaconversa, SPR_ic_prompt, SPR_ps_cracha};
 
 static const char *passive_names[P_COUNT] = {"Café", "Manual", "Colinha", "Ergonomia", "Crachá", "Plano de Saúde", "Network", "Hora Extra", "Marmita Térmica", "Sorte de Principiante", "Espinhos Corporativos", "Foco"};
 static const char *passive_descriptions[P_COUNT] = {
@@ -112,6 +120,7 @@ static const WeaponDef weapon_defs[W_COUNT] = {
     [W_COLEGA]       = {{10, 10, 14, 14, 20}, {0.80f, 0.70f, 0.70f, 0.60f, 0.55f}, {1, 1, 2, 2, 3}, {26, 28, 28, 32, 36}, {0, 0, 0, 0, 0}},
     [W_NOVACONVERSA] = {{8, 8, 12, 12, 18}, {15.0f, 13.5f, 13.5f, 12.0f, 10.0f}, {0, 0, 0, 0, 0}, {240, 270, 270, 300, 330}, {0, 0, 0, 0, 0}},
     [W_PROMPT]       = {{50, 50, 70, 70, 100}, {7.0f, 6.2f, 6.2f, 5.4f, 4.6f}, {0, 0, 0, 0, 0}, {280, 300, 300, 330, 360}, {14, 16, 16, 18, 20}},
+    [W_VERA]         = {{22, 22, 30, 30, 50}, {2.6f, 2.4f, 2.4f, 2.1f, 1.9f}, {1, 1, 2, 2, 2}, {84, 90, 90, 98, 108}, {0.6f, 0.7f, 0.9f, 1.1f, 1.3f}},
 };
 
 static const WeaponInfo weapon_infos[W_COUNT] = {
@@ -127,6 +136,7 @@ static const WeaponInfo weapon_infos[W_COUNT] = {
     [W_COLEGA]       = {"Intervalo", "Colegas", "Alcance", NULL, false, false, false},
     [W_NOVACONVERSA] = {"Recarga", NULL, "Raio", NULL, false, true, false},
     [W_PROMPT]       = {"Recarga", NULL, "Comprimento", "Largura", false, true, true},
+    [W_VERA]         = {"Recarga", "Ondas", "Raio", "Imunidade", true, true, false},
 };
 
 float sv_weapon_stat(int weapon, int stat, int level)
@@ -546,12 +556,25 @@ static void damage_enemy(SvEnemy *e, float damage, Vector2 from, float knockback
 // Jogador
 // -----------------------------------------------------------------------------
 
+static void vera_release(SvWeapon *w);
+
 void sv_hurt_player(float amount, int effect, float effect_time)
 {
     SvPlayer *p = &sv_run.player;
     float damage;
 
     if (p->invulnerable > 0.0f || sv_run.phase != SV_PLAYING) return;
+
+    // Vera Fischer: o golpe é verdadeiro (V) e o dano é falso (F), então o resultado é falso: V -> F = F
+    {
+        SvWeapon *vera = find_weapon(W_VERA);
+
+        if (vera && vera->cooldown <= 0.0f)
+        {
+            vera_release(vera);
+            return;
+        }
+    }
 
     damage = amount - p->armor;
     if (damage < amount * 0.4f) damage = amount * 0.4f;
@@ -697,6 +720,34 @@ static SvZone *new_zone(void)
     return NULL;
 }
 
+// Vera Fischer: solta as ondas, recomeça a recarga e dá um tempo de imunidade. Vale para o golpe anulado e para o disparo por proximidade
+static void vera_release(SvWeapon *w)
+{
+    SvPlayer *p = &sv_run.player;
+    int level = w->level;
+    int pulses = (int)WS(W_VERA, WSTAT_COUNT, level);
+
+    for (int i = 0; i < pulses; i++)
+    {
+        SvZone *z = new_zone();
+
+        if (!z) break;
+        z->shape = ZONE_CIRCLE;
+        z->kind = ZK_VERA;
+        z->pos = p->pos;
+        z->radius = WS(W_VERA, WSTAT_AREA, level) * p->area_mult * (1.0f + 0.3f * (float)i);
+        z->damage = WS(W_VERA, WSTAT_DAMAGE, level);
+        z->delay = 0.3f * (float)i;
+        z->life = z->max_life = z->delay + 0.3f;
+    }
+
+    w->cooldown = WS(W_VERA, WSTAT_COOLDOWN, level) * p->cooldown_mult;
+    if (p->invulnerable < WS(W_VERA, WSTAT_EXTRA, level)) p->invulnerable = WS(W_VERA, WSTAT_EXTRA, level);
+    p->negate_flash = 0.9f;
+    sv_spawn_fx(FX_FLASH, p->pos, 0.3f, 1.2f);
+    sv_sfx(SND_novaconversa);
+}
+
 static Vector2 aim_vector(float max_distance)
 {
     Target target = nearest_target(sv_run.player.pos, max_distance, NULL, 0);
@@ -769,24 +820,38 @@ static void fire_weapon(SvWeapon *w)
     case W_CANECA:
     {
         int count = (int)WS(W_CANECA, WSTAT_COUNT, level);
+        unsigned thrown[3];
+        int thrown_count = 0;
 
         base_cd = WS(W_CANECA, WSTAT_COOLDOWN, level);
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < count && i < 3; i++)
         {
-            bool found;
-            Vector2 target = random_enemy_position(300.0f, &found);
-            SvZone *z = new_zone();
+            // Cai sobre os inimigos mais próximos, um por caneca, já contando o passo que eles dão até o impacto
+            Target t = nearest_target(p->pos, CANECA_RANGE, thrown, thrown_count);
+            Vector2 target;
+            SvZone *z;
 
+            if (!t.found) break;
+            target = t.pos;
+            if (t.is_boss) thrown[thrown_count++] = 0xB055u;
+            else
+            {
+                thrown[thrown_count++] = t.enemy->id;
+                target = Vector2Add(t.pos, Vector2Scale(direction_of(t.pos, p->pos), enemy_stats[t.enemy->type].speed * CANECA_DELAY));
+            }
+
+            z = new_zone();
             if (!z) break;
             z->shape = ZONE_CIRCLE;
             z->kind = ZK_CANECA;
             z->pos = target;
             z->radius = WS(W_CANECA, WSTAT_AREA, level) * p->area_mult;
             z->damage = WS(W_CANECA, WSTAT_DAMAGE, level);
-            z->delay = 0.65f;
-            z->life = z->max_life = 0.65f + 0.35f;
+            z->delay = CANECA_DELAY;
+            z->life = z->max_life = CANECA_DELAY + 0.35f;
         }
-        sv_sfx(SND_caneca);
+        if (thrown_count == 0) base_cd = 0.25f; // Ninguém por perto: tenta de novo logo, sem gastar a recarga
+        else sv_sfx(SND_caneca);
         break;
     }
     case W_DEPLOY:
@@ -845,6 +910,14 @@ static void fire_weapon(SvWeapon *w)
         if (hit_count > 0) sv_sfx(SND_modus);
         else base_cd = 0.3f;
         break;
+    }
+    case W_VERA:
+    {
+        // Fica armada até alguém chegar perto. Se um golpe vier antes, sv_hurt_player a solta no lugar do dano
+        Target near_enemy = nearest_target(p->pos, VERA_TRIGGER, NULL, 0);
+
+        if (near_enemy.found) vera_release(w);
+        return;
     }
     case W_PROMPT:
     {
@@ -1082,7 +1155,7 @@ static void apply_zone(SvZone *z)
 
         if (!inside) continue;
         if (z->confuse > 0.0f) e->confused = z->confuse;
-        damage_enemy(e, z->damage, z->pos, z->kind == ZK_CANECA ? 70.0f : 30.0f);
+        damage_enemy(e, z->damage, z->pos, z->kind == ZK_VERA ? 130.0f : z->kind == ZK_CANECA ? 70.0f : 30.0f);
     }
 
     if (sv_run.boss.active)
@@ -1124,11 +1197,7 @@ static void update_zones(float dt)
         {
             z->fired = true;
             apply_zone(z);
-            if (z->kind == ZK_CANECA)
-            {
-                sv_spawn_fx(FX_EXPLOSION, z->pos, 0.35f, z->radius / 28.0f);
-            }
-            else if (z->kind == ZK_DEPLOY)
+            if (z->kind == ZK_DEPLOY)
             {
                 sv_sfx(SND_deploy);
             }
@@ -1837,6 +1906,7 @@ static void update_player(float dt, Vector2 move)
     p->root = p->root > dt ? p->root - dt : 0.0f;
     p->invert = p->invert > dt ? p->invert - dt : 0.0f;
     if (p->invulnerable > 0.0f) p->invulnerable -= dt;
+    if (p->negate_flash > 0.0f) p->negate_flash -= dt;
     if (p->regen > 0.0f && p->hp < p->max_hp) p->hp = fminf(p->max_hp, p->hp + p->regen * dt);
     if (p->hurt_flash > 0.0f) p->hurt_flash -= dt;
 

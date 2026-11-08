@@ -37,7 +37,7 @@ typedef enum { SV_PLAYING, SV_LEVELUP, SV_DEAD, SV_WON } SvPhase;
 typedef enum
 {
     W_GRAMPEADOR, W_PONTEIRO, W_CANECA, W_POSTITS, W_NAOPERTURBE, W_DEPLOY, W_TARJA, W_MODUS,
-    W_TABELA, W_COLEGA, W_NOVACONVERSA, W_PROMPT, W_COUNT
+    W_TABELA, W_COLEGA, W_NOVACONVERSA, W_PROMPT, W_VERA, W_COUNT
 } SvWeaponId;
 
 typedef enum
@@ -84,7 +84,7 @@ typedef struct
 } SvShot;
 
 typedef enum { ZONE_CIRCLE, ZONE_RECT } SvZoneShape;
-typedef enum { ZK_CANECA, ZK_DEPLOY, ZK_PONTEIRO, ZK_TARJA, ZK_PROMPT } SvZoneKind;
+typedef enum { ZK_CANECA, ZK_DEPLOY, ZK_PONTEIRO, ZK_TARJA, ZK_PROMPT, ZK_VERA } SvZoneKind;
 
 typedef struct
 {
@@ -190,6 +190,7 @@ typedef struct
     float crit_chance;     // Chance de golpe crítico (dobro do dano)
     float coin_mult;       // Multiplica o Banco de Horas ganho ao fim
     int coin_luck;         // Pontos percentuais extras na chance de soltar Banco de Horas
+    float negate_flash;    // Aviso na tela logo depois que a Vera Fischer anula um golpe
     SvWeapon weapons[SV_MAX_WEAPONS];
     int weapon_count;
     SvPassive passives[SV_MAX_PASSIVES];

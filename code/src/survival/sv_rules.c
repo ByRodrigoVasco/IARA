@@ -69,7 +69,8 @@ float sv_boss_hit_damage(float percent_of_base_hp)
     return fraction * SV_BASE_HP;
 }
 
-// Ordem dos poderes iniciais: 0 Grampeador, 1 Ponteiro, 2 Caneca, 3 Post-its, 4 Não Perturbe, 5 Deploy, 6 Tarja, 7 Modus
+// Ordem dos poderes iniciais: 0 Grampeador, 1 Ponteiro, 2 Caneca, 3 Post-its, 4 Não Perturbe, 5 Deploy, 6 Tarja, 7 Modus, 12 Vera Fischer
+#define W_VERA_ID 12
 static const SvCharacter characters[CH_COUNT] = {
     [CH_ESTAGIARIO] = {"Estagiarios", "Estagiário", "Aprendiz do departamento", "Aprendiz",
                        "Aprende rápido: ganha 10% a mais de XP.",
@@ -82,7 +83,7 @@ static const SvCharacter characters[CH_COUNT] = {
     [CH_ANDERSON] = {"Anderson", "Anderson", "Infraestrutura", "Servidor Estável",
                      "Vida máxima +40 e -1 de dano em cada golpe. Velocidade -8%.",
                      "Elimine 500 inimigos no total.",
-                     2, 40.0f, 1.0f, 0.92f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0, false},
+                     W_VERA_ID, 40.0f, 1.0f, 0.92f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0, false},
     [CH_JULIO] = {"Julio", "Julio", "Desenvolvedor back-end", "Deploy Contínuo",
                   "Velocidade +18%. Vida máxima -10.",
                   "Jogue 5 partidas.",
