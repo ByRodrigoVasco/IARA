@@ -85,3 +85,6 @@ desktop.ini
 # --- Progresso do Modo Sobrevivencia ---
 iara.survival
 iara.survival.tmp
+
+# --- Registro de quadros que travaram (a pasta saves/ já está ignorada acima) ---
+iara-desempenho.log

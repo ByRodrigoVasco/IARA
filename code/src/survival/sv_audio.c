@@ -92,33 +92,58 @@ void sv_audio_disable(bool disabled)
     audio_disabled = disabled;
 }
 
-void sv_audio_init(void)
+static bool audio_started = false;   // O dispositivo de áudio já foi aberto
+static int audio_next = 0;           // Quantos sons já foram carregados
+
+static void load_one_sound(int i)
 {
-    if (audio_ready || audio_disabled) return;
+    const char *path = TextFormat("%s%s.wav", SV_AUDIO_PATH, sfx_names[i]);
 
-    InitAudioDevice();
-    if (!IsAudioDeviceReady()) return;
+    sfx[i].tier = sfx_tiers[i];
+    sfx[i].gap = sfx_gaps[i];
+    sfx[i].last_played = -10.0;
+    sfx[i].base = LoadSound(path);
+    sfx[i].loaded = sfx[i].base.frameCount > 0;
+    sfx[i].voice_count = sfx_voice_counts[i] > MAX_VOICES ? MAX_VOICES : sfx_voice_counts[i];
+    sfx[i].next_voice = 0;
 
-    for (int i = 0; i < SND_COUNT; i++)
+    if (!sfx[i].loaded) return;
+
+    // A primeira voz é o próprio som; as outras dividem os mesmos dados
+    sfx[i].voices[0] = sfx[i].base;
+    for (int v = 1; v < sfx[i].voice_count; v++) sfx[i].voices[v] = LoadSoundAlias(sfx[i].base);
+}
+
+float sv_audio_init_step(void)
+{
+    if (audio_ready || audio_disabled) return 1.0f;
+
+    if (!audio_started)
     {
-        const char *path = TextFormat("%s%s.wav", SV_AUDIO_PATH, sfx_names[i]);
-
-        sfx[i].tier = sfx_tiers[i];
-        sfx[i].gap = sfx_gaps[i];
-        sfx[i].last_played = -10.0;
-        sfx[i].base = LoadSound(path);
-        sfx[i].loaded = sfx[i].base.frameCount > 0;
-        sfx[i].voice_count = sfx_voice_counts[i] > MAX_VOICES ? MAX_VOICES : sfx_voice_counts[i];
-        sfx[i].next_voice = 0;
-
-        if (!sfx[i].loaded) continue;
-
-        // A primeira voz é o próprio som; as outras dividem os mesmos dados
-        sfx[i].voices[0] = sfx[i].base;
-        for (int v = 1; v < sfx[i].voice_count; v++) sfx[i].voices[v] = LoadSoundAlias(sfx[i].base);
+        InitAudioDevice();
+        if (!IsAudioDeviceReady()) return 1.0f;   // Sem placa de som: o jogo segue sem áudio
+        audio_started = true;
+        audio_next = 0;
+        return 0.03f;
     }
 
-    audio_ready = true;
+    if (audio_next < SND_COUNT)
+    {
+        load_one_sound(audio_next);
+        audio_next++;
+    }
+
+    if (audio_next >= SND_COUNT)
+    {
+        audio_ready = true;
+        return 1.0f;
+    }
+    return 0.03f + 0.97f * (float)audio_next / (float)SND_COUNT;
+}
+
+void sv_audio_init(void)
+{
+    while (sv_audio_init_step() < 1.0f) { }
 }
 
 static void unload_streams(void)
@@ -131,7 +156,7 @@ static void unload_streams(void)
 
 void sv_audio_close(void)
 {
-    if (!audio_ready) return;
+    if (!audio_ready && !audio_started) return;
 
     unload_streams();
     for (int i = 0; i < SND_COUNT; i++)
@@ -143,6 +168,8 @@ void sv_audio_close(void)
     }
     CloseAudioDevice();
     audio_ready = false;
+    audio_started = false;
+    audio_next = 0;
 }
 
 // Quanto cada faixa abaixa os outros canais, em dB: trilha, ambiente e sons pequenos.

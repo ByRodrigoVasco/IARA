@@ -25,6 +25,12 @@ typedef struct
 extern SvMeta sv_meta;
 
 void sv_meta_reset(void);
+/** @brief Arquivo de progresso em uso: o do save escolhido, ou SV_SAVE_PATH quando não há save (testes). */
+const char *sv_meta_path(void);
+
+/** @brief Escolhe o arquivo de progresso. NULL volta ao padrão. */
+void sv_meta_set_path(const char *path);
+
 bool sv_meta_load(const char *path);
 bool sv_meta_save(const char *path);
 

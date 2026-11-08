@@ -30,7 +30,11 @@ typedef struct
 
 extern SvSprite sv_sprites[SPR_COUNT];
 
+/** @brief Carrega todas as imagens de uma vez. */
 void sv_load_sprites(void);
+
+/** @brief Carrega a próxima imagem e devolve o andamento, de 0 a 1 (1 quando acabou). Para a tela de carregamento. */
+float sv_load_sprites_step(void);
 void sv_unload_sprites(void);
 
 /**

@@ -36,30 +36,69 @@ static float menu_font_size;
 static float menu_letter_spacing;
 
 static Vector2 iniciar_text_size;
-static Vector2 sobrevivencia_text_size;
 static Vector2 creditos_text_size;
 static Vector2 configuracoes_text_size;
 static Vector2 sair_text_size;
 
 static Vector2 iniciar_text_target_position;
-static Vector2 sobrevivencia_text_target_position;
 static Vector2 creditos_text_target_position;
 static Vector2 configuracoes_text_target_position;
 static Vector2 sair_text_target_position;
 
 static Rectangle iniciar_text_rectangle;
-static Rectangle sobrevivencia_text_rectangle;
 static Rectangle creditos_text_rectangle;
 static Rectangle configuracoes_text_rectangle;
 static Rectangle sair_text_rectangle;
 
+// As imagens do menu ficam na memória durante o jogo todo: voltar ao menu não carrega nada de novo.
+// A abertura do jogo carrega uma por quadro (menu_preload_step), então o menu já nasce pronto.
+#define MENU_TEXTURE_COUNT 4
+static int menu_textures_loaded = 0;
+
+float menu_preload_step(void)
+{
+    if (menu_textures_loaded >= MENU_TEXTURE_COUNT) return 1.0f;
+
+    // Carregadas no tamanho original: o tamanho na tela é calculado a cada quadro
+    switch (menu_textures_loaded)
+    {
+    case 0:
+        arrow_icon_texture = load_smooth_texture("code/assets/icons/arrow-icon.png");
+        break;
+    case 1:
+        bg_office_texture = load_smooth_texture("code/assets/sprites/tela-inicial/escritorio-tela-inicial.png");
+        break;
+    case 2:
+        iara_name_texture = load_smooth_texture("code/assets/sprites/tela-inicial/iara-nome.png");
+        break;
+    default:
+        second_bg_texture = load_smooth_texture("code/assets/background/second-background.png");
+        break;
+    }
+
+    menu_textures_loaded++;
+    return (float)menu_textures_loaded / (float)MENU_TEXTURE_COUNT;
+}
+
+bool menu_preload_done(void)
+{
+    return menu_textures_loaded >= MENU_TEXTURE_COUNT;
+}
+
 static void initialize_menu_textures(void)
 {
-    // Carregadas no tamanho original: o tamanho na tela é calculado a cada quadro
-    arrow_icon_texture = load_smooth_texture("code/assets/icons/arrow-icon.png");
-    bg_office_texture = load_smooth_texture("code/assets/sprites/tela-inicial/escritorio-tela-inicial.png");
-    second_bg_texture = load_smooth_texture("code/assets/background/second-background.png");
-    iara_name_texture = load_smooth_texture("code/assets/sprites/tela-inicial/iara-nome.png");
+    // Se a abertura ainda não carregou tudo (ou o menu foi aberto direto, como nos testes), termina aqui
+    while (menu_preload_step() < 1.0f) { }
+}
+
+void unload_menu_textures(void)
+{
+    if (menu_textures_loaded == 0) return;
+    if (menu_textures_loaded > 0) UnloadTexture(arrow_icon_texture);
+    if (menu_textures_loaded > 1) UnloadTexture(bg_office_texture);
+    if (menu_textures_loaded > 2) UnloadTexture(iara_name_texture);
+    if (menu_textures_loaded > 3) UnloadTexture(second_bg_texture);
+    menu_textures_loaded = 0;
 }
 
 // Recalcula as opções do menu para o tamanho atual da janela.
@@ -73,7 +112,6 @@ static void update_menu_layout(void)
     float margin_y = TEXT_VERTICAL_MARGIN * 0.8f * menu_scale;
 
     iniciar_text_size = MeasureTextEx(default_game_font, "INICIAR", menu_font_size, menu_letter_spacing);
-    sobrevivencia_text_size = MeasureTextEx(default_game_font, "SOBREVIVÊNCIA", menu_font_size, menu_letter_spacing);
     creditos_text_size = MeasureTextEx(default_game_font, "CRÉDITOS", menu_font_size, menu_letter_spacing);
     configuracoes_text_size = MeasureTextEx(default_game_font, "CONFIGURAÇÕES", menu_font_size, menu_letter_spacing);
     sair_text_size = MeasureTextEx(default_game_font, "SAIR", menu_font_size, menu_letter_spacing);
@@ -82,13 +120,11 @@ static void update_menu_layout(void)
     float start_y = GetScreenHeight() / 2.0f;
 
     iniciar_text_target_position = (Vector2){margin_x, start_y};
-    sobrevivencia_text_target_position = (Vector2){margin_x, iniciar_text_target_position.y + iniciar_text_size.y + margin_y};
-    creditos_text_target_position = (Vector2){margin_x, sobrevivencia_text_target_position.y + sobrevivencia_text_size.y + margin_y};
+    creditos_text_target_position = (Vector2){margin_x, iniciar_text_target_position.y + iniciar_text_size.y + margin_y};
     configuracoes_text_target_position = (Vector2){margin_x, creditos_text_target_position.y + creditos_text_size.y + margin_y};
     sair_text_target_position = (Vector2){margin_x, configuracoes_text_target_position.y + configuracoes_text_size.y + margin_y};
 
     iniciar_text_rectangle = (Rectangle){iniciar_text_target_position.x, iniciar_text_target_position.y, iniciar_text_size.x, iniciar_text_size.y};
-    sobrevivencia_text_rectangle = (Rectangle){sobrevivencia_text_target_position.x, sobrevivencia_text_target_position.y, sobrevivencia_text_size.x, sobrevivencia_text_size.y};
     creditos_text_rectangle = (Rectangle){creditos_text_target_position.x, creditos_text_target_position.y, creditos_text_size.x, creditos_text_size.y};
     configuracoes_text_rectangle = (Rectangle){configuracoes_text_target_position.x, configuracoes_text_target_position.y, configuracoes_text_size.x, configuracoes_text_size.y};
     sair_text_rectangle = (Rectangle){sair_text_target_position.x, sair_text_target_position.y, sair_text_size.x, sair_text_size.y};
@@ -177,11 +213,6 @@ static int get_option_under_mouse(void)
         return INICIAR;
     }
 
-    if (check_mouse_hover(sobrevivencia_text_rectangle))
-    {
-        return SOBREVIVENCIA;
-    }
-
     if (check_mouse_hover(creditos_text_rectangle))
     {
         return CREDITOS;
@@ -242,9 +273,6 @@ void handle_render_arrow()
     case INICIAR:
         selected_rectangle = iniciar_text_rectangle;
         break;
-    case SOBREVIVENCIA:
-        selected_rectangle = sobrevivencia_text_rectangle;
-        break;
     case CREDITOS:
         selected_rectangle = creditos_text_rectangle;
         break;
@@ -296,7 +324,6 @@ void render_menu(void)
     DrawTexturePro(iara_name_texture, name_source, name_dest, (Vector2){0, 0}, 0.0f, texture_color_to_fade);
 
     DrawTextEx(default_game_font, "INICIAR", iniciar_text_target_position, menu_font_size, menu_letter_spacing, texture_color_to_fade);
-    DrawTextEx(default_game_font, "SOBREVIVÊNCIA", sobrevivencia_text_target_position, menu_font_size, menu_letter_spacing, texture_color_to_fade);
     DrawTextEx(default_game_font, "CRÉDITOS", creditos_text_target_position, menu_font_size, menu_letter_spacing, texture_color_to_fade);
     DrawTextEx(default_game_font, "CONFIGURAÇÕES", configuracoes_text_target_position, menu_font_size, menu_letter_spacing, texture_color_to_fade);
     DrawTextEx(default_game_font, "SAIR", sair_text_target_position, menu_font_size, menu_letter_spacing, texture_color_to_fade);
@@ -315,8 +342,6 @@ void render_menu(void)
 
 void unload_menu()
 {
-    UnloadTexture(bg_office_texture);
-    UnloadTexture(second_bg_texture);
-    UnloadTexture(arrow_icon_texture);
-    UnloadTexture(iara_name_texture);
+    // As imagens ficam carregadas para o próximo retorno ao menu; unload_menu_textures() as libera ao encerrar o jogo
+    SetMouseCursor(MOUSE_CURSOR_ARROW);
 }

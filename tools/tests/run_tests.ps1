@@ -90,6 +90,11 @@ $suite = @(
         Fonte = @("code/tests/test_save.c", "code/src/core/save.c", "code/src/core/game_state.c", "code/src/game/calendar.c")
     },
     @{
+        Nome  = "test_save_slots"
+        Nota  = "Unidade: saves em pastas, nomes unicos e apagar"
+        Fonte = @("code/tests/test_save_slots.c", "code/src/core/save_slots.c")
+    },
+    @{
         Nome  = "test_hints"
         Nota  = "Unidade: dica no mural e pontuacao"
         Fonte = @(
@@ -127,7 +132,8 @@ $suite = @(
         # o jogo sem depender de teclado e mouse.
         Fonte = @(
             "code/tests/test_fluxo.c",
-            "code/src/core/state_machine.c", "code/src/core/game_state.c",
+            "code/src/core/state_machine.c", "code/src/core/game_state.c", "code/src/core/save.c", "code/src/core/save_slots.c",
+            "code/src/screens/mode_select.c", "code/src/screens/save_select.c", "code/src/screens/loading.c", "code/src/ui/screen_style.c",
             "code/src/core/helper.c", "code/src/screens/pre_menu.c",
             "code/src/game/collisions.c", "code/src/game/characters.c",
             "code/src/ui/fonts.c", "code/src/ui/animations.c", "code/src/ui/button.c",
