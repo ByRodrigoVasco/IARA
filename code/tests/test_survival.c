@@ -585,6 +585,55 @@ static void test_characters(void)
         }
         check("SV-55", "os 8 personagens jogam 90 segundos sem valores inválidos", survived);
     }
+
+    // Vera Fischer (V -> F = F): o Anderson anula um golpe e só repete depois do intervalo
+    {
+        SvPlayer *p;
+        float hp;
+
+        sv_meta_reset();
+        unlock_everything();
+        sv_meta.character = CH_ANDERSON;
+        sv_game_start(9);
+        p = &sv_run.player;
+        p->weapons[0].cooldown = 0.0f;
+        hp = p->hp;
+        sv_hurt_player(20.0f, EFF_NONE, 0.0f);
+        check("SV-58", "Vera Fischer anula o golpe, solta a onda e recomeça a recarga", p->hp == hp && p->weapons[0].cooldown > 2.0f && p->invulnerable > 0.4f);
+        p->invulnerable = 0.0f;
+        sv_hurt_player(20.0f, EFF_NONE, 0.0f);
+        check("SV-59", "o golpe seguinte, ainda na recarga, causa dano", p->hp < hp);
+        p->invulnerable = 0.0f;
+        p->weapons[0].cooldown = 0.0f;
+        hp = p->hp;
+        sv_hurt_player(20.0f, EFF_NONE, 0.0f);
+        check("SV-60", "recarregada, a Vera Fischer anula de novo", p->hp == hp);
+
+        sv_meta.character = CH_ESTAGIARIO;
+        sv_game_start(9);
+        hp = sv_run.player.hp;
+        sv_hurt_player(20.0f, EFF_NONE, 0.0f);
+        check("SV-61", "quem não tem a Vera Fischer leva o golpe", sv_run.player.hp < hp);
+
+        sv_meta.character = CH_ANDERSON;
+        sv_game_start(10);
+        sv_run.player.weapons[0].cooldown = 0.0f;
+        sv_spawn_enemy_at(EN_CHAMADO, (Vector2){sv_run.player.pos.x + 30.0f, sv_run.player.pos.y}, false);
+        sv_game_update(1.0f / 60.0f, (Vector2){0.0f, 0.0f});
+        sv_game_update(1.0f / 60.0f, (Vector2){0.0f, 0.0f});
+        check("SV-62", "a Vera Fischer dispara sozinha quando um inimigo chega perto", sv_run.kills >= 1 && sv_run.player.weapons[0].cooldown > 2.0f);
+    }
+
+    // Caneca: cai sobre o inimigo mais próximo, em vez de um ponto qualquer
+    {
+        sv_meta_reset();
+        unlock_everything();
+        sv_meta.character = CH_ANDERSON;
+        sv_game_start(11);
+        sv_spawn_enemy_at(EN_CHAMADO, (Vector2){sv_run.player.pos.x + 150.0f, sv_run.player.pos.y}, false);
+        for (int frame = 0; frame < 60 * 3 && sv_run.kills == 0; frame++) sv_game_update(1.0f / 60.0f, (Vector2){0.0f, 0.0f});
+        check("SV-63", "a Caneca acerta o inimigo que se aproxima", sv_run.kills >= 1);
+    }
     sv_meta_reset();
 }
 
@@ -641,8 +690,8 @@ static void test_level_up(void)
     check("SV-28", "com tudo no máximo, oferece marmita e Banco de Horas", sv_run.phase == SV_LEVELUP && sv_run.choice_count == 3 && sv_run.choices[sv_run.choice_count - 1].kind >= 4);
     sv_meta_reset();
 
-    // Cada poder dispara sem travar e causa dano: todos os 12, dois grupos de 6, no nível máximo
-    for (int group = 0; group < 2; group++)
+    // Cada poder dispara sem travar e causa dano: todos os 13, em grupos de 6, no nível máximo
+    for (int group = 0; group < 3; group++)
     {
         int kills_before;
         bool damaged;
@@ -650,7 +699,7 @@ static void test_level_up(void)
         sv_game_start(60 + (unsigned)group);
         sv_run.player.hp = sv_run.player.max_hp = 1000000.0f;
         sv_run.player.weapon_count = 0;
-        for (int i = 0; i < 6; i++) sv_run.player.weapons[sv_run.player.weapon_count++] = (SvWeapon){group * 6 + i, SV_WEAPON_MAX_LEVEL, 0.0f, 0.0f};
+        for (int i = 0; i < 6 && group * 6 + i < W_COUNT; i++) sv_run.player.weapons[sv_run.player.weapon_count++] = (SvWeapon){group * 6 + i, SV_WEAPON_MAX_LEVEL, 0.0f, 0.0f};
         sv_run.time = 100.0f;
         for (int i = 0; i < 30; i++) sv_spawn_enemy_at(EN_ESVAZIADO, Vector2Add(sv_run.player.pos, (Vector2){(float)(i % 6 - 3) * 25.0f, (float)(i / 6 - 2) * 25.0f}), false);
         kills_before = sv_run.kills;
@@ -660,7 +709,7 @@ static void test_level_up(void)
             sv_game_update(1.0f / 60.0f, (Vector2){0, 0});
         }
         damaged = sv_run.kills > kills_before;
-        check(group == 0 ? "SV-29" : "SV-30", "o grupo de poderes mata inimigos e não trava", damaged && isfinite(sv_run.player.hp));
+        check(group == 0 ? "SV-29" : group == 1 ? "SV-30" : "SV-64", "o grupo de poderes mata inimigos e não trava", damaged && isfinite(sv_run.player.hp));
     }
     sv_meta_reset();
 }
