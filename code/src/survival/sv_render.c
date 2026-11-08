@@ -99,6 +99,95 @@ static void draw_gems(void)
     }
 }
 
+// Raio do Deploy em Produção. O desenho muda de forma nos primeiros instantes para parecer elétrico e depois some devagar
+#define DEPLOY_WARN 0.4f
+
+static float spark_hash(unsigned n)
+{
+    n ^= n << 13;
+    n ^= n >> 17;
+    n ^= n << 5;
+    n *= 2654435761u;
+    return (float)((n >> 8) & 0xFFFF) / 65535.0f;
+}
+
+static void draw_bolt_path(Vector2 from, Vector2 to, unsigned seed, float spread, int parts, float width, Color glow, Color core)
+{
+    Vector2 previous = from;
+    Vector2 direction = Vector2Normalize(Vector2Subtract(to, from));
+    Vector2 side = {-direction.y, direction.x};
+
+    for (int i = 1; i <= parts; i++)
+    {
+        float t = (float)i / (float)parts;
+        Vector2 point = Vector2Lerp(from, to, t);
+
+        // Os extremos ficam fixos, o meio zigue-zague
+        if (i < parts) point = Vector2Add(point, Vector2Scale(side, (spark_hash(seed + (unsigned)i * 977u) - 0.5f) * 2.0f * spread));
+        DrawLineEx(previous, point, width * 6.0f, (Color){120, 170, 255, (unsigned char)(glow.a * 0.85f)});
+        DrawLineEx(previous, point, width * 3.0f, glow);
+        DrawLineEx(previous, point, width, core);
+        previous = point;
+    }
+}
+
+static void draw_lightning(void)
+{
+    for (int i = 0; i < SV_MAX_ZONES; i++)
+    {
+        SvZone *z = &sv_run.zones[i];
+        unsigned base_seed;
+        float t, flicker, alpha;
+        Vector2 top;
+
+        if (!z->alive || z->kind != ZK_DEPLOY) continue;
+        base_seed = (unsigned)(z->pos.x * 31.0f) * 7919u + (unsigned)(z->pos.y * 17.0f);
+        top = (Vector2){z->pos.x + (spark_hash(base_seed) - 0.5f) * 90.0f, z->pos.y - 440.0f};
+
+        if (z->delay > 0.0f)
+        {
+            // Pouco antes de cair, um fio fino pisca no céu e avisa onde vai bater
+            if (z->delay < 0.14f && ((int)(sv_run.time * 40.0f) % 2) == 0) draw_bolt_path(top, z->pos, base_seed, 7.0f, 7, 1.0f, (Color){255, 230, 120, 40}, (Color){255, 255, 255, 120});
+            continue;
+        }
+
+        t = 1.0f - z->life / z->max_life;                     // 0 a 1 durante os 0,45 s do raio
+        flicker = fminf(3.0f, floorf(t * 22.0f));             // a forma troca 3 vezes e depois se firma
+        alpha = t < 0.25f ? 1.0f : fmaxf(0.0f, 1.0f - (t - 0.25f) / 0.6f);
+
+        if (alpha > 0.0f)
+        {
+            unsigned seed = base_seed + (unsigned)flicker * 4099u;
+            Color glow = {255, 225, 90, (unsigned char)(130.0f * alpha)};
+            Color core = {255, 255, 235, (unsigned char)(255.0f * alpha)};
+            Vector2 fork_from = Vector2Lerp(top, z->pos, 0.45f + 0.2f * spark_hash(seed + 5u));
+            Vector2 fork_to = Vector2Add(fork_from, (Vector2){(spark_hash(seed + 6u) - 0.5f) * 150.0f, 90.0f + 40.0f * spark_hash(seed + 7u)});
+
+            draw_bolt_path(top, z->pos, seed, 26.0f, 11, 4.4f, glow, core);
+            draw_bolt_path(fork_from, fork_to, seed + 31u, 12.0f, 4, 2.0f, (Color){255, 225, 90, (unsigned char)(90.0f * alpha)}, (Color){255, 250, 210, (unsigned char)(220.0f * alpha)});
+        }
+
+        // Clarão e faíscas no ponto de impacto
+        if (t < 0.45f)
+        {
+            float k = t / 0.45f;
+            float reach = z->radius + 16.0f;
+
+            DrawCircleV(z->pos, reach * (0.5f + 0.9f * k), (Color){255, 245, 200, (unsigned char)(230.0f * (1.0f - k))});
+            DrawCircleLinesV(z->pos, reach * (0.7f + 0.9f * k), (Color){255, 220, 90, (unsigned char)(240.0f * (1.0f - k))});
+            DrawCircleLinesV(z->pos, reach * (0.5f + 1.3f * k), (Color){140, 185, 255, (unsigned char)(200.0f * (1.0f - k))});
+            for (int s = 0; s < 8; s++)
+            {
+                float angle = ((float)s + spark_hash(base_seed + (unsigned)s)) * (PI * 2.0f / 8.0f);
+                Vector2 a = Vector2Add(z->pos, (Vector2){cosf(angle) * (6.0f + 16.0f * k), sinf(angle) * (3.0f + 8.0f * k)});
+                Vector2 b = Vector2Add(z->pos, (Vector2){cosf(angle) * (12.0f + 30.0f * k), sinf(angle) * (6.0f + 15.0f * k)});
+
+                DrawLineEx(a, b, 1.6f, (Color){255, 240, 160, (unsigned char)(255.0f * (1.0f - k))});
+            }
+        }
+    }
+}
+
 static void draw_zones(void)
 {
     for (int i = 0; i < SV_MAX_ZONES; i++)
@@ -157,19 +246,24 @@ static void draw_zones(void)
         }
         else if (z->kind == ZK_DEPLOY)
         {
-            Vector2 top = {z->pos.x, z->pos.y - 30.0f};
-
+            // No chão: a marca que carrega antes do raio e a queimadura que fica depois. O raio em si é desenhado por cima, em draw_lightning
             if (z->delay > 0.0f)
             {
-                DrawCircleLinesV(z->pos, z->radius, (Color){255, 230, 90, 140});
-                sv_draw(SPR_fx_deploy, 0, top, 1.0f, 0.0f, false, WHITE);
-                sv_draw(SPR_fx_deploy, 3, z->pos, 1.0f, 0.0f, false, WHITE);
+                float charge = 1.0f - z->delay / DEPLOY_WARN;
+                float pulse = 0.5f + 0.5f * sinf(sv_run.time * 24.0f);
+
+                DrawCircleV(z->pos, z->radius, (Color){255, 220, 70, (unsigned char)(18 + 40 * charge)});
+                DrawCircleLinesV(z->pos, z->radius, (Color){255, 230, 90, (unsigned char)(110 + 100 * pulse)});
+                DrawCircleLinesV(z->pos, z->radius * (1.0f - 0.85f * charge), (Color){255, 255, 230, (unsigned char)(80 + 120 * charge)});
             }
             else
             {
-                progress = 1.0f - z->life / z->max_life;
-                sv_draw(SPR_fx_deploy, progress < 0.5f ? 1 : 2, top, 1.0f, 0.0f, false, WHITE);
-                sv_draw(SPR_fx_deploy, 3, z->pos, 1.0f, 0.0f, false, WHITE);
+                float t = 1.0f - z->life / z->max_life;
+                unsigned char fade = (unsigned char)(200.0f * (1.0f - t));
+
+                DrawEllipse((int)z->pos.x, (int)z->pos.y + 2, z->radius * 0.9f, z->radius * 0.45f, (Color){18, 10, 2, fade});
+                DrawEllipse((int)z->pos.x, (int)z->pos.y + 2, z->radius * 0.5f, z->radius * 0.25f, (Color){255, 190, 50, (unsigned char)(fade / 2)});
+                sv_draw(SPR_fx_deploy, 3, z->pos, 1.0f, 0.0f, false, (Color){255, 255, 255, fade});
             }
         }
     }
@@ -634,6 +728,7 @@ void sv_render_game(void)
     }
     draw_world_objects(camera);
     draw_shots();
+    draw_lightning();
     for (int i = 0; i < SV_MAX_HAZARDS; i++)
     {
         if (sv_run.hazards[i].alive && sv_run.hazards[i].kind == HZ_PROJ) draw_hazard(&sv_run.hazards[i]);
