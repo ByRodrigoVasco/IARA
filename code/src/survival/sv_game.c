@@ -569,6 +569,7 @@ static void damage_enemy(SvEnemy *e, float damage, Vector2 from, float knockback
 
     damage *= sv_run.player.dmg_mult;
     if (sv_run.player.crit_chance > 0.0f && sv_rand() < sv_run.player.crit_chance) damage *= 2.0f;
+    if (sv_run.cheats[CHEAT_ONE_HIT]) damage *= 1000.0f;
     e->hp -= damage;
     e->hurt_flash = 0.1f;
     sv_sfx(SND_acertaInimigo);
@@ -592,6 +593,7 @@ void sv_hurt_player(float amount, int effect, float effect_time)
     SvPlayer *p = &sv_run.player;
     float damage;
 
+    if (sv_run.cheats[CHEAT_GOD]) return;
     if (p->invulnerable > 0.0f || sv_run.phase != SV_PLAYING) return;
 
     // Vera Fischer: o golpe é verdadeiro (V) e o dano é falso (F), então o resultado é falso: V -> F = F
@@ -1506,6 +1508,8 @@ static void update_enemies(float dt)
     SvPlayer *p = &sv_run.player;
     float danger_scale = 1.0f + sv_run.time / 600.0f * 0.8f;
 
+    if (sv_run.cheats[CHEAT_FREEZE]) return;   // Trapaça: inimigos parados
+
     for (int i = 0; i < SV_MAX_ENEMIES; i++)
     {
         SvEnemy *e = &sv_run.enemies[i];
@@ -2091,7 +2095,7 @@ void sv_game_start(unsigned seed)
     p->xp_needed = sv_xp_to_next(1);
 
     // Personagem ainda bloqueado volta para o Estagiário
-    p->character = sv_character_unlocked(sv_meta.character, sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills) ? sv_meta.character : CH_ESTAGIARIO;
+    p->character = (sv_debug_mode || sv_character_unlocked(sv_meta.character, sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills)) ? sv_meta.character : CH_ESTAGIARIO;
     p->weapons[0] = (SvWeapon){sv_character(p->character)->start_weapon, 1, 0.5f, 0.0f};
     p->weapon_count = 1;
     p->hp = 0.0f;
@@ -2265,7 +2269,7 @@ void sv_game_update(float dt, Vector2 move)
     update_player(dt, move);
 
     // Nascimentos
-    sv_run.spawn_accumulator += sv_spawn_rate(sv_run.time) * dt * (sv_run.boss.active ? 0.25f : 1.0f);
+    sv_run.spawn_accumulator += sv_spawn_rate(sv_run.time) * dt * (sv_run.boss.active ? 0.25f : 1.0f) * (sv_run.cheats[CHEAT_NO_SPAWN] ? 0.0f : 1.0f);
     budget = 6;
     while (sv_run.spawn_accumulator >= 1.0f && budget-- > 0 && sv_run.enemy_count < SV_MAX_ENEMIES - 20)
     {
@@ -2293,6 +2297,7 @@ int sv_game_finish(void)
 
     if (finished_flag) return 0;
     finished_flag = true;
+    if (sv_run.cheated) return 0;   // Partida com trapaça não conta para o progresso do save
 
     earned = sv_run.coins + (int)(sv_run.time / 10.0f) + sv_run.bosses_defeated * 30 + (sv_run.phase == SV_WON ? 300 : 0);
     if (sv_run.player.coin_mult > 0.0f) earned = (int)((float)earned * sv_run.player.coin_mult + 0.5f);
@@ -2304,4 +2309,191 @@ int sv_game_finish(void)
     sv_meta_save(sv_meta_path());
 
     return earned;
+}
+
+// -----------------------------------------------------------------------------
+// Modo debug: trapaças
+// -----------------------------------------------------------------------------
+
+bool sv_debug_mode = false;
+
+bool sv_cheat_active(int cheat)
+{
+    return cheat >= 0 && cheat < CHEAT_COUNT && sv_run.cheats[cheat];
+}
+
+void sv_cheat_toggle(int cheat)
+{
+    if (cheat < 0 || cheat >= CHEAT_COUNT) return;
+    sv_run.cheats[cheat] = !sv_run.cheats[cheat];
+    if (sv_run.cheats[cheat]) sv_run.cheated = true;
+}
+
+void sv_cheat_clear_toggles(void)
+{
+    for (int i = 0; i < CHEAT_COUNT; i++) sv_run.cheats[i] = false;
+}
+
+int sv_cheat_weapon_level(int weapon)
+{
+    SvWeapon *owned = find_weapon(weapon);
+
+    return owned ? owned->level : 0;
+}
+
+int sv_cheat_passive_level(int passive)
+{
+    return passive_level(passive);
+}
+
+bool sv_cheat_set_weapon(int weapon, int level)
+{
+    SvPlayer *p = &sv_run.player;
+    SvWeapon *owned = find_weapon(weapon);
+
+    if (weapon < 0 || weapon >= W_COUNT) return false;
+    if (level > SV_WEAPON_MAX_LEVEL) level = SV_WEAPON_MAX_LEVEL;
+
+    if (level <= 0)
+    {
+        if (!owned) return false;
+        sv_run.cheated = true;
+        memmove(owned, owned + 1, sizeof(SvWeapon) * (size_t)(p->weapon_count - 1 - (int)(owned - p->weapons)));
+        p->weapon_count--;
+    }
+    else if (owned)
+    {
+        sv_run.cheated = true;
+        owned->level = level;
+    }
+    else
+    {
+        if (p->weapon_count >= SV_MAX_WEAPONS) return false;
+        sv_run.cheated = true;
+        p->weapons[p->weapon_count++] = (SvWeapon){weapon, level, 0.3f, 0.0f};
+    }
+
+    recompute_stats();
+    return true;
+}
+
+bool sv_cheat_set_passive(int passive, int level)
+{
+    SvPlayer *p = &sv_run.player;
+    SvPassive *owned = NULL;
+
+    if (passive < 0 || passive >= P_COUNT) return false;
+    if (level > SV_PASSIVE_MAX_LEVEL) level = SV_PASSIVE_MAX_LEVEL;
+    for (int i = 0; i < p->passive_count; i++)
+    {
+        if (p->passives[i].id == passive) owned = &p->passives[i];
+    }
+
+    if (level <= 0)
+    {
+        if (!owned) return false;
+        sv_run.cheated = true;
+        memmove(owned, owned + 1, sizeof(SvPassive) * (size_t)(p->passive_count - 1 - (int)(owned - p->passives)));
+        p->passive_count--;
+    }
+    else if (owned)
+    {
+        sv_run.cheated = true;
+        owned->level = level;
+    }
+    else
+    {
+        if (p->passive_count >= SV_MAX_PASSIVES) return false;
+        sv_run.cheated = true;
+        p->passives[p->passive_count++] = (SvPassive){passive, level};
+    }
+
+    recompute_stats();
+    return true;
+}
+
+void sv_cheat_spawn_boss(int boss)
+{
+    if (boss < 0 || boss >= BOSS_COUNT) return;
+    sv_run.cheated = true;
+    sv_boss_clear_hazards();
+    sv_boss_spawn(boss);
+}
+
+void sv_cheat_kill_boss(void)
+{
+    if (!sv_run.boss.active) return;
+    sv_run.cheated = true;
+    sv_run.boss.invulnerable = 0.0f;
+    sv_damage_boss(sv_run.boss.max_hp * 2.0f);
+}
+
+void sv_cheat_spawn_enemies(int type, int count)
+{
+    if (type < 0 || type >= EN_COUNT) return;
+    sv_run.cheated = true;
+    for (int i = 0; i < count; i++)
+    {
+        float angle = sv_rand() * 2.0f * PI;
+        float distance = sv_rand_range(190.0f, 330.0f);
+
+        sv_spawn_enemy_at(type, Vector2Add(sv_run.player.pos, (Vector2){cosf(angle) * distance, sinf(angle) * distance}), false);
+    }
+}
+
+void sv_cheat_level_up(void)
+{
+    SvPlayer *p = &sv_run.player;
+
+    sv_run.cheated = true;
+    p->xp = (float)p->xp_needed;
+}
+
+void sv_cheat_heal(void)
+{
+    sv_run.cheated = true;
+    sv_run.player.hp = sv_run.player.max_hp;
+}
+
+void sv_cheat_revive(void)
+{
+    sv_run.cheated = true;
+    sv_run.player.revive_ready = true;
+}
+
+void sv_cheat_jump_time(float seconds)
+{
+    if (seconds <= 0.0f) return;
+    sv_run.cheated = true;
+    sv_run.time += seconds;
+}
+
+void sv_cheat_clear_enemies(void)
+{
+    sv_run.cheated = true;
+    for (int i = 0; i < SV_MAX_ENEMIES; i++)
+    {
+        if (!sv_run.enemies[i].alive) continue;
+        sv_run.enemies[i].alive = false;
+        sv_run.enemy_count--;
+    }
+}
+
+void sv_cheat_clear_hazards(void)
+{
+    sv_run.cheated = true;
+    sv_boss_clear_hazards();
+}
+
+const char *sv_enemy_name(int type)
+{
+    static const char *names[EN_COUNT] = {"Chamado", "Notificação", "Esvaziado", "Dado Enviesado", "Alucinação", "Auto-Resposta",
+                                          "Crachá Fantasma", "Afogado", "Auditor", "Eco da Iara", "Auto-Resposta menor"};
+
+    return (type >= 0 && type < EN_COUNT) ? names[type] : "?";
+}
+
+float sv_enemy_radius(int type)
+{
+    return (type >= 0 && type < EN_COUNT) ? enemy_stats[type].radius : 10.0f;
 }

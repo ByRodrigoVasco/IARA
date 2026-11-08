@@ -36,6 +36,9 @@
 
 typedef enum { SV_PLAYING, SV_LEVELUP, SV_DEAD, SV_WON } SvPhase;
 
+// Trapaças do modo debug (veja sv_debug.c). Cada uma liga e desliga.
+typedef enum { CHEAT_GOD, CHEAT_NO_SPAWN, CHEAT_ONE_HIT, CHEAT_FREEZE, CHEAT_COUNT } SvCheat;
+
 typedef enum
 {
     W_GRAMPEADOR, W_PONTEIRO, W_CANECA, W_POSTITS, W_NAOPERTURBE, W_DEPLOY, W_TARJA, W_MODUS,
@@ -249,9 +252,40 @@ typedef struct
     const char *banner_text;
     float shake;
     bool overtime;
+    bool cheated;                // Alguma trapaça foi usada: a partida não conta para o progresso do save
+    bool cheats[CHEAT_COUNT];    // Trapaças ligadas agora
 } SvRun;
 
 extern SvRun sv_run;
+
+// -----------------------------------------------------------------------------
+// Modo debug: trapaças para testar o jogo à mão. Qualquer uma marca a partida como trapaceada.
+// -----------------------------------------------------------------------------
+
+extern bool sv_debug_mode;   // Ligado pela tecla F1 (sv_debug.c). Libera as trapaças e todos os personagens.
+
+bool sv_cheat_active(int cheat);
+void sv_cheat_toggle(int cheat);
+void sv_cheat_clear_toggles(void);
+
+/** @brief Dá o poder no nível indicado (1 a 5), muda o nível se já tem, ou tira (nível 0). Falso se não couber. */
+bool sv_cheat_set_weapon(int weapon, int level);
+bool sv_cheat_set_passive(int passive, int level);
+int sv_cheat_weapon_level(int weapon);    // 0 se o jogador não tem
+int sv_cheat_passive_level(int passive);
+
+void sv_cheat_spawn_boss(int boss);
+void sv_cheat_kill_boss(void);
+void sv_cheat_spawn_enemies(int type, int count);
+void sv_cheat_level_up(void);
+void sv_cheat_heal(void);
+void sv_cheat_revive(void);                // Ctrl+Z de volta
+void sv_cheat_jump_time(float seconds);
+void sv_cheat_clear_enemies(void);
+void sv_cheat_clear_hazards(void);
+
+const char *sv_enemy_name(int type);
+float sv_enemy_radius(int type);   // Raio de colisão do inimigo, para o desenho do debug
 
 /** @brief Quantos colegas de plantão estão em campo agora (0 se o jogador não tem o poder). */
 int sv_colega_count(void);
