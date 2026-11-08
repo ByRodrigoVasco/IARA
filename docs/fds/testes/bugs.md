@@ -3,14 +3,17 @@
 Os BUG-01 a BUG-08 foram encontrados na execução dos testes de sistema de 22/10/2026
 (branch `develop`, commit `b366e7c`) e estão registrados como issue no repositório, com a
 label `bug`. Os BUG-09 a BUG-12 foram encontrados na revisão de 03/11/2026
-(branch `test/campanha-100-dias`) e também têm issue.
+(branch `test/campanha-100-dias`) e também têm issue. O BUG-13 foi relatado em 08/11/2026, durante o
+desenvolvimento do Modo Sobrevivência (branch `feature/modo-sobrevivencia`), e ainda não tem issue.
 
 Os blocos abaixo repetem o conteúdo de cada um, para consulta sem sair do repositório.
 
 ## Status
 
 Atualizar a coluna Status conforme as issues forem corrigidas e fechadas. Conferido em 03/11/2026:
-do BUG-01 ao BUG-11 as correções estão na `develop` e as issues foram fechadas. Só o BUG-12 segue aberto.
+do BUG-01 ao BUG-11 as correções estão na `develop` e as issues foram fechadas. Só o BUG-12 seguia aberto.
+Em 08/11/2026, na branch `feature/modo-sobrevivencia`, o BUG-12 foi resolvido e o BUG-13 foi corrigido. Os dois
+só chegam à `develop` quando a branch for aprovada, e a issue do BUG-12 fica aberta até lá.
 
 | ID | Problema | Gravidade | Issue | Status |
 |---|---|---|---|---|
@@ -25,7 +28,8 @@ do BUG-01 ao BUG-11 as correções estão na `develop` e as issues foram fechada
 | BUG-09 | Rótulos das mesas vazam dos botões | Média | [#43](https://github.com/ByRodrigoVasco/IARA/issues/43) | Corrigido na `develop`, issue fechada |
 | BUG-10 | Falha ao trocar o save pode perder o progresso | Média | [#44](https://github.com/ByRodrigoVasco/IARA/issues/44) | Corrigido na `develop`, issue fechada |
 | BUG-11 | Fundo do cartão do dia é carregado e nunca desenhado | Baixa | [#45](https://github.com/ByRodrigoVasco/IARA/issues/45) | Corrigido na `develop`, issue fechada |
-| BUG-12 | Menu não tem como começar uma partida nova | Média | [#46](https://github.com/ByRodrigoVasco/IARA/issues/46) | Aberto: falta decidir onde fica a opção |
+| BUG-12 | Menu não tem como começar uma partida nova | Média | [#46](https://github.com/ByRodrigoVasco/IARA/issues/46) | Resolvido na `feature/modo-sobrevivencia` (`ad1ec96`); issue aberta até a branch ir para a `develop` |
+| BUG-13 | Carregamentos sem retorno visual e engasgos no menu | Média | ainda sem issue | Corrigido na `feature/modo-sobrevivencia` |
 
 **Sobre o BUG-02:** os dois vazamentos descritos abaixo já não existem. Restava uma carga duplicada do menu ao abrir o jogo, removida. O CT-24 oscilava porque media sem desenhar quadros, e o driver de vídeo só devolve uma textura apagada depois de um quadro. Com quadros, 400 voltas ao menu cresceram 19 MB (cerca de 0,05 MB por volta, contra os 7 MB originais).
 
@@ -372,5 +376,38 @@ sem querer.
 
 **Em aberto:** decidir se a opção fica no menu ou em `CONFIGURAÇÕES`.
 
+**Correção (08/11/2026):** a decisão foi uma escolha em duas telas depois de `INICIAR`: primeiro o modo, depois
+o save. Cada modo aceita vários saves, cada um com nome único e na própria pasta (`saves/normal/<nome>/`).
+Criar um save novo começa do Dia 1 sem tocar nos outros, e um save pode ser apagado, com confirmação. Branch
+`feature/modo-sobrevivencia`, commit `ad1ec96`.
+
 **Onde:** `code/src/screens/menu.c` e `handle_menu_action()` em `code/src/core/state_machine.c`
-**Coberto por:** nenhum teste automatizado (achado por inspeção)
+**Coberto por:** CT-79 a CT-87 (fluxo) e SL-01 a SL-29 (saves em pastas); antes, nenhum teste automatizado (achado por inspeção)
+
+---
+
+<a id="bug-13"></a>
+
+## BUG-13 — Carregamentos sem retorno visual e engasgos no menu
+
+**Labels:** `bug`, `desempenho`, `gravidade: média`
+
+Relatado em 08/11/2026: o jogo travava algumas vezes e demorava para carregar, até no menu, e durante o
+carregamento a tela ficava congelada, sem nenhum sinal de que algo acontecia.
+
+**Esperado:** quadros regulares no menu e nas telas de escolha, e uma tela de carregamento com a porcentagem
+sempre que a carga passar de um quadro.
+**Obtido:** o fundo do menu tinha 3334x2160 e levava cerca de 210 ms para decodificar. O menu carregava o escritório
+e o nome IARA que a abertura já tinha carregado (166 ms a mais), e as configurações recarregavam o escritório a
+cada abertura. A partida do Sobrevivência decodificava todas as imagens e os sons antes do primeiro quadro,
+com a tela parada.
+
+**Correção:** (1) tela de carregamento com a porcentagem, que só cresce, e a carga dividida em passos, com
+orçamento de 10 ms por quadro; (2) as imagens do menu carregam por trás da abertura, uma por quadro; (3) fundo do
+menu reduzido para 1112x720 (15 ms para decodificar); (4) cada imagem grande carrega uma vez só, com contagem de
+usos (`acquire_smooth_texture`); (5) o jogo grava em `iara-desempenho.log` os quadros acima de 60 ms. Medido com o
+jogo real: em 18 s de abertura e menu parado, os únicos quadros acima de 60 ms foram dois, perto de 1,4 s, quando a
+placa de vídeo usa pela primeira vez as imagens grandes. Isso ainda não foi resolvido.
+
+**Onde:** `code/src/screens/loading.c`, `code/src/screens/menu.c`, `code/src/core/helper.c`, `code/src/core/state_machine.c`, `code/src/main.c`
+**Coberto por:** CT-88 (a porcentagem sobe) e CT-89 a CT-91 (imagens compartilhadas); os tempos foram medidos à parte, sem teste automatizado
