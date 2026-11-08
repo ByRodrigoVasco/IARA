@@ -11,7 +11,10 @@
     X(en_afogado, "en_afogado", 32, 32, 12) \
     X(en_auditor, "en_auditor", 32, 32, 12) \
     X(en_eco, "en_eco", 32, 32, 12) \
-    X(en_colega, "en_colega", 32, 32, 12) \
+    X(en_colega_seguranca, "en_colega_seguranca", 32, 32, 16) \
+    X(en_colega_suporte, "en_colega_suporte", 32, 32, 16) \
+    X(en_colega_enfermeira, "en_colega_enfermeira", 32, 32, 16) \
+    X(en_colega_entregador, "en_colega_entregador", 32, 32, 16) \
     X(bo_impressora, "bo_impressora", 64, 64, 24) \
     X(bo_modelo, "bo_modelo", 64, 64, 24) \
     X(bo_diego, "bo_diego", 64, 64, 24) \
@@ -27,7 +30,7 @@
     X(fx_modus, "fx_modus", 64, 28, 4) \
     X(fx_tabela, "fx_tabela", 61, 61, 4) \
     X(fx_novaconversa, "fx_novaconversa", 72, 72, 4) \
-    X(fx_prompt, "fx_prompt", 72, 26, 4) \
+    X(fx_fibra, "fx_fibra", 72, 26, 4) \
     X(fx_colega, "fx_colega", 32, 32, 4) \
     X(bp_leque, "bp_leque", 64, 48, 4) \
     X(bp_papelada, "bp_papelada", 64, 40, 4) \
@@ -58,6 +61,7 @@
     X(ic_colega, "ic_colega", 24, 24, 4) \
     X(ic_novaconversa, "ic_novaconversa", 24, 24, 4) \
     X(ic_prompt, "ic_prompt", 24, 24, 4) \
+    X(ic_fibra, "ic_fibra", 24, 24, 4) \
     X(ps_cafe, "ps_cafe", 24, 24, 4) \
     X(ps_manual, "ps_manual", 24, 24, 4) \
     X(ps_colinha, "ps_colinha", 24, 24, 4) \

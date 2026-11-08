@@ -524,7 +524,7 @@ static void test_characters(void)
 
         sv_meta.character = CH_VASCO;
         sv_game_start(7);
-        check("SV-47", "Vasco: coleta maior e mais XP", sv_run.player.magnet_range > base_magnet * 1.7f && sv_run.player.xp_mult > 1.19f);
+        check("SV-47", "Vasco: coleta maior, 15% a mais de XP e 1 colega a mais", sv_run.player.magnet_range > base_magnet * 1.7f && sv_run.player.xp_mult > 1.14f && sv_run.player.xp_mult < 1.16f && sv_run.player.extra_colleagues == 1);
 
         sv_meta.character = CH_NICOLLAS;
         sv_game_start(7);
@@ -671,6 +671,76 @@ static void test_characters(void)
         sv_spawn_enemy_at(EN_CHAMADO, (Vector2){sv_run.player.pos.x + 70.0f, sv_run.player.pos.y}, false);
         for (int frame = 0; frame < 60 * 3 && sv_run.kills == 0; frame++) sv_game_update(1.0f / 60.0f, (Vector2){0.0f, 0.0f});
         check("SV-68", "o Ponteiro acerta o inimigo mesmo fora da direção em que o jogador olha", sv_run.kills >= 1);
+    }
+
+    // Colegas de Plantão: o Vasco traz um a mais, e cada função faz a sua parte
+    {
+        float hp;
+        bool shot_seen = false;
+
+        sv_meta_reset();
+        unlock_everything();
+        sv_meta.character = CH_VASCO;
+        sv_game_start(16);
+        sv_run.player.weapons[sv_run.player.weapon_count++] = (SvWeapon){W_COLEGA, 1, 0.0f, 0.0f};
+        check("SV-69", "o Vasco tem 2 colegas de plantão já no nível 1", sv_colega_count() == 2);
+
+        sv_meta.character = CH_ESTAGIARIO;
+        sv_game_start(16);
+        check("SV-70", "sem o poder não há colegas", sv_colega_count() == 0);
+        sv_run.player.weapons[sv_run.player.weapon_count++] = (SvWeapon){W_COLEGA, 1, 0.0f, 0.0f};
+        check("SV-71", "os outros personagens começam com 1 colega", sv_colega_count() == 1);
+
+        // A enfermeira (3º colega) cura quem está ferido e espera 6 s para curar de novo
+        sv_meta.character = CH_VASCO;
+        sv_game_start(17);
+        sv_run.player.weapons[sv_run.player.weapon_count++] = (SvWeapon){W_COLEGA, 3, 0.0f, 0.0f};
+        sv_run.player.hp = sv_run.player.max_hp - 20.0f;
+        hp = sv_run.player.hp;
+        sv_game_update(0.05f, (Vector2){0.0f, 0.0f});
+        check("SV-72", "a enfermeira do RH cura o jogador ferido", sv_run.player.hp > hp + 1.9f);
+        hp = sv_run.player.hp;
+        for (int frame = 0; frame < 60 * 3; frame++) sv_game_update(1.0f / 60.0f, (Vector2){0.0f, 0.0f});
+        check("SV-73", "e só cura de novo depois do intervalo", sv_run.player.hp < hp + 0.1f);
+
+        // O Suporte de TI (2º colega) atira pacotes de dados de longe
+        sv_game_start(18);
+        sv_run.player.weapons[sv_run.player.weapon_count++] = (SvWeapon){W_COLEGA, 3, 0.0f, 0.0f};
+        sv_spawn_enemy_at(EN_ESVAZIADO, (Vector2){sv_run.player.pos.x + 220.0f, sv_run.player.pos.y}, false);
+        for (int frame = 0; frame < 60 * 4 && !shot_seen; frame++)
+        {
+            sv_game_update(1.0f / 60.0f, (Vector2){0.0f, 0.0f});
+            for (int i = 0; i < SV_MAX_SHOTS; i++) if (sv_run.shots[i].alive && sv_run.shots[i].kind == 1) shot_seen = true;
+        }
+        check("SV-74", "o Suporte de TI atira pacotes de dados no inimigo distante", shot_seen);
+    }
+
+    // Prompt da IARA e Fibra Óptica
+    {
+        unsigned strongest_id = 0;
+        bool targeted = false;
+
+        sv_meta_reset();
+        unlock_everything();
+        sv_meta.character = CH_ESTAGIARIO;
+        sv_game_start(19);
+        sv_run.player.weapons[0] = (SvWeapon){W_PROMPT, 1, 0.0f, 0.0f};
+        sv_spawn_enemy_at(EN_CHAMADO, (Vector2){sv_run.player.pos.x + 60.0f, sv_run.player.pos.y}, false);
+        sv_spawn_enemy_at(EN_ESVAZIADO, (Vector2){sv_run.player.pos.x, sv_run.player.pos.y + 200.0f}, false);
+        for (int i = 0; i < SV_MAX_ENEMIES; i++) if (sv_run.enemies[i].alive && sv_run.enemies[i].type == EN_ESVAZIADO) strongest_id = sv_run.enemies[i].id;
+        sv_game_update(1.0f / 60.0f, (Vector2){0.0f, 0.0f});
+        for (int i = 0; i < SV_MAX_ZONES; i++) if (sv_run.zones[i].alive && sv_run.zones[i].kind == ZK_PROMPT && sv_run.zones[i].target_id == strongest_id) targeted = true;
+        check("SV-75", "o Prompt da IARA digita o comando no inimigo mais forte", targeted);
+        for (int frame = 0; frame < 60 * 3 && sv_run.kills < 2; frame++) sv_game_update(1.0f / 60.0f, (Vector2){0.0f, 0.0f});
+        check("SV-76", "ao executar, derruba o alvo e quem está em volta dele", sv_run.kills >= 1);
+
+        sv_game_start(20);
+        sv_run.player.weapons[0] = (SvWeapon){W_FIBRA, 1, 0.0f, 0.0f};
+        for (int i = 0; i < 5; i++) sv_spawn_enemy_at(EN_CHAMADO, (Vector2){sv_run.player.pos.x + 100.0f + (float)i * 14.0f, sv_run.player.pos.y}, false);
+        for (int frame = 0; frame < 60 && sv_run.kills < 3; frame++) sv_game_update(1.0f / 60.0f, (Vector2){0.0f, 0.0f});
+        check("SV-77", "a Fibra Óptica atravessa vários inimigos em linha", sv_run.kills >= 3);
+
+        check("SV-78", "o Não Perturbe tem área inicial maior e bate menos", sv_weapon_stat(W_NAOPERTURBE, WSTAT_AREA, 1) > 60.0f && sv_weapon_stat(W_NAOPERTURBE, WSTAT_DAMAGE, 1) < 5.0f);
     }
 
     // Caneca: cai sobre o inimigo mais próximo, em vez de um ponto qualquer

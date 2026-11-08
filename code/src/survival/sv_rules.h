@@ -79,6 +79,7 @@ typedef struct
     float move_recharge;       // Poderes recarregam mais rápido enquanto o personagem anda (0,12 = 12%)
     float kill_heal;           // Vida recuperada a cada kill_heal_every inimigos derrotados
     int kill_heal_every;       // 0 = sem recuperação por abates
+    int extra_colleagues;      // Colegas de Plantão a mais quando o personagem tem esse poder
 } SvCharacter;
 
 // Dados do personagem. Um id inválido devolve o Estagiário.
