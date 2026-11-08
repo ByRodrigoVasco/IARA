@@ -17,7 +17,7 @@ CONTROLES
 - As demais teclas aparecem na tela durante o jogo.
 
 PROGRESSO
-O jogo salva sozinho ao fechar, no arquivo iara.save, ao lado do iara.exe.
+O progresso fica na pasta saves, ao lado do iara.exe: um save por jogador, em saves\normal e saves\sobrevivencia. Depois de INICIAR, o jogo pede o modo e o save.
 Para comecar do zero, apague esse arquivo. Se a pasta nao permitir gravacao
 (pasta do sistema, por exemplo), o jogo funciona, mas o progresso nao fica salvo.
 

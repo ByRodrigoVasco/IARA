@@ -8,6 +8,7 @@
 #include "macros.h"
 #include "helper.h"
 #include "accessibility.h"
+#include "screen_style.h"
 
 // Largura do nome IARA em 1080p, como fração da imagem original.
 #define IARA_NAME_SCALE_AT_REFERENCE 0.5f
@@ -15,6 +16,13 @@
 static bool fade_in_animation_finished = false;
 
 bool can_close_pre_menu_safely = false;
+
+static float menu_loading_percent = 100.0f;   // Enquanto o menu carrega por trás da abertura, uma barra mostra quanto falta
+
+void pre_menu_set_loading_percent(float percent)
+{
+    menu_loading_percent = percent;
+}
 
 static Color bg_color;
 /*
@@ -70,6 +78,7 @@ void render_pre_menu(void)
     ClearBackground(bg_color);
 
     draw_pre_menu_textures();
+    if (menu_loading_percent < 100.0f) style_progress_small(menu_loading_percent);
 
     end_game_drawing();
 }

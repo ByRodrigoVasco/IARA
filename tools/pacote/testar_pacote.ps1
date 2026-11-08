@@ -44,7 +44,7 @@ if (Test-Path $pasta) { Remove-Item -Recurse -Force $pasta }
 Expand-Archive -Path $zip -DestinationPath $pasta
 
 $exe = Join-Path $pasta "iara.exe"
-$save = Join-Path $pasta "iara.save"
+$saves = Join-Path $pasta "saves"
 
 Write-Host ""
 Write-Host "Pasta do teste: $pasta"
@@ -69,7 +69,7 @@ if ($rodando) {
     Checar "PKG-04" "Fecha pelo X em ate 10s" (Fechar-Jogo $jogo)
 }
 
-Checar "PKG-05" "Save criado ao lado do executavel" (Test-Path $save)
+Checar "PKG-05" "Pasta de saves criada ao lado do executavel, com os dois modos" ((Test-Path (Join-Path $saves "normal")) -and (Test-Path (Join-Path $saves "sobrevivencia")))
 Checar "PKG-06" "Saiu sem erro" ($jogo.HasExited -and $jogo.ExitCode -eq 0)
 
 # Opcao SAIR do menu: as teclas vao so para a janela do jogo, nunca para o resto do sistema

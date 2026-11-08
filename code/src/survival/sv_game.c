@@ -2301,7 +2301,7 @@ int sv_game_finish(void)
     sv_meta.kills += sv_run.kills;
     if (sv_run.phase == SV_WON) sv_meta.wins++;
     if ((int)sv_run.time > sv_meta.best_seconds) sv_meta.best_seconds = (int)sv_run.time;
-    sv_meta_save(SV_SAVE_PATH);
+    sv_meta_save(sv_meta_path());
 
     return earned;
 }

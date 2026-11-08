@@ -6,6 +6,7 @@
             "type": "shell",
             "command": "gcc",
             "args": [
+                "-O2",
                 "${workspaceFolder}/code/src/*.c",
                 "${workspaceFolder}/code/src/core/*.c",
                 "${workspaceFolder}/code/src/screens/*.c",

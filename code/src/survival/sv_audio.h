@@ -63,6 +63,9 @@ typedef enum
 // Desliga o áudio de vez (os testes automáticos não devem tocar nada no alto-falante).
 void sv_audio_disable(bool disabled);
 void sv_audio_init(void);
+
+/** @brief Abre o áudio e carrega o próximo som a cada chamada. Devolve o andamento, de 0 a 1. Para a tela de carregamento. */
+float sv_audio_init_step(void);
 void sv_audio_close(void);
 bool sv_audio_ready(void);
 

@@ -5,6 +5,18 @@
 
 SvMeta sv_meta;
 
+static char meta_path[512] = SV_SAVE_PATH;
+
+const char *sv_meta_path(void)
+{
+    return meta_path;
+}
+
+void sv_meta_set_path(const char *path)
+{
+    snprintf(meta_path, sizeof(meta_path), "%s", (path != NULL && path[0] != '\0') ? path : SV_SAVE_PATH);
+}
+
 static const char *upgrade_keys[UPG_COUNT] = {"vida", "dano", "velocidade", "recarga", "area", "ima", "xp", "armadura", "recomeco"};
 
 void sv_meta_reset(void)
@@ -18,6 +30,14 @@ bool sv_meta_load(const char *path)
     char line[128];
 
     sv_meta_reset();
+    if (!file)
+    {
+        // Uma gravação interrompida deixa o arquivo antigo como cópia de segurança
+        char backup[600];
+
+        snprintf(backup, sizeof(backup), "%s.bak", path);
+        file = fopen(backup, "r");
+    }
     if (!file) return false;
 
     while (fgets(line, sizeof(line), file))
@@ -51,7 +71,8 @@ bool sv_meta_load(const char *path)
 
 bool sv_meta_save(const char *path)
 {
-    char temp_path[260];
+    char temp_path[600];
+    char backup_path[600];
     FILE *file;
 
     snprintf(temp_path, sizeof(temp_path), "%s.tmp", path);
@@ -63,9 +84,17 @@ bool sv_meta_save(const char *path)
 
     if (fclose(file) != 0) return false;
 
-    // Só troca o arquivo antigo quando o novo está completo
-    remove(path);
-    return rename(temp_path, path) == 0;
+    // Só troca o arquivo antigo quando o novo está completo: o antigo vira cópia de segurança até lá
+    snprintf(backup_path, sizeof(backup_path), "%s.bak", path);
+    remove(backup_path);
+    rename(path, backup_path);
+    if (rename(temp_path, path) != 0)
+    {
+        rename(backup_path, path);
+        return false;
+    }
+    remove(backup_path);
+    return true;
 }
 
 bool sv_meta_buy(SvUpgradeId id)

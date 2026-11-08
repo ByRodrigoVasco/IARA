@@ -8,30 +8,57 @@ static Texture2D player_frames[DIRECTION_COUNT][WALK_FRAME_COUNT];
 static bool player_loaded = false;
 static bool sprites_loaded = false;
 
-void sv_load_sprites(void)
+typedef struct
 {
-    int index = 0;
+    const char *file;
+    int frame_width, frame_height, frames;
+} SpriteInfo;
 
-    if (sprites_loaded) return;
-
-#define X(id, name, w, h, n)                                                                   \
-    sv_sprites[index].texture = LoadTexture(SV_SPRITE_PATH name ".png");                      \
-    SetTextureFilter(sv_sprites[index].texture, TEXTURE_FILTER_POINT);                         \
-    sv_sprites[index].frame_width = w;                                                         \
-    sv_sprites[index].frame_height = h;                                                        \
-    sv_sprites[index].frames = n;                                                              \
-    index++;
+static const SpriteInfo sprite_info[SPR_COUNT] = {
+#define X(id, name, w, h, n) {name, w, h, n},
     SV_SPRITE_LIST(X)
 #undef X
+};
 
-    sprites_loaded = true;
+static int sprites_next = 0;   // Quantas imagens já foram carregadas
+
+float sv_load_sprites_step(void)
+{
+    if (sprites_loaded) return 1.0f;
+
+    if (sprites_next < SPR_COUNT)
+    {
+        const SpriteInfo *info = &sprite_info[sprites_next];
+        SvSprite *sprite = &sv_sprites[sprites_next];
+
+        sprite->texture = LoadTexture(TextFormat("%s%s.png", SV_SPRITE_PATH, info->file));
+        SetTextureFilter(sprite->texture, TEXTURE_FILTER_POINT);
+        sprite->frame_width = info->frame_width;
+        sprite->frame_height = info->frame_height;
+        sprite->frames = info->frames;
+        sprites_next++;
+    }
+
+    if (sprites_next >= SPR_COUNT)
+    {
+        sprites_loaded = true;
+        return 1.0f;
+    }
+    return (float)sprites_next / (float)SPR_COUNT;
+}
+
+void sv_load_sprites(void)
+{
+    while (sv_load_sprites_step() < 1.0f) { }
 }
 
 void sv_unload_sprites(void)
 {
-    if (!sprites_loaded) return;
-    for (int i = 0; i < SPR_COUNT; i++) UnloadTexture(sv_sprites[i].texture);
+    int count = sprites_loaded ? SPR_COUNT : sprites_next;
+
+    for (int i = 0; i < count; i++) UnloadTexture(sv_sprites[i].texture);
     sprites_loaded = false;
+    sprites_next = 0;
 }
 
 void sv_draw(SvSpriteId id, int frame, Vector2 center, float scale, float rotation, bool flip, Color tint)

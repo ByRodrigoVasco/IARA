@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 #include "state_machine.h"
 #include "game_state.h"
 #include "pre_menu.h"
@@ -5,6 +7,7 @@
 #include "fonts.h"
 #include "macros.h"
 #include "save.h"
+#include "save_slots.h"
 #include "helper.h"
 #include "accessibility.h"
 #include "preferences.h"
@@ -13,6 +16,27 @@ unsigned int screen_width = 0;
 unsigned int screen_height = 0;
 unsigned int middle_screen_x = 0;
 unsigned int middle_screen_y = 0;
+
+// Quadros que passam de 60 ms ficam registrados em iara-desempenho.log (cada execução recomeça o arquivo).
+// Assim, quando o jogo trava na máquina de alguém, o arquivo diz em que tela e quando.
+#define FRAME_SPIKE_LOG_PATH "iara-desempenho.log"
+#define FRAME_SPIKE_MS 60.0
+#define FRAME_SPIKE_MAX_LINES 200
+
+static void log_frame_spike(double frame_ms, int screen)
+{
+    static int lines = 0;
+    FILE *file;
+
+    if (frame_ms < FRAME_SPIKE_MS || lines >= FRAME_SPIKE_MAX_LINES) return;
+
+    TraceLog(LOG_WARNING, "DESEMPENHO: quadro de %.0f ms na tela %d", frame_ms, screen);
+    file = fopen(FRAME_SPIKE_LOG_PATH, lines == 0 ? "w" : "a");
+    if (file == NULL) return;
+    fprintf(file, "%.1f s  tela %d  quadro de %.0f ms\n", GetTime(), screen, frame_ms);
+    fclose(file);
+    lines++;
+}
 
 int main(void)
 {
@@ -55,21 +79,15 @@ int main(void)
     initialize_game_state_variables();
     initialize_hidden_statistic();
 
-    /* Retomada da partida (US01): se houver um save válido, ele substitui o
-     * estado inicial do Dia 1. Se não houver save, ou se ele estiver
-     * corrompido, o estado acima continua valendo e o jogo começa do zero. */
-    save_result load_status = load_game_state(SAVE_FILE_PATH);
-    if (load_status == SAVE_OK)
+    /* Saves em pastas: saves/normal/<nome> e saves/sobrevivencia/<nome>. O jogador escolhe
+     * o save depois de INICIAR (modo e save), então aqui só se garante que as pastas existem.
+     * Os saves de antes (iara.save e iara.survival, soltos ao lado do executável) viram o
+     * save "Principal" de cada modo, para ninguém perder o progresso. */
+    save_slots_ensure_folders();
+    int migrated_files = save_slots_migrate_legacy();
+    if (migrated_files > 0)
     {
-        TraceLog(LOG_INFO, "SAVE: partida retomada no dia %d", current_game_state_variables.current_day);
-    }
-    else if (load_status == SAVE_NOT_FOUND)
-    {
-        TraceLog(LOG_INFO, "SAVE: nenhum save encontrado, iniciando nova partida");
-    }
-    else
-    {
-        TraceLog(LOG_WARNING, "SAVE: save ignorado (%s), iniciando nova partida", save_result_to_string(load_status));
+        TraceLog(LOG_INFO, "SAVE: %d arquivo(s) de save antigo levado(s) para o save \"Principal\"", migrated_files);
     }
 
     handle_state_initialization();
@@ -79,6 +97,8 @@ int main(void)
     /* WindowShouldClose() fica true quando o jogador fecha a janela pelo X,
      * ou por ALT+F4 (o sistema manda o mesmo pedido de fechar). A opção SAIR do
      * menu e a tecla ESC, fora dos créditos e das configurações, também encerram. */
+    double last_frame_time = GetTime();
+
     while (!WindowShouldClose() && !is_game_to_close)
     {
         if (IsKeyPressed(KEY_ESCAPE) && escape_closes_current_screen())
@@ -95,19 +115,18 @@ int main(void)
         update_screen_metrics();
 
         handle_state_machine();
+
+        /* Registra os quadros que travaram (mais de 60 ms), para dar para descobrir onde e quando. */
+        double now = GetTime();
+        log_frame_spike((now - last_frame_time) * 1000.0, current_game_state_variables.current_screen);
+        last_frame_time = now;
     }
 
     /* Save automático (US01): grava o progresso ANTES de liberar qualquer
-     * recurso, para nenhum progresso recente se perder ao fechar. */
-    save_result save_status = save_game_state(SAVE_FILE_PATH);
-    if (save_status == SAVE_OK)
-    {
-        TraceLog(LOG_INFO, "SAVE: progresso salvo em %s (dia %d)", SAVE_FILE_PATH, current_game_state_variables.current_day);
-    }
-    else
-    {
-        TraceLog(LOG_WARNING, "SAVE: nao foi possivel salvar o progresso: %s", save_result_to_string(save_status));
-    }
+     * recurso, para nenhum progresso recente se perder ao fechar. Só a campanha
+     * precisa disto aqui: o Modo Sobrevivência grava o dele a cada compra e no fim
+     * de cada partida, e quem fecha o jogo no meio de uma leva o que juntou. */
+    save_active_campaign_progress();
 
     if (!save_preferences(PREFERENCES_FILE_PATH))
     {

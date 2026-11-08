@@ -24,6 +24,11 @@
 #include "pre_menu.h"
 #include "fonts.h"
 #include "settings.h"
+#include "mode_select.h"
+#include "save_select.h"
+#include "save_slots.h"
+#include "loading.h"
+#include "save.h"
 
 /* A main.c define estas globais; aqui o teste assume esse papel. */
 unsigned int screen_width = 0;
@@ -269,17 +274,66 @@ static void gravar_evidencia_do_quiz(const char *arquivo)
 /* Casos de teste                                                             */
 /* ------------------------------------------------------------------------ */
 
-/* Como apertar INICIAR depois do final da campanha: a partida recomeca do Dia 1. */
+/* Os saves do teste ficam numa pasta propria, para nao mexer nos saves de quem roda a suite. */
+#define RAIZ_DOS_SAVES_DE_TESTE "build/tests/saves_fluxo"
+
+static void limpar_saves_de_teste(void)
+{
+    for (int modo = 0; modo < SAVE_MODE_COUNT; modo++)
+    {
+        save_slot_info saves[SAVE_SLOTS_MAX];
+        int quantos = save_slots_list((save_mode)modo, saves, SAVE_SLOTS_MAX);
+
+        for (int i = 0; i < quantos; i++) save_slot_delete((save_mode)modo, saves[i].name);
+    }
+}
+
+static void preparar_saves_de_teste(void)
+{
+    save_slots_set_root(RAIZ_DOS_SAVES_DE_TESTE);
+    save_slots_ensure_folders();
+    limpar_saves_de_teste();
+    save_slot_create(SAVE_MODE_NORMAL, "Fluxo");
+    save_slot_create(SAVE_MODE_SURVIVAL, "Fluxo");
+}
+
+/* Espera o carregamento acabar, quadro a quadro, pela maquina de estados de verdade. */
+static bool esperar_tela(int tela, double limite_em_segundos)
+{
+    double inicio = GetTime();
+
+    while (current_game_state_variables.current_screen != tela && GetTime() - inicio < limite_em_segundos && !WindowShouldClose())
+    {
+        handle_state_machine();
+    }
+    return current_game_state_variables.current_screen == tela;
+}
+
+/* Como apertar INICIAR depois do final da campanha: o save escolhido tem a campanha terminada, e carregar esse save recomeca do Dia 1. */
 static void iniciar_partida_nova(void)
 {
+    char caminho[512];
+
     unload_game_loop();
+    active_save_set(SAVE_MODE_NORMAL, "Fluxo");
     current_game_state_variables.resolved_puzzles[TOTAL_GAME_DAYS] = true;
-    current_game_state_variables.current_screen = handle_menu_action(INICIAR);
+    if (active_save_path(caminho, sizeof(caminho))) save_game_state(caminho);
+    current_game_state_variables.current_screen = start_active_save_now();
 
     for (int quadro = 0; quadro < 5 && !WindowShouldClose(); quadro++)
     {
         handle_state_machine();
     }
+}
+
+/* Grava o estado atual no save "Fluxo" e carrega esse save, como o jogador faz ao escolhe-lo depois de INICIAR. */
+static int retomar_partida_do_save(void)
+{
+    char caminho[512];
+
+    active_save_set(SAVE_MODE_NORMAL, "Fluxo");
+    if (active_save_path(caminho, sizeof(caminho))) save_game_state(caminho);
+    return start_active_save_now();
 }
 
 static void testar_estado_inicial(void)
@@ -372,18 +426,23 @@ static void testar_creditos(void)
 
 static void testar_sobrevivencia(void)
 {
-    titulo("Opcao SOBREVIVENCIA (CT-77 e CT-78)");
-    etapa("[2/7] escolhendo SOBREVIVENCIA: o modo abre, a partida roda sozinha e o jogador volta ao menu");
+    titulo("Modo SOBREVIVENCIA pela escolha do modo e do save (CT-77 e CT-78)");
+    etapa("[2/7] INICIAR, modo Sobrevivencia, save: o modo abre, a partida roda sozinha e o jogador volta ao menu");
 
     /* Sem som: o teste nao deve tocar nada no alto-falante de quem o roda. */
     sv_audio_disable(true);
 
-    navegar_menu_ate(SOBREVIVENCIA);
+    navegar_menu_ate(INICIAR);
     confirm_menu_option();
-    handle_state_machine();
+    handle_state_machine();                                   /* escolha do modo */
+    mode_select_choose(SAVE_MODE_SURVIVAL);
+    handle_state_machine();                                   /* escolha do save */
+    save_select_choose_existing("Fluxo");
+    handle_state_machine();                                   /* tela de carregamento */
+    esperar_tela(SURVIVAL_SCREEN, 20.0);
     rodar_por(0.5);
 
-    checar("CT-77", "Escolher SOBREVIVENCIA abre o modo, que aguarda a escolha do jogador",
+    checar("CT-77", "Escolher o modo e o save carrega o Sobrevivencia, que aguarda a escolha do jogador",
            current_game_state_variables.current_screen == SURVIVAL_SCREEN && screen == SCREEN_HUB && !leave_to_menu);
 
     /* JOGAR: a partida comeca e roda com a tela real, sem ninguem mexendo. */
@@ -404,18 +463,127 @@ static void testar_sobrevivencia(void)
     rodar_por(0.8);
 }
 
-static void testar_iniciar(void)
+static void testar_modo_e_saves(void)
 {
-    titulo("Opcao INICIAR (CT-30)");
-    etapa("[3/7] escolhendo INICIAR");
+    char caminho[512];
+    float anterior = 0.0f;
+    bool subiu_sempre = true;
+    bool viu_carregando = false;
+
+    titulo("Escolha do modo, dos saves e carregamento (CT-79 a CT-88)");
+
+    /* Sem som: o teste nao deve tocar nada no alto-falante de quem o roda. */
+    sv_audio_disable(true);
+    etapa("[2/7] INICIAR abre a escolha do modo; depois a escolha do save, com nome unico, apagar e carregamento");
 
     navegar_menu_ate(INICIAR);
     confirm_menu_option();
-
-    /* Um quadro basta: a maquina de estados processa a escolha. */
     handle_state_machine();
+    rodar_por(0.4);
+    checar("CT-79", "INICIAR abre a escolha do modo, em vez de comecar a partida", current_game_state_variables.current_screen == MODE_SELECT_SCREEN);
 
-    checar("CT-30", "Escolher INICIAR no menu comeca a partida",
+    mode_select_go_back();
+    handle_state_machine();
+    bool voltou_ao_menu = (current_game_state_variables.current_screen == MENU_SCREEN);
+    navegar_menu_ate(INICIAR);
+    confirm_menu_option();
+    handle_state_machine();
+    mode_select_choose(SAVE_MODE_NORMAL);
+    handle_state_machine();
+    rodar_por(0.4);
+    checar("CT-80", "VOLTAR leva ao menu, e escolher o modo normal abre a escolha do save", voltou_ao_menu && current_game_state_variables.current_screen == SAVE_SELECT_SCREEN);
+
+    checar("CT-81", "um save com nome que ja existe e recusado (sem diferenciar maiusculas)",
+           save_select_create_named("fluxo") == SAVE_NAME_EXISTS && save_select_create_named("") == SAVE_NAME_EMPTY && save_select_create_named("a/b") == SAVE_NAME_INVALID &&
+               current_game_state_variables.current_screen == SAVE_SELECT_SCREEN);
+
+    /* Um nome novo cria a pasta do save e abre o carregamento. */
+    checar("CT-82", "um nome novo cria o save na pasta do modo", save_select_create_named("Ana Teste") == SAVE_NAME_OK && DirectoryExists(RAIZ_DOS_SAVES_DE_TESTE "/normal/Ana Teste"));
+    handle_state_machine();
+    esperar_tela(PLAYING_SCREEN, 20.0);
+    checar("CT-83", "o save novo carrega e leva ao jogo", current_game_state_variables.current_screen == PLAYING_SCREEN && is_loading_finished());
+
+    /* O Sobrevivencia carrega em muitos pedacos: a porcentagem aparece subindo, sem nunca voltar, ate 100. */
+    unload_game_loop();
+    current_game_state_variables.current_screen = MENU_SCREEN;
+    initialize_menu_variables();
+    navegar_menu_ate(INICIAR);
+    confirm_menu_option();
+    handle_state_machine();
+    mode_select_choose(SAVE_MODE_SURVIVAL);
+    handle_state_machine();
+    save_select_create_named("Carga");
+    handle_state_machine();
+    {
+        int valores_diferentes = 0;
+
+        while (current_game_state_variables.current_screen == LOADING_SCREEN && !WindowShouldClose())
+        {
+            float percentual = loading_percent();
+
+            viu_carregando = true;
+            if (percentual + 0.001f < anterior) subiu_sempre = false;
+            if (percentual > anterior + 0.5f) valores_diferentes++;
+            anterior = percentual;
+            handle_state_machine();
+        }
+        checar("CT-88", "a tela de carregamento mostra a porcentagem subindo aos poucos e leva ao jogo",
+               viu_carregando && subiu_sempre && valores_diferentes >= 4 && current_game_state_variables.current_screen == SURVIVAL_SCREEN && is_loading_finished() && loading_percent() >= 100.0f);
+    }
+    unload_survival();
+    active_save_clear();
+    current_game_state_variables.current_screen = MENU_SCREEN;
+    initialize_menu_variables();
+    active_save_set(SAVE_MODE_NORMAL, "Ana Teste");
+
+    /* Cada save guarda o progresso dele, na pasta dele. */
+    current_game_state_variables.current_day = 5;
+    checar("CT-84", "o progresso vai para a pasta do save ativo e so volta quando o mesmo save e carregado",
+           save_active_campaign_progress() && active_save_path(caminho, sizeof(caminho)) && FileExists(caminho) && strstr(caminho, "normal/Ana Teste") != NULL);
+
+    unload_game_loop();
+    current_game_state_variables.current_day = 1;
+    current_game_state_variables.current_screen = start_active_save_now();
+    bool voltou_o_dia_5 = (current_game_state_variables.current_day == 5);
+    unload_game_loop();
+    active_save_set(SAVE_MODE_NORMAL, "Fluxo");
+    current_game_state_variables.current_screen = start_active_save_now();
+    bool outro_save_comeca_no_dia_1 = (current_game_state_variables.current_day == 1);
+    unload_game_loop();
+    checar("CT-85", "cada save e independente: o dia 5 volta no save dele, e outro save comeca no dia 1", voltou_o_dia_5 && outro_save_comeca_no_dia_1);
+
+    /* Apagar remove a pasta e libera o nome. */
+    active_save_clear();
+    current_game_state_variables.current_screen = MENU_SCREEN;
+    initialize_menu_variables();
+    initialize_save_select(SAVE_MODE_NORMAL);
+    checar("CT-86", "apagar o save remove a pasta dele e libera o nome para um save novo",
+           save_select_delete_named("Ana Teste") && !DirectoryExists(RAIZ_DOS_SAVES_DE_TESTE "/normal/Ana Teste") && !save_slot_exists(SAVE_MODE_NORMAL, "Ana Teste") && save_slot_exists(SAVE_MODE_NORMAL, "Fluxo"));
+
+    checar("CT-87", "os dois modos guardam os saves em pastas separadas",
+           DirectoryExists(RAIZ_DOS_SAVES_DE_TESTE "/normal/Fluxo") && DirectoryExists(RAIZ_DOS_SAVES_DE_TESTE "/sobrevivencia/Fluxo") && save_mode_folder(SAVE_MODE_NORMAL) != save_mode_folder(SAVE_MODE_SURVIVAL));
+
+    active_save_clear();
+    current_game_state_variables.current_screen = MENU_SCREEN;
+    initialize_menu_variables();
+    rodar_por(0.5);
+}
+
+static void testar_iniciar(void)
+{
+    titulo("Opcao INICIAR (CT-30)");
+    etapa("[3/7] INICIAR, modo normal, save: o jogo comeca");
+
+    navegar_menu_ate(INICIAR);
+    confirm_menu_option();
+    handle_state_machine();                                   /* escolha do modo */
+    mode_select_choose(SAVE_MODE_NORMAL);
+    handle_state_machine();                                   /* escolha do save */
+    save_select_choose_existing("Fluxo");
+    handle_state_machine();                                   /* tela de carregamento */
+    esperar_tela(PLAYING_SCREEN, 20.0);
+
+    checar("CT-30", "Escolher INICIAR, o modo e o save comeca a partida",
            current_game_state_variables.current_screen == PLAYING_SCREEN);
 }
 
@@ -1320,8 +1488,7 @@ static void testar_campanha(void)
     bool voltou_ao_menu = current_game_state_variables.current_screen == MENU_SCREEN;
 
     unload_menu();
-    current_game_state_variables.current_screen = handle_menu_action(INICIAR);
-    handle_state_machine();
+    iniciar_partida_nova();   /* o save tem a campanha terminada: carregar esse save recomeca do Dia 1 */
 
     checar("CT-73", "Depois do final, o jogo volta ao menu e INICIAR recomeca do Dia 1 sem herdar nada",
            voltou_ao_menu && current_game_state_variables.current_day == 1 &&
@@ -1331,20 +1498,20 @@ static void testar_campanha(void)
     /* Retomar um save: o jogo volta no dia em que parou, seja qual for o tipo dele (CA4). */
     unload_game_loop();
     start_game_day(5);
-    current_game_state_variables.current_screen = handle_menu_action(INICIAR);
+    current_game_state_variables.current_screen = retomar_partida_do_save();
     bool retomou_no_salto = current_screen == DAY_TRANSITION_SCREEN && current_game_state_variables.current_day == 5 &&
                             current_game_state_variables.day_type == JUMP_DAY;
 
     unload_game_loop();
     start_game_day(27);
-    current_game_state_variables.current_screen = handle_menu_action(INICIAR);
+    current_game_state_variables.current_screen = retomar_partida_do_save();
     bool retomou_no_dia = current_screen == SCREEN_NONE && current_game_state_variables.current_day == 27 && active_script->day == 27;
 
     /* Fechado no cartao de fim do dia: o dia ja estava encerrado, entao segue para o proximo. */
     unload_game_loop();
     start_game_day(12);
     current_game_state_variables.resolved_puzzles[12] = true;
-    current_game_state_variables.current_screen = handle_menu_action(INICIAR);
+    current_game_state_variables.current_screen = retomar_partida_do_save();
     bool seguiu_para_o_proximo = current_game_state_variables.current_day == 13 && current_screen == DAY_TRANSITION_SCREEN;
 
     checar("CT-75", "Save retoma no salto, no dia jogavel com o roteiro certo e depois de um dia ja encerrado",
@@ -1471,10 +1638,12 @@ int main(void)
     /* Mesma ordem de preparo da main.c. */
     initialize_fonts();
     initialize_menu_variables();
+    preparar_saves_de_teste();
 
     testar_estado_inicial();
     testar_abertura();
     testar_creditos();
+    testar_modo_e_saves();
     testar_sobrevivencia();
     testar_iniciar();
     testar_cartao_do_dia();
@@ -1518,6 +1687,9 @@ int main(void)
     /* Encerrar com a partida recomecada libera tudo, e uma segunda chamada nao faz nada. */
     unload_game_loop();
     unload_game_loop();
+
+    limpar_saves_de_teste();
+    save_slots_set_root(NULL);
 
     unload_fonts();
     CloseWindow();

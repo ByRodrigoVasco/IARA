@@ -19,9 +19,9 @@ Use um computador sem MSYS2, gcc ou raylib, com usuário comum (sem administrado
 | 1 | Desligar o Wi-Fi e o cabo de rede | Sem internet | |
 | 2 | Copiar `IARA-windows.zip` por pendrive e extrair na Área de Trabalho | Extrai sem pedir permissão | |
 | 3 | Dar dois cliques em `iara.exe` | Abre sem aviso de DLL ausente | |
-| 4 | Jogar: menu, INICIAR, escritório, quiz | Sem imagem faltando e sem lentidão perceptível | |
+| 4 | Jogar: menu, INICIAR, modo normal, novo save, escritório, quiz | Sem imagem faltando e sem lentidão perceptível | |
 | 5 | Ver os CRÉDITOS | As fotos da equipe aparecem | |
-| 6 | Fechar pelo X | `iara.save` aparece ao lado do executável | |
+| 6 | Fechar pelo X | A pasta `saves`, com `normal` e `sobrevivencia`, aparece ao lado do executável (e o save que você jogou, dentro de uma delas) | |
 | 7 | Abrir de novo e sair pela opção SAIR | Fecha sem mensagem de erro | |
 
 Máquina usada: ________ Windows: ________ Placa de vídeo: ________ Data: ________ Responsável: ________

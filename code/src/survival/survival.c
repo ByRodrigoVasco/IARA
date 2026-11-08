@@ -10,6 +10,8 @@
 #include "sv_assets.h"
 #include "characters.h"
 #include "macros.h"
+#include "loading.h"
+#include "save_slots.h"
 
 typedef enum { SCREEN_HUB, SCREEN_SHOP, SCREEN_CHARS, SCREEN_RUN, SCREEN_PAUSE, SCREEN_OVER } SvScreen;
 
@@ -38,19 +40,44 @@ static const char *upgrade_descriptions[UPG_COUNT] = {
 #define HUB_OPTIONS 4
 static const char *hub_labels[HUB_OPTIONS] = {"JOGAR", "PERSONAGEM", "PLANO DE CARREIRA", "VOLTAR"};
 
-void initialize_survival(void)
+// O carregamento é dividido em trabalhos pequenos: a tela de carregamento roda um pedaço por quadro e mostra a porcentagem.
+static float job_read_save(void)
 {
-    sv_meta_load(SV_SAVE_PATH);
-    sv_load_sprites();
+    char path[512];
+
+    // Cada save tem o seu arquivo de progresso; sem save escolhido (testes), vale o arquivo antigo
+    if (active_save_is_set() && active_save_mode() == SAVE_MODE_SURVIVAL && active_save_path(path, sizeof(path))) sv_meta_set_path(path);
+    else sv_meta_set_path(NULL);
+
+    sv_meta_load(sv_meta_path());
     if (sv_meta.character < 0 || sv_meta.character >= CH_COUNT || !sv_character_unlocked(sv_meta.character, sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills)) sv_meta.character = CH_ESTAGIARIO;
     char_cursor = sv_meta.character;
+    return 1.0f;
+}
+
+static float job_sprites(void)
+{
+    return sv_load_sprites_step();
+}
+
+static float job_characters(void)
+{
     sv_load_player(sv_meta.character);
     for (int i = 0; i < CH_COUNT; i++)
     {
         roster_icons[i] = LoadTexture(TextFormat("%s%s/walk/south-0.png", PERSONAGENS_PATH, sv_character(i)->folder));
         if (roster_icons[i].id) SetTextureFilter(roster_icons[i], TEXTURE_FILTER_POINT);
     }
-    sv_audio_init();
+    return 1.0f;
+}
+
+static float job_audio(void)
+{
+    return sv_audio_init_step();
+}
+
+static float job_ready(void)
+{
     loaded = true;
     leave_to_menu = false;
     screen = SCREEN_HUB;
@@ -58,6 +85,28 @@ void initialize_survival(void)
     shop_selected = 0;
     sv_music_play(MUS_MENU);
     sv_ambient_play(-1);
+    return 1.0f;
+}
+
+int survival_loading_jobs(loading_job *jobs)
+{
+    jobs[0] = (loading_job){"Lendo o save", 0.3f, job_read_save};
+    jobs[1] = (loading_job){"Imagens do mapa, dos inimigos e dos poderes", 5.0f, job_sprites};
+    jobs[2] = (loading_job){"Personagens", 1.0f, job_characters};
+    jobs[3] = (loading_job){"Sons e músicas", 3.5f, job_audio};
+    jobs[4] = (loading_job){"Preparando o modo", 0.2f, job_ready};
+    return 5;
+}
+
+void initialize_survival(void)
+{
+    loading_job jobs[LOADING_MAX_JOBS];
+    int count = survival_loading_jobs(jobs);
+
+    for (int i = 0; i < count; i++)
+    {
+        while (jobs[i].step() < 1.0f) { }
+    }
 }
 
 void unload_survival(void)
@@ -258,7 +307,7 @@ static void render_characters(void)
         else
         {
             sv_meta.character = char_cursor;
-            sv_meta_save(SV_SAVE_PATH);
+            sv_meta_save(sv_meta_path());
             char_message = "Personagem escolhido.";
             sv_sfx(SND_confirma);
         }
@@ -352,7 +401,7 @@ static void render_shop(void)
         {
             shop_message = "Comprado.";
             sv_sfx(SND_compra);
-            sv_meta_save(SV_SAVE_PATH);
+            sv_meta_save(sv_meta_path());
         }
         else
         {
