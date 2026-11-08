@@ -192,6 +192,9 @@ typedef struct
     int coin_luck;         // Pontos percentuais extras na chance de soltar Banco de Horas
     float negate_flash;    // Aviso na tela logo depois que a Vera Fischer anula um golpe
     float move_recharge;   // Bônus de recarga enquanto anda (Julio)
+    float kill_heal;       // Vida recuperada a cada kill_heal_every abates (Nicollas)
+    int kill_heal_every;
+    int kills_since_heal;
     bool moving;           // Andando neste quadro
     SvWeapon weapons[SV_MAX_WEAPONS];
     int weapon_count;

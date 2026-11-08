@@ -528,7 +528,7 @@ static void test_characters(void)
 
         sv_meta.character = CH_NICOLLAS;
         sv_game_start(7);
-        check("SV-48", "Nicollas: recarga menor e poderes mais longos", sv_run.player.cooldown_mult < 0.9f && sv_run.player.duration_mult > 1.09f);
+        check("SV-48", "Nicollas: recarga menor e recupera vida a cada 20 abates", sv_run.player.cooldown_mult < 0.9f && sv_run.player.kill_heal_every == 20 && sv_run.player.kill_heal > 3.0f);
 
         sv_meta.character = CH_LAURA;
         sv_game_start(7);
@@ -644,6 +644,33 @@ static void test_characters(void)
         sv_spawn_enemy_at(EN_CHAMADO, (Vector2){sv_run.player.pos.x + 150.0f, sv_run.player.pos.y}, false);
         for (int frame = 0; frame < 60 * 4 && sv_run.kills == 0; frame++) sv_game_update(1.0f / 60.0f, (Vector2){0.0f, 0.0f});
         check("SV-66", "o Deploy em Produção acerta o inimigo que se aproxima", sv_run.kills >= 1);
+    }
+
+    // Nicollas: cada 20 abates devolvem 4 de vida, e o Ponteiro mira o inimigo mais próximo
+    {
+        float hp;
+
+        sv_meta_reset();
+        unlock_everything();
+        sv_meta.character = CH_NICOLLAS;
+        sv_game_start(14);
+        sv_run.player.hp = sv_run.player.max_hp - 30.0f;
+        hp = sv_run.player.hp;
+        sv_run.player.dmg_mult = 50.0f;
+        sv_run.player.invulnerable = 30.0f;
+        // 20 chamados enfileirados na linha do Ponteiro, que derruba quase todos num golpe só
+        for (int i = 0; i < 20; i++) sv_spawn_enemy_at(EN_CHAMADO, (Vector2){sv_run.player.pos.x + 55.0f + (float)i * 2.5f, sv_run.player.pos.y}, false);
+        for (int frame = 0; frame < 60 * 6 && sv_run.kills < 20; frame++)
+        {
+            if (sv_run.phase == SV_LEVELUP) sv_game_choose(0);
+            sv_game_update(1.0f / 60.0f, (Vector2){0.0f, 0.0f});
+        }
+        check("SV-67", "a cada 20 inimigos derrotados a Nicollas recupera 4 de vida", sv_run.kills >= 20 && sv_run.player.hp > hp + 3.9f && sv_run.player.hp < hp + 4.1f);
+
+        sv_game_start(15);
+        sv_spawn_enemy_at(EN_CHAMADO, (Vector2){sv_run.player.pos.x + 70.0f, sv_run.player.pos.y}, false);
+        for (int frame = 0; frame < 60 * 3 && sv_run.kills == 0; frame++) sv_game_update(1.0f / 60.0f, (Vector2){0.0f, 0.0f});
+        check("SV-68", "o Ponteiro acerta o inimigo mesmo fora da direção em que o jogador olha", sv_run.kills >= 1);
     }
 
     // Caneca: cai sobre o inimigo mais próximo, em vez de um ponto qualquer
