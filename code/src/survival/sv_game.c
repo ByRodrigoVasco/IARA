@@ -19,22 +19,22 @@ static bool finished_flag = false;
 typedef struct
 {
     float hp, speed, damage;
-    int xp;
+    float xp;              // XP do inimigo, proporcional à dificuldade dele; o chip solto vale o dobro
     float radius;
 } EnemyStats;
 
 static const EnemyStats enemy_stats[EN_COUNT] = {
-    [EN_CHAMADO]      = {6.0f, 52.0f, 4.0f, 1, 9.0f},
-    [EN_NOTIFICACAO]  = {8.0f, 80.0f, 5.0f, 2, 9.0f},
-    [EN_ESVAZIADO]    = {30.0f, 36.0f, 8.0f, 3, 11.0f},
-    [EN_DADO]         = {20.0f, 74.0f, 10.0f, 3, 12.0f},
-    [EN_ALUCINACAO]   = {16.0f, 62.0f, 7.0f, 3, 10.0f},
-    [EN_AUTORESPOSTA] = {24.0f, 55.0f, 8.0f, 4, 11.0f},
-    [EN_CRACHA]       = {28.0f, 78.0f, 11.0f, 5, 10.0f},
-    [EN_AFOGADO]      = {50.0f, 50.0f, 12.0f, 6, 11.0f},
-    [EN_AUDITOR]      = {260.0f, 60.0f, 18.0f, 25, 13.0f},
-    [EN_ECO]          = {90.0f, 60.0f, 14.0f, 10, 11.0f},
-    [EN_MINI]         = {8.0f, 92.0f, 4.0f, 1, 7.0f},
+    [EN_CHAMADO]      = {7.0f, 52.0f, 4.0f, 0.75f, 9.0f},
+    [EN_NOTIFICACAO]  = {10.0f, 80.0f, 5.0f, 1.5f, 9.0f},
+    [EN_ESVAZIADO]    = {33.0f, 36.0f, 8.0f, 2.75f, 11.0f},
+    [EN_DADO]         = {20.0f, 74.0f, 10.0f, 2.75f, 12.0f},
+    [EN_ALUCINACAO]   = {16.0f, 62.0f, 7.0f, 1.75f, 10.0f},
+    [EN_AUTORESPOSTA] = {24.0f, 55.0f, 8.0f, 2.5f, 11.0f},
+    [EN_CRACHA]       = {28.0f, 78.0f, 11.0f, 4.25f, 10.0f},
+    [EN_AFOGADO]      = {50.0f, 50.0f, 12.0f, 6.0f, 11.0f},
+    [EN_AUDITOR]      = {260.0f, 60.0f, 18.0f, 40.0f, 13.0f},
+    [EN_ECO]          = {90.0f, 60.0f, 14.0f, 13.0f, 11.0f},
+    [EN_MINI]         = {8.0f, 92.0f, 4.0f, 0.5f, 7.0f},
 };
 
 static const SvSpriteId enemy_sprites[EN_COUNT] = {
