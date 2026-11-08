@@ -624,6 +624,28 @@ static void test_characters(void)
         check("SV-62", "a Vera Fischer dispara sozinha quando um inimigo chega perto", sv_run.kills >= 1 && sv_run.player.weapons[0].cooldown > 2.0f);
     }
 
+    // Julio: recarrega mais rápido andando, e o Deploy cai sobre quem se aproxima
+    {
+        float standing, walking;
+
+        sv_meta_reset();
+        unlock_everything();
+        sv_meta.character = CH_JULIO;
+        sv_game_start(12);
+        sv_run.player.weapons[0].cooldown = 10.0f;
+        sv_game_update(0.05f, (Vector2){0.0f, 0.0f});
+        standing = 10.0f - sv_run.player.weapons[0].cooldown;
+        sv_run.player.weapons[0].cooldown = 10.0f;
+        sv_game_update(0.05f, (Vector2){1.0f, 0.0f});
+        walking = 10.0f - sv_run.player.weapons[0].cooldown;
+        check("SV-65", "o Julio recarrega os poderes mais rápido enquanto anda", walking > standing * 1.1f);
+
+        sv_game_start(13);
+        sv_spawn_enemy_at(EN_CHAMADO, (Vector2){sv_run.player.pos.x + 150.0f, sv_run.player.pos.y}, false);
+        for (int frame = 0; frame < 60 * 4 && sv_run.kills == 0; frame++) sv_game_update(1.0f / 60.0f, (Vector2){0.0f, 0.0f});
+        check("SV-66", "o Deploy em Produção acerta o inimigo que se aproxima", sv_run.kills >= 1);
+    }
+
     // Caneca: cai sobre o inimigo mais próximo, em vez de um ponto qualquer
     {
         sv_meta_reset();

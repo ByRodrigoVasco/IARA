@@ -46,6 +46,9 @@ SvSpriteId sv_enemy_sprite(int type)
     return enemy_sprites[type];
 }
 
+// Deploy em Produção: alcance de mira
+#define DEPLOY_RANGE 300.0f
+
 // Vera Fischer: distância em que um inimigo dispara a onda sozinho
 #define VERA_TRIGGER 44.0f
 
@@ -71,7 +74,7 @@ static const char *weapon_descriptions[W_COUNT] = {
     "Cai sobre os inimigos mais próximos e derrama café quente em área.",
     "Giram ao seu redor e protegem de perto.",
     "Aura de dano que afasta quem chega perto.",
-    "Raios em alvos aleatórios, também distantes.",
+    "Raios que caem sobre os inimigos mais próximos.",
     "Faixa que confunde quem atinge.",
     "Se acerta A, salta para B, e assim por diante.",
     "Grade no chão que fere quem pisa nas casas acesas.",
@@ -113,7 +116,7 @@ static const WeaponDef weapon_defs[W_COUNT] = {
     [W_CANECA]       = {{20, 20, 26, 26, 36}, {2.20f, 2.00f, 2.00f, 1.80f, 1.60f}, {1, 1, 2, 2, 3}, {40, 46, 46, 52, 58}, {0, 0, 0, 0, 0}},
     [W_POSTITS]      = {{7, 7, 10, 10, 15}, {0.50f, 0.45f, 0.45f, 0.40f, 0.35f}, {0, 0, 0, 0, 0}, {54, 60, 60, 68, 76}, {0, 0, 0, 0, 0}},
     [W_NAOPERTURBE]  = {{5, 5, 8, 8, 12}, {0.50f, 0.45f, 0.45f, 0.40f, 0.35f}, {0, 0, 0, 0, 0}, {58, 66, 66, 76, 86}, {0, 0, 0, 0, 0}},
-    [W_DEPLOY]       = {{28, 28, 36, 36, 48}, {2.60f, 2.40f, 2.40f, 2.10f, 1.80f}, {1, 1, 2, 2, 3}, {28, 32, 32, 36, 40}, {0, 0, 0, 0, 0}},
+    [W_DEPLOY]       = {{28, 28, 36, 36, 48}, {2.60f, 2.40f, 2.40f, 2.10f, 1.80f}, {1, 1, 2, 2, 3}, {38, 42, 42, 46, 50}, {0, 0, 0, 0, 0}},
     [W_TARJA]        = {{7, 7, 10, 10, 14}, {3.20f, 3.00f, 3.00f, 2.70f, 2.40f}, {0, 0, 0, 0, 0}, {120, 135, 135, 150, 170}, {2.0f, 2.5f, 2.5f, 3.0f, 3.5f}},
     [W_MODUS]        = {{14, 14, 18, 18, 24}, {1.80f, 1.65f, 1.65f, 1.45f, 1.30f}, {3, 3, 4, 4, 5}, {170, 185, 185, 200, 220}, {0, 0, 0, 0, 0}},
     [W_TABELA]       = {{6, 6, 9, 9, 13}, {0.60f, 0.55f, 0.55f, 0.50f, 0.45f}, {0, 0, 0, 0, 0}, {50, 56, 56, 64, 72}, {0, 0, 0, 0, 0}},
@@ -314,6 +317,7 @@ static void recompute_stats(void)
         p->crit_chance = c->crit_chance;
         p->coin_mult = c->coin_mult;
         p->coin_luck = c->coin_luck;
+        p->move_recharge = c->move_recharge;
     }
 
     if (old_max > 0.0f) p->hp += p->max_hp - old_max;
@@ -666,28 +670,6 @@ static void damage_target(const Target *target, float damage, Vector2 from, floa
     else damage_enemy(target->enemy, damage, from, knockback);
 }
 
-static Vector2 random_enemy_position(float max_distance, bool *found)
-{
-    int candidates[SV_MAX_ENEMIES];
-    int count = 0;
-
-    for (int i = 0; i < SV_MAX_ENEMIES; i++)
-    {
-        SvEnemy *e = &sv_run.enemies[i];
-
-        if (e->alive && Vector2Distance(e->pos, sv_run.player.pos) < max_distance) candidates[count++] = i;
-    }
-
-    if (count == 0)
-    {
-        *found = false;
-        return Vector2Add(sv_run.player.pos, (Vector2){sv_rand_range(-120, 120), sv_rand_range(-120, 120)});
-    }
-
-    *found = true;
-    return sv_run.enemies[candidates[(int)(sv_rand() * count) % count]].pos;
-}
-
 // -----------------------------------------------------------------------------
 // Armas
 // -----------------------------------------------------------------------------
@@ -857,14 +839,26 @@ static void fire_weapon(SvWeapon *w)
     case W_DEPLOY:
     {
         int count = (int)WS(W_DEPLOY, WSTAT_COUNT, level);
+        unsigned struck[3];
+        int struck_count = 0;
 
         base_cd = WS(W_DEPLOY, WSTAT_COOLDOWN, level);
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < count && i < 3; i++)
         {
-            bool found;
-            Vector2 target = random_enemy_position(420.0f, &found);
-            SvZone *z = new_zone();
+            Target t = nearest_target(p->pos, DEPLOY_RANGE, struck, struck_count);
+            Vector2 target;
+            SvZone *z;
 
+            if (!t.found) break;
+            target = t.pos;
+            if (t.is_boss) struck[struck_count++] = 0xB055u;
+            else
+            {
+                struck[struck_count++] = t.enemy->id;
+                target = Vector2Add(t.pos, Vector2Scale(direction_of(t.pos, p->pos), enemy_stats[t.enemy->type].speed * 0.4f));
+            }
+
+            z = new_zone();
             if (!z) break;
             z->shape = ZONE_CIRCLE;
             z->kind = ZK_DEPLOY;
@@ -874,6 +868,7 @@ static void fire_weapon(SvWeapon *w)
             z->delay = 0.4f;
             z->life = z->max_life = 0.4f + 0.45f;
         }
+        if (struck_count == 0) base_cd = 0.25f; // Ninguém por perto: tenta de novo logo, sem gastar a recarga
         break;
     }
     case W_TARJA:
@@ -1106,6 +1101,12 @@ static void update_continuous_weapon(SvWeapon *w, float dt)
     }
 }
 
+// Ritmo das recargas: o Julio recarrega mais rápido enquanto anda
+static float recharge_pace(void)
+{
+    return sv_run.player.moving ? 1.0f + sv_run.player.move_recharge : 1.0f;
+}
+
 static void update_weapons(float dt)
 {
     SvPlayer *p = &sv_run.player;
@@ -1120,7 +1121,7 @@ static void update_weapons(float dt)
             continue;
         }
 
-        w->cooldown -= dt;
+        w->cooldown -= dt * recharge_pace();
         if (w->cooldown <= 0.0f) fire_weapon(w);
     }
 }
@@ -1281,7 +1282,7 @@ static void update_enemies(float dt)
         if (e->confused > 0.0f) e->confused -= dt;
         for (int w = 0; w < W_COUNT; w++)
         {
-            if (e->wcd[w] > 0.0f) e->wcd[w] -= dt;
+            if (e->wcd[w] > 0.0f) e->wcd[w] -= dt * recharge_pace();
         }
 
         toward = direction_of(e->pos, p->pos);
@@ -1909,6 +1910,8 @@ static void update_player(float dt, Vector2 move)
     if (p->negate_flash > 0.0f) p->negate_flash -= dt;
     if (p->regen > 0.0f && p->hp < p->max_hp) p->hp = fminf(p->max_hp, p->hp + p->regen * dt);
     if (p->hurt_flash > 0.0f) p->hurt_flash -= dt;
+
+    p->moving = length > 0.05f && p->root <= 0.0f;
 
     if (length > 0.05f)
     {
