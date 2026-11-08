@@ -756,6 +756,124 @@ static void test_characters(void)
     sv_meta_reset();
 }
 
+// Guarda a posição de cada inimigo e mede depois quanto o que mais andou se deslocou
+static Vector2 saved_enemy_pos[SV_MAX_ENEMIES];
+
+static void save_enemy_positions(void)
+{
+    for (int i = 0; i < SV_MAX_ENEMIES; i++) saved_enemy_pos[i] = sv_run.enemies[i].pos;
+}
+
+static float enemy_max_displacement(void)
+{
+    float largest = 0.0f;
+
+    for (int i = 0; i < SV_MAX_ENEMIES; i++)
+    {
+        float moved;
+
+        if (!sv_run.enemies[i].alive) continue;
+        moved = Vector2Distance(sv_run.enemies[i].pos, saved_enemy_pos[i]);
+        if (moved > largest) largest = moved;
+    }
+    return largest;
+}
+
+static void test_debug_cheats(void)
+{
+    int before;
+
+    // Poderes e passivos
+    sv_meta_reset();
+    sv_game_start(401);
+    check("SV-79", "dar um poder pelo cheat o coloca no nível pedido e marca a partida", sv_cheat_set_weapon(W_PROMPT, 3) && sv_cheat_weapon_level(W_PROMPT) == 3 && sv_run.cheated);
+    check("SV-80", "dar de novo muda o nível, e o nível 0 tira o poder", sv_cheat_set_weapon(W_PROMPT, 5) && sv_cheat_weapon_level(W_PROMPT) == 5 && sv_cheat_set_weapon(W_PROMPT, 0) && sv_cheat_weapon_level(W_PROMPT) == 0);
+    {
+        bool refused_a_new_one = false;
+
+        for (int w = 0; w < W_COUNT; w++) sv_cheat_set_weapon(w, 1);
+        for (int w = 0; w < W_COUNT; w++)
+        {
+            if (sv_cheat_weapon_level(w) == 0 && !sv_cheat_set_weapon(w, 1)) refused_a_new_one = true;
+        }
+        check("SV-81", "o limite de 6 poderes vale também para o cheat", sv_run.player.weapon_count == SV_MAX_WEAPONS && refused_a_new_one);
+    }
+    check("SV-82", "passivo dado pelo cheat vale na hora", sv_cheat_set_passive(P_SAUDE, 2) && sv_cheat_passive_level(P_SAUDE) == 2 && sv_run.player.max_hp == SV_BASE_HP + 24.0f);
+
+    // Chefes e inimigos
+    sv_game_start(402);
+    sv_cheat_spawn_boss(BOSS_DIEGO);
+    check("SV-83", "chamar um chefe pelo cheat o coloca na partida", sv_run.boss.active && sv_run.boss.id == BOSS_DIEGO);
+    before = sv_run.enemy_count;
+    sv_cheat_spawn_enemies(EN_AUDITOR, 5);
+    check("SV-84", "chamar inimigos pelo cheat os coloca na partida", sv_run.enemy_count == before + 5);
+    sv_cheat_clear_enemies();
+    check("SV-85", "limpar os inimigos remove todos", sv_run.enemy_count == 0);
+
+    // Invulnerável, um golpe, congelar, nascimentos e tempo
+    sv_game_start(403);
+    sv_cheat_toggle(CHEAT_GOD);
+    {
+        float hp = sv_run.player.hp;
+
+        sv_hurt_player(50.0f, EFF_NONE, 0.0f);
+        check("SV-86", "invulnerável: o jogador não perde vida", sv_run.player.hp == hp);
+    }
+    sv_cheat_toggle(CHEAT_GOD);
+    sv_cheat_toggle(CHEAT_NO_SPAWN);
+    for (int frame = 0; frame < 60 * 6; frame++) sv_game_update(1.0f / 60.0f, (Vector2){0.0f, 0.0f});
+    check("SV-87", "sem nascimentos: nenhum inimigo novo aparece", sv_run.enemy_count == 0);
+    // Sem armas, para que nada morra durante a medição; os nascimentos seguem parados, para só contar os 3 chamados
+    while (sv_run.player.weapon_count > 0) sv_cheat_set_weapon(sv_run.player.weapons[0].id, 0);
+    sv_cheat_spawn_enemies(EN_CHAMADO, 3);
+    sv_cheat_toggle(CHEAT_FREEZE);
+    save_enemy_positions();
+    for (int frame = 0; frame < 60 * 2; frame++) sv_game_update(1.0f / 60.0f, (Vector2){0.0f, 0.0f});
+    {
+        bool stayed = sv_run.enemy_count == 3 && enemy_max_displacement() < 0.01f;
+
+        sv_cheat_toggle(CHEAT_FREEZE);
+        for (int frame = 0; frame < 60; frame++) sv_game_update(1.0f / 60.0f, (Vector2){0.0f, 0.0f});
+        check("SV-88", "congelar: os inimigos ficam parados e voltam a andar quando descongelados", stayed && enemy_max_displacement() > 5.0f);
+    }
+    sv_cheat_toggle(CHEAT_NO_SPAWN);
+    {
+        float t = sv_run.time;
+
+        sv_cheat_jump_time(60.0f);
+        check("SV-89", "pular o tempo adianta o relógio da partida", sv_run.time >= t + 59.9f);
+    }
+
+    // Partida com cheat não conta para o progresso
+    sv_meta_reset();
+    sv_game_start(404);
+    sv_run.coins = 50;
+    sv_run.time = 120.0f;
+    sv_cheat_heal();
+    {
+        int earned = sv_game_finish();
+
+        check("SV-90", "partida com cheat não dá Banco de Horas nem altera o progresso", earned == 0 && sv_meta.coins == 0 && sv_meta.runs == 0 && sv_meta.best_seconds == 0);
+    }
+    sv_meta_reset();
+    sv_game_start(405);
+    sv_run.coins = 50;
+    sv_run.time = 120.0f;
+    check("SV-91", "partida sem cheat continua valendo", sv_game_finish() > 0 && sv_meta.runs == 1);
+
+    // O debug libera todos os personagens
+    sv_meta_reset();
+    sv_meta.character = CH_JV;
+    sv_debug_mode = false;
+    sv_game_start(406);
+    check("SV-92", "sem debug, um personagem bloqueado volta para o Estagiário", sv_run.player.character == CH_ESTAGIARIO);
+    sv_debug_mode = true;
+    sv_game_start(406);
+    check("SV-93", "com o debug ligado, todos os personagens estão liberados", sv_run.player.character == CH_JV);
+    sv_debug_mode = false;
+    sv_meta_reset();
+}
+
 static void test_boss_balance(void)
 {
     bool rising = true;
@@ -845,6 +963,7 @@ int main(void)
     test_level_up();
     test_characters();
     test_boss_balance();
+    test_debug_cheats();
 
     printf("\n%d verificacoes, todas passaram.\n", checks);
     return 0;

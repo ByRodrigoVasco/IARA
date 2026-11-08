@@ -10,6 +10,7 @@
 #include "sv_render.h"
 #include "sv_meta.h"
 #include "sv_map.h"
+#include "sv_debug.h"
 
 static const SvSpriteId boss_sprites[BOSS_COUNT] = {SPR_bo_impressora, SPR_bo_modelo, SPR_bo_diego, SPR_bo_rene, SPR_bo_iara};
 
@@ -875,9 +876,11 @@ void sv_render_game(void)
         if (sv_run.hazards[i].alive && sv_run.hazards[i].kind == HZ_PROJ) draw_hazard(&sv_run.hazards[i]);
     }
     draw_fx();
+    if (sv_debug_mode) sv_debug_draw_world();
     EndMode2D();
 
     draw_hud(camera);
+    if (sv_debug_mode) sv_debug_draw_hud();
 }
 
 // -----------------------------------------------------------------------------

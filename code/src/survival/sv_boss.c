@@ -188,6 +188,7 @@ bool sv_damage_boss(float amount)
 
     if (!b->active || b->invulnerable > 0.0f) return false;
 
+    if (sv_run.cheats[CHEAT_ONE_HIT]) amount *= 1000.0f;
     b->hp -= amount;
     b->hurt_flash = 0.08f;
     sv_sfx(SND_acertaInimigo);

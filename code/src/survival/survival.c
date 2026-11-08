@@ -8,6 +8,7 @@
 #include "sv_meta.h"
 #include "sv_audio.h"
 #include "sv_assets.h"
+#include "sv_debug.h"
 #include "characters.h"
 #include "macros.h"
 #include "loading.h"
@@ -253,7 +254,8 @@ static void render_hub(void)
 
 static bool character_unlocked(int id)
 {
-    return sv_character_unlocked(id, sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills);
+    // No modo debug todos os personagens estão liberados
+    return sv_debug_mode || sv_character_unlocked(id, sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills);
 }
 
 static Rectangle roster_cell(int index)
@@ -467,6 +469,7 @@ static void render_shop(void)
 static void render_run(void)
 {
     float dt = GetFrameTime();
+    bool debug_pause = sv_debug_update();   // F2 abre o menu de cheats (só no modo debug) e a partida fica parada
 
     if (sv_run.phase == SV_LEVELUP)
     {
@@ -496,7 +499,7 @@ static void render_run(void)
             levelup_selected = 0;
         }
     }
-    else
+    else if (!debug_pause)
     {
         if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_P))
         {
@@ -522,6 +525,7 @@ static void render_run(void)
     begin_game_drawing();
     sv_render_game();
     if (sv_run.phase == SV_LEVELUP) sv_render_levelup(levelup_selected);
+    sv_debug_draw_menu();
     end_game_drawing();
 }
 
@@ -594,6 +598,8 @@ static void render_over(void)
     snprintf(text, sizeof(text), "Saldo %d", sv_meta.coins);
     sv_text_centered(text, w / 2.0f, 470.0f * ui, 36.0f * ui, (Color){255, 214, 80, 255});
 
+    if (sv_run.cheated) sv_text_centered("Cheats usados: esta partida não conta para o progresso do save.", w / 2.0f, 530.0f * ui, 28.0f * ui, (Color){255, 140, 120, 255});
+
     sv_text_centered("Enter para voltar", w / 2.0f, 600.0f * ui, 34.0f * ui, (Color){190, 180, 195, 255});
 
     end_game_drawing();
@@ -601,6 +607,9 @@ static void render_over(void)
 
 bool render_survival(void)
 {
+    // F1 liga e desliga o modo debug em qualquer tela do modo
+    if (IsKeyPressed(KEY_F1)) sv_debug_toggle();
+
     switch (screen)
     {
     case SCREEN_HUB:
