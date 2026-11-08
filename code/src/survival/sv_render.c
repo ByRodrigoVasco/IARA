@@ -99,6 +99,81 @@ static void draw_gems(void)
     }
 }
 
+static float spark_hash(unsigned n);
+
+// Prompt da IARA: a janela de terminal digita um comando sobre o alvo e, ao dar Enter, solta uma chuva de letras
+static const char *prompt_commands[8] = {"> demitir todos", "> sudo matar", "> rm -rf inimigo", "> exit(0);", "> encerrar tudo", "> apagar chamado", "> negar acesso", "> ignorar erro"};
+
+static void draw_prompt_windows(void)
+{
+    static const char glyphs[] = "01{}<>/?!#;=";
+
+    for (int i = 0; i < SV_MAX_ZONES; i++)
+    {
+        SvZone *z = &sv_run.zones[i];
+        const char *full;
+        float wx, wy;
+        const float ww = 120.0f, wh = 36.0f;
+
+        if (!z->alive || z->kind != ZK_PROMPT) continue;
+        full = prompt_commands[((z->text % 8) + 8) % 8];
+        wx = z->pos.x - ww / 2.0f;
+        wy = z->pos.y - 84.0f;
+
+        if (z->delay > 0.0f)
+        {
+            // Digitando: aparece uma letra por vez, com o cursor piscando
+            float t = 1.0f - z->delay / SV_PROMPT_TYPING;
+            int length = (int)strlen(full);
+            int shown = (int)(t * (float)(length + 5));
+            char text[24];
+            bool blink = ((int)(sv_run.time * 6.0f) % 2) == 0;
+
+            if (shown > length) shown = length;
+            memcpy(text, full, (size_t)shown);
+            text[shown] = 0;
+
+            for (int k = 0; k < 3; k++) DrawRectangle((int)z->pos.x - 1, (int)(wy + wh + 3.0f + (float)k * 8.0f), 2, 4, (Color){56, 240, 228, 150});
+            DrawRectangle((int)wx + 2, (int)wy + 2, (int)ww, (int)wh, (Color){0, 0, 0, 90});
+            DrawRectangle((int)wx, (int)wy, (int)ww, (int)wh, (Color){8, 22, 30, 240});
+            DrawRectangle((int)wx, (int)wy, (int)ww, 9, (Color){18, 124, 128, 255});
+            for (int k = 0; k < 3; k++) DrawRectangle((int)wx + 4 + k * 6, (int)wy + 3, 3, 3, k == 0 ? (Color){200, 12, 20, 255} : (Color){232, 194, 74, 255});
+            sv_text("IARA", wx + ww - 30.0f, wy - 1.0f, 8.0f, (Color){224, 255, 248, 210});
+            DrawRectangleLines((int)wx, (int)wy, (int)ww, (int)wh, (Color){56, 240, 228, 255});
+            sv_text(text, wx + 6.0f, wy + 15.0f, 11.0f, (Color){120, 255, 240, 255});
+            if (blink) DrawRectangle((int)(wx + 7.0f + sv_text_width(text, 11.0f)), (int)wy + 16, 5, 9, (Color){224, 255, 248, 255});
+        }
+        else
+        {
+            // Enter: a janela pisca e a resposta sai em letras que se espalham pela área
+            float q = 1.0f - z->life / 0.4f;
+            unsigned char fade = (unsigned char)(255.0f * (1.0f - q));
+
+            if (q < 0.6f)
+            {
+                // A janela fica um instante com o comando completo, pisca em branco e some
+                unsigned char alpha = (unsigned char)(255.0f * (1.0f - q / 0.6f));
+
+                DrawRectangle((int)wx, (int)wy, (int)ww, (int)wh, (Color){8, 22, 30, alpha});
+                DrawRectangle((int)wx, (int)wy, (int)ww, 9, (Color){18, 124, 128, alpha});
+                DrawRectangleLines((int)wx, (int)wy, (int)ww, (int)wh, (Color){180, 255, 248, alpha});
+                sv_text(full, wx + 6.0f, wy + 15.0f, 11.0f, (Color){120, 255, 240, alpha});
+                if (q < 0.15f) DrawRectangle((int)wx, (int)wy, (int)ww, (int)wh, (Color){255, 255, 255, (unsigned char)(170.0f * (1.0f - q / 0.15f))});
+            }
+            DrawCircleV(z->pos, z->radius * (0.3f + 0.7f * q), (Color){56, 240, 228, (unsigned char)(fade / 5)});
+            DrawCircleLinesV(z->pos, z->radius * (0.3f + 0.7f * q), (Color){160, 255, 245, fade});
+            for (int k = 0; k < 18; k++)
+            {
+                float angle = ((float)k + spark_hash((unsigned)(z->text * 31 + k))) * (PI * 2.0f / 18.0f);
+                float distance = z->radius * (0.15f + 0.9f * q) * (0.6f + 0.4f * spark_hash((unsigned)(k * 7 + 3)));
+                char glyph[2] = {glyphs[k % (int)(sizeof(glyphs) - 1)], 0};
+
+                sv_text(glyph, z->pos.x + cosf(angle) * distance - 3.0f, z->pos.y + sinf(angle) * distance * 0.8f - 6.0f, 12.0f, k % 3 ? (Color){120, 255, 240, fade} : (Color){255, 255, 255, fade});
+            }
+        }
+    }
+}
+
 // Raio do Deploy em Produção. O desenho muda de forma nos primeiros instantes para parecer elétrico e depois some devagar
 #define DEPLOY_WARN 0.4f
 
@@ -205,7 +280,7 @@ static void draw_zones(void)
 
             progress = 1.0f - z->life / z->max_life;
             if (z->kind == ZK_TARJA) sv_draw_stretched(SPR_fx_tarja, (int)(progress * 4.0f), center, length, z->radius * 2.0f, z->angle, WHITE);
-            else if (z->kind == ZK_PROMPT) sv_draw_stretched(SPR_fx_prompt, (int)(progress * 4.0f), center, length, z->radius * 2.0f + 10.0f, z->angle, WHITE);
+            else if (z->kind == ZK_FIBRA) sv_draw_stretched(SPR_fx_fibra, (int)(progress * 4.0f), center, length, z->radius * 2.0f + 10.0f, z->angle, WHITE);
             else sv_draw_stretched(SPR_fx_ponteiro, (int)(progress * 4.0f), center, length, 13.0f, z->angle, WHITE);
             continue;
         }
@@ -228,6 +303,17 @@ static void draw_zones(void)
 
                 if (t > 0.6f) tint.a = (unsigned char)(255.0f * (1.0f - (t - 0.6f) / 0.4f));
                 sv_draw(SPR_fx_caneca, t < 0.35f ? 2 : 3, z->pos, scale, 0.0f, false, tint);
+            }
+        }
+        else if (z->kind == ZK_PROMPT)
+        {
+            // No chão: o anel mostra até onde a onda do comando vai. A janela e as letras são desenhadas por cima, em draw_prompt_windows
+            if (z->delay > 0.0f)
+            {
+                float pulse = 0.5f + 0.5f * sinf(sv_run.time * 18.0f);
+
+                DrawCircleV(z->pos, z->radius, (Color){56, 240, 228, 18});
+                DrawCircleLinesV(z->pos, z->radius, (Color){56, 240, 228, (unsigned char)(70 + 80 * pulse)});
             }
         }
         else if (z->kind == ZK_VERA)
@@ -338,10 +424,52 @@ static void draw_player(void)
 }
 
 static void draw_boss(void);
+// Cada colega tem a sua roupa e a sua cor: Segurança (azul), Suporte de TI (verde), Enfermeira do RH (branco e vermelho) e Entregador (laranja)
+static const SvSpriteId colega_sprites[SV_MAX_COLEGAS] = {SPR_en_colega_seguranca, SPR_en_colega_suporte, SPR_en_colega_enfermeira, SPR_en_colega_entregador};
+static const Color colega_colors[SV_MAX_COLEGAS] = {{110, 160, 255, 255}, {110, 235, 160, 255}, {255, 130, 150, 255}, {255, 200, 80, 255}};
+
 static void draw_colega(int c)
 {
-    draw_shadow(sv_run.colega_pos[c], 9.0f);
-    sv_draw(SPR_en_colega, 4 + anim_frame(sv_run.time, 6.0f + (float)c) % 4, sv_run.colega_pos[c], 1.0f, 0.0f, false, (Color){200, 255, 220, 255});
+    Vector2 pos = sv_run.colega_pos[c];
+    Vector2 dir = sv_run.colega_dir[c];
+    bool moving = sv_run.colega_moving[c];
+    float attack = sv_run.colega_attack[c];
+    float bob = moving ? 0.0f : sinf(sv_run.time * 3.0f + (float)c * 1.7f);
+    int frame;
+    bool flip = dir.x < 0.0f;
+    Color color = colega_colors[c];
+
+    // Quadros: 0 a 3 de frente, 4 a 7 de lado, 8 a 11 de costas e 12 a 15 de lado dando o golpe
+    if (attack > 0.0f)
+    {
+        frame = 12 + (int)fminf(3.0f, (1.0f - attack / 0.25f) * 4.0f);
+    }
+    else
+    {
+        int base = fabsf(dir.x) >= fabsf(dir.y) ? 4 : dir.y > 0.0f ? 0 : 8;
+
+        if (base != 4) flip = false;
+        frame = base + (moving ? (int)(sv_run.colega_walk[c] * 9.0f) % 4 : 0);
+    }
+
+    draw_shadow(pos, 9.0f);
+    if (attack > 0.0f && c != 1)
+    {
+        float t = 1.0f - attack / 0.25f;
+
+        DrawCircleLinesV(pos, 12.0f + 18.0f * t, (Color){color.r, color.g, color.b, (unsigned char)(200.0f * (1.0f - t))});
+    }
+    sv_draw(colega_sprites[c], frame, (Vector2){pos.x, pos.y + bob}, 1.0f, 0.0f, flip, WHITE);
+    DrawRectanglePro((Rectangle){pos.x, pos.y - 25.0f + bob, 4.0f, 4.0f}, (Vector2){2.0f, 2.0f}, 45.0f, color);
+
+    if (c == 2 && sv_run.colega_heal_flash > 0.0f)
+    {
+        // A cura da enfermeira: uma cruz verde sobe do jogador
+        float t = 1.0f - sv_run.colega_heal_flash / 0.7f;
+
+        DrawCircleLinesV(sv_run.player.pos, 12.0f + 14.0f * t, (Color){110, 235, 160, (unsigned char)(220.0f * (1.0f - t))});
+        sv_text("+", sv_run.player.pos.x - 4.0f, sv_run.player.pos.y - 30.0f - 18.0f * t, 16.0f, (Color){110, 235, 160, (unsigned char)(255.0f * (1.0f - t))});
+    }
 }
 
 static void draw_prop(const SvMapProp *p)
@@ -391,7 +519,7 @@ static void draw_world_objects(Camera2D camera)
     {
         if (player->weapons[i].id == W_COLEGA)
         {
-            int n = 1 + (player->weapons[i].level >= 3) + (player->weapons[i].level >= 5);
+            int n = sv_colega_count();
 
             for (int c = 0; c < n; c++) list[count++] = (Drawable){sv_run.colega_pos[c].y + 8.0f, DR_COLEGA, c};
         }
@@ -434,6 +562,18 @@ static void draw_shots(void)
         SvShot *s = &sv_run.shots[i];
 
         if (!s->alive) continue;
+        if (s->kind == 1)
+        {
+            // Pacote de dados do Suporte de TI: um tijolinho verde com rastro
+            float angle = atan2f(s->vel.y, s->vel.x) * RAD2DEG;
+            Vector2 tail = Vector2Subtract(s->pos, Vector2Scale(Vector2Normalize(s->vel), 11.0f));
+
+            DrawLineEx(tail, s->pos, 3.0f, (Color){90, 230, 140, 120});
+            DrawRectanglePro((Rectangle){s->pos.x, s->pos.y, 8.0f, 6.0f}, (Vector2){4.0f, 3.0f}, angle, (Color){20, 70, 50, 255});
+            DrawRectanglePro((Rectangle){s->pos.x, s->pos.y, 6.0f, 4.0f}, (Vector2){3.0f, 2.0f}, angle, (Color){120, 240, 170, 255});
+            DrawRectanglePro((Rectangle){s->pos.x, s->pos.y, 2.0f, 2.0f}, (Vector2){1.0f, 1.0f}, angle, (Color){240, 255, 245, 255});
+            continue;
+        }
         sv_draw(SPR_fx_grampeador, anim_frame(s->life, 12.0f) % 4, s->pos, 1.0f, atan2f(s->vel.y, s->vel.x) * RAD2DEG, false, WHITE);
     }
 }
@@ -729,6 +869,7 @@ void sv_render_game(void)
     draw_world_objects(camera);
     draw_shots();
     draw_lightning();
+    draw_prompt_windows();
     for (int i = 0; i < SV_MAX_HAZARDS; i++)
     {
         if (sv_run.hazards[i].alive && sv_run.hazards[i].kind == HZ_PROJ) draw_hazard(&sv_run.hazards[i]);

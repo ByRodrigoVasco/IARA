@@ -31,13 +31,15 @@
 #define SV_WEAPON_MAX_LEVEL 5
 #define SV_PASSIVE_MAX_LEVEL 5
 #define SV_TRAIL 16
+#define SV_MAX_COLEGAS 4
+#define SV_PROMPT_TYPING 0.8f   // Segundos que o Prompt da IARA leva para digitar o comando
 
 typedef enum { SV_PLAYING, SV_LEVELUP, SV_DEAD, SV_WON } SvPhase;
 
 typedef enum
 {
     W_GRAMPEADOR, W_PONTEIRO, W_CANECA, W_POSTITS, W_NAOPERTURBE, W_DEPLOY, W_TARJA, W_MODUS,
-    W_TABELA, W_COLEGA, W_NOVACONVERSA, W_PROMPT, W_VERA, W_COUNT
+    W_TABELA, W_COLEGA, W_NOVACONVERSA, W_PROMPT, W_VERA, W_FIBRA, W_COUNT
 } SvWeaponId;
 
 typedef enum
@@ -79,12 +81,13 @@ typedef struct
     Vector2 pos, vel;
     float damage, radius, life;
     int pierce;
+    int kind;              // 0 grampo, 1 pacote de dados do Suporte de TI
     unsigned hit_ids[4];
     bool alive;
 } SvShot;
 
 typedef enum { ZONE_CIRCLE, ZONE_RECT } SvZoneShape;
-typedef enum { ZK_CANECA, ZK_DEPLOY, ZK_PONTEIRO, ZK_TARJA, ZK_PROMPT, ZK_VERA } SvZoneKind;
+typedef enum { ZK_CANECA, ZK_DEPLOY, ZK_PONTEIRO, ZK_TARJA, ZK_PROMPT, ZK_VERA, ZK_FIBRA } SvZoneKind;
 
 typedef struct
 {
@@ -96,6 +99,9 @@ typedef struct
     float damage;
     float confuse;
     int shape, kind;
+    unsigned target_id;    // Prompt da IARA: o inimigo que recebe o comando (0xB055 é o chefe)
+    bool target_boss;
+    int text;              // Prompt da IARA: qual comando é digitado
     bool fired;
     bool alive;
 } SvZone;
@@ -195,6 +201,7 @@ typedef struct
     float kill_heal;       // Vida recuperada a cada kill_heal_every abates (Nicollas)
     int kill_heal_every;
     int kills_since_heal;
+    int extra_colleagues;  // Vasco: colegas a mais quando ele tem o Colega de Plantão
     bool moving;           // Andando neste quadro
     SvWeapon weapons[SV_MAX_WEAPONS];
     int weapon_count;
@@ -225,7 +232,14 @@ typedef struct
     SvGem gems[SV_MAX_GEMS];
     SvFx fx[SV_MAX_FX];
     Vector2 trail[SV_TRAIL];
-    Vector2 colega_pos[3];  // Colegas de Plantão
+    Vector2 colega_pos[SV_MAX_COLEGAS];   // Colegas de Plantão
+    Vector2 colega_dir[SV_MAX_COLEGAS];   // Para onde cada um olha
+    float colega_cd[SV_MAX_COLEGAS];      // Recarga de cada um
+    float colega_attack[SV_MAX_COLEGAS];  // Tempo que falta da animação do golpe
+    float colega_walk[SV_MAX_COLEGAS];    // Relógio da caminhada
+    bool colega_moving[SV_MAX_COLEGAS];
+    float colega_heal;                    // Enfermeira: tempo até a próxima cura
+    float colega_heal_flash;              // Brilho da cura, para o desenho
     float trail_timer;
     SvChoice choices[3];
     int choice_count;
@@ -238,6 +252,9 @@ typedef struct
 } SvRun;
 
 extern SvRun sv_run;
+
+/** @brief Quantos colegas de plantão estão em campo agora (0 se o jogador não tem o poder). */
+int sv_colega_count(void);
 
 /** @brief Começa uma partida nova com os upgrades permanentes aplicados. */
 void sv_game_start(unsigned seed);
