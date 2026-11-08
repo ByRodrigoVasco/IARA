@@ -191,6 +191,8 @@ typedef struct
     float coin_mult;       // Multiplica o Banco de Horas ganho ao fim
     int coin_luck;         // Pontos percentuais extras na chance de soltar Banco de Horas
     float negate_flash;    // Aviso na tela logo depois que a Vera Fischer anula um golpe
+    float move_recharge;   // Bônus de recarga enquanto anda (Julio)
+    bool moving;           // Andando neste quadro
     SvWeapon weapons[SV_MAX_WEAPONS];
     int weapon_count;
     SvPassive passives[SV_MAX_PASSIVES];
