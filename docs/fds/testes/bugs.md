@@ -4,7 +4,8 @@ Os BUG-01 a BUG-08 foram encontrados na execução dos testes de sistema de 22/1
 (branch `develop`, commit `b366e7c`) e estão registrados como issue no repositório, com a
 label `bug`. Os BUG-09 a BUG-12 foram encontrados na revisão de 03/11/2026
 (branch `test/campanha-100-dias`) e também têm issue. O BUG-13 foi relatado em 08/11/2026, durante o
-desenvolvimento do Modo Sobrevivência (branch `feature/modo-sobrevivencia`), e ainda não tem issue.
+desenvolvimento do Modo Sobrevivência (branch `feature/modo-sobrevivencia`), e ainda não tem issue. Os BUG-14 a BUG-16
+saíram do teste à mão de 08/11/2026 e do retorno de um usuário final de 09/11/2026, na mesma branch, e também não têm issue.
 
 Os blocos abaixo repetem o conteúdo de cada um, para consulta sem sair do repositório.
 
@@ -12,8 +13,10 @@ Os blocos abaixo repetem o conteúdo de cada um, para consulta sem sair do repos
 
 Atualizar a coluna Status conforme as issues forem corrigidas e fechadas. Conferido em 03/11/2026:
 do BUG-01 ao BUG-11 as correções estão na `develop` e as issues foram fechadas. Só o BUG-12 seguia aberto.
-Em 08/11/2026, na branch `feature/modo-sobrevivencia`, o BUG-12 foi resolvido e o BUG-13 foi corrigido. Os dois
-só chegam à `develop` quando a branch for aprovada, e a issue do BUG-12 fica aberta até lá.
+Em 08/11/2026, na branch `feature/modo-sobrevivencia`, o BUG-12 foi resolvido e o BUG-13 foi corrigido, e o usuário
+testou os dois no jogo real e aprovou. Em 09/11/2026 o BUG-14 foi corrigido na mesma branch. Esses três só chegam
+à `develop` quando a branch for para lá, e a issue do BUG-12 fica aberta até então. Os BUG-15 e BUG-16 seguem
+abertos, com gravidade baixa: são quadros lentos medidos no teste real, sem efeito na jogabilidade.
 
 | ID | Problema | Gravidade | Issue | Status |
 |---|---|---|---|---|
@@ -28,8 +31,11 @@ só chegam à `develop` quando a branch for aprovada, e a issue do BUG-12 fica a
 | BUG-09 | Rótulos das mesas vazam dos botões | Média | [#43](https://github.com/ByRodrigoVasco/IARA/issues/43) | Corrigido na `develop`, issue fechada |
 | BUG-10 | Falha ao trocar o save pode perder o progresso | Média | [#44](https://github.com/ByRodrigoVasco/IARA/issues/44) | Corrigido na `develop`, issue fechada |
 | BUG-11 | Fundo do cartão do dia é carregado e nunca desenhado | Baixa | [#45](https://github.com/ByRodrigoVasco/IARA/issues/45) | Corrigido na `develop`, issue fechada |
-| BUG-12 | Menu não tem como começar uma partida nova | Média | [#46](https://github.com/ByRodrigoVasco/IARA/issues/46) | Resolvido na `feature/modo-sobrevivencia` (`ad1ec96`); issue aberta até a branch ir para a `develop` |
-| BUG-13 | Carregamentos sem retorno visual e engasgos no menu | Média | ainda sem issue | Corrigido na `feature/modo-sobrevivencia` |
+| BUG-12 | Menu não tem como começar uma partida nova | Média | [#46](https://github.com/ByRodrigoVasco/IARA/issues/46) | Resolvido na `feature/modo-sobrevivencia` (`ad1ec96`) e aprovado em teste real; issue aberta até a branch ir para a `develop` |
+| BUG-13 | Carregamentos sem retorno visual e engasgos no menu | Média | ainda sem issue | Corrigido na `feature/modo-sobrevivencia` e aprovado em teste real |
+| BUG-14 | Telas de modo e de save em lista vertical, pouco organizadas | Baixa | ainda sem issue | Corrigido na `feature/modo-sobrevivencia` |
+| BUG-15 | Quadro de 1,67 s no menu, sete segundos depois de abrir | Baixa | ainda sem issue | Aberto, não reproduzido |
+| BUG-16 | Troca de música e ambiente lê o arquivo na hora | Baixa | ainda sem issue | Aberto |
 
 **Sobre o BUG-02:** os dois vazamentos descritos abaixo já não existem. Restava uma carga duplicada do menu ao abrir o jogo, removida. O CT-24 oscilava porque media sem desenhar quadros, e o driver de vídeo só devolve uma textura apagada depois de um quadro. Com quadros, 400 voltas ao menu cresceram 19 MB (cerca de 0,05 MB por volta, contra os 7 MB originais).
 
@@ -379,7 +385,8 @@ sem querer.
 **Correção (08/11/2026):** a decisão foi uma escolha em duas telas depois de `INICIAR`: primeiro o modo, depois
 o save. Cada modo aceita vários saves, cada um com nome único e na própria pasta (`saves/normal/<nome>/`).
 Criar um save novo começa do Dia 1 sem tocar nos outros, e um save pode ser apagado, com confirmação. Branch
-`feature/modo-sobrevivencia`, commit `ad1ec96`.
+`feature/modo-sobrevivencia`, commit `ad1ec96`. O usuário testou o fluxo no jogo real em 08/11/2026 e aprovou.
+O visual das duas telas mudou depois, no BUG-14.
 
 **Onde:** `code/src/screens/menu.c` e `handle_menu_action()` em `code/src/core/state_machine.c`
 **Coberto por:** CT-79 a CT-87 (fluxo) e SL-01 a SL-29 (saves em pastas); antes, nenhum teste automatizado (achado por inspeção)
@@ -407,7 +414,79 @@ orçamento de 10 ms por quadro; (2) as imagens do menu carregam por trás da abe
 menu reduzido para 1112x720 (15 ms para decodificar); (4) cada imagem grande carrega uma vez só, com contagem de
 usos (`acquire_smooth_texture`); (5) o jogo grava em `iara-desempenho.log` os quadros acima de 60 ms. Medido com o
 jogo real: em 18 s de abertura e menu parado, os únicos quadros acima de 60 ms foram dois, perto de 1,4 s, quando a
-placa de vídeo usa pela primeira vez as imagens grandes. Isso ainda não foi resolvido.
+placa de vídeo usa pela primeira vez as imagens grandes.
+
+**Teste real (08/11/2026):** o usuário jogou cerca de 18 minutos no Sobrevivência e aprovou. Depois do carregamento,
+nenhum quadro passou de 60 ms durante a partida. Os quadros lentos que sobraram estão nos BUG-15 e BUG-16.
 
 **Onde:** `code/src/screens/loading.c`, `code/src/screens/menu.c`, `code/src/core/helper.c`, `code/src/core/state_machine.c`, `code/src/main.c`
 **Coberto por:** CT-88 (a porcentagem sobe) e CT-89 a CT-91 (imagens compartilhadas); os tempos foram medidos à parte, sem teste automatizado
+
+---
+
+<a id="bug-14"></a>
+
+## BUG-14 — Telas de modo e de save em lista vertical, pouco organizadas
+
+**Labels:** `bug`, `ui`, `gravidade: baixa`
+
+Retorno de um usuário final, repassado em 09/11/2026: a escolha do modo mostrava os dois modos um embaixo do outro,
+colados à esquerda, e a lista de saves era uma pilha de linhas sem separação, com o nome, o resumo e a data
+misturados numa linha só.
+
+**Esperado:** o modo no centro da tela, com os dois lado a lado e a opção de passar de um para o outro; os saves
+em cartões organizados.
+**Obtido:** lista vertical alinhada à esquerda nas duas telas.
+
+**Correção (09/11/2026):** a escolha de modo virou dois cartões lado a lado no centro, com esquerda e direita para
+passar de um para o outro, o cartão escolhido destacado e o botão `VOLTAR` embaixo. A lista de saves virou uma coluna
+centralizada de cartões, cada um com o nome, o resumo do progresso à esquerda e a data à direita; o save escolhido
+mostra o botão de apagar no canto, a barra de rolagem aparece quando nem todos cabem, e `VOLTAR` é um botão fixo
+embaixo. O mouse e o teclado seguem iguais. Branch `feature/modo-sobrevivencia`.
+
+**Onde:** `code/src/screens/mode_select.c`, `code/src/screens/save_select.c`, `code/src/ui/screen_style.c`
+**Coberto por:** CT-79 a CT-87 (fluxo) seguem passando; o visual foi conferido por captura de tela em 1600x900 e 1280x720
+
+---
+
+<a id="bug-15"></a>
+
+## BUG-15 — Quadro de 1,67 s no menu, sete segundos depois de abrir
+
+**Labels:** `bug`, `desempenho`, `gravidade: baixa`
+
+No teste real de 08/11/2026, `iara-desempenho.log` registrou um quadro de 1671 ms na tela do menu, 7,1 s depois
+de abrir o jogo. Não voltou nos 18 minutos seguintes, e o jogo não registrou erro.
+
+**Esperado:** nenhum quadro acima de 60 ms no menu.
+**Obtido:** um quadro de 1,67 s. Entre a abertura e o menu o jogo só carrega quatro imagens pequenas e não inicia o áudio,
+então a causa não está numa carga pesada do código. Pode ter sido um evento do Windows (arrastar ou focar a janela)
+ou a placa de vídeo, mas isso não foi confirmado.
+
+**Em aberto:** reproduzir. Se voltar, medir o tempo por etapa dentro do quadro (`handle_state_machine()` e `EndDrawing()`).
+
+**Onde:** abertura e menu (`code/src/screens/pre_menu.c`, `code/src/screens/menu.c`)
+**Coberto por:** nenhum teste; achado pelo log do jogo real
+
+---
+
+<a id="bug-16"></a>
+
+## BUG-16 — Troca de música e ambiente lê o arquivo na hora
+
+**Labels:** `bug`, `desempenho`, `gravidade: baixa`
+
+No mesmo teste real, três quadros passaram de 60 ms: 78 ms e 129 ms na tela de carregamento do Sobrevivência (abrir
+o dispositivo de áudio e carregar o lote de sons) e 130 ms no começo de uma partida, quando `sv_music_play()` e
+`sv_ambient_play()` carregam a música e o ambiente com `LoadMusicStream` no próprio quadro. Durante a partida, as
+trocas de música e de ambiente ficaram abaixo de 60 ms.
+
+**Esperado:** nenhum quadro acima de 60 ms ao começar a partida.
+**Obtido:** 130 ms no quadro em que a partida começa; nos dois quadros do carregamento a barra de progresso fica
+parada por um instante.
+
+**Em aberto:** carregar a música e o ambiente da primeira fase durante a tela de carregamento, e dividir o lote de
+sons em passos menores.
+
+**Onde:** `code/src/survival/sv_audio.c` (`start_stream()`, `sv_audio_init_step()`)
+**Coberto por:** nenhum teste; achado pelo log do jogo real
