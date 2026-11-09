@@ -8,10 +8,11 @@
 #define INICIAR 1
 #define CREDITOS 2
 #define CONFIGURACOES 3
-#define SAIR 4
+#define AJUDA 4
+#define SAIR 5
 
 extern bool is_menu_to_close; // true quando o jogador escolheu uma opção
-extern int next_screen;       // opção escolhida (INICIAR, CREDITOS ou SAIR)
+extern int next_screen;       // opção escolhida (INICIAR, CREDITOS, CONFIGURACOES, AJUDA ou SAIR)
 
 void initialize_menu_variables(void);
 void render_menu(void);

@@ -66,6 +66,7 @@ extern unsigned int middle_screen_y;
 #define PLAYING_SCREEN 2
 #define CREDITS_SCREEN 5
 #define SETTINGS_SCREEN 6
+#define HELP_SCREEN 11   // Os números de 7 a 10 são do Modo Sobrevivência
 
 // TIPOS DE DIAS E TELAS DE GAME_LOOP
 #define NOT_YET_DEFINED 0

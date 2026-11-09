@@ -17,6 +17,7 @@
 #include "accessibility.h"
 #include "calendar.h"
 #include "audio.h"
+#include "pause_menu.h"
 
 // Valor de sentinela para indicar que o temporizador do cartão de introdução ainda não começou a contar
 #define DID_NOT_START -30
@@ -90,6 +91,7 @@ static bool computer_loop_loaded = false;                // Indica se as textura
 static bool render_calendar_day_card_finished = false;   // Indica se toda a sequência do cartão narrativo terminou
 static int current_screen = SCREEN_NONE;                  // Armazena qual tela do jogo está sendo processada no momento
 static bool game_loop_finished = false;                   // Indica que o dia terminou e a partida volta ao menu
+static bool game_loop_quit_requested = false;              // O jogador escolheu SAIR DO JOGO na pausa; a máquina de estados fecha o jogo
 static bool leave_office = false;                        // Flag acionada ao interagir com a porta depois de concluir a tarefa
 static bool is_near_exit = false;                        // Flag que indica se o jogador alcança a porta de saída
 static bool enter_computer_screen = false;               // Flag acionada ao interagir com o computador para mudar de tela
@@ -542,6 +544,7 @@ void initialize_game_loop_variables(void)
 
     // A partida pode recomeçar depois de voltar ao menu
     game_loop_finished = false;
+    game_loop_quit_requested = false;
     leave_office = false;
     enter_computer_screen = false;
     nearby_npc_id = -1;
@@ -1554,10 +1557,46 @@ void handle_game_loop_screens(void)
  */
 void render_game_loop(void)
 {
+    // Pausado: o jogo fica parado na última imagem e só o menu de pausa responde
+    if (pause_menu_is_open())
+    {
+        pause_action action;
+
+        begin_game_drawing();
+        action = pause_menu_update_and_draw();
+        end_game_drawing();
+
+        if (action == PAUSE_RESUME)
+        {
+            pause_menu_close();
+        }
+        else if (action == PAUSE_TO_MENU)
+        {
+            pause_menu_close();
+            game_loop_finished = true; // A máquina de estados salva o progresso e volta ao menu
+        }
+        else if (action == PAUSE_QUIT)
+        {
+            pause_menu_close();
+            game_loop_quit_requested = true; // A máquina de estados descarrega o jogo e a main.c salva o progresso e fecha a janela
+        }
+        return;
+    }
+
+    // ESC ou P pausam só no escritório. Dentro do computador o ESC sai do computador, e o quadro em que
+    // ele sai não pode pausar também: por isso a tela é lida antes de processar o quadro.
+    bool was_walking_in_office = (current_screen == IN_GAME_SCREEN);
+
     begin_game_drawing();
     ClearBackground(BG_COLOR); // Limpa o buffer de cor com a cor padrão do jogo
 
     handle_game_loop_screens(); // Processa a tela ativa
+
+    if (was_walking_in_office && current_screen == IN_GAME_SCREEN && (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_P)))
+    {
+        update_player_footstep_audio(false);
+        pause_menu_open(); // Guarda este quadro como fundo da pausa
+    }
 
     end_game_drawing(); // Finaliza a renderização do frame e envia para o monitor (Swap Buffers)
 }
@@ -1565,6 +1604,11 @@ void render_game_loop(void)
 bool is_computer_screen_open(void)
 {
     return current_screen == COMPUTER_SCREEN;
+}
+
+bool is_game_loop_quit_requested(void)
+{
+    return game_loop_quit_requested;
 }
 
 bool is_game_loop_finished(void)
