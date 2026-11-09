@@ -1,5 +1,6 @@
 #include <time.h>
 #include <math.h> // Necessário para operações matemáticas avançadas, como a função sin() usada na animação do indicador
+#include <stdio.h>
 
 #include "raylib.h"
 #include "game_loop.h"
@@ -8,6 +9,7 @@
 #include "fonts.h"
 #include "animations.h"
 #include "characters.h"
+#include "npcs.h"
 #include "collisions.h"
 #include "computer_loop.h"
 #include "helper.h"
@@ -93,6 +95,10 @@ static bool is_near_exit = false;                        // Flag que indica se o
 static bool enter_computer_screen = false;               // Flag acionada ao interagir com o computador para mudar de tela
 static bool is_near_hint = false;                         // Flag que indica se o jogador alcança o bilhete do mural
 static bool is_near_computer = false;                     // Flag que indica se o jogador está sobre a zona de interação do computador
+static int nearby_npc_id = -1;
+static int active_npc_id = -1;
+static int active_npc_dialogue_line = 0;
+static bool hint_bubble_unlocked = false;
 
 // Texturas gerais de interface e mapas
 static Color color_to_fade = {255, 255, 255, 0};          // Cor base de renderização (RGBA) usada para aplicar efeito de opacidade/fade
@@ -150,36 +156,90 @@ static Rectangle hint_item_rectangle;                     // Mural onde fica o b
 static bool show_debug_hitboxes = false;                 // Modo debug (F1): desenha as hitboxes de colisão
 
 // Obstáculos medidos no mapa de referência (office.png), relativos ao centro da tela
-#define OBSTACLE_COUNT 25  // Quantidade de obstáculos medidos; atualizar ao incluir mais
+// Linha inferior da porta no asset: y = 808 px (centro vertical do mapa = 438,5).
+#define OFFICE_FRONT_BOUNDARY_Y 369.5f
+#define OBSTACLE_COUNT 32  // Quantidade de obstáculos medidos; atualizar ao incluir mais
 #define GLASS_ROOMS_OBSTACLE 7   // Índice das salas de vidro em office_obstacles
-#define GLASS_DOOR_OBSTACLE 21   // Índice da porta de vidro em office_obstacles
+#define GLASS_DOOR_OBSTACLE 21   // Índice da porta de vidro em office_obstacles: a passagem atrás do vidro é livre, então o retângulo é {0}
 static Rectangle office_obstacles_reference[OBSTACLE_COUNT] = {
     {-531.0f, -438.0f, 1062.0f, 114.0f},  // parede do topo (banheiros, cozinha, quadro, servidores)
     {-531.0f, -317.0f, 175.0f, 67.0f},    // banheiros, parte de baixo
     {-189.0f, -317.0f, 31.0f, 12.0f},     // lixeira
-    {18.0f, -317.0f, 31.0f, 12.0f},       // planta embaixo do quadro
+    {16.0f, -356.5f, 37.0f, 52.0f},       // planta embaixo do quadro
     {185.0f, -317.0f, 23.0f, 12.0f},      // bebedouro
     {364.0f, -317.0f, 167.0f, 94.0f},     // sala de servidores, parte de baixo
     {-531.0f, -242.0f, 140.0f, 106.0f},   // sala do mural
     {403.0f, -215.0f, 128.0f, 487.0f},    // salas de vidro da direita
     {-272.0f, -197.0f, 190.0f, 78.0f},    // mesas superior esquerda
     {63.0f, -197.0f, 198.0f, 78.0f},      // mesas superior direita
-    {-13.0f, -156.0f, 19.0f, 74.0f},      // planta do meio, em cima
+    {-28.0f, -171.0f, 48.0f, 89.0f},      // planta do meio, em cima
     {-473.0f, -128.0f, 81.0f, 86.0f},     // impressora
     {-531.0f, -65.0f, 43.0f, 63.0f},      // planta da esquerda, em cima
     {-276.0f, 59.0f, 198.0f, 82.0f},      // mesas inferior esquerda
     {63.0f, 59.0f, 198.0f, 78.0f},        // mesas inferior direita
     {-531.0f, 57.0f, 105.0f, 82.0f},      // estante de livros
-    {-17.0f, 100.0f, 23.0f, 78.0f},       // planta do meio, embaixo
+    {-32.0f, 82.0f, 52.0f, 96.0f},       // planta do meio, embaixo
     {-531.0f, 167.0f, 39.0f, 78.0f},      // planta da esquerda, no meio
     {-422.0f, 253.0f, 66.0f, 43.0f},      // mesinha do sofá
-    {481.0f, 280.0f, 39.0f, 27.0f},       // planta da direita, embaixo
+    {475.0f, 247.0f, 50.0f, 60.0f},       // planta da direita, embaixo
     {-531.0f, 292.0f, 43.0f, 31.0f},      // planta da esquerda, embaixo
-    {-60.0f, 304.0f, 116.0f, 27.0f},      // porta de vidro
-    {-169.0f, 316.0f, 78.0f, 16.0f},      // jardineira esquerda
-    {95.0f, 316.0f, 78.0f, 16.0f},        // jardineira direita
-    {-531.0f, 339.0f, 1062.0f, 98.0f}};   // parede de baixo
+    {0},                              // porta: passagem atras do vidro
+    {-175.0f, 307.5f, 84.0f, 54.0f},      // jardineira esquerda
+    {93.0f, 307.5f, 84.0f, 54.0f},        // jardineira direita
+    {-531.0f, OFFICE_FRONT_BOUNDARY_Y, 1062.0f, 68.0f}, // linha inferior da porta
+    {0}, {0},                         // pilares: oclusao visual, passagem livre
+    {-531.0f, 331.5f, 4.0f, 106.0f},    // lateral esquerda
+    {524.0f, 331.5f, 7.0f, 106.0f},      // lateral direita
+    {0}, {0}, {0}};                    // bases dos tres tiles de vidro
 static Rectangle office_obstacles[OBSTACLE_COUNT];  // Mesmos obstáculos em coordenadas da tela
+
+// Paineis inferiores: coordenadas do mesmo office.png, relativas ao centro.
+#define GLASS_COUNT 3
+static const collision_tile glass_reference[GLASS_COUNT] = {
+    {{-527.0f, 331.5f, 210.0f, OFFICE_FRONT_BOUNDARY_Y - 331.5f + 4.0f}, TILE_GLASS, 4.0f},
+    {{317.0f, 331.5f, 207.0f, OFFICE_FRONT_BOUNDARY_Y - 331.5f + 4.0f}, TILE_GLASS, 4.0f},
+    {{-58.0f, 308.5f, 109.0f, OFFICE_FRONT_BOUNDARY_Y - 308.5f + 4.0f}, TILE_GLASS, 4.0f}
+};
+// Superficie visual independente; a base fisica nunca ultrapassa a linha da porta.
+static const Rectangle glass_surface_reference[GLASS_COUNT] = {
+    {-527.0f, 331.5f, 210.0f, 49.0f},
+    {317.0f, 331.5f, 207.0f, 49.0f},
+    {-58.0f, 308.5f, 109.0f, 58.0f}
+};
+static const Rectangle office_foreground_reference[] = {
+    {-245.0f, 369.5f, 181.0f, 68.0f},  // parede esquerda: sem incluir o piso
+    {58.0f, 369.5f, 185.0f, 68.0f},    // parede direita: sem incluir o piso
+    {-64.0f, 369.5f, 122.0f, 68.0f},    // soleira e placa abaixo da porta
+    {-314.0f, 324.5f, 69.0f, 113.0f},   // pilar esquerdo
+    {243.0f, 324.5f, 74.0f, 113.0f},    // pilar direito
+    {-7.0f, 296.5f, 10.0f, 73.0f}      // divisoria central da porta
+};
+static collision_tile office_glass[GLASS_COUNT];
+static Rectangle office_glass_surface[GLASS_COUNT];
+static RenderTexture2D glass_scene;
+static Shader glass_shader;
+static int glass_panel_loc, glass_size_loc;
+
+// Cena intermediaria invertida em Y; o recorte usa coordenadas de tela.
+static const char *glass_fragment_shader =
+    "#version 330\n"
+    "in vec2 fragTexCoord; in vec4 fragColor; out vec4 finalColor;\n"
+    "uniform sampler2D texture0; uniform vec4 colDiffuse;\n"
+    "uniform vec4 panel; uniform vec2 size;\n"
+    "void main() {\n"
+    " vec2 pixel = vec2(fragTexCoord.x, 1.0-fragTexCoord.y)*size;\n"
+    " if(any(lessThan(pixel,panel.xy)) || any(greaterThanEqual(pixel,panel.xy+panel.zw))) discard;\n"
+    " vec4 c = texture(texture0, fragTexCoord);\n"
+    " c.rgb = mix(c.rgb,vec3(0.45,0.80,0.95),0.12);\n"
+    " finalColor = c*colDiffuse*fragColor; }\n";
+
+static void unload_glass(void)
+{
+    if (glass_scene.id) UnloadRenderTexture(glass_scene);
+    if (glass_shader.id) UnloadShader(glass_shader);
+    glass_scene = (RenderTexture2D){0};
+    glass_shader = (Shader){0};
+}
 
 // ---------------------------------------------------------------------------
 // FUNÇÕES DE REDIMENSIONAMENTO E ESCALA DINÂMICA
@@ -254,12 +314,22 @@ static Rectangle get_exit_zone(void)
     return scale_reference_rect(EXIT_ZONE_REFERENCE, get_scale(), screen_center);
 }
 
+// Porta de vidro: o retângulo só serve à seta e ao contorno, a passagem atrás do vidro é livre
+static const Rectangle glass_door_reference = {-60.0f, 304.0f, 116.0f, 27.0f};
+
+static Rectangle get_glass_door_rectangle(void)
+{
+    Vector2 screen_center = {GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f};
+
+    return scale_reference_rect(glass_door_reference, get_scale(), screen_center);
+}
+
 /**
  * @brief Objeto indicado pela seta: primeiro o computador e, com a tarefa resolvida, a porta.
  */
 static Rectangle get_next_objective_rectangle(void)
 {
-    return current_game_state_variables.is_resolved ? office_obstacles[GLASS_DOOR_OBSTACLE] : estagiario_computer_collision_rectangle;
+    return current_game_state_variables.is_resolved ? get_glass_door_rectangle() : estagiario_computer_collision_rectangle;
 }
 
 /**
@@ -300,6 +370,8 @@ static void place_player_at_entrance(void)
 static void open_playable_day(void)
 {
     int day = current_game_state_variables.current_day;
+
+    hint_bubble_unlocked = false;
 
     // Quem perdeu o bilhete do Dia 1 não fica sem a colinha nos puzzles seguintes (RF07)
     if (day > 1) current_game_state_variables.has_cheat_sheet = true;
@@ -416,6 +488,7 @@ static void keep_player_place_on_resize(void)
     if (screen_center.x != last_screen_center.x || screen_center.y != last_screen_center.y || scale != last_scale)
     {
         // Distância do jogador ao centro do mapa, reescalada, somada ao novo centro
+        resize_npcs(last_scale, scale, last_screen_center, screen_center);
         current_estagiario_position.x = screen_center.x + (current_estagiario_position.x - last_screen_center.x) * scale / last_scale;
         current_estagiario_position.y = screen_center.y + (current_estagiario_position.y - last_screen_center.y) * scale / last_scale;
         last_screen_center = screen_center;
@@ -438,6 +511,14 @@ static void update_obstacle_recs(void)
     for (int i = 0; i < OBSTACLE_COUNT; i++)
     {
         office_obstacles[i] = scale_reference_rect(office_obstacles_reference[i], get_scale(), screen_center);
+    }
+    for (int i = 0; i < GLASS_COUNT; i++)
+    {
+        office_glass[i] = glass_reference[i];
+        office_glass[i].bounds = scale_reference_rect(glass_reference[i].bounds, get_scale(), screen_center);
+        office_glass[i].base_height *= get_scale();
+        office_glass_surface[i] = scale_reference_rect(glass_surface_reference[i], get_scale(), screen_center);
+        office_obstacles[OBSTACLE_COUNT - GLASS_COUNT + i] = tile_collision_rectangle(office_glass[i]);
     }
 }
 
@@ -463,8 +544,17 @@ void initialize_game_loop_variables(void)
     game_loop_finished = false;
     leave_office = false;
     enter_computer_screen = false;
+    nearby_npc_id = -1;
+    active_npc_id = -1;
+    active_npc_dialogue_line = 0;
+    hint_bubble_unlocked = false;
     walk_time = 0.0f;
     color_to_fade.a = 0;
+
+    unload_glass();
+    glass_shader = LoadShaderFromMemory(NULL, glass_fragment_shader);
+    glass_panel_loc = GetShaderLocation(glass_shader, "panel");
+    glass_size_loc = GetShaderLocation(glass_shader, "size");
 
     // Carrega o mapa do escritório
     in_game_office = LoadTexture("code/assets/sprites/environment/office.png");
@@ -500,6 +590,11 @@ void initialize_game_loop_variables(void)
     for (int i = 0; i < DIRECTION_COUNT; i++)
     {
         walk_loaded[i] = load_walk_frames("Estagiarios", i, walk_textures[i]);
+    }
+
+    if (!initialize_npcs(get_scale(), get_map_center()))
+    {
+        TraceLog(LOG_ERROR, "Nao foi possivel carregar os sprites dos NPCs.");
     }
 
     // Define o ponto inicial de surgimento (spawn) do jogador, logo acima da porta de entrada
@@ -641,10 +736,35 @@ void handle_map_interactables(void)
     is_near_hint = calendar_has_investigation(current_game_state_variables.current_day) &&
                    is_hitbox_on_hint(estagiario_collision_rec, get_scale(), get_map_center());
     is_near_exit = current_game_state_variables.is_resolved && CheckCollisionRecs(estagiario_collision_rec, get_exit_zone());
+    nearby_npc_id = npc_get_nearby(estagiario_collision_rec, get_scale());
+
+    if (active_npc_id >= 0)
+    {
+        if (IsKeyPressed(KEY_SPACE))
+        {
+            active_npc_dialogue_line++;
+            if (active_npc_dialogue_line >=
+                npc_get_dialogue_line_count(active_npc_id, current_game_state_variables.current_day))
+            {
+                active_npc_id = -1;
+                active_npc_dialogue_line = 0;
+            }
+        }
+        return;
+    }
 
     if (!IsKeyPressed(KEY_SPACE)) return;
 
-    if (is_hint_note_open() || is_near_hint)
+    if (is_hint_note_open())
+    {
+        toggle_mural_note();
+    }
+    else if (nearby_npc_id >= 0)
+    {
+        active_npc_id = nearby_npc_id;
+        active_npc_dialogue_line = 0;
+    }
+    else if (is_near_hint)
     {
         toggle_mural_note();
     }
@@ -703,6 +823,24 @@ void handle_map_collisions(void)
     }
 }
 
+static int get_player_movement_obstacles(Rectangle obstacles[])
+{
+    int movement_obstacle_count = 0;
+
+    for (int i = 0; i < OBSTACLE_COUNT; i++)
+    {
+        obstacles[movement_obstacle_count++] = office_obstacles[i];
+    }
+    for (int i = 0; i < NPC_COUNT; i++)
+    {
+        if (npc_blocks_player(i))
+        {
+            obstacles[movement_obstacle_count++] = npc_get_hitbox(i, get_scale());
+        }
+    }
+    return movement_obstacle_count;
+}
+
 /**
  * @brief Captura os comandos do teclado (WASD / Setas), atualiza a velocidade, direção do sprite e
  * posição do jogador no espaço 2D.
@@ -713,6 +851,8 @@ void handle_map_collisions(void)
 void handle_player_input(void)
 {
     float speed = DEFAULT_PLAYER_MOVEMENT_SPEED * get_scale();
+    Rectangle movement_obstacles[OBSTACLE_COUNT + NPC_COUNT];
+    int movement_obstacle_count = get_player_movement_obstacles(movement_obstacles);
 
     // Modificadores vetoriais de direção (-1, 0, 1)
     int dx = 0;
@@ -756,10 +896,12 @@ void handle_player_input(void)
 
     // Move um eixo por vez: se bater num obstáculo, desfaz só aquele eixo e o jogador desliza na parede
     update_collision_rec();
-    current_estagiario_position.x = move_axis(current_estagiario_position.x, dx * speed, estagiario_collision_rec, true, office_obstacles, OBSTACLE_COUNT);
+    current_estagiario_position.x = move_axis(current_estagiario_position.x, dx * speed, estagiario_collision_rec, true,
+                                              movement_obstacles, movement_obstacle_count);
 
     update_collision_rec();
-    current_estagiario_position.y = move_axis(current_estagiario_position.y, dy * speed, estagiario_collision_rec, false, office_obstacles, OBSTACLE_COUNT);
+    current_estagiario_position.y = move_axis(current_estagiario_position.y, dy * speed, estagiario_collision_rec, false,
+                                              movement_obstacles, movement_obstacle_count);
     update_collision_rec();
 }
 
@@ -804,6 +946,11 @@ void render_debug_hitboxes(void)
     for (int i = 0; i < OBSTACLE_COUNT; i++)
     {
         DrawRectangleLinesEx(office_obstacles[i], 2.0f, ORANGE);                  // Obstáculos
+    }
+
+    for (int i = 0; i < NPC_COUNT; i++)
+    {
+        DrawRectangleLinesEx(npc_get_hitbox(i, get_scale()), 2.0f, PURPLE);       // NPCs
     }
 }
 
@@ -942,6 +1089,85 @@ static void render_computer_backdrop(void)
     DrawRectangle(0, 0, (int)window_w, (int)window_h, (Color){0, 0, 0, dim_alpha});
 }
 
+// Chamado no ciclo de desenho existente, antes da interface.
+static void render_office_scene(void)
+{
+    render_game_loop_escritorio();
+    draw_npcs(get_scale(), color_to_fade, current_game_state_variables.current_day,
+              current_estagiario_position.y, true, hint_bubble_unlocked);
+    render_player();
+    draw_npcs(get_scale(), color_to_fade, current_game_state_variables.current_day,
+              current_estagiario_position.y, false, hint_bubble_unlocked);
+}
+
+static void render_office_with_glass(void)
+{
+    int width = GetScreenWidth(), height = GetScreenHeight();
+    if (width <= 0 || height <= 0) return;
+    if (glass_scene.texture.width != width || glass_scene.texture.height != height)
+    {
+        if (glass_scene.id) UnloadRenderTexture(glass_scene);
+        glass_scene = LoadRenderTexture(width, height);
+    }
+    if (!glass_scene.id)
+    {
+        render_office_scene();
+        return;
+    }
+    BeginTextureMode(glass_scene);
+    ClearBackground(BG_COLOR);
+    render_office_scene();
+    EndTextureMode();
+
+    Rectangle source = {0, 0, (float)width, -(float)height};
+    DrawTextureRec(glass_scene.texture, source, (Vector2){0}, WHITE);
+    float scale = get_scale();
+    Vector2 size = {(float)width, (float)height};
+    bool shader_ready = glass_panel_loc >= 0 && glass_size_loc >= 0;
+    for (int i = 0; i < GLASS_COUNT; i++)
+    {
+        Rectangle pane = office_glass_surface[i];
+        if (shader_ready)
+        {
+            SetShaderValue(glass_shader, glass_panel_loc, &pane, SHADER_UNIFORM_VEC4);
+            SetShaderValue(glass_shader, glass_size_loc, &size, SHADER_UNIFORM_VEC2);
+            BeginShaderMode(glass_shader);
+            DrawTextureRec(glass_scene.texture, source, (Vector2){0}, color_to_fade);
+            EndShaderMode();
+        }
+        // Reutiliza os reflexos do asset e redesenha a moldura sem distorcao.
+        Rectangle ref = glass_surface_reference[i];
+        Rectangle crop = {ref.x + in_game_office.width/2.0f,
+                          ref.y + in_game_office.height/2.0f, ref.width, ref.height};
+        Color reflection = color_to_fade;
+        reflection.a = (unsigned char)(reflection.a * 0.18f);
+        DrawTexturePro(in_game_office, crop, pane, (Vector2){0}, 0, reflection);
+        float top_frame = i == GLASS_COUNT - 1 ? 12.0f : 7.0f;
+        Rectangle frames[] = {
+            {crop.x, crop.y-top_frame, crop.width, top_frame},
+            {crop.x, crop.y+crop.height-4, crop.width, in_game_office.height-crop.y-crop.height+4},
+            {crop.x-3, crop.y-7, 3, crop.height+15},
+            {crop.x+crop.width, crop.y-7, 3, crop.height+15}
+        };
+        Vector2 origin = {(width-in_game_office.width*scale)/2.0f,
+                          (height-in_game_office.height*scale)/2.0f};
+        for (int j = 0; j < 4; j++)
+            DrawTexturePro(in_game_office, frames[j], scale_reference_rect(frames[j], scale, origin),
+                           (Vector2){0}, 0, color_to_fade);
+    }
+    // Pilares e parede central tambem ocluem a parte superior do sprite.
+    Vector2 origin = {(width-in_game_office.width*scale)/2.0f,
+                      (height-in_game_office.height*scale)/2.0f};
+    for (unsigned int i = 0; i < sizeof(office_foreground_reference)/sizeof(office_foreground_reference[0]); i++)
+    {
+        Rectangle ref = office_foreground_reference[i];
+        Rectangle crop = {ref.x+in_game_office.width/2.0f, ref.y+in_game_office.height/2.0f,
+                          ref.width, ref.height};
+        DrawTexturePro(in_game_office, crop, scale_reference_rect(crop, scale, origin),
+                       (Vector2){0}, 0, color_to_fade);
+    }
+}
+
 /**
  * @brief Renderiza os ícones de dica de controle (WASD, Setas, Espaço) de forma alinhada e
  * centralizada no espaço livre da margem inferior da tela (abaixo do mapa do escritório).
@@ -1031,6 +1257,79 @@ void render_interact_arrow(Rectangle target)
     DrawTexturePro(arrow_down_texture, source, dest, (Vector2){0, 0}, 0.0f, color_to_fade);
 }
 
+static void draw_npc_dialogue_line(const char *text, Vector2 position, float max_width,
+                                   float font_size, float letter_spacing)
+{
+    char line[256] = "";
+    const char *word_start = text;
+
+    while (*word_start != '\0')
+    {
+        while (*word_start == ' ') word_start++;
+        if (*word_start == '\0') break;
+
+        const char *word_end = word_start;
+        while (*word_end != '\0' && *word_end != ' ') word_end++;
+        size_t word_length = (size_t)(word_end - word_start);
+        char word[256];
+        if (word_length >= sizeof(word)) word_length = sizeof(word) - 1;
+        snprintf(word, sizeof(word), "%.*s", (int)word_length, word_start);
+
+        char candidate[256];
+        if (line[0] == '\0') snprintf(candidate, sizeof(candidate), "%s", word);
+        else snprintf(candidate, sizeof(candidate), "%s %s", line, word);
+
+        if (line[0] != '\0' &&
+            MeasureTextEx(default_game_font, candidate, font_size, letter_spacing).x > max_width)
+        {
+            DrawTextEx(default_game_font, line, position, font_size, letter_spacing, WHITE);
+            position.y += font_size * 1.15f;
+            snprintf(line, sizeof(line), "%s", word);
+        }
+        else
+        {
+            snprintf(line, sizeof(line), "%s", candidate);
+        }
+
+        word_start = word_end;
+    }
+
+    if (line[0] != '\0') DrawTextEx(default_game_font, line, position, font_size, letter_spacing, WHITE);
+}
+
+static void render_npc_dialogue(void)
+{
+    if (active_npc_id < 0) return;
+
+    float scale = get_ui_scale();
+    float panel_height = 230.0f * scale;
+    float screen_height = (float)GetScreenHeight();
+    Rectangle panel = {0, screen_height - panel_height, (float)GetScreenWidth(), panel_height};
+    const NpcDefinition *definition = npc_get_definition(active_npc_id);
+    const char *line = npc_get_dialogue_line(active_npc_id, current_game_state_variables.current_day,
+                                             active_npc_dialogue_line);
+    if (definition == NULL || line == NULL) return;
+
+    DrawRectangleRec(panel, (Color){18, 10, 20, 225});
+    draw_npc_portrait(active_npc_id,
+                      (Rectangle){30.0f * scale, panel.y + 22.0f * scale, 165.0f * scale, 190.0f * scale});
+
+    float font_size = 34.0f * scale;
+    float text_x = 230.0f * scale;
+    DrawTextEx(default_game_font, definition->name, (Vector2){text_x, panel.y + 24.0f * scale},
+               26.0f * scale, 0.0f, RAYWHITE);
+    draw_npc_dialogue_line(line, (Vector2){text_x, panel.y + 70.0f * scale},
+                           GetScreenWidth() - text_x - 60.0f * scale, font_size, 0.0f);
+
+    const char *continue_text = "ESPAÇO: CONTINUAR";
+    float continue_size = 20.0f * scale;
+    float continue_width = MeasureTextEx(default_game_font, continue_text, continue_size, 0.0f).x;
+    DrawTextEx(default_game_font, continue_text,
+               (Vector2){GetScreenWidth() - continue_width - 24.0f * scale,
+                          panel.y + panel.height - continue_size - 10.0f * scale},
+               continue_size, 0.0f, RAYWHITE);
+}
+
 /**
  * @brief Contorno claro por dentro e escuro por fora: o par se destaca sobre qualquer fundo.
  */
@@ -1084,7 +1383,7 @@ static void render_high_contrast_outlines(void)
     }
 
     draw_dashed_outline(office_obstacles[GLASS_ROOMS_OBSTACLE], thickness);
-    draw_dashed_outline(office_obstacles[GLASS_DOOR_OBSTACLE], thickness);
+    draw_dashed_outline(get_glass_door_rectangle(), thickness);
 
     draw_double_outline(estagiario_computer_collision_rectangle, thickness);
     draw_double_outline(hint_item_rectangle, thickness);
@@ -1137,9 +1436,11 @@ void handle_game_loop_screens(void)
 
         hint_item_rectangle = get_hint_item_rectangle(get_scale(), get_map_center());
 
+        Vector2 previous_player_position = current_estagiario_position;
+        bool interaction_open = is_hint_note_open() || active_npc_id >= 0;
+
         // Processa lógica de comandos do jogador, interações e colisões com o mapa.
         // Enquanto lê o bilhete, o jogador fica parado.
-        Vector2 previous_player_position = current_estagiario_position;
         if (is_hint_note_open())
         {
             walk_time = 0.0f;
@@ -1147,6 +1448,12 @@ void handle_game_loop_screens(void)
         else
         {
             handle_player_input();
+        }
+
+        if (!interaction_open)
+        {
+            update_npcs(GetFrameTime(), get_scale(), get_map_center(), map_collision_rec,
+                        office_obstacles, OBSTACLE_COUNT, estagiario_collision_rec);
         }
 
         handle_map_interactables();
@@ -1157,18 +1464,22 @@ void handle_game_loop_screens(void)
 
         // ORDEM DE RENDERIZAÇÃO (Layering / Z-Index):
         // 1º O mapa de fundo (Escritório)
-        // 2º O sprite do Jogador
+        // 2º NPCs, jogador, refração dos vidros e molduras em primeiro plano
         // 3º As dicas de controle no rodapé
         // 4º A seta indicativa por cima do cenário
-        // 5º O bilhete com a dica, por cima de tudo
-        render_game_loop_escritorio();
-        render_player();
+        // 5º Os diálogos e bilhetes, por cima de tudo
+        render_office_with_glass();
         render_control_tips();
         render_day_counter();
         render_high_contrast_outlines();
         render_interact_arrow(get_next_objective_rectangle());
         if (is_near_hint) render_interact_arrow(hint_item_rectangle);
+        if (nearby_npc_id >= 0 && active_npc_id < 0)
+        {
+            render_interact_arrow(npc_get_hitbox(nearby_npc_id, get_scale()));
+        }
         render_debug_hitboxes();
+        render_npc_dialogue();
         draw_hint_note();
 
         // Se a interação com o computador foi acionada, abre a cena do computador.
@@ -1182,6 +1493,7 @@ void handle_game_loop_screens(void)
         {
             initialize_computer_loop();
             computer_loop_loaded = true;
+            hint_bubble_unlocked = true;
             current_screen = COMPUTER_SCREEN;
             enter_computer_screen = false;
         }
@@ -1277,6 +1589,8 @@ void unload_game_loop(void)
         computer_loop_loaded = false;
     }
 
+    unload_glass();
+
     // Texturas do escritório e elementos gráficos
     UnloadTexture(in_game_office);
     UnloadTexture(arrow_down_texture);
@@ -1299,4 +1613,6 @@ void unload_game_loop(void)
             UnloadTexture(walk_textures[i][j]);
         }
     }
+
+    unload_npcs();
 }
