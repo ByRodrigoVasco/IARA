@@ -32,6 +32,11 @@ void render_game_loop(void);
 bool is_game_loop_finished(void);
 
 /**
+ * @brief Informa que o jogador escolheu SAIR DO JOGO no menu de pausa.
+ */
+bool is_game_loop_quit_requested(void);
+
+/**
  * @brief Informa se a tela do computador está aberta: nela, o ESC sai do computador, não do jogo.
  *
  * @return true enquanto o jogador está no computador.
