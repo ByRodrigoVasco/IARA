@@ -97,7 +97,7 @@ INICIAR, cartão do dia, caminhada pelo escritório, tutorial, os cinco chamados
 | CT-51 | Terceiro erro seguido aciona o failsafe: a IARA conclui o que falta e o jogador não trava | OK |
 | CT-52 | Colinha traz os 5 símbolos, começa fora do monitor e não altera a pontuação | OK |
 | CT-53 | Contador mostra Dia 1 de 100 e ler o mural dá a colinha e registra a investigação, sem somar pontos ainda | OK |
-| CT-54 | Colinha fica colada no canto inferior esquerdo do monitor, sem cobrir a janela da IARA | OK |
+| CT-54 | Colinha fica colada na moldura de baixo, no canto esquerdo do monitor, sem cobrir a janela da IARA | OK |
 | CT-55 | Enviar sem conferir devolve o jogador ao mapa e o fim do dia conta que a IARA resolveu | OK |
 | CT-56 | Failsafe passa pelo relatório e encerra o dia direto no cartão, e recomeçar não acumula pontos | OK |
 | CT-57 | Chamado com CPF pede a tarja, que vai ao relatório sem mudar os pontos, e a chefia só pressiona | OK |

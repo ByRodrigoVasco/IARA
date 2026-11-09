@@ -15,6 +15,10 @@ extern bool computer_failsafe_triggered;
 // false deixa o mouse livre: os testes rodam sem prender o ponteiro de quem os executa.
 extern bool computer_mouse_capture_enabled;
 
+// Diz de quem é a dica do dia (nome do NPC) ou NULL. A tela do computador só a anuncia, de leve,
+// quando o jogador erra ou demora: a dica em si é dada pelo NPC, no escritório.
+void computer_set_hint_giver(const char *npc_name);
+
 // Andamento da entrada na cena do computador, de 0 (escritório) a 1 (monitor no lugar).
 extern float computer_scene_progress;
 
