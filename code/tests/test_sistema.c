@@ -11,9 +11,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <math.h>
 
 #include "raylib.h"
+
 #include "rlgl.h"
+#include "janela_de_teste.h"
+#include "game_state.h"
 
 /* A main.c define estas globais; aqui o teste assume esse papel. */
 unsigned int screen_width = 0;
@@ -220,14 +224,16 @@ static void testar_carregamento_do_jogo(void)
 
     int frames_ok = 0;
 
-    for (int i = 0; i < WALK_FRAME_COUNT; i++)
+    for (int d = 0; d < DIRECTION_COUNT; d++)
     {
-        if (walk_east_textures[i].id > 0) frames_ok++;
-        if (walk_west_textures[i].id > 0) frames_ok++;
+        for (int i = 0; i < WALK_FRAME_COUNT; i++)
+        {
+            if (walk_textures[d][i].id > 0) frames_ok++;
+        }
     }
 
-    checar("CT-06", "Frames do andar (leste e oeste) carregados",
-           frames_ok == WALK_FRAME_COUNT * 2);
+    checar("CT-06", "Frames do andar das 8 direcoes carregados",
+           frames_ok == WALK_FRAME_COUNT * DIRECTION_COUNT);
 
     /* Um segundo andando a 60 quadros por segundo. */
     bool ciclo_correto = true;
@@ -243,6 +249,120 @@ static void testar_carregamento_do_jogo(void)
     }
 
     checar("CT-07", "Animacao do andar percorre os 4 frames em ciclo", ciclo_correto);
+}
+
+static void testar_npcs(Vector2 player_spawn)
+{
+    titulo("NPCs, movimentacao e colisoes");
+
+    bool sprites_carregados = initialize_npcs(get_scale(), get_map_center());
+    checar("CT-71", "Sprites e animacoes dos NPCs carregados", sprites_carregados);
+
+    current_estagiario_position = player_spawn;
+    update_collision_rec();
+    bool posicoes_livres = true;
+
+    for (int npc = 0; npc < npc_get_count(); npc++)
+    {
+        Rectangle hitbox = npc_get_hitbox(npc, get_scale());
+        if (npc_is_moving(npc) &&
+            (collides_with_any(hitbox, office_obstacles, OBSTACLE_COUNT) ||
+             CheckCollisionRecs(hitbox, estagiario_collision_rec) ||
+             !dentro_do_mapa(hitbox)))
+        {
+            printf("           NPC %d inicia sobreposto a movel, jogador ou limite do mapa\n", npc);
+            posicoes_livres = false;
+        }
+
+        for (int other = npc + 1; npc_is_moving(npc) && other < npc_get_count(); other++)
+        {
+            if (npc_is_moving(other) && CheckCollisionRecs(hitbox, npc_get_hitbox(other, get_scale())))
+            {
+                printf("           NPCs %d e %d iniciam sobrepostos\n", npc, other);
+                posicoes_livres = false;
+            }
+        }
+    }
+
+    checar("CT-72", "NPCs nascem sem sobreposicao com o mapa, moveis ou jogador", posicoes_livres);
+
+    Rectangle zone = npc_get_interaction_zone(NPC_ANDERSON, get_scale());
+    Rectangle player_near_npc = {zone.x + zone.width / 2.0f - 5.0f,
+                                  zone.y + zone.height / 2.0f - 5.0f, 10.0f, 10.0f};
+    checar("CT-73", "Jogador pode alcancar a zona de conversa de um NPC",
+           npc_get_nearby(player_near_npc, get_scale()) == NPC_ANDERSON);
+
+    Rectangle player_obstacles[OBSTACLE_COUNT + NPC_COUNT];
+    int player_obstacle_count = get_player_movement_obstacles(player_obstacles);
+    Rectangle npc_hitbox = npc_get_hitbox(NPC_ZITO, get_scale());
+    Rectangle player_hitbox = {npc_hitbox.x - npc_hitbox.width, npc_hitbox.y,
+                               npc_hitbox.width, npc_hitbox.height};
+    float blocked_position = move_axis(player_hitbox.x, 2.0f, player_hitbox, true,
+                                      player_obstacles, player_obstacle_count);
+    checar("CT-74", "Colisao do jogador inclui a hitbox dos NPCs",
+           blocked_position == player_hitbox.x);
+
+    Rectangle initial_hitboxes[NPC_COUNT];
+    bool movement_and_collisions_hold = true;
+    bool every_npc_moved[NPC_COUNT] = {false};
+
+    for (int npc = 0; npc < npc_get_count(); npc++)
+    {
+        initial_hitboxes[npc] = npc_get_hitbox(npc, get_scale());
+    }
+
+    SetRandomSeed(20261107u);
+    for (int frame = 0; frame < 300; frame++)
+    {
+        update_npcs(0.05f, get_scale(), get_map_center(), map_collision_rec,
+                    office_obstacles, OBSTACLE_COUNT, estagiario_collision_rec);
+
+        for (int npc = 0; npc < npc_get_count(); npc++)
+        {
+            Rectangle hitbox = npc_get_hitbox(npc, get_scale());
+            if (hitbox.x != initial_hitboxes[npc].x || hitbox.y != initial_hitboxes[npc].y)
+            {
+                every_npc_moved[npc] = true;
+            }
+
+            if (npc_is_moving(npc) &&
+                (collides_with_any(hitbox, office_obstacles, OBSTACLE_COUNT) ||
+                 CheckCollisionRecs(hitbox, estagiario_collision_rec) ||
+                 !dentro_do_mapa(hitbox)))
+            {
+                if (movement_and_collisions_hold)
+                {
+                    printf("           NPC %d colidiu com movel, jogador ou mapa no quadro %d\n", npc, frame);
+                }
+                movement_and_collisions_hold = false;
+            }
+
+            for (int other = npc + 1; npc_is_moving(npc) && other < npc_get_count(); other++)
+            {
+                if (npc_is_moving(other) &&
+                    CheckCollisionRecs(hitbox, npc_get_hitbox(other, get_scale())))
+                {
+                    if (movement_and_collisions_hold)
+                    {
+                        printf("           NPCs %d e %d colidiram no quadro %d\n", npc, other, frame);
+                    }
+                    movement_and_collisions_hold = false;
+                }
+            }
+        }
+    }
+
+    for (int npc = 0; npc < npc_get_count(); npc++)
+    {
+        if (every_npc_moved[npc] != npc_is_moving(npc))
+        {
+            printf("           NPC %d movimento inesperado\n", npc);
+            movement_and_collisions_hold = false;
+        }
+    }
+
+    checar("CT-75", "NPCs permanecem parados e colidem apenas quando estao em pe",
+           movement_and_collisions_hold);
 }
 
 static void testar_percurso(Vector2 spawn)
@@ -331,6 +451,152 @@ static void testar_movimento(Vector2 spawn)
     bool perto = is_near_computer;
 
     checar("CT-13", "Zona do computador so acende com o jogador em cima", longe && perto);
+}
+
+/* A dica fica em um item do cenario: o jogador precisa conseguir chegar ate ele,
+ * e examina-lo nao pode mexer na pontuacao nem soltar o jogador (PI2-203/204). */
+static void testar_dica(Vector2 spawn)
+{
+    titulo("Dica no mural (CT-38 e CT-39)");
+
+    Rectangle zona = get_hint_zone(get_scale(), get_map_center());
+    int passos = 0;
+    bool alcancavel = calcular_caminho_ate(zona, spawn, &passos);
+
+    printf("           caminho do spawn ate o mural: %d passos\n", passos);
+    checar("CT-38", "Jogador consegue ir do spawn ate o item da dica", alcancavel);
+
+    initialize_hidden_statistic();
+    struct hidden_statistic antes = current_hidden_statistic;
+
+    /* O mural so tem o que examinar nos dias com investigacao. */
+    current_game_state_variables.current_day = 1;
+    current_estagiario_position = posicao_do_caminho(spawn, 0);
+    update_collision_rec();
+    handle_map_interactables();
+    bool perto = is_near_hint;
+
+    toggle_hint_note();
+    bool abriu = is_hint_note_open();
+    toggle_hint_note();
+
+    bool mesmos_pontos = current_hidden_statistic.current_overall_points == antes.current_overall_points &&
+                         current_hidden_statistic.current_automation_points == antes.current_automation_points &&
+                         current_hidden_statistic.current_perception_points == antes.current_perception_points &&
+                         current_hidden_statistic.current_human_bond_points == antes.current_human_bond_points;
+
+    checar("CT-39", "Examinar a dica abre o bilhete e nao altera a pontuacao",
+           perto && abriu && !is_hint_note_open() && mesmos_pontos);
+
+    current_estagiario_position = spawn;
+    update_collision_rec();
+}
+
+/* Simula a visao com daltonismo sobre um pixel (matrizes de Machado et al., 2009,
+ * severidade total). */
+static Color simular_daltonismo(Color c, const float m[3][3])
+{
+    float r = c.r, g = c.g, b = c.b;
+    float saida[3];
+
+    for (int l = 0; l < 3; l++)
+    {
+        saida[l] = m[l][0] * r + m[l][1] * g + m[l][2] * b;
+        if (saida[l] < 0.0f) saida[l] = 0.0f;
+        if (saida[l] > 255.0f) saida[l] = 255.0f;
+    }
+
+    return (Color){(unsigned char)saida[0], (unsigned char)saida[1], (unsigned char)saida[2], 255};
+}
+
+/* Razao de contraste da WCAG entre duas cores. */
+static float luminancia_relativa(Color c)
+{
+    float canais[3] = {c.r / 255.0f, c.g / 255.0f, c.b / 255.0f};
+
+    for (int i = 0; i < 3; i++)
+    {
+        canais[i] = (canais[i] <= 0.03928f) ? canais[i] / 12.92f : powf((canais[i] + 0.055f) / 1.055f, 2.4f);
+    }
+
+    return 0.2126f * canais[0] + 0.7152f * canais[1] + 0.0722f * canais[2];
+}
+
+static float razao_de_contraste(Color a, Color b)
+{
+    float la = luminancia_relativa(a) + 0.05f;
+    float lb = luminancia_relativa(b) + 0.05f;
+
+    return (la > lb) ? la / lb : lb / la;
+}
+
+/* Desenha o escritorio com o modo ligado e confere, com protanopia e deuteranopia
+ * simuladas, se o contorno de cada elemento continua se destacando (CT-40). */
+static void testar_alto_contraste(void)
+{
+    titulo("Alto contraste com daltonismo simulado (CT-40)");
+
+    const float protanopia[3][3] = {{0.152286f, 1.052583f, -0.204868f}, {0.114503f, 0.786281f, 0.099216f}, {-0.003882f, -0.048116f, 1.051998f}};
+    const float deuteranopia[3][3] = {{0.367322f, 0.860646f, -0.227968f}, {0.280085f, 0.672501f, 0.047413f}, {-0.011820f, 0.042940f, 0.968881f}};
+
+    toggle_high_contrast();
+    color_to_fade = WHITE;
+
+    RenderTexture2D alvo = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
+
+    BeginTextureMode(alvo);
+    begin_high_contrast_filter();
+    ClearBackground(BG_COLOR);
+    render_game_loop_escritorio();
+    render_player();
+    render_high_contrast_outlines();
+    end_high_contrast_filter();
+    EndTextureMode();
+
+    Image quadro = LoadImageFromTexture(alvo.texture);
+    ImageFlipVertical(&quadro);
+
+    float espessura = HIGH_CONTRAST_LINE_AT_REFERENCE * get_scale();
+    if (espessura < 2.0f) espessura = 2.0f;
+
+    /* Em cada elemento, compara a linha clara com a escura logo ao lado. */
+    Rectangle elementos[] = {estagiario_computer_collision_rectangle, hint_item_rectangle};
+    int fracos = 0;
+
+    for (int e = 0; e < 2; e++)
+    {
+        int meio_y = (int)(elementos[e].y + elementos[e].height / 2.0f);
+        Color clara = GetImageColor(quadro, (int)(elementos[e].x + espessura / 2.0f), meio_y);
+        Color escura = GetImageColor(quadro, (int)(elementos[e].x - espessura / 2.0f), meio_y);
+
+        if (razao_de_contraste(simular_daltonismo(clara, protanopia), simular_daltonismo(escura, protanopia)) < 3.0f) fracos++;
+        if (razao_de_contraste(simular_daltonismo(clara, deuteranopia), simular_daltonismo(escura, deuteranopia)) < 3.0f) fracos++;
+    }
+
+    /* Vidro: traco claro sobre a base escura, comparado com o intervalo entre tracos. */
+    Rectangle vidro = office_obstacles[GLASS_ROOMS_OBSTACLE];
+    Color traco = GetImageColor(quadro, (int)(vidro.x + espessura * 2.0f), (int)(vidro.y + espessura / 2.0f));
+    Color intervalo = GetImageColor(quadro, (int)(vidro.x + espessura * 7.0f), (int)(vidro.y + espessura / 2.0f));
+
+    if (razao_de_contraste(simular_daltonismo(traco, deuteranopia), simular_daltonismo(intervalo, deuteranopia)) < 3.0f) fracos++;
+    if (razao_de_contraste(simular_daltonismo(traco, protanopia), simular_daltonismo(intervalo, protanopia)) < 3.0f) fracos++;
+
+    checar("CT-40", "Contornos seguem distinguiveis com protanopia e deuteranopia simuladas", fracos == 0);
+
+    /* Evidencia: o quadro como uma pessoa com deuteranopia o veria. */
+    for (int y = 0; y < quadro.height; y++)
+    {
+        for (int x = 0; x < quadro.width; x++)
+        {
+            ImageDrawPixel(&quadro, x, y, simular_daltonismo(GetImageColor(quadro, x, y), deuteranopia));
+        }
+    }
+
+    ExportImage(quadro, "docs/fds/testes/evidencias/alto-contraste-deuteranopia.png");
+
+    UnloadImage(quadro);
+    UnloadRenderTexture(alvo);
+    toggle_high_contrast();
 }
 
 static void testar_redimensionamento(Vector2 spawn)
@@ -597,7 +863,7 @@ int main(void)
     /* Sem logs da Raylib: o relatorio dos testes fica limpo para o screencast. */
     SetTraceLogLevel(LOG_WARNING);
 
-    InitWindow(LARGURA_JANELA, ALTURA_JANELA, "IARA - testes de sistema");
+    abrir_janela_de_teste(LARGURA_JANELA, ALTURA_JANELA, "IARA - testes de sistema");
 
     /* Mesmo ajuste que a main.c faz depois de abrir a janela. */
     screen_width = GetScreenWidth();
@@ -616,8 +882,11 @@ int main(void)
 
     testar_recursos();
     testar_carregamento_do_jogo();
+    testar_npcs(spawn);
     testar_percurso(spawn);
     testar_movimento(spawn);
+    testar_dica(spawn);
+    testar_alto_contraste();
     testar_redimensionamento(spawn);
     testar_animacoes();
     testar_vidro();

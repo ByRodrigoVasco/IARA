@@ -39,6 +39,7 @@ static void reset_state(void)
 int main(void)
 {
     remove(TEST_SAVE_PATH);
+    remove(TEST_SAVE_PATH ".bak");
     reset_state();
 
     // Sem arquivo: a primeira partida começa no Dia 1, sem alterar nada
@@ -52,6 +53,10 @@ int main(void)
     current_game_state_variables.mode_type = true;
     current_game_state_variables.user_investigated = true;
     current_game_state_variables.is_resolved = true;
+    current_game_state_variables.has_cheat_sheet = true;
+    current_game_state_variables.evidence_mask = EVIDENCE_NO_HUMAN_ORDER;
+    current_game_state_variables.found_mariana = true;
+    current_game_state_variables.proof_succeeded = true;
     current_game_state_variables.resolved_puzzles[1] = true;
     current_game_state_variables.resolved_puzzles[3] = true;
     current_game_state_variables.resolved_puzzles[TOTAL_GAME_DAYS] = true;
@@ -71,6 +76,10 @@ int main(void)
     assert(current_game_state_variables.mode_type == true);
     assert(current_game_state_variables.user_investigated == true);
     assert(current_game_state_variables.is_resolved == true);
+    assert(current_game_state_variables.has_cheat_sheet == true);
+    assert(current_game_state_variables.evidence_mask == EVIDENCE_NO_HUMAN_ORDER);
+    assert(current_game_state_variables.found_mariana == true);
+    assert(current_game_state_variables.proof_succeeded == true);
     assert(current_game_state_variables.resolved_puzzles[1] == true);
     assert(current_game_state_variables.resolved_puzzles[2] == false);
     assert(current_game_state_variables.resolved_puzzles[3] == true);
@@ -93,6 +102,21 @@ int main(void)
     // O arquivo temporário não fica para trás
     FILE *temp = fopen(TEST_SAVE_PATH ".tmp", "rb");
     assert(temp == NULL);
+
+    // A cópia de segurança também não fica para trás depois de uma gravação completa
+    FILE *backup = fopen(TEST_SAVE_PATH ".bak", "rb");
+    assert(backup == NULL);
+
+    // Gravação interrompida depois de afastar o save antigo: a cópia de segurança é carregada
+    assert(rename(TEST_SAVE_PATH, TEST_SAVE_PATH ".bak") == 0);
+    reset_state();
+    assert(load_game_state(TEST_SAVE_PATH) == SAVE_OK);
+    assert(current_game_state_variables.current_day == 13);
+
+    // A gravação seguinte volta a deixar só o save
+    assert(save_game_state(TEST_SAVE_PATH) == SAVE_OK);
+    backup = fopen(TEST_SAVE_PATH ".bak", "rb");
+    assert(backup == NULL);
 
     // Save truncado (jogo caiu no meio da gravação de outra ferramenta): rejeitado
     char content[8192];
@@ -127,6 +151,7 @@ int main(void)
     assert(current_game_state_variables.current_day == 1);
 
     remove(TEST_SAVE_PATH);
+    remove(TEST_SAVE_PATH ".bak");
 
     printf("Todos os testes passaram\n");
     return 0;

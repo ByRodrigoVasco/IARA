@@ -37,16 +37,25 @@ void initialize_estagiario_1_textures(char_textures out);
 int get_walk_frame(float walk_time);
 
 /**
- * @brief Carrega os 4 frames do andar de um personagem em uma direção.
- *
- * Lê PERSONAGENS/<character>/walk/<direction>-<n>.png. Só carrega se os 4 arquivos existirem.
+ * @brief Confere se os 4 arquivos do andar de um personagem existem em uma direção. Não precisa de janela.
  *
  * @param character Nome da pasta do personagem (ex.: "Estagiarios").
- * @param direction "east", "north" ou "south".
- * @param mirror true para espelhar na horizontal (gera o oeste a partir do leste).
+ * @param direction Uma das constantes de direção (EAST, NORTH...).
+ * @return true se os 4 arquivos existem.
+ */
+bool has_walk_frames(const char *character, int direction);
+
+/**
+ * @brief Carrega os 4 frames do andar de um personagem em uma direção.
+ *
+ * Lê PERSONAGENS/<character>/walk/<direção>-<n>.png. Só carrega se os 4 arquivos existirem.
+ * O oeste não tem arquivo próprio: é o leste espelhado.
+ *
+ * @param character Nome da pasta do personagem (ex.: "Estagiarios").
+ * @param direction Uma das constantes de direção (EAST, NORTH...).
  * @param frames Array que recebe os frames.
  * @return true se carregou, false se faltou algum arquivo.
  */
-bool load_walk_frames(const char *character, const char *direction, bool mirror, Texture2D frames[WALK_FRAME_COUNT]);
+bool load_walk_frames(const char *character, int direction, Texture2D frames[WALK_FRAME_COUNT]);
 
 #endif // CHARACTERS_H

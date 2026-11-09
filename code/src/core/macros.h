@@ -13,6 +13,10 @@ NEM TODOS OS MACROS ESTARÃO AQUI.
 #define DEFAULT_LETTER_SPACING 5
 #define DEFAULT_MENU_FONT_SIZE 80
 
+// RESPONSIVIDADE: os tamanhos acima valem para 1920x1080 e são multiplicados por get_ui_scale()
+#define UI_REFERENCE_WIDTH 1920.0f
+#define UI_REFERENCE_HEIGHT 1080.0f
+
 // -----------------------------------------------------------------------------
 // Configurações de Janela
 // PS: essas variáveis são definidas na main.c
@@ -26,6 +30,9 @@ extern unsigned int screen_width;
  */
 extern unsigned int screen_height;
 #define IARA_TITLE "IARA"
+#define WINDOW_MONITOR_RATIO 0.85f // Tamanho inicial da janela em relação ao monitor
+#define WINDOW_MIN_WIDTH 960
+#define WINDOW_MIN_HEIGHT 540
 /*
  * @brief meio da tela horizontal calculada automaticamente na main.c
  */
@@ -57,9 +64,8 @@ extern unsigned int middle_screen_y;
 #define PRE_MENU_SCREEN 0
 #define MENU_SCREEN 1
 #define PLAYING_SCREEN 2
-#define FLASHING_SCREEN 3
-#define JUMPING_SCREEN 4
 #define CREDITS_SCREEN 5
+#define SETTINGS_SCREEN 6
 
 // TIPOS DE DIAS E TELAS DE GAME_LOOP
 #define NOT_YET_DEFINED 0
@@ -69,7 +75,7 @@ extern unsigned int middle_screen_y;
 
 // PATHS PARA ASSETS
 #define SPRITES_PATH "code/assets/sprites/"
-#define PERSONAGENS_PATH    SPRITES_PATH "personagens/"
+#define PERSONAGENS_PATH    SPRITES_PATH "PERSONAGENS/"
 #define IARA_NOME_PNG_PATH "code/assets/sprites/tela-inicial/iara-nome.png"
 #define ESCRITORIO_TELA_PNG_PATH "code/assets/sprites/tela-inicial/escritorio-tela-inicial.png"
 
@@ -81,6 +87,14 @@ extern unsigned int middle_screen_y;
 
 // Icon de indicação de interação com o computador
 #define ARROW_DOWN_PNG_PATH  "code/assets/icons/arrow-down.png"
+
+// PATHS PARA ÁUDIO
+#define SOUNDS_PATH "code/assets/sounds/"
+#define MENU_MUSIC_PATH SOUNDS_PATH "DEMO -  MENU.mp3"
+#define GAME_MUSIC_PATH SOUNDS_PATH "DEMO - GAME.mp3"
+#define MOUSE_CLICK_SOUND_PATH SOUNDS_PATH "CLICK MOUSE.mp3"
+#define IARA_VOICE_SOUND_PATH SOUNDS_PATH "ARI VOICE BLIP.mp3"
+#define PLAYER_FOOTSTEPS_SOUND_PATH SOUNDS_PATH "SOM DE PASSOS.mp3"
 
 // PATHS PARA O COMPUTADOR
 #define COMPUTER_ASSETS_PATH           "code/assets/sprites/computer/"
