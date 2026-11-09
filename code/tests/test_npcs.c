@@ -102,30 +102,32 @@ static void test_npcs_are_stationary_and_face_the_requested_directions(void)
     assert(!npc_is_moving(NPC_NICOLLAS));
     assert(!npc_is_moving(NPC_VASCO));
     assert(!npc_is_moving(NPC_ZITO));
-    assert(npc_get_definition(NPC_JULIO)->facing == EAST);
-    assert(npc_get_definition(NPC_JV)->facing == WEST);
-    assert(npc_get_definition(NPC_ZITO)->facing == NORTH);
-    assert(npc_get_definition(NPC_JULIO)->position.y == npc_get_definition(NPC_JV)->position.y);
+    assert(npc_get_definition(NPC_JULIO)->facing == SOUTHEAST);
+    assert(npc_get_definition(NPC_JV)->facing == SOUTHWEST);
+    assert(npc_get_definition(NPC_ZITO)->facing == SOUTHWEST);
+    assert(npc_get_definition(NPC_ANDERSON)->facing == SOUTH);
+    assert(npc_get_definition(NPC_LAURA)->facing == SOUTH);
+    assert(npc_get_definition(NPC_NICOLLAS)->facing == SOUTH);
+    assert(npc_get_definition(NPC_VASCO)->facing == SOUTH);
     assert(npc_get_definition(NPC_JULIO)->position.x < npc_get_definition(NPC_JV)->position.x);
     assert(npc_get_definition(NPC_JV)->position.x - npc_get_definition(NPC_JULIO)->position.x <
            75.0f);
-    assert(npc_get_definition(NPC_ZITO)->position.y ==
-           npc_get_definition(NPC_VASCO)->position.y);
+    assert(npc_get_definition(NPC_JV)->position.y < npc_get_definition(NPC_JULIO)->position.y);
+    assert(npc_get_definition(NPC_ZITO)->position.y == npc_get_definition(NPC_JULIO)->position.y);
     assert(npc_get_definition(NPC_ZITO)->position.x > npc_get_definition(NPC_VASCO)->position.x);
     assert(npc_get_definition(NPC_ANDERSON)->seated_pose);
     assert(npc_get_definition(NPC_LAURA)->seated_pose);
     assert(npc_get_definition(NPC_NICOLLAS)->seated_pose);
     assert(npc_get_definition(NPC_VASCO)->seated_pose);
-    assert(npc_get_definition(NPC_ANDERSON)->position.x == -262.0f);
-    assert(npc_get_definition(NPC_ANDERSON)->position.y == -253.0f);
+    assert(!npc_get_definition(NPC_JULIO)->seated_pose);
+    assert(npc_get_definition(NPC_ANDERSON)->position.x == -258.0f);
+    assert(npc_get_definition(NPC_ANDERSON)->position.y == -263.0f);
     assert(npc_get_definition(NPC_LAURA)->position.x == -262.0f);
+    assert(npc_get_definition(NPC_LAURA)->position.y == 0.0f);
     assert(npc_get_definition(NPC_NICOLLAS)->position.x == 76.0f);
     assert(npc_get_definition(NPC_VASCO)->position.x == 178.0f);
-    assert(npc_get_definition(NPC_LAURA)->position.y == 3.0f);
-    assert(npc_get_definition(NPC_NICOLLAS)->position.y == 3.0f);
-    assert(npc_get_definition(NPC_VASCO)->position.y == 3.0f);
-    assert(npc_get_definition(NPC_JULIO)->position.y <
-           npc_get_definition(NPC_ZITO)->position.y);
+    assert(npc_get_definition(NPC_NICOLLAS)->position.y == -7.0f);
+    assert(npc_get_definition(NPC_VASCO)->position.y == -7.0f);
     assert(npc_blocks_player(NPC_JULIO));
     assert(npc_blocks_player(NPC_JV));
     assert(npc_blocks_player(NPC_ZITO));
