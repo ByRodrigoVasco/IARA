@@ -39,6 +39,9 @@ efeito na jogabilidade.
 | BUG-16 | Telas de modo e de save em lista vertical, pouco organizadas | Baixa | [#57](https://github.com/ByRodrigoVasco/IARA/issues/57) | Corrigido na `feature/modo-sobrevivencia` |
 | BUG-17 | Quadro de 1,67 s no menu, sete segundos depois de abrir | Baixa | [#58](https://github.com/ByRodrigoVasco/IARA/issues/58) | Aberto, não reproduzido |
 | BUG-18 | Troca de música e ambiente lê o arquivo na hora | Baixa | [#59](https://github.com/ByRodrigoVasco/IARA/issues/59) | Aberto |
+| BUG-19 | ESC fecha o jogo na hora e a campanha não tem pausa | Média | ainda sem issue | Corrigido nas branches `feature/heuristicas-de-nielsen` e `feature/modo-sobrevivencia` |
+| BUG-20 | O jogo não tem ajuda | Baixa | ainda sem issue | Corrigido nas mesmas branches |
+| BUG-21 | Falha ao salvar o progresso não é avisada | Média | ainda sem issue | Corrigido nas mesmas branches |
 
 **Sobre o BUG-02:** os dois vazamentos descritos abaixo já não existem. Restava uma carga duplicada do menu ao abrir o jogo, removida. O CT-24 oscilava porque media sem desenhar quadros, e o driver de vídeo só devolve uma textura apagada depois de um quadro. Com quadros, 400 voltas ao menu cresceram 19 MB (cerca de 0,05 MB por volta, contra os 7 MB originais).
 
@@ -534,3 +537,68 @@ sons em passos menores.
 
 **Onde:** `code/src/survival/sv_audio.c` (`start_stream()`, `sv_audio_init_step()`)
 **Coberto por:** nenhum teste; achado pelo log do jogo real
+
+---
+
+<a id="bug-19"></a>
+
+## BUG-19 — ESC fecha o jogo na hora e a campanha não tem pausa
+
+**Labels:** `bug`, `ui`, `gravidade: média`
+
+Achado na auditoria de usabilidade de 09/11/2026 (`docs/fds/usabilidade-nielsen.md`, heurísticas 3 e 5). No menu
+principal e no escritório, o ESC encerrava o jogo sem perguntar, a opção SAIR fazia o mesmo, e no Modo Sobrevivência
+DESISTIR da partida valia na hora. A campanha também não tinha pausa nem como voltar ao menu antes do final.
+
+**Esperado:** nenhuma ação difícil de desfazer acontece com uma tecla só, e o jogador consegue parar o jogo e sair.
+**Obtido:** uma tecla errada fechava o jogo.
+
+**Correção (09/11/2026):** SAIR e ESC no menu abrem a pergunta "SAIR DO JOGO?", com o botão que cancela já escolhido.
+No escritório, ESC (ou P) abre a pausa, com CONTINUAR, COMO JOGAR, VOLTAR AO MENU (salva antes) e SAIR DO JOGO (pergunta).
+No Sobrevivência, DESISTIR também pergunta. Branches `feature/heuristicas-de-nielsen` (campanha) e
+`feature/modo-sobrevivencia`.
+
+**Onde:** `code/src/core/state_machine.c`, `code/src/screens/menu.c`, `code/src/screens/game_loop.c`, `code/src/ui/pause_menu.c`, `code/src/ui/confirm_dialog.c`, `code/src/survival/survival.c`
+**Coberto por:** UX-04 a UX-06 e UX-09 a UX-15
+
+---
+
+<a id="bug-20"></a>
+
+## BUG-20 — O jogo não tem ajuda
+
+**Labels:** `bug`, `ui`, `gravidade: baixa`
+
+Heurística 10. Os controles só apareciam como imagens no escritório, e nada explicava o objetivo, o computador, a
+pausa, os saves nem o Modo Sobrevivência.
+
+**Esperado:** uma ajuda curta, fácil de achar e focada no que o jogador faz.
+**Obtido:** nenhuma.
+
+**Correção (09/11/2026):** opção AJUDA no menu principal, COMO JOGAR na pausa da campanha e no início e na pausa do
+Sobrevivência, com uma página por modo e as teclas escritas no rodapé de cada tela.
+
+**Onde:** `code/src/screens/help.c`, `code/src/screens/menu.c`
+**Coberto por:** UX-07, UX-08, UX-14 e UX-16
+
+---
+
+<a id="bug-21"></a>
+
+## BUG-21 — Falha ao salvar o progresso não é avisada
+
+**Labels:** `bug`, `ui`, `gravidade: média`
+
+Heurísticas 1 e 9. Salvar era silencioso, e uma falha (disco cheio, pasta sem permissão) só ia para o log do console:
+o jogador perdia o progresso sem saber.
+
+**Esperado:** o jogo diz que salvou e, se não conseguiu, explica o que conferir.
+**Obtido:** nenhum aviso.
+
+**Correção (09/11/2026):** aviso "Progresso salvo." ao voltar ao menu, e aviso de erro de 7 s ("Não consegui salvar o
+progresso. Confira se há espaço livre no disco e se a pasta do jogo permite gravar arquivos.") quando a gravação
+falha. No Sobrevivência, `sv_meta_last_save_ok()` diz se a última gravação deu certo, e a tela avisa ao comprar, ao
+escolher personagem e ao fim da partida.
+
+**Onde:** `code/src/ui/notice.c`, `code/src/core/state_machine.c`, `code/src/survival/survival.c`, `code/src/survival/sv_meta.c`
+**Coberto por:** UX-01 a UX-03, SV-94 e SV-95
