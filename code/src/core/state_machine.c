@@ -12,8 +12,27 @@
 #include "preferences.h"
 #include "state_machine.h"
 #include "audio.h"
+#include "help.h"
+#include "notice.h"
+#include "save.h"
 
 bool is_game_to_close = false;
+
+// Salva ao voltar ao menu e diz o que aconteceu: se der certo, o jogador vê; se falhar, sabe o que conferir.
+static void save_progress_with_notice(void)
+{
+    save_result status = save_game_state(SAVE_FILE_PATH);
+
+    if (status == SAVE_OK)
+    {
+        notice_show("Progresso salvo.", NOTICE_SUCCESS);
+    }
+    else
+    {
+        TraceLog(LOG_WARNING, "SAVE: nao foi possivel salvar o progresso: %s", save_result_to_string(status));
+        notice_show("Não consegui salvar o progresso. Confira se há espaço livre no disco e se a pasta do jogo permite gravar arquivos.", NOTICE_ERROR);
+    }
+}
 
 void handle_state_initialization(void)
 {
@@ -45,6 +64,10 @@ int handle_menu_action(int screen)
         initialize_settings_screen();
         return SETTINGS_SCREEN;
         break;
+
+    case AJUDA:
+        initialize_help_screen();
+        return HELP_SCREEN;
 
     case SAIR:
         // Só avisa a main.c: fechar a janela aqui derrubaria o jogo no unload_menu() logo depois
@@ -87,8 +110,17 @@ void handle_state_machine(void)
     case PLAYING_SCREEN:
         render_game_loop();
 
+        if (is_game_loop_quit_requested())
+        {
+            // SAIR DO JOGO na pausa: a main.c salva o progresso e fecha a janela
+            unload_game_loop();
+            is_game_to_close = true;
+            break;
+        }
+
         if (is_game_loop_finished())
         {
+            save_progress_with_notice();
             unload_game_loop();
             initialize_menu_variables();
             current_game_state_variables.current_screen = MENU_SCREEN;
@@ -114,6 +146,14 @@ void handle_state_machine(void)
         }
         break;
 
+    case HELP_SCREEN:
+        if (render_help_screen())
+        {
+            initialize_menu_variables();
+            current_game_state_variables.current_screen = MENU_SCREEN;
+        }
+        break;
+
     default:
         // Tela desconhecida: volta para o menu por segurança.
         initialize_menu_variables();
@@ -128,7 +168,10 @@ bool escape_closes_current_screen(void)
 {
     int screen = current_game_state_variables.current_screen;
 
-    return screen != CREDITS_SCREEN && screen != SETTINGS_SCREEN && !is_computer_screen_open();
+    // No menu o ESC abre a pergunta de sair, no escritório abre a pausa e na abertura é ignorado:
+    // uma tecla só nunca fecha o jogo de uma vez.
+    return screen != CREDITS_SCREEN && screen != SETTINGS_SCREEN && screen != HELP_SCREEN && screen != MENU_SCREEN &&
+           screen != PLAYING_SCREEN && screen != PRE_MENU_SCREEN && !is_computer_screen_open();
 }
 
 void handle_state_shutdown(void)
