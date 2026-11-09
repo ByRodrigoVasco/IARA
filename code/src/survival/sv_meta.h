@@ -33,6 +33,7 @@ void sv_meta_set_path(const char *path);
 
 bool sv_meta_load(const char *path);
 bool sv_meta_save(const char *path);
+bool sv_meta_last_save_ok(void);   // A última gravação deu certo? (para avisar o jogador se não deu)
 
 // Compra o próximo nível. Retorna false se faltou saldo ou já está no máximo.
 bool sv_meta_buy(SvUpgradeId id);
