@@ -13,6 +13,10 @@
 #include "macros.h"
 #include "loading.h"
 #include "save_slots.h"
+#include "confirm_dialog.h"
+#include "help.h"
+#include "notice.h"
+#include "ui_theme.h"
 
 typedef enum { SCREEN_HUB, SCREEN_SHOP, SCREEN_CHARS, SCREEN_RUN, SCREEN_PAUSE, SCREEN_OVER } SvScreen;
 
@@ -27,6 +31,7 @@ static const char *char_message = "";
 static int shop_selected = 0;
 static int levelup_selected = 0;
 static int pause_selected = 0;
+static bool pause_help_open = false;   // O painel de ajuda está aberto por cima da pausa
 static int earned_coins = 0;
 static float shop_message_timer = 0.0f;
 static const char *shop_message = "";
@@ -38,10 +43,17 @@ static const char *upgrade_descriptions[UPG_COUNT] = {
     "+10 de vida máxima por nível", "+5% de dano por nível", "+4% de velocidade por nível", "-4% de recarga por nível", "+5% de área por nível",
     "+15% de alcance de coleta por nível", "+5% de XP por nível", "-1 de dano em cada golpe por nível", "Ao morrer, volta uma vez com 50% da vida"};
 
-#define HUB_OPTIONS 4
-static const char *hub_labels[HUB_OPTIONS] = {"JOGAR", "PERSONAGEM", "PLANO DE CARREIRA", "VOLTAR"};
+#define HUB_OPTIONS 5
+static const char *hub_labels[HUB_OPTIONS] = {"JOGAR", "PERSONAGEM", "PLANO DE CARREIRA", "COMO JOGAR", "VOLTAR"};
+static bool hub_help_open = false;   // A ajuda está aberta por cima do início
 
 // O carregamento é dividido em trabalhos pequenos: a tela de carregamento roda um pedaço por quadro e mostra a porcentagem.
+// Se o disco não deixou gravar, o jogador precisa saber: avisar na hora é melhor que perder o progresso em silêncio.
+static void warn_if_save_failed(void)
+{
+    if (!sv_meta_last_save_ok()) notice_show("Não consegui salvar o progresso do Sobrevivência. Confira se há espaço livre no disco e se a pasta de saves permite gravar arquivos.", NOTICE_ERROR);
+}
+
 static float job_read_save(void)
 {
     char path[512];
@@ -81,6 +93,7 @@ static float job_ready(void)
 {
     loaded = true;
     leave_to_menu = false;
+    hub_help_open = false;
     screen = SCREEN_HUB;
     hub_selected = 0;
     shop_selected = 0;
@@ -203,25 +216,30 @@ static void render_hub(void)
     float ui = sv_ui();
     float w = (float)GetScreenWidth();
     char text[128];
-    bool clicked;
+    bool clicked = false;
     int hovered;
 
-    if (pressed_down()) { hub_selected = (hub_selected + 1) % HUB_OPTIONS; sv_sfx(SND_escolha); }
-    if (pressed_up()) { hub_selected = (hub_selected + HUB_OPTIONS - 1) % HUB_OPTIONS; sv_sfx(SND_escolha); }
-
-    hovered = mouse_pick(HUB_OPTIONS, 560.0f, 90.0f, 620.0f, &clicked);
-    if (hovered >= 0 && hovered != hub_selected) { hub_selected = hovered; sv_sfx(SND_escolha); }
-
-    if (pressed_confirm() || clicked)
+    // Com a ajuda aberta, só ela responde às teclas e ao mouse
+    if (!hub_help_open)
     {
-        sv_sfx(SND_confirma);
-        if (hub_selected == 0) start_run();
-        else if (hub_selected == 1) { screen = SCREEN_CHARS; char_cursor = sv_meta.character; char_message_timer = 0.0f; }
-        else if (hub_selected == 2) { screen = SCREEN_SHOP; shop_selected = 0; sv_music_play(MUS_LOJA); }
-        else leave_to_menu = true;
-    }
+        if (pressed_down()) { hub_selected = (hub_selected + 1) % HUB_OPTIONS; sv_sfx(SND_escolha); }
+        if (pressed_up()) { hub_selected = (hub_selected + HUB_OPTIONS - 1) % HUB_OPTIONS; sv_sfx(SND_escolha); }
 
-    if (IsKeyPressed(KEY_ESCAPE)) leave_to_menu = true;
+        hovered = mouse_pick(HUB_OPTIONS, 560.0f, 80.0f, 620.0f, &clicked);
+        if (hovered >= 0 && hovered != hub_selected) { hub_selected = hovered; sv_sfx(SND_escolha); }
+
+        if (pressed_confirm() || clicked)
+        {
+            sv_sfx(SND_confirma);
+            if (hub_selected == 0) start_run();
+            else if (hub_selected == 1) { screen = SCREEN_CHARS; char_cursor = sv_meta.character; char_message_timer = 0.0f; }
+            else if (hub_selected == 2) { screen = SCREEN_SHOP; shop_selected = 0; sv_music_play(MUS_LOJA); }
+            else if (hub_selected == 3) { help_select_page(1); hub_help_open = true; }
+            else leave_to_menu = true;
+        }
+
+        if (IsKeyPressed(KEY_ESCAPE)) leave_to_menu = true;
+    }
 
     begin_game_drawing();
     draw_backdrop();
@@ -238,11 +256,20 @@ static void render_hub(void)
 
     for (int i = 0; i < HUB_OPTIONS; i++)
     {
-        Rectangle row = menu_row(i, 560.0f, 90.0f, 620.0f);
+        Rectangle row = menu_row(i, 560.0f, 80.0f, 620.0f);
         bool selected = i == hub_selected;
 
         if (selected) DrawRectangleRec(row, (Color){70, 14, 26, 220});
         sv_text_centered(hub_labels[i], w / 2.0f, row.y + 8.0f * ui, 52.0f * ui, selected ? (Color){255, 70, 80, 255} : (Color){225, 215, 225, 255});
+    }
+
+    if (hub_help_open)
+    {
+        if (help_update_and_draw_panel()) hub_help_open = false;
+    }
+    else
+    {
+        ui_draw_hint("SETAS: escolher    ENTER: confirmar    ESC: voltar ao menu");
     }
 
     end_game_drawing();
@@ -309,7 +336,7 @@ static void render_characters(void)
         else
         {
             sv_meta.character = char_cursor;
-            sv_meta_save(sv_meta_path());
+            sv_meta_save(sv_meta_path()); warn_if_save_failed();
             char_message = "Personagem escolhido.";
             sv_sfx(SND_confirma);
         }
@@ -403,7 +430,7 @@ static void render_shop(void)
         {
             shop_message = "Comprado.";
             sv_sfx(SND_compra);
-            sv_meta_save(sv_meta_path());
+            sv_meta_save(sv_meta_path()); warn_if_save_failed();
         }
         else
         {
@@ -505,6 +532,7 @@ static void render_run(void)
         {
             screen = SCREEN_PAUSE;
             pause_selected = 0;
+            pause_help_open = false;
             sv_sfx(SND_confirma);
         }
         else
@@ -517,7 +545,7 @@ static void render_run(void)
 
     if (sv_run.phase == SV_DEAD || sv_run.phase == SV_WON)
     {
-        earned_coins = sv_game_finish();
+        earned_coins = sv_game_finish(); warn_if_save_failed();
         screen = SCREEN_OVER;
         return;
     }
@@ -529,27 +557,55 @@ static void render_run(void)
     end_game_drawing();
 }
 
+#define PAUSE_OPTIONS 3
+
+
+// Desistir vale como derrota: o Banco de Horas coletado fica
+static void abandon_run(void)
+{
+    sv_run.phase = SV_DEAD;
+    earned_coins = sv_game_finish(); warn_if_save_failed();
+    screen = SCREEN_OVER;
+    sv_music_play(MUS_GAMEOVER);
+}
+
+static void choose_pause_option(int option)
+{
+    sv_sfx(SND_confirma);
+    if (option == 0)
+    {
+        screen = SCREEN_RUN;
+    }
+    else if (option == 1)
+    {
+        help_select_page(1);   // A página do Sobrevivência
+        pause_help_open = true;
+    }
+    else
+    {
+        confirm_open("DESISTIR DA PARTIDA?", "Desistir conta como derrota. O Banco de Horas que você juntou até aqui fica com você.", "DESISTIR", "CONTINUAR", true);
+    }
+}
+
 static void render_pause(void)
 {
     float ui = sv_ui();
     float w = (float)GetScreenWidth(), h = (float)GetScreenHeight();
-    static const char *labels[2] = {"CONTINUAR", "DESISTIR"};
+    static const char *labels[PAUSE_OPTIONS] = {"CONTINUAR", "COMO JOGAR", "DESISTIR"};
+    bool dialog_blocks = confirm_is_open() || pause_help_open;   // Com uma janela aberta, só ela responde às teclas
+    bool clicked = false;
+    int hovered = -1;
 
-    if (pressed_down() || pressed_up()) { pause_selected = 1 - pause_selected; sv_sfx(SND_escolha); }
-    if (IsKeyPressed(KEY_ESCAPE)) { screen = SCREEN_RUN; sv_sfx(SND_confirma); }
-
-    if (pressed_confirm())
+    if (!dialog_blocks)
     {
-        sv_sfx(SND_confirma);
-        if (pause_selected == 0) screen = SCREEN_RUN;
-        else
-        {
-            // Desistir vale como derrota: o Banco de Horas coletado fica
-            sv_run.phase = SV_DEAD;
-            earned_coins = sv_game_finish();
-            screen = SCREEN_OVER;
-            sv_music_play(MUS_GAMEOVER);
-        }
+        if (pressed_down()) { pause_selected = (pause_selected + 1) % PAUSE_OPTIONS; sv_sfx(SND_escolha); }
+        if (pressed_up()) { pause_selected = (pause_selected + PAUSE_OPTIONS - 1) % PAUSE_OPTIONS; sv_sfx(SND_escolha); }
+
+        hovered = mouse_pick(PAUSE_OPTIONS, h * 0.45f / ui, 90.0f, 620.0f, &clicked);
+        if (hovered >= 0 && hovered != pause_selected) { pause_selected = hovered; sv_sfx(SND_escolha); }
+
+        if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_P)) { screen = SCREEN_RUN; sv_sfx(SND_confirma); }
+        else if (pressed_confirm() || clicked) choose_pause_option(pause_selected);
     }
 
     sv_audio_update(GetFrameTime());
@@ -557,10 +613,21 @@ static void render_pause(void)
     begin_game_drawing();
     sv_render_game();
     DrawRectangle(0, 0, (int)w, (int)h, (Color){4, 0, 8, 190});
-    sv_text_centered("PAUSADO", w / 2.0f, h * 0.25f, 100.0f * ui, (Color){230, 40, 50, 255});
-    for (int i = 0; i < 2; i++)
+
+    if (pause_help_open)
     {
-        sv_text_centered(labels[i], w / 2.0f, h * 0.45f + (float)i * 90.0f * ui, 56.0f * ui, i == pause_selected ? (Color){255, 70, 80, 255} : (Color){225, 215, 225, 255});
+        if (help_update_and_draw_panel()) pause_help_open = false;
+    }
+    else
+    {
+        sv_text_centered("PAUSADO", w / 2.0f, h * 0.25f, 100.0f * ui, (Color){230, 40, 50, 255});
+        for (int i = 0; i < PAUSE_OPTIONS; i++)
+        {
+            sv_text_centered(labels[i], w / 2.0f, h * 0.45f + (float)i * 90.0f * ui, 56.0f * ui, i == pause_selected ? (Color){255, 70, 80, 255} : (Color){225, 215, 225, 255});
+        }
+        ui_draw_hint("SETAS: escolher    ENTER: confirmar    ESC ou P: continuar");
+
+        if (confirm_is_open() && confirm_update_and_draw() == CONFIRM_YES) abandon_run();
     }
     end_game_drawing();
 }

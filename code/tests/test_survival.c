@@ -951,6 +951,17 @@ static void test_level_up(void)
     sv_meta_reset();
 }
 
+// Quando o disco não deixa gravar, o jogo precisa saber para avisar o jogador (heurística de Nielsen 9)
+static void test_save_feedback(void)
+{
+    printf("\nAviso de falha ao salvar\n");
+
+    sv_meta_reset();
+    check("SV-94", "gravar numa pasta que não existe falha e fica registrado", !sv_meta_save("pasta-que-nao-existe-xyz/progresso.survival") && !sv_meta_last_save_ok());
+    check("SV-95", "gravar num lugar válido dá certo e limpa o registro de falha", sv_meta_save("build/tests/sv-aviso.survival") && sv_meta_last_save_ok());
+    remove("build/tests/sv-aviso.survival");
+}
+
 int main(void)
 {
     printf("Testes do Modo Sobrevivencia\n");
@@ -964,6 +975,7 @@ int main(void)
     test_characters();
     test_boss_balance();
     test_debug_cheats();
+    test_save_feedback();
 
     printf("\n%d verificacoes, todas passaram.\n", checks);
     return 0;

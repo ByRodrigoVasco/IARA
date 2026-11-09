@@ -69,7 +69,7 @@ bool sv_meta_load(const char *path)
     return true;
 }
 
-bool sv_meta_save(const char *path)
+static bool write_meta_file(const char *path)
 {
     char temp_path[600];
     char backup_path[600];
@@ -95,6 +95,20 @@ bool sv_meta_save(const char *path)
     }
     remove(backup_path);
     return true;
+}
+
+// Quem chama precisa saber se gravou: sem isso, um disco cheio perderia o progresso em silêncio.
+static bool last_save_ok = true;
+
+bool sv_meta_save(const char *path)
+{
+    last_save_ok = write_meta_file(path);
+    return last_save_ok;
+}
+
+bool sv_meta_last_save_ok(void)
+{
+    return last_save_ok;
 }
 
 bool sv_meta_buy(SvUpgradeId id)

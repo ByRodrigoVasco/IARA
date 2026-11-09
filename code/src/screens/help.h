@@ -11,6 +11,9 @@
 /** @brief Volta para a primeira página. */
 void initialize_help_screen(void);
 
+/** @brief Abre numa página específica (0 campanha, 1 Sobrevivência). Número fora da lista volta à primeira. */
+void help_select_page(int page);
+
 /** @brief Tela cheia (a do menu principal). Devolve true quando o jogador pediu para voltar. */
 bool render_help_screen(void);
 
