@@ -5,13 +5,14 @@
 #include "helper.h"
 #include "animations.h"
 #include "accessibility.h"
+#include "confirm_dialog.h"
 
 // Tamanhos em 1080p, como divisores da imagem original ou da janela.
 #define ARROW_ICON_SCALE_DIVISOR 2.5f
 #define IARA_NAME_SCALE_DIVISOR 3.0f
 #define MENU_OFFICE_SCALE_DIVISOR 1.15f
 
-#define FULLSCREEN_HINT "F11: tela cheia"
+#define MENU_HINT "SETAS ou W S: escolher    ENTER: confirmar    F11: tela cheia    ESC: sair"
 
 int next_screen = NONE;
 int mouse_is_hovering = NONE;
@@ -38,16 +39,19 @@ static float menu_letter_spacing;
 static Vector2 iniciar_text_size;
 static Vector2 creditos_text_size;
 static Vector2 configuracoes_text_size;
+static Vector2 ajuda_text_size;
 static Vector2 sair_text_size;
 
 static Vector2 iniciar_text_target_position;
 static Vector2 creditos_text_target_position;
 static Vector2 configuracoes_text_target_position;
+static Vector2 ajuda_text_target_position;
 static Vector2 sair_text_target_position;
 
 static Rectangle iniciar_text_rectangle;
 static Rectangle creditos_text_rectangle;
 static Rectangle configuracoes_text_rectangle;
+static Rectangle ajuda_text_rectangle;
 static Rectangle sair_text_rectangle;
 
 // As imagens do menu ficam na memória durante o jogo todo: voltar ao menu não carrega nada de novo.
@@ -116,19 +120,22 @@ static void update_menu_layout(void)
     iniciar_text_size = MeasureTextEx(default_game_font, "INICIAR", menu_font_size, menu_letter_spacing);
     creditos_text_size = MeasureTextEx(default_game_font, "CRÉDITOS", menu_font_size, menu_letter_spacing);
     configuracoes_text_size = MeasureTextEx(default_game_font, "CONFIGURAÇÕES", menu_font_size, menu_letter_spacing);
+    ajuda_text_size = MeasureTextEx(default_game_font, "AJUDA", menu_font_size, menu_letter_spacing);
     sair_text_size = MeasureTextEx(default_game_font, "SAIR", menu_font_size, menu_letter_spacing);
 
-    // As opções começam no meio da tela, abaixo do nome IARA.
-    float start_y = GetScreenHeight() / 2.0f;
+    // As opções começam abaixo do nome IARA e cabem as cinco na janela.
+    float start_y = GetScreenHeight() * 0.40f;
 
     iniciar_text_target_position = (Vector2){margin_x, start_y};
     creditos_text_target_position = (Vector2){margin_x, iniciar_text_target_position.y + iniciar_text_size.y + margin_y};
     configuracoes_text_target_position = (Vector2){margin_x, creditos_text_target_position.y + creditos_text_size.y + margin_y};
-    sair_text_target_position = (Vector2){margin_x, configuracoes_text_target_position.y + configuracoes_text_size.y + margin_y};
+    ajuda_text_target_position = (Vector2){margin_x, configuracoes_text_target_position.y + configuracoes_text_size.y + margin_y};
+    sair_text_target_position = (Vector2){margin_x, ajuda_text_target_position.y + ajuda_text_size.y + margin_y};
 
     iniciar_text_rectangle = (Rectangle){iniciar_text_target_position.x, iniciar_text_target_position.y, iniciar_text_size.x, iniciar_text_size.y};
     creditos_text_rectangle = (Rectangle){creditos_text_target_position.x, creditos_text_target_position.y, creditos_text_size.x, creditos_text_size.y};
     configuracoes_text_rectangle = (Rectangle){configuracoes_text_target_position.x, configuracoes_text_target_position.y, configuracoes_text_size.x, configuracoes_text_size.y};
+    ajuda_text_rectangle = (Rectangle){ajuda_text_target_position.x, ajuda_text_target_position.y, ajuda_text_size.x, ajuda_text_size.y};
     sair_text_rectangle = (Rectangle){sair_text_target_position.x, sair_text_target_position.y, sair_text_size.x, sair_text_size.y};
 }
 
@@ -180,8 +187,20 @@ bool check_mouse_hover(Rectangle collision_rectangle)
 }
 
 // Confirma a opção selecionada: guarda a escolha e sinaliza o fechamento do menu.
+static void open_exit_confirmation(void)
+{
+    confirm_open("SAIR DO JOGO?", "O jogo fecha. O seu progresso fica salvo.", "SAIR", "CONTINUAR", true);
+}
+
+// Fechar o jogo não se desfaz, então SAIR pergunta antes: um clique ou tecla errada não derruba a partida.
 static void confirm_menu_option(void)
 {
+    if (selected_menu_option == SAIR)
+    {
+        open_exit_confirmation();
+        return;
+    }
+
     SetMouseCursor(MOUSE_CURSOR_ARROW);
     next_screen = selected_menu_option;
     is_menu_to_close = true;
@@ -205,6 +224,11 @@ static void handle_keyboard_navigation(void)
     {
         confirm_menu_option();
     }
+
+    if (IsKeyPressed(KEY_ESCAPE))
+    {
+        open_exit_confirmation();
+    }
 }
 
 // Descobre qual opção do menu está sob o mouse (NONE se nenhuma).
@@ -223,6 +247,11 @@ static int get_option_under_mouse(void)
     if (check_mouse_hover(configuracoes_text_rectangle))
     {
         return CONFIGURACOES;
+    }
+
+    if (check_mouse_hover(ajuda_text_rectangle))
+    {
+        return AJUDA;
     }
 
     if (check_mouse_hover(sair_text_rectangle))
@@ -281,6 +310,9 @@ void handle_render_arrow()
     case CONFIGURACOES:
         selected_rectangle = configuracoes_text_rectangle;
         break;
+    case AJUDA:
+        selected_rectangle = ajuda_text_rectangle;
+        break;
     case SAIR:
         selected_rectangle = sair_text_rectangle;
         break;
@@ -305,8 +337,12 @@ void render_menu(void)
 
     update_menu_layout();
 
-    handle_keyboard_navigation();
-    handle_mouse_action();
+    // Com a pergunta de sair aberta, só ela responde às teclas e ao mouse
+    if (!confirm_is_open())
+    {
+        handle_keyboard_navigation();
+        handle_mouse_action();
+    }
 
     begin_game_drawing();
     ClearBackground(BG_COLOR);
@@ -328,16 +364,26 @@ void render_menu(void)
     DrawTextEx(default_game_font, "INICIAR", iniciar_text_target_position, menu_font_size, menu_letter_spacing, texture_color_to_fade);
     DrawTextEx(default_game_font, "CRÉDITOS", creditos_text_target_position, menu_font_size, menu_letter_spacing, texture_color_to_fade);
     DrawTextEx(default_game_font, "CONFIGURAÇÕES", configuracoes_text_target_position, menu_font_size, menu_letter_spacing, texture_color_to_fade);
+    DrawTextEx(default_game_font, "AJUDA", ajuda_text_target_position, menu_font_size, menu_letter_spacing, texture_color_to_fade);
     DrawTextEx(default_game_font, "SAIR", sair_text_target_position, menu_font_size, menu_letter_spacing, texture_color_to_fade);
 
     handle_render_arrow();
 
-    // Mostra o atalho da tela cheia, que de outro modo o jogador não teria como descobrir
+    // As teclas do menu ficam sempre à vista, inclusive o atalho da tela cheia
     float hint_size = DEFAULT_TEXT_FONT_SIZE * menu_scale;
-    Vector2 hint_measure = MeasureTextEx(default_game_font, FULLSCREEN_HINT, hint_size, menu_letter_spacing / 2.0f);
-    Vector2 hint_position = {window_w - hint_measure.x - (TEXT_VERTICAL_MARGIN * menu_scale), window_h - hint_measure.y - (TEXT_VERTICAL_MARGIN * menu_scale)};
+    Vector2 hint_measure = MeasureTextEx(default_game_font, MENU_HINT, hint_size, menu_letter_spacing / 2.0f);
+    Vector2 hint_position = {(window_w - hint_measure.x) / 2.0f, window_h - hint_measure.y - (TEXT_VERTICAL_MARGIN * menu_scale)};
 
-    DrawTextEx(default_game_font, FULLSCREEN_HINT, hint_position, hint_size, menu_letter_spacing / 2.0f, texture_color_to_fade);
+    DrawTextEx(default_game_font, MENU_HINT, hint_position, hint_size, menu_letter_spacing / 2.0f, texture_color_to_fade);
+
+    if (confirm_is_open())
+    {
+        if (confirm_update_and_draw() == CONFIRM_YES)
+        {
+            next_screen = SAIR;
+            is_menu_to_close = true;
+        }
+    }
 
     end_game_drawing();
 }

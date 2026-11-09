@@ -1707,6 +1707,24 @@ int main(void)
     int tela_apos_sair = handle_menu_action(SAIR);
     checar("CT-36", "Escolher SAIR pede o fechamento e mantem a janela viva para o save",
            is_game_to_close && tela_apos_sair == NONE && IsWindowReady());
+    is_game_to_close = false;
+
+    /* Uma tecla so nunca fecha o jogo: no menu o ESC abre a pergunta, no escritorio abre a pausa. */
+    int tela_antes = current_game_state_variables.current_screen;
+    bool esc_nao_fecha_nenhuma = true;
+    int telas_protegidas[] = {PRE_MENU_SCREEN, MENU_SCREEN, PLAYING_SCREEN, CREDITS_SCREEN, SETTINGS_SCREEN, HELP_SCREEN};
+
+    for (int i = 0; i < (int)(sizeof(telas_protegidas) / sizeof(telas_protegidas[0])); i++)
+    {
+        current_game_state_variables.current_screen = telas_protegidas[i];
+        if (escape_closes_current_screen()) esc_nao_fecha_nenhuma = false;
+    }
+    current_game_state_variables.current_screen = tela_antes;
+    checar("UX-15", "ESC na abertura, no menu, no escritorio, nos creditos, nas configuracoes e na ajuda nao fecha o jogo", esc_nao_fecha_nenhuma);
+
+    /* A ajuda abre pelo menu e voltar leva ao menu. */
+    int tela_da_ajuda = handle_menu_action(AJUDA);
+    checar("UX-16", "Escolher AJUDA no menu abre a tela de ajuda", tela_da_ajuda == HELP_SCREEN);
 
     printf("\n------------------------------------------------------------------------\n");
     printf(" Bloco 3: %d de %d casos aprovados", casos_ok, total_casos);

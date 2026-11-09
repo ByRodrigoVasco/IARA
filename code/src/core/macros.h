@@ -70,6 +70,7 @@ extern unsigned int middle_screen_y;
 #define MODE_SELECT_SCREEN 8
 #define SAVE_SELECT_SCREEN 9
 #define LOADING_SCREEN 10
+#define HELP_SCREEN 11
 
 // TIPOS DE DIAS E TELAS DE GAME_LOOP
 #define NOT_YET_DEFINED 0

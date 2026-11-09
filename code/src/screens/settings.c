@@ -4,6 +4,7 @@
 #include "fonts.h"
 #include "helper.h"
 #include "accessibility.h"
+#include "ui_theme.h"
 
 // Medidas em 1920x1080, multiplicadas por get_ui_scale().
 #define PANEL_WIDTH 1000.0f
@@ -313,6 +314,8 @@ bool render_settings_screen(void)
             draw_checkbox(row, is_option_checked(option));
         }
     }
+
+    ui_draw_hint("SETAS ou W S: escolher    ESQUERDA / DIREITA: ajustar    ENTER: marcar    ESC: voltar");
 
     end_game_drawing();
 
