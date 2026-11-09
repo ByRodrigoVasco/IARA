@@ -4,6 +4,7 @@
 #include <math.h>   // sinf() das ondas do papel de parede
 
 #include "raylib.h"
+#include "audio.h"
 #include "computer_loop.h"
 #include "game_state.h"
 #include "macros.h"
@@ -37,6 +38,7 @@
 #define BOSS_FIRST_DELAY 20.0f    // a chefia começa a cobrar
 #define BOSS_SECOND_DELAY 40.0f   // a chefia cobra com mais pressa
 #define BOSS_LAST_DAY 74          // neste dia, a chefia já não aparece mais
+#define IARA_TYPING_CHARACTERS_PER_SECOND 45.0f
 
 // Memória da IARA. Conferir gasta menos que enviar sem conferir, e resolver sozinho devolve um pouco.
 #define IARA_MEMORY_MAX 6
@@ -222,6 +224,8 @@ static bool ticket_redacted_data = false;   // Tarjou os dados pessoais antes de
 static int claim_marks[MAX_CLAIMS];         // Marca do jogador em cada afirmação
 static float ticket_time = 0.0f;            // Segundos com o chamado aberto
 static float step_arrival = 1.0f;           // Entrada do passo, de 0 a 1
+static float iara_suggestion_typing_time = 0.0f;
+static bool iara_suggestion_typing_started = false;
 static int unchecked_sends = 0;             // Vezes que enviou sem conferir hoje
 static TaskResult ticket_results[MAX_TICKETS];
 static unsigned int day_choice_effects = 0; // O que as escolhas do dia vão mudar quando ele for concluído
@@ -612,9 +616,17 @@ static bool step_is_ticket(const DialogStep *step)
 // O relatório do dia é sempre o último passo.
 #define REPORT_STEP (TOTAL_STEPS - 1)
 
+static void reset_iara_suggestion_typing(void)
+{
+    iara_suggestion_typing_time = 0.0f;
+    iara_suggestion_typing_started = false;
+    update_iara_voice_typing(false);
+}
+
 // Prepara o estado para o passo que vai começar.
 static void reset_step_state(void)
 {
+    reset_iara_suggestion_typing();
     current_quiz_answered = false;
     current_quiz_selected = -1;
     current_ticket_view = TICKET_ANSWERING;
@@ -1500,6 +1512,7 @@ static void spend_iara_memory(int cost)
 // Abre a IARA no chamado atual. Se ele tem dados pessoais, antes pergunta sobre a tarja.
 static void ask_iara(void)
 {
+    reset_iara_suggestion_typing();
     ticket_asked_iara = true;
     ticket_memory_level = get_iara_memory_level();
     current_ticket_view = dialog_sequence[current_step_index].has_personal_data ? TICKET_PRIVACY : TICKET_SUGGESTION;
@@ -1509,6 +1522,7 @@ static void ask_iara(void)
 // e os dados pessoais voltam a passar pela decisão da tarja.
 static void start_new_conversation(void)
 {
+    reset_iara_suggestion_typing();
     iara_memory = IARA_MEMORY_MAX;
     current_ticket_view = TICKET_PASTE;
 }
@@ -1517,6 +1531,7 @@ static void start_new_conversation(void)
 // já foi enviado sem tarja não volta atrás.
 static void decide_personal_data(bool redact)
 {
+    reset_iara_suggestion_typing();
     if (!redact) ticket_exposed_data = true;
 
     ticket_redacted_data = redact && !ticket_exposed_data;
@@ -1726,8 +1741,9 @@ static float get_quiz_center_x(void)
     return quiz_area_rect.x + (quiz_area_rect.width / 2.0f) + (remaining * remaining * quiz_area_rect.width);
 }
 
-// Caixa de texto centralizada. Devolve onde ela termina, para ancorar o que vem abaixo.
-static float draw_text_box(const char (*lines)[MAX_LINE_LEN], int line_count, float top, Color fill, float *box_width)
+// Caixa de texto centralizada. visible_characters limita a revelação sem alterar o layout.
+static float draw_text_box_with_visible_characters(const char (*lines)[MAX_LINE_LEN], int line_count,
+                                                   float top, Color fill, int visible_characters, float *box_width)
 {
     float win_w = quiz_area_rect.width;
     float win_h = quiz_area_rect.height;
@@ -1760,18 +1776,57 @@ static float draw_text_box(const char (*lines)[MAX_LINE_LEN], int line_count, fl
     DrawRectangleLinesEx(box, 2.0f, BLACK);
 
     float y = box.y + padding_y;
+    int characters_remaining = visible_characters;
 
     for (int i = 0; i < line_count; i++)
     {
         float line_width = measure_logic_text(lines[i], font_size, letter_spacing).x;
 
-        draw_logic_text(lines[i], (Vector2){center_x - (line_width / 2.0f), y}, font_size, letter_spacing, QUESTION_TEXT_COLOR);
+        const char *visible_line = lines[i];
+        char partial_line[MAX_LINE_LEN];
+
+        if (characters_remaining >= 0)
+        {
+            int line_characters = GetCodepointCount(lines[i]);
+            if (characters_remaining < line_characters)
+            {
+                int bytes_to_copy = 0;
+                const char *cursor = lines[i];
+
+                for (int character = 0; character < characters_remaining && *cursor != '\0'; character++)
+                {
+                    int codepoint_bytes = 0;
+                    GetCodepointNext(cursor, &codepoint_bytes);
+                    if (codepoint_bytes <= 0 || bytes_to_copy + codepoint_bytes >= MAX_LINE_LEN) break;
+
+                    bytes_to_copy += codepoint_bytes;
+                    cursor += codepoint_bytes;
+                }
+
+                for (int byte = 0; byte < bytes_to_copy; byte++) partial_line[byte] = lines[i][byte];
+                partial_line[bytes_to_copy] = '\0';
+                visible_line = partial_line;
+                characters_remaining = 0;
+            }
+            else
+            {
+                characters_remaining -= line_characters;
+            }
+        }
+
+        draw_logic_text(visible_line, (Vector2){center_x - (line_width / 2.0f), y}, font_size, letter_spacing, QUESTION_TEXT_COLOR);
         y += font_size + line_spacing;
     }
 
     if (box_width != NULL) *box_width = width;
 
     return box.y + box.height;
+}
+
+// Mantém o desenho completo usado pelos demais diálogos.
+static float draw_text_box(const char (*lines)[MAX_LINE_LEN], int line_count, float top, Color fill, float *box_width)
+{
+    return draw_text_box_with_visible_characters(lines, line_count, top, fill, -1, box_width);
 }
 
 // Botão centralizado de ação: cresce se o texto não couber na largura padrão.
@@ -2023,10 +2078,26 @@ static void render_ticket_suggestion(DialogStep *step, float top)
 
     if (iara.aside[0] != '\0') snprintf(lines[line_count++], MAX_LINE_LEN, "%s", iara.aside);
 
+    int total_characters = 0;
+    for (int line = 0; line < line_count; line++) total_characters += GetCodepointCount(lines[line]);
+
+    if (!iara_suggestion_typing_started)
+    {
+        iara_suggestion_typing_started = true;
+        iara_suggestion_typing_time = 0.0f;
+    }
+
+    iara_suggestion_typing_time += GetFrameTime();
+    int visible_characters = (int)(iara_suggestion_typing_time * IARA_TYPING_CHARACTERS_PER_SECOND);
+    if (visible_characters > total_characters) visible_characters = total_characters;
+    bool typing_finished = (visible_characters >= total_characters);
+
     float win_w = quiz_area_rect.width;
     float win_h = quiz_area_rect.height;
     float box_bottom = draw_text_box(step->lines, step->line_count, top, QUESTION_BOX_COLOR, NULL);
-    float suggestion_bottom = draw_text_box(lines, line_count, box_bottom + (win_h * QUIZ_BUTTONS_TOP_GAP_RATIO), IARA_BOX_COLOR, NULL);
+    float suggestion_bottom = draw_text_box_with_visible_characters(
+        lines, line_count, box_bottom + (win_h * QUIZ_BUTTONS_TOP_GAP_RATIO), IARA_BOX_COLOR, visible_characters, NULL);
+    update_iara_voice_typing(visible_characters > 0 && !typing_finished && !computer_leaving);
     float y = suggestion_bottom + (win_h * QUIZ_BUTTONS_TOP_GAP_RATIO);
     float check_width = win_w * CHECK_BUTTON_WIDTH_RATIO;
     float gap = win_w * SUGGESTION_BUTTON_GAP_RATIO;
@@ -2038,11 +2109,20 @@ static void render_ticket_suggestion(DialogStep *step, float top)
     bool check_clicked = false;
     bool unchecked_clicked = false;
 
-    draw_button((Rectangle){x, y, check_width, height}, "Conferir", quiz_font_size, BUTTON_FILL_COLOR, step_can_click, &check_clicked);
+    // Conferir espera a IARA terminar de escrever: não dá para conferir o que ainda não foi lido.
+    // Enviar sem conferir não espera nada (US03): o modo automático resolve no mesmo instante.
+    draw_button((Rectangle){x, y, check_width, height}, "Conferir", quiz_font_size, BUTTON_FILL_COLOR, step_can_click && typing_finished, &check_clicked);
     draw_button((Rectangle){x + check_width + gap, y, unchecked_width, height}, "Enviar sem conferir", quiz_font_size, BUTTON_FILL_COLOR, step_can_click, &unchecked_clicked);
 
+    if (unchecked_clicked)
+    {
+        send_without_checking();
+        return;
+    }
+
+    if (!typing_finished) return;
+
     if (check_clicked) start_checking();
-    else if (unchecked_clicked) send_without_checking();
     else if (ticket_memory_level != IARA_MEMORY_FULL &&
              draw_action_button("Nova conversa", y + height + (win_h * OPTION_SPACING_RATIO)))
     {

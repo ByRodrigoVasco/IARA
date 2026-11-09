@@ -3,20 +3,21 @@
 Os BUG-01 a BUG-08 foram encontrados na execução dos testes de sistema de 22/10/2026
 (branch `develop`, commit `b366e7c`) e estão registrados como issue no repositório, com a
 label `bug`. Os BUG-09 a BUG-12 foram encontrados na revisão de 03/11/2026
-(branch `test/campanha-100-dias`) e também têm issue. O BUG-13 foi relatado em 08/11/2026, durante o
-desenvolvimento do Modo Sobrevivência (branch `feature/modo-sobrevivencia`), e tem a issue #56. Os BUG-14 a BUG-16
-saíram do teste à mão de 08/11/2026 e do retorno de um usuário final de 09/11/2026, na mesma branch, e têm as issues #57 a #59.
+(branch `test/campanha-100-dias`) e também têm issue. Os BUG-13 e BUG-14 foram encontrados em
+07/11/2026, ao cobrir a US03 (branch `test/us03-modo-automatico`), e ainda precisam de issue.
+O BUG-15 foi relatado em 08/11/2026, durante o desenvolvimento do Modo Sobrevivência (branch `feature/modo-sobrevivencia`), e tem a issue #56. Os BUG-16 a BUG-18 saíram do teste à mão de 08/11/2026 e do retorno de um usuário final de 09/11/2026, na mesma branch, e têm as issues #57 a #59.
 
 Os blocos abaixo repetem o conteúdo de cada um, para consulta sem sair do repositório.
 
 ## Status
 
 Atualizar a coluna Status conforme as issues forem corrigidas e fechadas. Conferido em 03/11/2026:
-do BUG-01 ao BUG-11 as correções estão na `develop` e as issues foram fechadas. Só o BUG-12 seguia aberto.
-Em 08/11/2026, na branch `feature/modo-sobrevivencia`, o BUG-12 foi resolvido e o BUG-13 foi corrigido, e o usuário
-testou os dois no jogo real e aprovou. Em 09/11/2026 o BUG-14 foi corrigido na mesma branch. Esses três só chegam
-à `develop` quando a branch for para lá, e a issue do BUG-12 fica aberta até então. Os BUG-15 e BUG-16 seguem
-abertos, com gravidade baixa: são quadros lentos medidos no teste real, sem efeito na jogabilidade.
+do BUG-01 ao BUG-11 as correções estão na `develop` e as issues foram fechadas. Em 09/11/2026, o BUG-13 e o BUG-14
+estão corrigidos na `develop` (PR #55). Na branch `feature/modo-sobrevivencia`, que segue separada da `develop`, o
+BUG-12 foi resolvido e o BUG-15 foi corrigido em 08/11/2026, e o usuário testou os dois no jogo real e aprovou.
+O BUG-16 foi corrigido na mesma branch em 09/11/2026. A issue do BUG-12 fica aberta até a branch ir para a
+`develop`. Os BUG-17 e BUG-18 seguem abertos, com gravidade baixa: são quadros lentos medidos no teste real, sem
+efeito na jogabilidade.
 
 | ID | Problema | Gravidade | Issue | Status |
 |---|---|---|---|---|
@@ -32,10 +33,12 @@ abertos, com gravidade baixa: são quadros lentos medidos no teste real, sem efe
 | BUG-10 | Falha ao trocar o save pode perder o progresso | Média | [#44](https://github.com/ByRodrigoVasco/IARA/issues/44) | Corrigido na `develop`, issue fechada |
 | BUG-11 | Fundo do cartão do dia é carregado e nunca desenhado | Baixa | [#45](https://github.com/ByRodrigoVasco/IARA/issues/45) | Corrigido na `develop`, issue fechada |
 | BUG-12 | Menu não tem como começar uma partida nova | Média | [#46](https://github.com/ByRodrigoVasco/IARA/issues/46) | Resolvido na `feature/modo-sobrevivencia` (`ad1ec96`) e aprovado em teste real; issue aberta até a branch ir para a `develop` |
-| BUG-13 | Carregamentos sem retorno visual e engasgos no menu | Média | [#56](https://github.com/ByRodrigoVasco/IARA/issues/56) | Corrigido na `feature/modo-sobrevivencia` e aprovado em teste real |
-| BUG-14 | Telas de modo e de save em lista vertical, pouco organizadas | Baixa | [#57](https://github.com/ByRodrigoVasco/IARA/issues/57) | Corrigido na `feature/modo-sobrevivencia` |
-| BUG-15 | Quadro de 1,67 s no menu, sete segundos depois de abrir | Baixa | [#58](https://github.com/ByRodrigoVasco/IARA/issues/58) | Aberto, não reproduzido |
-| BUG-16 | Troca de música e ambiente lê o arquivo na hora | Baixa | [#59](https://github.com/ByRodrigoVasco/IARA/issues/59) | Aberto |
+| BUG-13 | Suíte de testes deixou de compilar depois do áudio | Alta | A abrir | Corrigido na `develop` (PR #55) |
+| BUG-14 | "Enviar sem conferir" esperava a IARA terminar de escrever | Média | A abrir | Corrigido na `develop` (PR #55) |
+| BUG-15 | Carregamentos sem retorno visual e engasgos no menu | Média | [#56](https://github.com/ByRodrigoVasco/IARA/issues/56) | Corrigido na `feature/modo-sobrevivencia` e aprovado em teste real |
+| BUG-16 | Telas de modo e de save em lista vertical, pouco organizadas | Baixa | [#57](https://github.com/ByRodrigoVasco/IARA/issues/57) | Corrigido na `feature/modo-sobrevivencia` |
+| BUG-17 | Quadro de 1,67 s no menu, sete segundos depois de abrir | Baixa | [#58](https://github.com/ByRodrigoVasco/IARA/issues/58) | Aberto, não reproduzido |
+| BUG-18 | Troca de música e ambiente lê o arquivo na hora | Baixa | [#59](https://github.com/ByRodrigoVasco/IARA/issues/59) | Aberto |
 
 **Sobre o BUG-02:** os dois vazamentos descritos abaixo já não existem. Restava uma carga duplicada do menu ao abrir o jogo, removida. O CT-24 oscilava porque media sem desenhar quadros, e o driver de vídeo só devolve uma textura apagada depois de um quadro. Com quadros, 400 voltas ao menu cresceram 19 MB (cerca de 0,05 MB por volta, contra os 7 MB originais).
 
@@ -386,7 +389,7 @@ sem querer.
 o save. Cada modo aceita vários saves, cada um com nome único e na própria pasta (`saves/normal/<nome>/`).
 Criar um save novo começa do Dia 1 sem tocar nos outros, e um save pode ser apagado, com confirmação. Branch
 `feature/modo-sobrevivencia`, commit `ad1ec96`. O usuário testou o fluxo no jogo real em 08/11/2026 e aprovou.
-O visual das duas telas mudou depois, no BUG-14.
+O visual das duas telas mudou depois, no BUG-16.
 
 **Onde:** `code/src/screens/menu.c` e `handle_menu_action()` em `code/src/core/state_machine.c`
 **Coberto por:** CT-79 a CT-87 (fluxo) e SL-01 a SL-29 (saves em pastas); antes, nenhum teste automatizado (achado por inspeção)
@@ -395,7 +398,48 @@ O visual das duas telas mudou depois, no BUG-14.
 
 <a id="bug-13"></a>
 
-## BUG-13 — Carregamentos sem retorno visual e engasgos no menu
+## BUG-13 — Suíte de testes deixou de compilar depois do áudio
+
+**Labels:** `bug`, `testes`, `gravidade: alta`
+
+A PR #53 (áudio) fez `computer_loop.c`, `game_loop.c` e `state_machine.c` chamarem funções de
+`core/audio.c`, mas o `run_tests.ps1` não passou a compilar esse arquivo. Na `develop`, o
+`test_sistema`, o `test_conteudo` e o `test_fluxo` param no link com
+`undefined reference to update_iara_voice_typing`.
+
+**Correção:** `code/src/core/audio.c` entrou na lista de fontes desses três conjuntos. Sem
+placa de som, `IsAudioDeviceReady()` devolve `false` e as funções de áudio não fazem nada, então
+os testes rodam iguais.
+
+**Onde:** `tools/tests/run_tests.ps1`
+**Coberto por:** a própria execução da suíte
+
+---
+
+<a id="bug-14"></a>
+
+## BUG-14 — "Enviar sem conferir" esperava a IARA terminar de escrever
+
+**Labels:** `bug`, `ui`, `gravidade: média`
+
+Com a PR #53, a sugestão da IARA passou a aparecer letra por letra (45 por segundo), e os dois
+botões só eram liberados no fim. Numa sugestão comum, isso dá de 2 a 4 segundos de espera antes
+de poder delegar, o que contradiz a US03 (PI2-227): o modo automático deve resolver na hora.
+
+**Correção:** "Enviar sem conferir" fica liberado desde o início da digitação e encerra o
+chamado no mesmo clique. "Conferir" continua esperando o texto terminar, porque não dá para
+conferir o que ainda não foi lido. A diferença reforça o que o jogo já faz com o botão que cresce
+a cada envio: a imprudência é o caminho mais fácil.
+
+**Onde:** `render_ticket_suggestion()` em `code/src/screens/computer_loop.c`
+**Coberto por:** CT-78 cobre a lógica do envio. O clique durante a digitação é verificado à mão,
+porque a raylib não permite injetar o mouse
+
+---
+
+<a id="bug-15"></a>
+
+## BUG-15 — Carregamentos sem retorno visual e engasgos no menu
 
 **Labels:** `bug`, `desempenho`, `gravidade: média`
 
@@ -417,16 +461,16 @@ jogo real: em 18 s de abertura e menu parado, os únicos quadros acima de 60 ms 
 placa de vídeo usa pela primeira vez as imagens grandes.
 
 **Teste real (08/11/2026):** o usuário jogou cerca de 18 minutos no Sobrevivência e aprovou. Depois do carregamento,
-nenhum quadro passou de 60 ms durante a partida. Os quadros lentos que sobraram estão nos BUG-15 e BUG-16.
+nenhum quadro passou de 60 ms durante a partida. Os quadros lentos que sobraram estão nos BUG-17 e BUG-18.
 
 **Onde:** `code/src/screens/loading.c`, `code/src/screens/menu.c`, `code/src/core/helper.c`, `code/src/core/state_machine.c`, `code/src/main.c`
 **Coberto por:** CT-88 (a porcentagem sobe) e CT-89 a CT-91 (imagens compartilhadas); os tempos foram medidos à parte, sem teste automatizado
 
 ---
 
-<a id="bug-14"></a>
+<a id="bug-16"></a>
 
-## BUG-14 — Telas de modo e de save em lista vertical, pouco organizadas
+## BUG-16 — Telas de modo e de save em lista vertical, pouco organizadas
 
 **Labels:** `bug`, `ui`, `gravidade: baixa`
 
@@ -449,9 +493,9 @@ embaixo. O mouse e o teclado seguem iguais. Branch `feature/modo-sobrevivencia`.
 
 ---
 
-<a id="bug-15"></a>
+<a id="bug-17"></a>
 
-## BUG-15 — Quadro de 1,67 s no menu, sete segundos depois de abrir
+## BUG-17 — Quadro de 1,67 s no menu, sete segundos depois de abrir
 
 **Labels:** `bug`, `desempenho`, `gravidade: baixa`
 
@@ -470,9 +514,9 @@ ou a placa de vídeo, mas isso não foi confirmado.
 
 ---
 
-<a id="bug-16"></a>
+<a id="bug-18"></a>
 
-## BUG-16 — Troca de música e ambiente lê o arquivo na hora
+## BUG-18 — Troca de música e ambiente lê o arquivo na hora
 
 **Labels:** `bug`, `desempenho`, `gravidade: baixa`
 

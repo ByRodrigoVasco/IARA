@@ -93,6 +93,7 @@ void sv_audio_disable(bool disabled)
 }
 
 static bool audio_started = false;   // O dispositivo de áudio já foi aberto
+static bool audio_owns_device = false;   // Foi o Sobrevivência que abriu o dispositivo; se o jogo já o abriu (audio.c), ele não fecha
 static int audio_next = 0;           // Quantos sons já foram carregados
 
 static void load_one_sound(int i)
@@ -120,8 +121,13 @@ float sv_audio_init_step(void)
 
     if (!audio_started)
     {
-        InitAudioDevice();
-        if (!IsAudioDeviceReady()) return 1.0f;   // Sem placa de som: o jogo segue sem áudio
+        // O menu e a campanha (audio.c) abrem o dispositivo na partida do jogo: aqui só se abre se ninguém abriu
+        if (!IsAudioDeviceReady())
+        {
+            InitAudioDevice();
+            audio_owns_device = true;
+        }
+        if (!IsAudioDeviceReady()) { audio_owns_device = false; return 1.0f; }   // Sem placa de som: o jogo segue sem áudio
         audio_started = true;
         audio_next = 0;
         return 0.03f;
@@ -166,7 +172,8 @@ void sv_audio_close(void)
         UnloadSound(sfx[i].base);
         sfx[i].loaded = false;
     }
-    CloseAudioDevice();
+    if (audio_owns_device) CloseAudioDevice();
+    audio_owns_device = false;
     audio_ready = false;
     audio_started = false;
     audio_next = 0;

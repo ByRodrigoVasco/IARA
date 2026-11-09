@@ -2,6 +2,7 @@
 
 #include "state_machine.h"
 #include "game_state.h"
+#include "audio.h"
 #include "pre_menu.h"
 #include "menu.h"
 #include "fonts.h"
@@ -50,6 +51,12 @@ int main(void)
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(800, 450, IARA_TITLE);
     SetWindowMinSize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT);
+
+    if (!initialize_audio())
+    {
+        CloseWindow();
+        return 1;
+    }
 
     int monitor_id = GetCurrentMonitor();
 
@@ -101,6 +108,8 @@ int main(void)
 
     while (!WindowShouldClose() && !is_game_to_close)
     {
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) play_click_sound();
+
         if (IsKeyPressed(KEY_ESCAPE) && escape_closes_current_screen())
         {
             break;
@@ -136,6 +145,7 @@ int main(void)
     handle_state_shutdown();
     unload_accessibility();
     unload_fonts();
+    unload_audio();
     CloseWindow();
     return 0;
 }
