@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#include <math.h>
 
 #include "raylib.h"
 #include "janela_de_teste.h"
@@ -1570,6 +1571,317 @@ static void testar_campanha(void)
     iniciar_partida_nova();
 }
 
+/* ------------------------------------------------------------------------ */
+/* US14: ignorar os NPCs nao bloqueia o progresso (CT-79, PI2-251)            */
+/* ------------------------------------------------------------------------ */
+
+/* Mesma lista de obstaculos que o jogo usa para andar: moveis e NPCs que barram a passagem. */
+static Rectangle obstaculos_com_npcs[OBSTACLE_COUNT + NPC_COUNT];
+static int total_obstaculos_com_npcs = 0;
+
+static void atualizar_obstaculos_com_npcs(void)
+{
+    update_obstacle_recs();
+    total_obstaculos_com_npcs = get_player_movement_obstacles(obstaculos_com_npcs);
+}
+
+/* Livre de moveis, de NPCs e dentro das paredes. */
+static bool posicao_livre_com_npcs(float px, float py)
+{
+    Rectangle hitbox = hitbox_em(px, py);
+
+    if (collides_with_any(hitbox, obstaculos_com_npcs, total_obstaculos_com_npcs)) return false;
+
+    return dentro_do_mapa(hitbox);
+}
+
+/* Na zona do objetivo e longe de todo NPC: ali o ESPACO vai para o objetivo, e nao para uma conversa. */
+static bool chegou_sem_npc_por_perto(float px, float py, Rectangle zona)
+{
+    Rectangle hitbox = hitbox_em(px, py);
+
+    return CheckCollisionRecs(hitbox, zona) && npc_get_nearby(hitbox, get_scale()) < 0;
+}
+
+/* Mesma busca de percurso_do_jogador.h, mas com os NPCs no caminho e o destino longe deles. */
+static bool calcular_caminho_desviando_dos_npcs(Rectangle zona, Vector2 origem, int *passos_do_caminho)
+{
+    float passo = DEFAULT_PLAYER_MOVEMENT_SPEED * get_scale();
+
+    const int di[4] = {1, -1, 0, 0};
+    const int dj[4] = {0, 0, 1, -1};
+
+    memset(veio_de, 0, sizeof(veio_de));
+    tamanho_caminho = 0;
+
+    int inicio = 0;
+    int fim = 0;
+
+    veio_de[GRADE_CENTRO][GRADE_CENTRO] = 5;
+    fila[fim++] = GRADE_CENTRO * GRADE + GRADE_CENTRO;
+
+    while (inicio < fim)
+    {
+        int atual = fila[inicio++];
+        int i = atual / GRADE;
+        int j = atual % GRADE;
+
+        if (chegou_sem_npc_por_perto(origem.x + (i - GRADE_CENTRO) * passo,
+                                     origem.y + (j - GRADE_CENTRO) * passo, zona))
+        {
+            while (veio_de[i][j] != 5)
+            {
+                caminho_i[tamanho_caminho] = i;
+                caminho_j[tamanho_caminho] = j;
+                tamanho_caminho++;
+
+                int de_onde = veio_de[i][j] - 1;
+                i -= di[de_onde];
+                j -= dj[de_onde];
+            }
+
+            caminho_i[tamanho_caminho] = GRADE_CENTRO;
+            caminho_j[tamanho_caminho] = GRADE_CENTRO;
+            tamanho_caminho++;
+
+            *passos_do_caminho = tamanho_caminho - 1;
+            return true;
+        }
+
+        for (int d = 0; d < 4; d++)
+        {
+            int ni = i + di[d];
+            int nj = j + dj[d];
+
+            if (ni < 0 || ni >= GRADE || nj < 0 || nj >= GRADE) continue;
+            if (veio_de[ni][nj] != 0) continue;
+
+            if (!posicao_livre_com_npcs(origem.x + (ni - GRADE_CENTRO) * passo,
+                                        origem.y + (nj - GRADE_CENTRO) * passo)) continue;
+
+            veio_de[ni][nj] = (unsigned char)(d + 1);
+            fila[fim++] = ni * GRADE + nj;
+        }
+    }
+
+    return false;
+}
+
+/* Um quadro de andar como o handle_player_input(), com os NPCs como obstaculo, e sem
+ * nunca apertar ESPACO: handle_map_interactables() roda, mas nenhuma conversa abre. */
+static void andar_um_passo_ignorando_npcs(int dx, int dy, bool desenhar)
+{
+    float speed = DEFAULT_PLAYER_MOVEMENT_SPEED * get_scale();
+
+    if (dx != 0 && dy != 0) speed *= 0.7071f;
+
+    if      (dx == 0 && dy < 0)  current_direction = NORTH;
+    else if (dx == 0 && dy > 0)  current_direction = SOUTH;
+    else if (dx < 0  && dy == 0) current_direction = WEST;
+    else                         current_direction = EAST;
+
+    current_estagiario_texture_direction = estagiario_texture[current_direction];
+    walk_time += 1.0f / 60.0f;
+
+    update_collision_rec();
+    current_estagiario_position.x = move_axis(current_estagiario_position.x, dx * speed,
+                                              estagiario_collision_rec, true,
+                                              obstaculos_com_npcs, total_obstaculos_com_npcs);
+    update_collision_rec();
+    current_estagiario_position.y = move_axis(current_estagiario_position.y, dy * speed,
+                                              estagiario_collision_rec, false,
+                                              obstaculos_com_npcs, total_obstaculos_com_npcs);
+    update_collision_rec();
+    handle_map_collisions();
+    handle_map_interactables();
+
+    if (!desenhar) return;
+
+    /* Mesmo desenho do jogo: escritorio, NPCs e jogador na ordem certa. */
+    BeginDrawing();
+    ClearBackground(BG_COLOR);
+    render_office_with_glass();
+    render_control_tips();
+    render_day_counter();
+    render_interact_arrow(get_next_objective_rectangle());
+    EndDrawing();
+}
+
+/* Evidencia da US14: o mesmo quadro de gravar_evidencia_do_jogo(), mas com os NPCs no escritorio. */
+static void gravar_evidencia_com_npcs(const char *arquivo)
+{
+    RenderTexture2D alvo = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
+
+    BeginTextureMode(alvo);
+    ClearBackground(BG_COLOR);
+
+    render_office_scene();
+    render_control_tips();
+    render_day_counter();
+    render_interact_arrow(get_next_objective_rectangle());
+
+    EndTextureMode();
+
+    Image imagem = LoadImageFromTexture(alvo.texture);
+    ImageFlipVertical(&imagem);
+    ExportImage(imagem, arquivo);
+
+    UnloadImage(imagem);
+    UnloadRenderTexture(alvo);
+}
+
+/* Percorre o caminho calculado. Devolve false se algum passo travar ou abrir conversa. */
+static bool percorrer_caminho_ignorando_npcs(Vector2 origem, bool desenhar, bool *abriu_conversa)
+{
+    for (int k = tamanho_caminho - 2; k >= 0 && !WindowShouldClose(); k--)
+    {
+        Vector2 atual = posicao_do_caminho(origem, k + 1);
+        Vector2 proxima = posicao_do_caminho(origem, k);
+
+        int dx = (proxima.x > atual.x) - (proxima.x < atual.x);
+        int dy = (proxima.y > atual.y) - (proxima.y < atual.y);
+
+        andar_um_passo_ignorando_npcs(dx, dy, desenhar);
+
+        if (active_npc_id >= 0) *abriu_conversa = true;
+
+        /* Um NPC no meio do caminho faria o jogador parar antes da proxima casa. */
+        if (fabsf(current_estagiario_position.x - proxima.x) > 0.5f ||
+            fabsf(current_estagiario_position.y - proxima.y) > 0.5f) return false;
+    }
+
+    walk_time = 0.0f;
+    return true;
+}
+
+/* Joga os 9 dias jogaveis sem nunca conversar com um NPC: so anda, usa o computador e sai pela porta. */
+static void testar_ignorar_npcs(void)
+{
+    titulo("US14: ignorar os NPCs nao bloqueia o progresso (CT-79)");
+    etapa("anda desviando dos NPCs, nunca aperta ESPACO perto deles e conclui cada dia");
+
+    double inicio = GetTime();
+    int dias_jogados = 0;
+    int dias_concluidos = 0;
+    int dia_com_falha = 0;
+    bool algum_npc_barra_o_caminho = false;
+    bool abriu_conversa = false;
+
+    iniciar_partida_nova();
+
+    while (current_screen != ENDING_CARD_SCREEN && GetTime() - inicio < 240.0 && !WindowShouldClose())
+    {
+        int dia = current_game_state_variables.current_day;
+
+        if (current_screen == DAY_TRANSITION_SCREEN)
+        {
+            if (current_game_state_variables.day_type == FLASH_DAY)
+            {
+                rodar_por(0.05);
+                advance_to_next_day();
+            }
+            else
+            {
+                while (current_game_state_variables.current_day == dia && !WindowShouldClose()) handle_state_machine();
+            }
+            continue;
+        }
+
+        if (current_screen == SCREEN_NONE) handle_state_machine();
+
+        /* Pula o cartao de chegada: o jogador esta na porta de entrada. */
+        current_screen = IN_GAME_SCREEN;
+        dias_jogados++;
+
+        bool desenhar = (dias_jogados == 1);
+        color_to_fade.a = 255; /* O escritorio ja apareceu por inteiro, como depois do fade do jogo. */
+        estagiario_computer_collision_rectangle = get_computer_collision_rectangle();
+        atualizar_obstaculos_com_npcs();
+
+        for (int npc = 0; npc < NPC_COUNT; npc++)
+        {
+            if (npc_blocks_player(npc)) algum_npc_barra_o_caminho = true;
+        }
+
+        /* 1. Da entrada ate o computador, sem conversar com ninguem. */
+        Vector2 entrada = current_estagiario_position;
+        int passos_ate_o_computador = 0;
+        bool chegou_ao_computador =
+            calcular_caminho_desviando_dos_npcs(estagiario_computer_collision_rectangle, entrada, &passos_ate_o_computador) &&
+            percorrer_caminho_ignorando_npcs(entrada, desenhar, &abriu_conversa);
+
+        handle_map_interactables();
+
+        /* Com nenhum NPC por perto, o ESPACO cai no ramo do computador de handle_map_interactables(). */
+        bool espaco_abre_o_computador = chegou_ao_computador && is_near_computer && nearby_npc_id < 0 &&
+                                        !is_hint_note_open() && !current_game_state_variables.is_resolved;
+
+        if (desenhar) gravar_evidencia_com_npcs("docs/fds/testes/evidencias/us14-computador-sem-npc.png");
+
+        if (!espaco_abre_o_computador)
+        {
+            if (dia_com_falha == 0) dia_com_falha = dia;
+            break;
+        }
+
+        enter_computer_screen = true;
+        rodar_ate_a_tela(COMPUTER_SCREEN, 5.0);
+        jogar_o_computador(0);
+        rodar_ate_a_tela(IN_GAME_SCREEN, 5.0);
+
+        /* 2. Do computador ate a porta, de novo sem conversar. */
+        atualizar_obstaculos_com_npcs();
+        Vector2 computador = current_estagiario_position;
+        int passos_ate_a_porta = 0;
+        bool chegou_a_porta =
+            calcular_caminho_desviando_dos_npcs(get_exit_zone(), computador, &passos_ate_a_porta) &&
+            percorrer_caminho_ignorando_npcs(computador, desenhar, &abriu_conversa);
+
+        handle_map_interactables();
+
+        bool espaco_abre_a_porta = chegou_a_porta && is_near_exit && nearby_npc_id < 0 && !is_near_hint;
+
+        if (desenhar)
+        {
+            etapa(TextFormat("      Dia %d: %d passos ate o computador e %d ate a porta, sem conversa",
+                             dia, passos_ate_o_computador, passos_ate_a_porta));
+            gravar_evidencia_com_npcs("docs/fds/testes/evidencias/us14-porta-sem-npc.png");
+        }
+
+        if (!espaco_abre_a_porta)
+        {
+            if (dia_com_falha == 0) dia_com_falha = dia;
+            break;
+        }
+
+        leave_office = true;
+        rodar_ate_a_tela(DAY_END_CARD_SCREEN, 5.0);
+        render_calendar_day_card_finished = true;
+        handle_state_machine();
+
+        /* O dia conta como concluido se foi salvo e o jogo seguiu: para o proximo dia ou, no ultimo, para o final. */
+        if (current_game_state_variables.resolved_puzzles[dia] &&
+            (current_game_state_variables.current_day > dia || current_screen == ENDING_CARD_SCREEN))
+        {
+            dias_concluidos++;
+        }
+        else if (dia_com_falha == 0)
+        {
+            dia_com_falha = dia;
+        }
+    }
+
+    if (dia_com_falha != 0) etapa(TextFormat("      travou no Dia %d", dia_com_falha));
+    etapa(TextFormat("      %d de 9 dias concluidos sem falar com nenhum NPC, em %.0fs",
+                     dias_concluidos, GetTime() - inicio));
+
+    checar("CT-79", "Sem falar com nenhum NPC, o jogador conclui os 9 dias jogaveis e chega ao final",
+           algum_npc_barra_o_caminho && !abriu_conversa && active_npc_id < 0 && dia_com_falha == 0 &&
+           dias_jogados == 9 && dias_concluidos == 9 && current_screen == ENDING_CARD_SCREEN);
+
+    iniciar_partida_nova();
+}
+
 /* Confere, em cada dia, se os textos dos botoes da mesa cabem neles e se a mesa cabe na janela da IARA. */
 static int conferir_mesas_na_janela(int largura, int altura)
 {
@@ -1705,6 +2017,7 @@ int main(void)
     testar_caminhos_do_dia();
     testar_saida_no_meio_do_dia();
     testar_campanha();
+    testar_ignorar_npcs();
 
     /* CONFIGURACOES abre a propria tela e VOLTAR devolve o jogador ao menu. */
     current_game_state_variables.current_screen = handle_menu_action(CONFIGURACOES);
