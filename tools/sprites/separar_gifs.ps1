@@ -29,6 +29,35 @@ function Clear-WhiteBackground($bmp, $name) {
     if ($removed -gt 0) { Write-Host "AVISO: fundo branco removido em $name" }
 }
 
+# Gera um frame do andar a partir do sprite parado da direção: encurta uma perna e sobe o tronco 1 px.
+# $side: -1 levanta a perna da esquerda, 1 a da direita, 0 devolve o sprite parado (pés no chão).
+function New-WalkFrame($source, $side) {
+    $frame = New-Object System.Drawing.Bitmap 32, 32, ([System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+    # Limites do personagem dentro do quadro
+    $top = 32; $bottom = -1
+    foreach ($y in 0..31) { foreach ($x in 0..31) { if ($source.GetPixel($x, $y).A -gt 0) {
+        if ($y -lt $top) { $top = $y }
+        if ($y -gt $bottom) { $bottom = $y }
+    } } }
+    # As pernas são o último quarto do corpo; os pés (3 linhas de baixo) dizem onde dividir esquerda e direita
+    $hip = $bottom - [math]::Round(($bottom - $top + 1) * 0.25) + 1
+    $feet = 0..31 | Where-Object { $x = $_; ($bottom - 2)..$bottom | Where-Object { $source.GetPixel($x, $_).A -gt 0 } }
+    $split = [math]::Floor((($feet | Measure-Object -Minimum).Minimum + ($feet | Measure-Object -Maximum).Maximum) / 2)
+    $lift = 2
+
+    foreach ($y in 0..31) { foreach ($x in 0..31) {
+        $srcY = $y
+        if ($side -ne 0) {
+            $isLifted = ($side -lt 0 -and $x -le $split) -or ($side -gt 0 -and $x -gt $split)
+            if ($y -lt $hip - 1) { $srcY = $y + 1 }                     # tronco sobe 1 px
+            elseif ($y -eq $hip - 1) { $srcY = $hip }                   # cintura ocupa o espaço que o tronco deixou
+            elseif ($y -ge $hip -and $isLifted) { $srcY = $y + $lift }  # perna levantada: some o trecho do joelho
+        }
+        if ($srcY -le 31) { $frame.SetPixel($x, $y, $source.GetPixel($x, $srcY)) }
+    } }
+    return ,$frame
+}
+
 foreach ($dir in Get-ChildItem "code/assets/sprites/PERSONAGENS" -Directory) {
     $walk = Join-Path $dir.FullName "walk"
     New-Item -ItemType Directory -Force $walk | Out-Null
@@ -58,5 +87,22 @@ foreach ($dir in Get-ChildItem "code/assets/sprites/PERSONAGENS" -Directory) {
         }
         $image.Dispose()
         Write-Host "$($dir.Name): $direction a partir do GIF"
+    }
+
+    # Direções sem GIF: gera os 4 frames a partir do sprite parado (o mesmo que o jogo mostra sem andar)
+    foreach ($direction in "north", "south", "north-east", "north-west", "south-east", "south-west") {
+        $gif = "$($dir.FullName)\Idle_walking-4-frames_$direction.gif", "$($dir.FullName)\rotations\Idle_walking-4-frames_$direction.gif" | Where-Object { Test-Path $_ } | Select-Object -First 1
+        if ($gif) { continue }
+        $still = "$($dir.FullName)\$direction.png", "$($dir.FullName)\rotations\$direction.png" | Where-Object { Test-Path $_ } | Select-Object -First 1
+        if (-not $still) { Write-Host "AVISO: $($dir.Name) sem sprite $direction"; continue }
+        $source = New-Object System.Drawing.Bitmap $still
+        $sides = 0, -1, 0, 1
+        for ($n = 0; $n -lt 4; $n++) {
+            $frame = New-WalkFrame $source $sides[$n]
+            Save-Walk $frame[0] (Join-Path $walk "$direction-$n.png")
+            $frame[0].Dispose()
+        }
+        $source.Dispose()
+        Write-Host "$($dir.Name): $direction gerado do sprite parado"
     }
 }

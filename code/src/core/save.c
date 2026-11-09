@@ -140,6 +140,25 @@ static bool apply_save_line(const char *key, const char *value,
         if (!parse_bool(value, &state->is_resolved)) return false;
         *fields_read |= FIELD_IS_RESOLVED;
     }
+    else if (strcmp(key, "has_cheat_sheet") == 0)
+    {
+        // Não entra em ALL_FIELDS: saves anteriores à colinha continuam válidos, sem ela.
+        if (!parse_bool(value, &state->has_cheat_sheet)) return false;
+    }
+    else if (strcmp(key, "evidence_mask") == 0)
+    {
+        // Estes também são opcionais: saves anteriores aos próximos dias continuam válidos.
+        if (!parse_ranged(value, 0, 1000000, &number)) return false;
+        state->evidence_mask = (unsigned int)number;
+    }
+    else if (strcmp(key, "found_mariana") == 0)
+    {
+        if (!parse_bool(value, &state->found_mariana)) return false;
+    }
+    else if (strcmp(key, "proof_succeeded") == 0)
+    {
+        if (!parse_bool(value, &state->proof_succeeded)) return false;
+    }
     else if (strcmp(key, "overall_points") == 0)
     {
         // Pontuação geral pode ficar negativa.
@@ -185,6 +204,14 @@ static bool apply_save_line(const char *key, const char *value,
     return true;
 }
 
+/**
+ * @brief Monta o caminho da cópia de segurança do save.
+ */
+static bool build_backup_path(const char *path, char *buffer, size_t size)
+{
+    return snprintf(buffer, size, "%s.bak", path) < (int)size;
+}
+
 // ---------------------------------------------------------------------------
 // SERIALIZAÇÃO
 // ---------------------------------------------------------------------------
@@ -212,6 +239,10 @@ static int build_save_body(char *buffer, size_t size)
                            "mode_type=%d\n"
                            "user_investigated=%d\n"
                            "is_resolved=%d\n"
+                           "has_cheat_sheet=%d\n"
+                           "evidence_mask=%u\n"
+                           "found_mariana=%d\n"
+                           "proof_succeeded=%d\n"
                            "overall_points=%d\n"
                            "automation_points=%u\n"
                            "perception_points=%u\n"
@@ -222,6 +253,10 @@ static int build_save_body(char *buffer, size_t size)
                            state->mode_type ? 1 : 0,
                            state->user_investigated ? 1 : 0,
                            state->is_resolved ? 1 : 0,
+                           state->has_cheat_sheet ? 1 : 0,
+                           state->evidence_mask,
+                           state->found_mariana ? 1 : 0,
+                           state->proof_succeeded ? 1 : 0,
                            stats->current_overall_points,
                            stats->current_automation_points,
                            stats->current_perception_points,
@@ -271,14 +306,27 @@ save_result save_game_state(const char *path)
         return SAVE_IO_ERROR;
     }
 
-    // No Windows, rename() falha se o destino já existe, então o save antigo
-    // é removido antes. O arquivo novo já está completo no .tmp a essa altura.
-    remove(path);
-    if (rename(temp_path, path) != 0)
+    // No Windows, rename() falha se o destino já existe, então o save antigo sai
+    // do caminho antes. Ele vira cópia de segurança até o novo estar no lugar: se a
+    // troca falhar ele volta, e se o jogo cair no meio o carregamento o encontra.
+    char backup_path[512];
+    if (!build_backup_path(path, backup_path, sizeof(backup_path)))
     {
         remove(temp_path);
         return SAVE_IO_ERROR;
     }
+
+    remove(backup_path);
+    bool has_backup = rename(path, backup_path) == 0;
+
+    if (rename(temp_path, path) != 0)
+    {
+        remove(temp_path);
+        if (has_backup) rename(backup_path, path);
+        return SAVE_IO_ERROR;
+    }
+
+    remove(backup_path);
 
     return SAVE_OK;
 }
@@ -290,6 +338,16 @@ save_result save_game_state(const char *path)
 save_result load_game_state(const char *path)
 {
     FILE *file = fopen(path, "rb");
+    if (file == NULL)
+    {
+        // Sem o save, vale a cópia de segurança de uma gravação interrompida.
+        char backup_path[512];
+        if (build_backup_path(path, backup_path, sizeof(backup_path)))
+        {
+            file = fopen(backup_path, "rb");
+        }
+    }
+
     if (file == NULL)
     {
         return SAVE_NOT_FOUND;

@@ -1,0 +1,26 @@
+IARA - jogo para Windows
+
+COMO JOGAR
+1. Extraia o .zip inteiro em qualquer pasta onde voce possa gravar
+   (Area de Trabalho, Documentos ou um pendrive).
+2. De dois cliques em iara.exe.
+
+Nao precisa instalar nada, criar conta, ter internet nem ser administrador.
+
+CONTROLES
+- WASD ou setas: andar e navegar nos menus.
+- F11: alterna entre janela e tela cheia.
+- CONFIGURACOES, no menu: alto contraste, brilho e tela cheia.
+- ESC: volta ao menu nos creditos e nas configuracoes, sai do computador e volta ao escritorio; nas outras telas, salva e fecha o jogo.
+- ESPACO: interage com o que estiver perto. No mural, voce pega a colinha,
+  que fica colada no monitor do computador.
+- As demais teclas aparecem na tela durante o jogo.
+
+PROGRESSO
+O jogo salva sozinho ao fechar, no arquivo iara.save, ao lado do iara.exe.
+Para comecar do zero, apague esse arquivo. Se a pasta nao permitir gravacao
+(pasta do sistema, por exemplo), o jogo funciona, mas o progresso nao fica salvo.
+
+SE ALGO DER ERRADO
+- Mantenha as pastas "code" e "docs" ao lado do iara.exe: as imagens ficam nelas.
+- O computador precisa de placa de video com suporte a OpenGL 3.3.

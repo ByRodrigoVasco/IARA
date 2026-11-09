@@ -20,6 +20,7 @@ as inconsistências. Assim, a mecânica ensina ao mesmo tempo ética em IA e ló
 
 - **Motor e gameplay:** C, para o game loop, menus, gerenciamento de estado e persistência.
 - **Renderização:** [raylib](https://www.raylib.com/), biblioteca gráfica em C, 2D.
+- **Áudio:** raylib, com música em loop durante a navegação do menu, configurações e créditos, música de gameplay e efeitos para cliques e passos durante a movimentação. A voz da IARA acompanha a digitação da sugestão e para quando o texto termina. O volume geral pode ser ajustado nas configurações e fica salvo nas preferências.
 - **Regras puras:** Haskell, para pontuação, validação de respostas e seleção de conteúdo.
 - **Versionamento:** GitHub, com o fluxo descrito no [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
@@ -74,7 +75,18 @@ Ou, no VS Code com a pasta `IARA` aberta, aperte `Ctrl + Shift + B`: ele compila
 ./iara.exe
 ```
 
+O jogo abre em janela, que pode ser redimensionada. **F11** ou a caixa **Tela cheia**, em `CONFIGURAÇÕES` no menu, alternam entre janela e tela cheia. A mesma tela ajusta o brilho e o alto contraste, e as escolhas ficam salvas em `iara.ini`. **ESC** sai do computador e volta ao escritório, e volta ao menu nos créditos e nas configurações; nas outras telas, salva e fecha o jogo.
+
 > **Versão para terminal (PIF):** em desenvolvimento.
+
+### Gerar o pacote para outras máquinas
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/pacote/empacotar.ps1
+powershell -ExecutionPolicy Bypass -File tools/pacote/testar_pacote.ps1
+```
+
+O primeiro comando gera `build/IARA-windows.zip`, com o executável, as DLLs e os assets. Quem recebe só extrai e abre o `iara.exe`: não precisa de instalação, conta, internet nem administrador. O segundo testa o pacote fora do ambiente de desenvolvimento; o teste em máquina real segue o [roteiro de máquina limpa](docs/fds/testes/maquina-limpa.md).
 
 ## Entregas por disciplina
 
