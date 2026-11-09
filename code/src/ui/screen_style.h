@@ -21,6 +21,18 @@ void style_backdrop(void);
 /** @brief Título grande no alto da tela e, se houver, uma linha menor embaixo. */
 void style_title(const char *title, const char *subtitle);
 
+/** @brief Título centralizado no alto da tela e, se houver, uma linha menor embaixo. */
+void style_title_centered(const char *title, const char *subtitle);
+
+/** @brief Primeiro y do conteúdo das telas centralizadas, abaixo do título. */
+float style_content_top(void);
+
+/** @brief Moldura de cartão (fundo, sombra e borda). Escolhido: borda vermelha e fundo mais claro. */
+void style_card_frame(Rectangle bounds, bool selected, bool accent);
+
+/** @brief Texto com quebra de linha, cada linha centralizada na largura. Devolve a altura usada. */
+float style_wrapped_text_centered(const char *text, float x, float y, float width, float size, Color color);
+
 /** @brief Altura que uma linha de lista ocupa (com o espaço entre elas), no tamanho atual da janela. */
 float style_row_height(void);
 

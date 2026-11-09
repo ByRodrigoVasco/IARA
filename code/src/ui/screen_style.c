@@ -128,7 +128,44 @@ Rectangle style_button(Rectangle bounds, const char *label, bool selected, bool 
     return bounds;
 }
 
-float style_wrapped_text(const char *text, float x, float y, float width, float size, Color color)
+void style_title_centered(const char *title, const char *subtitle)
+{
+    float scale = get_ui_scale();
+    float width = (float)GetScreenWidth();
+    float title_size = style_font_size(1.0f);
+    float y = TEXT_VERTICAL_MARGIN * 1.2f * scale;
+    Vector2 measure = MeasureTextEx(default_game_font, title, title_size, letter_spacing(title_size));
+
+    DrawTextEx(default_game_font, title, (Vector2){(width - measure.x) / 2.0f, y}, title_size, letter_spacing(title_size), STYLE_TEXT_COLOR);
+    if (subtitle != NULL && subtitle[0] != '\0')
+    {
+        float size = style_font_size(0.42f);
+
+        measure = MeasureTextEx(default_game_font, subtitle, size, letter_spacing(size));
+        DrawTextEx(default_game_font, subtitle, (Vector2){(width - measure.x) / 2.0f, y + title_size + 6.0f * scale}, size, letter_spacing(size), STYLE_DIM_COLOR);
+    }
+}
+
+float style_content_top(void)
+{
+    float scale = get_ui_scale();
+
+    return TEXT_VERTICAL_MARGIN * 1.2f * scale + style_font_size(1.0f) + style_font_size(0.42f) + 40.0f * scale;
+}
+
+void style_card_frame(Rectangle bounds, bool selected, bool accent)
+{
+    float scale = get_ui_scale();
+    Color fill = selected ? (Color){54, 28, 62, 255} : (Color){30, 20, 36, 255};
+    Color border = selected ? STYLE_BLOOD_COLOR : (Color){90, 70, 100, 255};
+
+    if (accent && !selected) fill = (Color){36, 24, 44, 255};
+    DrawRectangleRec((Rectangle){bounds.x + 5.0f * scale, bounds.y + 6.0f * scale, bounds.width, bounds.height}, (Color){0, 0, 0, 110});
+    DrawRectangleRec(bounds, fill);
+    DrawRectangleLinesEx(bounds, (selected ? 4.0f : 2.0f) * scale, border);
+}
+
+static float wrapped_text(const char *text, float x, float y, float width, float size, Color color, bool centered)
 {
     char line[256];
     const char *cursor = text;
@@ -150,7 +187,9 @@ float style_wrapped_text(const char *text, float x, float y, float width, float 
         snprintf(candidate, sizeof(candidate), "%s%s%s", line, line[0] != '\0' ? " " : "", word);
         if (line[0] != '\0' && MeasureTextEx(default_game_font, candidate, size, letter_spacing(size)).x > width)
         {
-            DrawTextEx(default_game_font, line, (Vector2){x, y + used}, size, letter_spacing(size), color);
+            float line_x = centered ? x + (width - MeasureTextEx(default_game_font, line, size, letter_spacing(size)).x) / 2.0f : x;
+
+            DrawTextEx(default_game_font, line, (Vector2){line_x, y + used}, size, letter_spacing(size), color);
             used += line_height;
             snprintf(line, sizeof(line), "%s", word);
         }
@@ -161,10 +200,22 @@ float style_wrapped_text(const char *text, float x, float y, float width, float 
     }
     if (line[0] != '\0')
     {
-        DrawTextEx(default_game_font, line, (Vector2){x, y + used}, size, letter_spacing(size), color);
+        float line_x = centered ? x + (width - MeasureTextEx(default_game_font, line, size, letter_spacing(size)).x) / 2.0f : x;
+
+        DrawTextEx(default_game_font, line, (Vector2){line_x, y + used}, size, letter_spacing(size), color);
         used += line_height;
     }
     return used;
+}
+
+float style_wrapped_text(const char *text, float x, float y, float width, float size, Color color)
+{
+    return wrapped_text(text, x, y, width, size, color, false);
+}
+
+float style_wrapped_text_centered(const char *text, float x, float y, float width, float size, Color color)
+{
+    return wrapped_text(text, x, y, width, size, color, true);
 }
 
 void style_progress(float percent, const char *label)
