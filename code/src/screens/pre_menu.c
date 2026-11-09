@@ -8,6 +8,7 @@
 #include "macros.h"
 #include "helper.h"
 #include "accessibility.h"
+#include "fonts.h"
 
 // Largura do nome IARA em 1080p, como fração da imagem original.
 #define IARA_NAME_SCALE_AT_REFERENCE 0.5f
@@ -15,6 +16,14 @@
 static bool fade_in_animation_finished = false;
 
 bool can_close_pre_menu_safely = false;
+
+// O jogador pediu para pular a abertura (tecla ou clique): a abertura some depressa em vez de esperar o fim
+static bool skip_requested = false;
+
+void pre_menu_request_skip(void)
+{
+    skip_requested = true;
+}
 
 static Color bg_color;
 /*
@@ -29,6 +38,10 @@ static Texture2D iara_name_texture;
 void initialize_pre_menu_textures(void)
 {
     bg_color = GetColor(BG_COLOR_HEX);
+    skip_requested = false;
+    fade_in_animation_finished = false;
+    can_close_pre_menu_safely = false;
+    textures_color.a = 0;
 
     bg_office_texture = load_smooth_texture("code/assets/sprites/tela-inicial/escritorio-tela-inicial.png");
     iara_name_texture = load_smooth_texture("code/assets/sprites/tela-inicial/iara-nome.png");
@@ -52,11 +65,19 @@ static void draw_pre_menu_textures(void)
 void close_pre_menu(void)
 {
     // PODE FECHAR APENAS DEPOIS DA ANIMAÇÃO TERMINAR.
-    fade_out_texture(10, &textures_color, &can_close_pre_menu_safely);
+    fade_out_texture(skip_requested ? 40 : 10, &textures_color, &can_close_pre_menu_safely);
 }
 
 void render_pre_menu(void)
 {
+    // Qualquer tecla (menos o F11, que troca a tela cheia) ou clique pula a abertura
+    for (int key = GetKeyPressed(); key != 0; key = GetKeyPressed())
+    {
+        if (key != KEY_F11) skip_requested = true;
+    }
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) skip_requested = true;
+    if (skip_requested) fade_in_animation_finished = true;
+
     if (fade_in_animation_finished)
     {
         close_pre_menu();
@@ -70,6 +91,15 @@ void render_pre_menu(void)
     ClearBackground(bg_color);
 
     draw_pre_menu_textures();
+
+    // O jogador precisa saber que dá para pular
+    {
+        const char *hint = "Aperte qualquer tecla para pular";
+        float hint_size = DEFAULT_TEXT_FONT_SIZE * 0.8f * get_ui_scale();
+        Vector2 hint_measure = MeasureTextEx(default_game_font, hint, hint_size, hint_size * 0.06f);
+
+        DrawTextEx(default_game_font, hint, (Vector2){(GetScreenWidth() - hint_measure.x) / 2.0f, GetScreenHeight() - hint_measure.y - 24.0f * get_ui_scale()}, hint_size, hint_size * 0.06f, (Color){200, 192, 206, (unsigned char)(textures_color.a * 0.7f)});
+    }
 
     end_game_drawing();
 }

@@ -40,6 +40,11 @@ void render_pre_menu(void);
 void close_pre_menu(void);
 
 /**
+ * @brief Pede para pular a abertura. A abertura também pula sozinha com qualquer tecla ou clique.
+ */
+void pre_menu_request_skip(void);
+
+/**
  * @brief Descarrega as texturas do pré-menu da memória de vídeo (VRAM).
  * Essencial chamar antes de fechar o jogo ou trocar de cena para evitar Memory Leaks.
  */

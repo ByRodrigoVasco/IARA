@@ -301,8 +301,27 @@ static void testar_estado_inicial(void)
 
 static void testar_abertura(void)
 {
-    titulo("Abertura do jogo (CT-27)");
+    titulo("Abertura do jogo (CT-27 e UX-17)");
     etapa("[1/7] tela de abertura e menu principal");
+
+    /* Pular a abertura: com o pedido de pular, ela some em poucos quadros e entrega o menu. */
+    handle_state_initialization();
+    current_game_state_variables.current_screen = PRE_MENU_SCREEN;
+    pre_menu_request_skip();
+
+    int quadros_pulando = 0;
+
+    while (current_game_state_variables.current_screen == PRE_MENU_SCREEN && quadros_pulando < LIMITE_DE_QUADROS)
+    {
+        handle_state_machine();
+        quadros_pulando++;
+    }
+
+    checar("UX-17", "Pedir para pular a abertura entrega o menu em poucos quadros",
+           current_game_state_variables.current_screen == MENU_SCREEN && quadros_pulando < 60);
+
+    /* Volta ao inicio para o teste da abertura inteira, abaixo */
+    unload_menu();
 
     handle_state_initialization();
     current_game_state_variables.current_screen = PRE_MENU_SCREEN;
