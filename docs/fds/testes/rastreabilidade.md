@@ -25,7 +25,7 @@ A coluna de issue traz só o que foi confirmado no Jira; as demais ficam para a 
 | RF12 | Pontuação por método | `resolve_day_tasks()` em `core/game_state.c` | CT-47 a CT-49, CT-51, CT-58, CT-63 | | 🟡 | Pontos por chamado: 10 sozinho ou conferindo, +5 por erro da IARA pego, 0 sem conferir, +5 por investigar. Adapta o GDD 7.3, que pontua por tarefa, e a equipe ainda decide o conflito com a US11. Acumula entre os dias |
 | RF13 | Múltiplos finais | `get_game_ending()` em `core/game_state.c` | CT-70, CT-72 | | 🟡 | Os 4 finais seguem o GDD 6.5. O limiar do Vínculo é proposta, e a US12 descreve finais diferentes: a equipe precisa decidir |
 | RF14 | Tensão progressiva | Cartões e flashes em `game/calendar.c`, roteiros em `screens/computer_days.h` | CT-71 | | 🟡 | Textos propostos, a validar com a equipe |
-| RF15 | Interação opcional com NPCs | Mensagens opcionais nos dias 3, 27 e 58, em `screens/computer_days.h` | CT-72 | | 🟡 | As conversas acontecem pelo computador: ainda não há NPCs andando no mapa |
+| RF15 | Interação opcional com NPCs | NPCs no mapa em `game/npcs.c`, diálogo em `screens/game_loop.c`; mensagens opcionais nos dias 3, 27 e 58, em `screens/computer_days.h` | `test_npcs`, CT-72, CT-79 | PI2-251 | 🟡 | Ignorar os NPCs não bloqueia o progresso (CT-79). Falta testar a conversa aberta com o ESPAÇO de verdade |
 
 ## Requisitos não funcionais
 
