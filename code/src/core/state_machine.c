@@ -18,6 +18,7 @@
 #include "loading.h"
 #include "screen_style.h"
 #include "state_machine.h"
+#include "audio.h"
 
 bool is_game_to_close = false;
 
@@ -271,6 +272,8 @@ void handle_state_machine(void)
         current_game_state_variables.current_screen = MENU_SCREEN;
         break;
     }
+
+    update_audio_for_screen(current_game_state_variables.current_screen);
 }
 
 bool escape_closes_current_screen(void)

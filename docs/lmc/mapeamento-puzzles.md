@@ -1,7 +1,8 @@
 # Mapeamento de puzzles e auditoria de teoria
 
-Levantamento feito em 02/11/2026 sobre o código da branch `feature/desktop-configuracoes-animacao`.
-Cobre o PI2-217 (puzzle → conceito formal), o PI2-214 (auditoria de telas de teoria) e o
+Levantamento feito em 02/11/2026 sobre o código da branch `feature/desktop-configuracoes-animacao`
+e revisto em 06/11/2026 sobre a `develop` (`d736f64`), quando os puzzles dos dias 3 a 100 já
+existiam. Cobre o PI2-217 (puzzle → conceito formal), o PI2-214 (auditoria de telas de teoria) e o
 PI2-215 (conceito embutido na narrativa). A revisão com o material de LMC é o PI2-218 e
 **ainda não foi feita**: nada aqui substitui a validação de quem cuida da lógica na equipe.
 
@@ -105,6 +106,8 @@ No Dia 100 há 3 provas aceitas: `D` com `¬D`, `H` com `¬H`, ou `D`, `D → C`
 
 ## Auditoria de telas de teoria
 
+### Primeira passagem, 02/11/2026: o Dia 1
+
 **Resultado: nenhuma tela de teoria isolada.** Foram revisados o roteiro inteiro dos chamados, o
 cartão do dia e o escritório.
 
@@ -121,6 +124,40 @@ cartão do dia e o escritório.
 
 Antes desta revisão, o Dia 1 não tinha nenhum conteúdo de lógica, embora o GDD peça condicional
 e modus ponens. O passo 7 corrige isso. O bilhete do mural é a dica por exploração da US04.
+
+### Segunda passagem, 06/11/2026: os 8 dias restantes
+
+A primeira passagem foi escrita antes de os puzzles dos dias 3 a 100 existirem: eles entraram em
+[`computer_days.h`](../../code/src/screens/computer_days.h) no mesmo dia, pelo `b8063ba`. Esta
+passagem cobre esses 8 dias, os enunciados das mesas, as dicas de erro e os bilhetes do mural.
+
+**Nenhuma tela de teoria isolada também aqui.** Nenhum dia abre com uma tela de conceito antes do
+puzzle: todos vão do recado da IARA direto para a mesa. O que apareceu foi mais fino — pedaços de
+explicação em voz de apostila *dentro* de documentos que deveriam ser de alguém.
+
+| Dia | Achado | O que foi feito |
+|---|---|---|
+| 3 | `"V é verdadeiro, F é falso."` era legenda de notação na voz do jogo, e o enunciado era o único sem remetente | O enunciado virou o bilhete que o Tiago deixou no monitor, com a norma e a legenda na fala dele |
+| 12 | `"Compare cada par na tabela-verdade."` instruía o método; a Sônia, do Financeiro, não falaria assim | A pergunta passou a ser dela: "cada par abaixo continua dizendo a mesma coisa?" |
+| 12 | Dica `"Negar um ∨ pede o ∧ do outro lado."` enunciava De Morgan como regra de livro | Virou uma linha a testar no par B, sem nomear a lei |
+| 41 | Enunciado eram três linhas de `∀`/`∃` sem remetente nem documento, único dia sem moldura | Passou a ser a ficha do treino, com as mesmas três exigências |
+| 41 | Dica `"Um ∀ cai com um só contraexemplo."` era o princípio abstrato | Virou "um registro com CPF já quebra a exigência" |
+| 89 | Dica `"Todo A é B não diz que todo B é A."` usava `A` e `B` que não existem no puzzle | Passou a falar dos próprios conjuntos: convidado e funcionário |
+| 100 | `"Use só o que a contradição precisa…"` era regra de exercício, embora o Renê estivesse falando na tela anterior | O desafio continua na fala dele, entre aspas |
+
+Ficaram como estavam, por já nascerem de alguém ou de um documento:
+
+| Item | Por quê |
+|---|---|
+| Bilhete do mural do Dia 1 | Explica `P -> Q`, mas assinado "Estagiário do ano passado" e pregado no mural |
+| Colinha | Objeto do cenário, pego junto com o bilhete; é legenda de símbolos, não aula |
+| Dias 27, 58, 74, 89 | Enunciados já vêm de "Ata da diretoria", "Portaria", "Auditoria" e "Lista da sala" |
+| Dia 1, passo 7 | A norma já vinha no e-mail do Tiago |
+| Bilhetes dos dias 12, 41, 58, 74 e 89 | São pistas da narrativa, sem conteúdo de lógica |
+| Dicas dos dias 27, 58, 74 e 100 | Falam das variáveis do próprio puzzle, não de letras genéricas |
+
+**Limite desta passagem:** o critério foi *de quem é a voz*, não se o conceito está correto. A
+revisão de conteúdo com LMC (PI2-218) continua pendente, e os textos novos entram nela.
 
 ## Pontos para a equipe
 

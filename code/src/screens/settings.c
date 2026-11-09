@@ -7,7 +7,7 @@
 
 // Medidas em 1920x1080, multiplicadas por get_ui_scale().
 #define PANEL_WIDTH 1000.0f
-#define PANEL_HEIGHT 570.0f
+#define PANEL_HEIGHT 680.0f
 #define PANEL_PADDING 50.0f
 #define ROW_HEIGHT 95.0f
 #define ROWS_TOP 150.0f
@@ -45,11 +45,11 @@ static Rectangle get_row_rectangle(int option)
         (ROW_HEIGHT - 10.0f) * scale};
 }
 
-// Barra do brilho, alinhada à direita da linha, deixando espaço para a porcentagem.
-static Rectangle get_slider_rectangle(void)
+// Sliders alinhados à direita da linha, deixando espaço para a porcentagem.
+static Rectangle get_slider_rectangle(int option)
 {
     float scale = get_ui_scale();
-    Rectangle row = get_row_rectangle(SETTINGS_BRIGHTNESS);
+    Rectangle row = get_row_rectangle(option);
     float value_width = 130.0f * scale;
     float width = SLIDER_WIDTH * scale;
     float height = SLIDER_HEIGHT * scale;
@@ -64,6 +64,14 @@ static Rectangle get_slider_rectangle(void)
 static bool is_option_checked(int option)
 {
     return (option == SETTINGS_CONTRAST) ? is_high_contrast_enabled() : is_fullscreen_enabled();
+}
+
+static void set_master_volume(float volume)
+{
+    if (volume < 0.0f) volume = 0.0f;
+    if (volume > 1.0f) volume = 1.0f;
+
+    SetMasterVolume(volume);
 }
 
 bool activate_settings_option(int option)
@@ -86,7 +94,7 @@ bool activate_settings_option(int option)
     }
 }
 
-// Teclado: W/S ou setas escolhem a linha, A/D ou setas ajustam o brilho, Enter ou Espaço acionam e ESC volta ao menu.
+// Teclado: W/S ou setas escolhem a linha, A/D ou setas ajustam sliders, Enter ou Espaço acionam e ESC volta ao menu.
 static bool handle_settings_keyboard(void)
 {
     if (IsKeyPressed(KEY_ESCAPE)) return true;
@@ -106,6 +114,11 @@ static bool handle_settings_keyboard(void)
         if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D)) set_game_brightness(get_game_brightness() + BRIGHTNESS_STEP);
         if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_A)) set_game_brightness(get_game_brightness() - BRIGHTNESS_STEP);
     }
+    else if (selected_option == SETTINGS_VOLUME)
+    {
+        if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D)) set_master_volume(GetMasterVolume() + 0.1f);
+        if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_A)) set_master_volume(GetMasterVolume() - 0.1f);
+    }
 
     if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE))
     {
@@ -115,7 +128,7 @@ static bool handle_settings_keyboard(void)
     return false;
 }
 
-// Mouse: mover destaca a linha, clicar aciona e arrastar na barra ajusta o brilho.
+// Mouse: mover destaca a linha, clicar aciona e arrastar nas barras ajusta os valores.
 static bool handle_settings_mouse(void)
 {
     if (!IsWindowFocused()) return false;
@@ -136,17 +149,26 @@ static bool handle_settings_mouse(void)
 
     if (mouse_moved || IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) selected_option = hovered;
 
-    if (hovered == SETTINGS_BRIGHTNESS)
+    if (hovered == SETTINGS_BRIGHTNESS || hovered == SETTINGS_VOLUME)
     {
-        Rectangle slider = get_slider_rectangle();
+        Rectangle slider = get_slider_rectangle(hovered);
         float reach = SLIDER_HANDLE_WIDTH * get_ui_scale();
         bool on_slider = mouse.x >= slider.x - reach && mouse.x <= slider.x + slider.width + reach;
 
         if (on_slider && IsMouseButtonDown(MOUSE_BUTTON_LEFT))
         {
             float progress = (mouse.x - slider.x) / slider.width;
+            if (progress < 0.0f) progress = 0.0f;
+            if (progress > 1.0f) progress = 1.0f;
 
-            set_game_brightness(BRIGHTNESS_MIN + (progress * (BRIGHTNESS_MAX - BRIGHTNESS_MIN)));
+            if (hovered == SETTINGS_BRIGHTNESS)
+            {
+                set_game_brightness(BRIGHTNESS_MIN + (progress * (BRIGHTNESS_MAX - BRIGHTNESS_MIN)));
+            }
+            else
+            {
+                set_master_volume(progress);
+            }
         }
 
         return false;
@@ -187,7 +209,7 @@ static void draw_checkbox(Rectangle row, bool checked)
 static void draw_brightness_slider(Rectangle row, float font_size)
 {
     float scale = get_ui_scale();
-    Rectangle slider = get_slider_rectangle();
+    Rectangle slider = get_slider_rectangle(SETTINGS_BRIGHTNESS);
     float progress = (get_game_brightness() - BRIGHTNESS_MIN) / (BRIGHTNESS_MAX - BRIGHTNESS_MIN);
     float handle_w = SLIDER_HANDLE_WIDTH * scale;
     float handle_h = SLIDER_HANDLE_HEIGHT * scale;
@@ -207,6 +229,29 @@ static void draw_brightness_slider(Rectangle row, float font_size)
                font_size, letter_spacing, WHITE);
 }
 
+static void draw_volume_slider(Rectangle row, float font_size)
+{
+    float scale = get_ui_scale();
+    Rectangle slider = get_slider_rectangle(SETTINGS_VOLUME);
+    float volume = GetMasterVolume();
+    float handle_w = SLIDER_HANDLE_WIDTH * scale;
+    float handle_h = SLIDER_HANDLE_HEIGHT * scale;
+    float handle_x = slider.x + (volume * slider.width) - (handle_w / 2.0f);
+    float handle_y = row.y + (row.height - handle_h) / 2.0f;
+
+    DrawRectangleRec(slider, CONTROL_COLOR);
+    DrawRectangleLinesEx(slider, 2.0f, WHITE);
+    DrawRectangleRec((Rectangle){handle_x, handle_y, handle_w, handle_h}, WHITE);
+
+    const char *value = TextFormat("%d%%", (int)((volume * 100.0f) + 0.5f));
+    float letter_spacing = font_size * LETTER_SPACING_RATIO;
+    Vector2 size = MeasureTextEx(default_game_font, value, font_size, letter_spacing);
+
+    DrawTextEx(default_game_font, value,
+               (Vector2){row.x + row.width - size.x - (SELECTION_BAR_WIDTH * 2.0f * scale), row.y + (row.height - size.y) / 2.0f},
+               font_size, letter_spacing, WHITE);
+}
+
 void initialize_settings_screen(void)
 {
     // O menu já mantém o escritório na memória: abrir as configurações não decodifica a imagem de novo
@@ -216,7 +261,7 @@ void initialize_settings_screen(void)
 
 bool render_settings_screen(void)
 {
-    const char *labels[SETTINGS_OPTION_COUNT] = {"Alto contraste", "Brilho", "Tela cheia", "VOLTAR AO MENU"};
+    const char *labels[SETTINGS_OPTION_COUNT] = {"Alto contraste", "Brilho", "Volume", "Tela cheia", "VOLTAR AO MENU"};
 
     bool go_back = handle_settings_keyboard();
     go_back = handle_settings_mouse() || go_back;
@@ -258,6 +303,10 @@ bool render_settings_screen(void)
         if (option == SETTINGS_BRIGHTNESS)
         {
             draw_brightness_slider(row, row_font);
+        }
+        else if (option == SETTINGS_VOLUME)
+        {
+            draw_volume_slider(row, row_font);
         }
         else if (option != SETTINGS_BACK)
         {
