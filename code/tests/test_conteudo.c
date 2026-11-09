@@ -738,6 +738,150 @@ static int contar_mesas_aceitas(const DialogStep *mesa)
     return aceitas;
 }
 
+/* ------------------------------------------------------------------------ */
+/* US03: manual ou automatico em cada tarefa jogavel (CT-77 e CT-78)          */
+/* ------------------------------------------------------------------------ */
+
+#define SO_SOZINHO 0      /* Resolve todo chamado sem abrir a IARA */
+#define SO_SEM_CONFERIR 1 /* Abre a IARA e envia toda sugestao como veio */
+
+/* Resolve a mesa sozinho com a primeira marcacao aceita. O treino e a prova nao
+ * tem destino por linha, entao a resposta sai da propria regra da mesa. */
+static void resolver_a_mesa_sozinho(void)
+{
+    DialogStep *mesa = chamado_atual();
+
+    for (int combinacao = 0; combinacao < (1 << mesa->card_count); combinacao++)
+    {
+        for (int c = 0; c < mesa->card_count; c++) triage_choices[c] = (combinacao >> c) & 1;
+
+        if (count_board_wrong(mesa, triage_choices) == 0) break;
+    }
+
+    submit_triage();
+    continue_after_answer();
+}
+
+/* Joga um dia inteiro usando sempre a mesma forma de resolver. Devolve false se algum
+ * chamado nao ofereceu as duas formas, se a IARA nao respondeu na hora ou se um
+ * chamado precisou de mais de uma acao para andar. */
+static bool jogar_o_dia_com_uma_forma(int dia, int forma, bool sem_memoria, bool tarjar)
+{
+    reiniciar_tarefa();
+    start_game_day(dia);
+    reset_computer_progress();
+    current_game_state_variables.evidence_mask = EVIDENCE_NO_RESIGNATION_LETTER | EVIDENCE_BADGE_AFTER_LEAVING | EVIDENCE_NO_HUMAN_ORDER;
+
+    if (sem_memoria) iara_memory = 0;
+
+    bool tudo_certo = true;
+    int passos = 0;
+
+    while (current_step_index < REPORT_STEP && passos++ <= TOTAL_STEPS)
+    {
+        DialogStep *passo = chamado_atual();
+        int antes = current_step_index;
+
+        if (!step_is_ticket(passo))
+        {
+            if (passo->type == STEP_CHOICE) choose_day_option(passo, 0);
+            else advance_step();
+            continue;
+        }
+
+        /* As duas formas a vista: as alternativas ou a mesa, e o botao "Perguntar a IARA". */
+        if (current_ticket_view != TICKET_ANSWERING || ticket_asked_iara || current_quiz_answered) tudo_certo = false;
+
+        if (forma == SO_SOZINHO)
+        {
+            if (passo->type == STEP_TRIAGE) resolver_a_mesa_sozinho();
+            else resolver_sozinho();
+        }
+        else
+        {
+            ask_iara();
+
+            /* Instantaneo: a sugestao aparece no mesmo clique, sem tela de espera. */
+            if (current_ticket_view != TICKET_SUGGESTION && current_ticket_view != TICKET_PRIVACY) tudo_certo = false;
+            if (current_ticket_view == TICKET_PRIVACY) decide_personal_data(tarjar);
+            if (current_ticket_view != TICKET_SUGGESTION) tudo_certo = false;
+
+            send_without_checking();
+        }
+
+        if (current_step_index != antes + 1 || current_wrong_answers != 0) tudo_certo = false;
+    }
+
+    return tudo_certo && current_step_index == REPORT_STEP && current_game_state_variables.is_resolved &&
+           !computer_failsafe_triggered;
+}
+
+static void testar_manual_ou_automatico(void)
+{
+    titulo("US03: manual ou automatico em todos os dias jogaveis (CT-77 e CT-78)");
+
+    bool manual_em_todos = true;
+    bool automatico_em_todos = true;
+    int dias = 0;
+    int partidas_automaticas = 0;
+
+    for (int s = 0; s < DAY_SCRIPT_COUNT; s++)
+    {
+        int dia = day_scripts[s].day;
+
+        /* Manual: o resultado depende do acerto, vale pontos e nao conta como Automacao. */
+        bool manual_ok = jogar_o_dia_com_uma_forma(dia, SO_SOZINHO, false, true);
+        int automacao_da_escolha = (day_choice_effects & DAY_EFFECT_AUTOMATION) ? 1 : 0;
+
+        manual_ok = manual_ok && current_game_state_variables.mode_type == MODE_MANUAL &&
+                    current_hidden_statistic.current_overall_points == HIDDEN_STATISTIC_START + (TICKET_COUNT * POINTS_SOLVED_ALONE) &&
+                    current_hidden_statistic.current_automation_points == HIDDEN_STATISTIC_START + automacao_da_escolha;
+
+        for (int i = 0; i < TICKET_COUNT; i++)
+        {
+            if (ticket_results[i].outcome != TASK_SOLVED_ALONE) manual_ok = false;
+        }
+
+        /* Automatico: com e sem memoria, tarjando ou nao. Nunca trava e nunca da recompensa. */
+        bool automatico_ok = true;
+
+        for (int variacao = 0; variacao < 4; variacao++)
+        {
+            bool sem_memoria = (variacao & 1) != 0;
+            bool tarjar = (variacao & 2) != 0;
+            bool rodou = jogar_o_dia_com_uma_forma(dia, SO_SEM_CONFERIR, sem_memoria, tarjar);
+
+            rodou = rodou && current_game_state_variables.mode_type == MODE_AUTOMATIC &&
+                    current_hidden_statistic.current_overall_points == HIDDEN_STATISTIC_START &&
+                    current_hidden_statistic.current_automation_points >= HIDDEN_STATISTIC_START + 1 &&
+                    unchecked_sends == TICKET_COUNT;
+
+            for (int i = 0; i < TICKET_COUNT; i++)
+            {
+                if (ticket_results[i].outcome != TASK_SENT_UNCHECKED) rodou = false;
+            }
+
+            if (!rodou) automatico_ok = false;
+            partidas_automaticas++;
+        }
+
+        printf("           Dia %3d: %d chamado(s), manual %s, automatico %s\n", dia, TICKET_COUNT,
+               manual_ok ? "ok" : "FALHOU", automatico_ok ? "ok nas 4 variacoes" : "FALHOU");
+
+        if (!manual_ok) manual_em_todos = false;
+        if (!automatico_ok) automatico_em_todos = false;
+        dias++;
+    }
+
+    checar("CT-77", "Todo chamado dos 9 dias jogaveis oferece resolver sozinho ou pedir a IARA, e o manual vale pontos",
+           manual_em_todos && dias == 9);
+    checar("CT-78", "Modo automatico resolve na hora, nunca trava nem aciona o failsafe e vale 0 em todos os dias",
+           automatico_em_todos && partidas_automaticas == 9 * 4);
+
+    select_day_script(1);
+    reiniciar_tarefa();
+}
+
 /* Calendario da campanha, gabaritos calculados e finais (CT-64 a CT-70). */
 static void testar_dias_seguintes(void)
 {
@@ -1121,6 +1265,7 @@ int main(void)
     testar_logica_e_memoria();
     testar_dias_seguintes();
     testar_modos_e_pontos();
+    testar_manual_ou_automatico();
     testar_menu();
     testar_ciclo_do_menu();
 
