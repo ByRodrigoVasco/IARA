@@ -2109,13 +2109,20 @@ static void render_ticket_suggestion(DialogStep *step, float top)
     bool check_clicked = false;
     bool unchecked_clicked = false;
 
+    // Conferir espera a IARA terminar de escrever: não dá para conferir o que ainda não foi lido.
+    // Enviar sem conferir não espera nada (US03): o modo automático resolve no mesmo instante.
     draw_button((Rectangle){x, y, check_width, height}, "Conferir", quiz_font_size, BUTTON_FILL_COLOR, step_can_click && typing_finished, &check_clicked);
-    draw_button((Rectangle){x + check_width + gap, y, unchecked_width, height}, "Enviar sem conferir", quiz_font_size, BUTTON_FILL_COLOR, step_can_click && typing_finished, &unchecked_clicked);
+    draw_button((Rectangle){x + check_width + gap, y, unchecked_width, height}, "Enviar sem conferir", quiz_font_size, BUTTON_FILL_COLOR, step_can_click, &unchecked_clicked);
+
+    if (unchecked_clicked)
+    {
+        send_without_checking();
+        return;
+    }
 
     if (!typing_finished) return;
 
     if (check_clicked) start_checking();
-    else if (unchecked_clicked) send_without_checking();
     else if (ticket_memory_level != IARA_MEMORY_FULL &&
              draw_action_button("Nova conversa", y + height + (win_h * OPTION_SPACING_RATIO)))
     {
