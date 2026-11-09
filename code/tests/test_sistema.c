@@ -249,6 +249,120 @@ static void testar_carregamento_do_jogo(void)
     checar("CT-07", "Animacao do andar percorre os 4 frames em ciclo", ciclo_correto);
 }
 
+static void testar_npcs(Vector2 player_spawn)
+{
+    titulo("NPCs, movimentacao e colisoes");
+
+    bool sprites_carregados = initialize_npcs(get_scale(), get_map_center());
+    checar("CT-71", "Sprites e animacoes dos NPCs carregados", sprites_carregados);
+
+    current_estagiario_position = player_spawn;
+    update_collision_rec();
+    bool posicoes_livres = true;
+
+    for (int npc = 0; npc < npc_get_count(); npc++)
+    {
+        Rectangle hitbox = npc_get_hitbox(npc, get_scale());
+        if (npc_is_moving(npc) &&
+            (collides_with_any(hitbox, office_obstacles, OBSTACLE_COUNT) ||
+             CheckCollisionRecs(hitbox, estagiario_collision_rec) ||
+             !dentro_do_mapa(hitbox)))
+        {
+            printf("           NPC %d inicia sobreposto a movel, jogador ou limite do mapa\n", npc);
+            posicoes_livres = false;
+        }
+
+        for (int other = npc + 1; npc_is_moving(npc) && other < npc_get_count(); other++)
+        {
+            if (npc_is_moving(other) && CheckCollisionRecs(hitbox, npc_get_hitbox(other, get_scale())))
+            {
+                printf("           NPCs %d e %d iniciam sobrepostos\n", npc, other);
+                posicoes_livres = false;
+            }
+        }
+    }
+
+    checar("CT-72", "NPCs nascem sem sobreposicao com o mapa, moveis ou jogador", posicoes_livres);
+
+    Rectangle zone = npc_get_interaction_zone(NPC_ANDERSON, get_scale());
+    Rectangle player_near_npc = {zone.x + zone.width / 2.0f - 5.0f,
+                                  zone.y + zone.height / 2.0f - 5.0f, 10.0f, 10.0f};
+    checar("CT-73", "Jogador pode alcancar a zona de conversa de um NPC",
+           npc_get_nearby(player_near_npc, get_scale()) == NPC_ANDERSON);
+
+    Rectangle player_obstacles[OBSTACLE_COUNT + NPC_COUNT];
+    int player_obstacle_count = get_player_movement_obstacles(player_obstacles);
+    Rectangle npc_hitbox = npc_get_hitbox(NPC_ZITO, get_scale());
+    Rectangle player_hitbox = {npc_hitbox.x - npc_hitbox.width, npc_hitbox.y,
+                               npc_hitbox.width, npc_hitbox.height};
+    float blocked_position = move_axis(player_hitbox.x, 2.0f, player_hitbox, true,
+                                      player_obstacles, player_obstacle_count);
+    checar("CT-74", "Colisao do jogador inclui a hitbox dos NPCs",
+           blocked_position == player_hitbox.x);
+
+    Rectangle initial_hitboxes[NPC_COUNT];
+    bool movement_and_collisions_hold = true;
+    bool every_npc_moved[NPC_COUNT] = {false};
+
+    for (int npc = 0; npc < npc_get_count(); npc++)
+    {
+        initial_hitboxes[npc] = npc_get_hitbox(npc, get_scale());
+    }
+
+    SetRandomSeed(20261107u);
+    for (int frame = 0; frame < 300; frame++)
+    {
+        update_npcs(0.05f, get_scale(), get_map_center(), map_collision_rec,
+                    office_obstacles, OBSTACLE_COUNT, estagiario_collision_rec);
+
+        for (int npc = 0; npc < npc_get_count(); npc++)
+        {
+            Rectangle hitbox = npc_get_hitbox(npc, get_scale());
+            if (hitbox.x != initial_hitboxes[npc].x || hitbox.y != initial_hitboxes[npc].y)
+            {
+                every_npc_moved[npc] = true;
+            }
+
+            if (npc_is_moving(npc) &&
+                (collides_with_any(hitbox, office_obstacles, OBSTACLE_COUNT) ||
+                 CheckCollisionRecs(hitbox, estagiario_collision_rec) ||
+                 !dentro_do_mapa(hitbox)))
+            {
+                if (movement_and_collisions_hold)
+                {
+                    printf("           NPC %d colidiu com movel, jogador ou mapa no quadro %d\n", npc, frame);
+                }
+                movement_and_collisions_hold = false;
+            }
+
+            for (int other = npc + 1; npc_is_moving(npc) && other < npc_get_count(); other++)
+            {
+                if (npc_is_moving(other) &&
+                    CheckCollisionRecs(hitbox, npc_get_hitbox(other, get_scale())))
+                {
+                    if (movement_and_collisions_hold)
+                    {
+                        printf("           NPCs %d e %d colidiram no quadro %d\n", npc, other, frame);
+                    }
+                    movement_and_collisions_hold = false;
+                }
+            }
+        }
+    }
+
+    for (int npc = 0; npc < npc_get_count(); npc++)
+    {
+        if (every_npc_moved[npc] != npc_is_moving(npc))
+        {
+            printf("           NPC %d movimento inesperado\n", npc);
+            movement_and_collisions_hold = false;
+        }
+    }
+
+    checar("CT-75", "NPCs permanecem parados e colidem apenas quando estao em pe",
+           movement_and_collisions_hold);
+}
+
 static void testar_percurso(Vector2 spawn)
 {
     titulo("Percurso real do jogador (CT-08)");
@@ -595,6 +709,7 @@ int main(void)
 
     testar_recursos();
     testar_carregamento_do_jogo();
+    testar_npcs(spawn);
     testar_percurso(spawn);
     testar_movimento(spawn);
     testar_dica(spawn);

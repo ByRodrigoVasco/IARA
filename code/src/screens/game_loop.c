@@ -1,5 +1,6 @@
 #include <time.h>
 #include <math.h> // Necessário para operações matemáticas avançadas, como a função sin() usada na animação do indicador
+#include <stdio.h>
 
 #include "raylib.h"
 #include "game_loop.h"
@@ -8,6 +9,7 @@
 #include "fonts.h"
 #include "animations.h"
 #include "characters.h"
+#include "npcs.h"
 #include "collisions.h"
 #include "computer_loop.h"
 #include "helper.h"
@@ -93,6 +95,10 @@ static bool is_near_exit = false;                        // Flag que indica se o
 static bool enter_computer_screen = false;               // Flag acionada ao interagir com o computador para mudar de tela
 static bool is_near_hint = false;                         // Flag que indica se o jogador alcança o bilhete do mural
 static bool is_near_computer = false;                     // Flag que indica se o jogador está sobre a zona de interação do computador
+static int nearby_npc_id = -1;
+static int active_npc_id = -1;
+static int active_npc_dialogue_line = 0;
+static bool hint_bubble_unlocked = false;
 
 // Texturas gerais de interface e mapas
 static Color color_to_fade = {255, 255, 255, 0};          // Cor base de renderização (RGBA) usada para aplicar efeito de opacidade/fade
@@ -301,6 +307,8 @@ static void open_playable_day(void)
 {
     int day = current_game_state_variables.current_day;
 
+    hint_bubble_unlocked = false;
+
     // Quem perdeu o bilhete do Dia 1 não fica sem a colinha nos puzzles seguintes (RF07)
     if (day > 1) current_game_state_variables.has_cheat_sheet = true;
 
@@ -416,6 +424,7 @@ static void keep_player_place_on_resize(void)
     if (screen_center.x != last_screen_center.x || screen_center.y != last_screen_center.y || scale != last_scale)
     {
         // Distância do jogador ao centro do mapa, reescalada, somada ao novo centro
+        resize_npcs(last_scale, scale, last_screen_center, screen_center);
         current_estagiario_position.x = screen_center.x + (current_estagiario_position.x - last_screen_center.x) * scale / last_scale;
         current_estagiario_position.y = screen_center.y + (current_estagiario_position.y - last_screen_center.y) * scale / last_scale;
         last_screen_center = screen_center;
@@ -463,6 +472,10 @@ void initialize_game_loop_variables(void)
     game_loop_finished = false;
     leave_office = false;
     enter_computer_screen = false;
+    nearby_npc_id = -1;
+    active_npc_id = -1;
+    active_npc_dialogue_line = 0;
+    hint_bubble_unlocked = false;
     walk_time = 0.0f;
     color_to_fade.a = 0;
 
@@ -500,6 +513,11 @@ void initialize_game_loop_variables(void)
     for (int i = 0; i < DIRECTION_COUNT; i++)
     {
         walk_loaded[i] = load_walk_frames("Estagiarios", i, walk_textures[i]);
+    }
+
+    if (!initialize_npcs(get_scale(), get_map_center()))
+    {
+        TraceLog(LOG_ERROR, "Nao foi possivel carregar os sprites dos NPCs.");
     }
 
     // Define o ponto inicial de surgimento (spawn) do jogador, logo acima da porta de entrada
@@ -641,10 +659,35 @@ void handle_map_interactables(void)
     is_near_hint = calendar_has_investigation(current_game_state_variables.current_day) &&
                    is_hitbox_on_hint(estagiario_collision_rec, get_scale(), get_map_center());
     is_near_exit = current_game_state_variables.is_resolved && CheckCollisionRecs(estagiario_collision_rec, get_exit_zone());
+    nearby_npc_id = npc_get_nearby(estagiario_collision_rec, get_scale());
+
+    if (active_npc_id >= 0)
+    {
+        if (IsKeyPressed(KEY_SPACE))
+        {
+            active_npc_dialogue_line++;
+            if (active_npc_dialogue_line >=
+                npc_get_dialogue_line_count(active_npc_id, current_game_state_variables.current_day))
+            {
+                active_npc_id = -1;
+                active_npc_dialogue_line = 0;
+            }
+        }
+        return;
+    }
 
     if (!IsKeyPressed(KEY_SPACE)) return;
 
-    if (is_hint_note_open() || is_near_hint)
+    if (is_hint_note_open())
+    {
+        toggle_mural_note();
+    }
+    else if (nearby_npc_id >= 0)
+    {
+        active_npc_id = nearby_npc_id;
+        active_npc_dialogue_line = 0;
+    }
+    else if (is_near_hint)
     {
         toggle_mural_note();
     }
@@ -703,6 +746,24 @@ void handle_map_collisions(void)
     }
 }
 
+static int get_player_movement_obstacles(Rectangle obstacles[])
+{
+    int movement_obstacle_count = 0;
+
+    for (int i = 0; i < OBSTACLE_COUNT; i++)
+    {
+        obstacles[movement_obstacle_count++] = office_obstacles[i];
+    }
+    for (int i = 0; i < NPC_COUNT; i++)
+    {
+        if (npc_blocks_player(i))
+        {
+            obstacles[movement_obstacle_count++] = npc_get_hitbox(i, get_scale());
+        }
+    }
+    return movement_obstacle_count;
+}
+
 /**
  * @brief Captura os comandos do teclado (WASD / Setas), atualiza a velocidade, direção do sprite e
  * posição do jogador no espaço 2D.
@@ -713,6 +774,8 @@ void handle_map_collisions(void)
 void handle_player_input(void)
 {
     float speed = DEFAULT_PLAYER_MOVEMENT_SPEED * get_scale();
+    Rectangle movement_obstacles[OBSTACLE_COUNT + NPC_COUNT];
+    int movement_obstacle_count = get_player_movement_obstacles(movement_obstacles);
 
     // Modificadores vetoriais de direção (-1, 0, 1)
     int dx = 0;
@@ -756,10 +819,12 @@ void handle_player_input(void)
 
     // Move um eixo por vez: se bater num obstáculo, desfaz só aquele eixo e o jogador desliza na parede
     update_collision_rec();
-    current_estagiario_position.x = move_axis(current_estagiario_position.x, dx * speed, estagiario_collision_rec, true, office_obstacles, OBSTACLE_COUNT);
+    current_estagiario_position.x = move_axis(current_estagiario_position.x, dx * speed, estagiario_collision_rec, true,
+                                              movement_obstacles, movement_obstacle_count);
 
     update_collision_rec();
-    current_estagiario_position.y = move_axis(current_estagiario_position.y, dy * speed, estagiario_collision_rec, false, office_obstacles, OBSTACLE_COUNT);
+    current_estagiario_position.y = move_axis(current_estagiario_position.y, dy * speed, estagiario_collision_rec, false,
+                                              movement_obstacles, movement_obstacle_count);
     update_collision_rec();
 }
 
@@ -804,6 +869,11 @@ void render_debug_hitboxes(void)
     for (int i = 0; i < OBSTACLE_COUNT; i++)
     {
         DrawRectangleLinesEx(office_obstacles[i], 2.0f, ORANGE);                  // Obstáculos
+    }
+
+    for (int i = 0; i < NPC_COUNT; i++)
+    {
+        DrawRectangleLinesEx(npc_get_hitbox(i, get_scale()), 2.0f, PURPLE);       // NPCs
     }
 }
 
@@ -1031,6 +1101,79 @@ void render_interact_arrow(Rectangle target)
     DrawTexturePro(arrow_down_texture, source, dest, (Vector2){0, 0}, 0.0f, color_to_fade);
 }
 
+static void draw_npc_dialogue_line(const char *text, Vector2 position, float max_width,
+                                   float font_size, float letter_spacing)
+{
+    char line[256] = "";
+    const char *word_start = text;
+
+    while (*word_start != '\0')
+    {
+        while (*word_start == ' ') word_start++;
+        if (*word_start == '\0') break;
+
+        const char *word_end = word_start;
+        while (*word_end != '\0' && *word_end != ' ') word_end++;
+        size_t word_length = (size_t)(word_end - word_start);
+        char word[256];
+        if (word_length >= sizeof(word)) word_length = sizeof(word) - 1;
+        snprintf(word, sizeof(word), "%.*s", (int)word_length, word_start);
+
+        char candidate[256];
+        if (line[0] == '\0') snprintf(candidate, sizeof(candidate), "%s", word);
+        else snprintf(candidate, sizeof(candidate), "%s %s", line, word);
+
+        if (line[0] != '\0' &&
+            MeasureTextEx(default_game_font, candidate, font_size, letter_spacing).x > max_width)
+        {
+            DrawTextEx(default_game_font, line, position, font_size, letter_spacing, WHITE);
+            position.y += font_size * 1.15f;
+            snprintf(line, sizeof(line), "%s", word);
+        }
+        else
+        {
+            snprintf(line, sizeof(line), "%s", candidate);
+        }
+
+        word_start = word_end;
+    }
+
+    if (line[0] != '\0') DrawTextEx(default_game_font, line, position, font_size, letter_spacing, WHITE);
+}
+
+static void render_npc_dialogue(void)
+{
+    if (active_npc_id < 0) return;
+
+    float scale = get_ui_scale();
+    float panel_height = 230.0f * scale;
+    float screen_height = (float)GetScreenHeight();
+    Rectangle panel = {0, screen_height - panel_height, (float)GetScreenWidth(), panel_height};
+    const NpcDefinition *definition = npc_get_definition(active_npc_id);
+    const char *line = npc_get_dialogue_line(active_npc_id, current_game_state_variables.current_day,
+                                             active_npc_dialogue_line);
+    if (definition == NULL || line == NULL) return;
+
+    DrawRectangleRec(panel, (Color){18, 10, 20, 225});
+    draw_npc_portrait(active_npc_id,
+                      (Rectangle){30.0f * scale, panel.y + 22.0f * scale, 165.0f * scale, 190.0f * scale});
+
+    float font_size = 34.0f * scale;
+    float text_x = 230.0f * scale;
+    DrawTextEx(default_game_font, definition->name, (Vector2){text_x, panel.y + 24.0f * scale},
+               26.0f * scale, 0.0f, RAYWHITE);
+    draw_npc_dialogue_line(line, (Vector2){text_x, panel.y + 70.0f * scale},
+                           GetScreenWidth() - text_x - 60.0f * scale, font_size, 0.0f);
+
+    const char *continue_text = "ESPAÇO: CONTINUAR";
+    float continue_size = 20.0f * scale;
+    float continue_width = MeasureTextEx(default_game_font, continue_text, continue_size, 0.0f).x;
+    DrawTextEx(default_game_font, continue_text,
+               (Vector2){GetScreenWidth() - continue_width - 24.0f * scale,
+                          panel.y + panel.height - continue_size - 10.0f * scale},
+               continue_size, 0.0f, RAYWHITE);
+}
+
 /**
  * @brief Contorno claro por dentro e escuro por fora: o par se destaca sobre qualquer fundo.
  */
@@ -1137,9 +1280,11 @@ void handle_game_loop_screens(void)
 
         hint_item_rectangle = get_hint_item_rectangle(get_scale(), get_map_center());
 
+        Vector2 previous_player_position = current_estagiario_position;
+        bool interaction_open = is_hint_note_open() || active_npc_id >= 0;
+
         // Processa lógica de comandos do jogador, interações e colisões com o mapa.
         // Enquanto lê o bilhete, o jogador fica parado.
-        Vector2 previous_player_position = current_estagiario_position;
         if (is_hint_note_open())
         {
             walk_time = 0.0f;
@@ -1147,6 +1292,12 @@ void handle_game_loop_screens(void)
         else
         {
             handle_player_input();
+        }
+
+        if (!interaction_open)
+        {
+            update_npcs(GetFrameTime(), get_scale(), get_map_center(), map_collision_rec,
+                        office_obstacles, OBSTACLE_COUNT, estagiario_collision_rec);
         }
 
         handle_map_interactables();
@@ -1157,18 +1308,27 @@ void handle_game_loop_screens(void)
 
         // ORDEM DE RENDERIZAÇÃO (Layering / Z-Index):
         // 1º O mapa de fundo (Escritório)
-        // 2º O sprite do Jogador
+        // 2º NPCs e jogador
         // 3º As dicas de controle no rodapé
         // 4º A seta indicativa por cima do cenário
-        // 5º O bilhete com a dica, por cima de tudo
+        // 5º Os diálogos e bilhetes, por cima de tudo
         render_game_loop_escritorio();
+        draw_npcs(get_scale(), color_to_fade, current_game_state_variables.current_day,
+                  current_estagiario_position.y, true, hint_bubble_unlocked);
         render_player();
+        draw_npcs(get_scale(), color_to_fade, current_game_state_variables.current_day,
+                  current_estagiario_position.y, false, hint_bubble_unlocked);
         render_control_tips();
         render_day_counter();
         render_high_contrast_outlines();
         render_interact_arrow(get_next_objective_rectangle());
         if (is_near_hint) render_interact_arrow(hint_item_rectangle);
+        if (nearby_npc_id >= 0 && active_npc_id < 0)
+        {
+            render_interact_arrow(npc_get_hitbox(nearby_npc_id, get_scale()));
+        }
         render_debug_hitboxes();
+        render_npc_dialogue();
         draw_hint_note();
 
         // Se a interação com o computador foi acionada, abre a cena do computador.
@@ -1182,6 +1342,7 @@ void handle_game_loop_screens(void)
         {
             initialize_computer_loop();
             computer_loop_loaded = true;
+            hint_bubble_unlocked = true;
             current_screen = COMPUTER_SCREEN;
             enter_computer_screen = false;
         }
@@ -1299,4 +1460,6 @@ void unload_game_loop(void)
             UnloadTexture(walk_textures[i][j]);
         }
     }
+
+    unload_npcs();
 }

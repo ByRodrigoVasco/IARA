@@ -85,6 +85,13 @@ $suite = @(
         Fonte = @("code/tests/test_characters.c", "code/src/game/characters.c")
     },
     @{
+        Nome  = "test_npcs"
+        Nota  = "Unidade: dialogos e dicas dos NPCs"
+        Fonte = @("code/tests/test_npcs.c", "code/src/game/npcs.c",
+                  "code/src/game/characters.c", "code/src/game/collisions.c",
+                  "code/src/game/calendar.c", "code/src/ui/fonts.c")
+    },
+    @{
         Nome  = "test_save"
         Nota  = "Unidade: save e carregamento da partida"
         Fonte = @("code/tests/test_save.c", "code/src/core/save.c", "code/src/core/game_state.c", "code/src/game/calendar.c")
@@ -102,7 +109,7 @@ $suite = @(
         Nota  = "Sistema bloco 1: partida, movimento e colisoes"
         Fonte = @(
             "code/tests/test_sistema.c",
-            "code/src/game/collisions.c", "code/src/game/characters.c",
+            "code/src/game/collisions.c", "code/src/game/characters.c", "code/src/game/npcs.c",
             "code/src/ui/fonts.c", "code/src/ui/animations.c", "code/src/ui/button.c",
             "code/src/core/helper.c", "code/src/core/game_state.c",
             "code/src/ui/accessibility.c", "code/src/game/hints.c",
@@ -131,7 +138,7 @@ $suite = @(
             "code/tests/test_fluxo.c",
             "code/src/core/state_machine.c", "code/src/core/game_state.c",
             "code/src/core/helper.c", "code/src/screens/pre_menu.c",
-            "code/src/game/collisions.c", "code/src/game/characters.c",
+            "code/src/game/collisions.c", "code/src/game/characters.c", "code/src/game/npcs.c",
             "code/src/ui/fonts.c", "code/src/ui/animations.c", "code/src/ui/button.c",
             "code/src/ui/accessibility.c", "code/src/game/hints.c", "code/src/screens/settings.c",
             "code/src/core/preferences.c", "code/src/ui/cheat_sheet.c", "code/src/ui/logic_text.c", "code/src/game/logic.c", "code/src/game/calendar.c",
