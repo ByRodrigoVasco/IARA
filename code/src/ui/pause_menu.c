@@ -4,21 +4,18 @@
 #include "rlgl.h"
 #include "pause_menu.h"
 #include "confirm_dialog.h"
-#include "help.h"
 #include "ui_theme.h"
 #include "fonts.h"
 #include "helper.h"
 #include "accessibility.h"
 #include "macros.h"
 
-#define PAUSE_OPTION_COUNT 4
+#define PAUSE_OPTION_COUNT 3
 #define PAUSE_RESUME_OPTION 0
-#define PAUSE_HELP_OPTION 1
-#define PAUSE_MENU_OPTION 2
-#define PAUSE_QUIT_OPTION 3
+#define PAUSE_MENU_OPTION 1
+#define PAUSE_QUIT_OPTION 2
 
 static bool pause_open = false;
-static bool pause_help_open = false;
 static int pause_selected = 0;
 static int pause_skip_frames = 0;
 static Texture2D pause_background = {0};
@@ -33,10 +30,8 @@ void pause_menu_open(void)
     UnloadImage(snapshot);
 
     pause_open = true;
-    pause_help_open = false;
     pause_selected = PAUSE_RESUME_OPTION;
     pause_skip_frames = 1;
-    initialize_help_screen();
 }
 
 bool pause_menu_is_open(void)
@@ -47,7 +42,6 @@ bool pause_menu_is_open(void)
 void pause_menu_close(void)
 {
     pause_open = false;
-    pause_help_open = false;
     if (pause_background.id != 0) UnloadTexture(pause_background);
     pause_background = (Texture2D){0};
     confirm_close();
@@ -57,21 +51,15 @@ void pause_menu_close(void)
 static pause_action choose(int option)
 {
     if (option == PAUSE_RESUME_OPTION) return PAUSE_RESUME;
-    if (option == PAUSE_HELP_OPTION)
-    {
-        pause_help_open = true;
-        initialize_help_screen();
-        return PAUSE_NONE;
-    }
     if (option == PAUSE_MENU_OPTION) return PAUSE_TO_MENU;
 
-    confirm_open("SAIR DO JOGO?", "O jogo fecha. O seu progresso até aqui é salvo antes de fechar.", "SAIR", "CONTINUAR", true);
+    confirm_open("SAIR PARA A ÁREA DE TRABALHO?", "O jogo fecha. O seu progresso até aqui é salvo antes de fechar.", "SAIR", "CONTINUAR", true);
     return PAUSE_NONE;
 }
 
 pause_action pause_menu_update_and_draw(void)
 {
-    static const char *labels[PAUSE_OPTION_COUNT] = {"CONTINUAR", "COMO JOGAR", "VOLTAR AO MENU", "SAIR DO JOGO"};
+    static const char *labels[PAUSE_OPTION_COUNT] = {"CONTINUAR", "SAIR PARA O MENU", "SAIR PARA A ÁREA DE TRABALHO"};
     float scale = get_ui_scale();
     float width = (float)GetScreenWidth();
     float height = (float)GetScreenHeight();
@@ -97,12 +85,6 @@ pause_action pause_menu_update_and_draw(void)
         DrawTexturePro(pause_background, (Rectangle){0, 0, (float)pause_background.width, (float)pause_background.height}, (Rectangle){0, 0, width, height}, (Vector2){0, 0}, 0.0f, WHITE);
     }
     ui_draw_dim();
-
-    if (pause_help_open)
-    {
-        if (help_update_and_draw_panel()) pause_help_open = false;
-        return PAUSE_NONE;
-    }
 
     if (confirm_is_open())
     {

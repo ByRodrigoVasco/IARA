@@ -979,15 +979,18 @@ static int conferir_layout_na_janela(int largura, int altura)
 
     int problemas = conferir_layout_do_quiz(win_w, font_size);
 
-    /* A colinha fica entre a borda do jogo, a janela da IARA e a barra de tarefas. */
+    /* A colinha fica entre a borda do jogo e a janela da IARA, colada na moldura de baixo do monitor. */
     float screen_x = (largura - screen_w) / 2.0f;
     float screen_y = (altura * MONITOR_TOP_RATIO) + (altura * MONITOR_BEZEL_RATIO);
     Rectangle barra = {screen_x, screen_y + screen_h - taskbar_h, screen_w, taskbar_h};
     Rectangle janela = {screen_x + (screen_w * DESKTOP_WINDOW_LEFT_RATIO), screen_y + (screen_h * DESKTOP_WINDOW_MARGIN_RATIO), win_w, janela_h};
-    Rectangle colinha = get_cheat_sheet_rect(janela, barra, screen_w, screen_h, (float)largura);
+    Rectangle moldura = {screen_x - (altura * MONITOR_BEZEL_RATIO), altura * MONITOR_TOP_RATIO, screen_w + (altura * MONITOR_BEZEL_RATIO * 2.0f),
+                         screen_h + (altura * MONITOR_BEZEL_RATIO) + (altura * MONITOR_CHIN_RATIO)};
+    Rectangle colinha = get_cheat_sheet_rect(janela, moldura, screen_w, screen_h, (float)largura);
     float fonte_da_colinha = get_cheat_sheet_font_size(colinha);
 
-    if (colinha.x < 0.0f || CheckCollisionRecs(colinha, janela) || CheckCollisionRecs(colinha, barra) || fonte_da_colinha < 12.0f)
+    if (colinha.x < 0.0f || CheckCollisionRecs(colinha, janela) || colinha.y + colinha.height > moldura.y + moldura.height ||
+        colinha.y + colinha.height <= barra.y || fonte_da_colinha < 12.0f)
     {
         printf("           janela %dx%d: colinha em %.0f,%.0f de %.0fx%.0f com fonte %.1f\n", largura, altura,
                colinha.x, colinha.y, colinha.width, colinha.height, fonte_da_colinha);
@@ -1198,12 +1201,12 @@ static void testar_caminhos_do_dia(void)
     rodar_por(1.5);
     gravar_evidencia_do_quiz("docs/fds/testes/evidencias/colinha-no-monitor.png");
 
-    Rectangle colinha = get_cheat_sheet_rect(iara_window_rect, taskbar_rect, screen_rect.width, screen_rect.height, (float)GetScreenWidth());
+    Rectangle colinha = get_cheat_sheet_rect(iara_window_rect, monitor_rect, screen_rect.width, screen_rect.height, (float)GetScreenWidth());
 
-    checar("CT-54", "Colinha fica colada no canto inferior esquerdo do monitor, sem cobrir a janela da IARA",
+    checar("CT-54", "Colinha fica colada na moldura de baixo, no canto esquerdo do monitor, sem cobrir a janela da IARA",
            current_game_state_variables.has_cheat_sheet &&
-           colinha.x + colinha.width <= iara_window_rect.x && colinha.y + colinha.height <= taskbar_rect.y &&
-           colinha.y > screen_rect.y + (screen_rect.height / 2.0f));
+           colinha.x + colinha.width <= iara_window_rect.x && colinha.y + colinha.height <= monitor_rect.y + monitor_rect.height &&
+           colinha.y + colinha.height > taskbar_rect.y && colinha.y > screen_rect.y + (screen_rect.height / 2.0f));
 
     /* Enviar tudo sem conferir: o relatorio cobra, o jogador volta ao mapa e sai pela porta. */
     while (step_is_ticket(&dialog_sequence[current_step_index]))
@@ -1979,6 +1982,67 @@ static void testar_layout_do_quiz(void)
            problemas_nas_mesas == 0);
 }
 
+/* Ajustes pedidos depois do teste com jogadores: fala digitada, porta, lugares dos colegas e aviso da dica. */
+static void testar_ajustes_do_modo_historia(void)
+{
+    titulo("Ajustes do modo historia (UX-18 a UX-22)");
+
+    checar("UX-18", "A fala digitada conta letras e nao bytes, entao os acentos nao quebram no meio",
+           utf8_length("ação") == 4 && utf8_prefix_bytes("ação", 2) == 3 &&
+           utf8_prefix_bytes("ação", 99) == (int)strlen("ação") && utf8_length(NULL) == 0);
+
+    /* A zona de saida vai do comeco da porta ate a soleira: o jogador que chega por qualquer ponto da passagem encerra o dia. */
+    bool zona_cobre_a_passagem = EXIT_ZONE_REFERENCE.y <= glass_door_reference.y &&
+                                 EXIT_ZONE_REFERENCE.y + EXIT_ZONE_REFERENCE.height >= OFFICE_FRONT_BOUNDARY_Y - HITBOX_HEIGHT_AT_REFERENCE &&
+                                 EXIT_ZONE_REFERENCE.x <= glass_door_reference.x &&
+                                 EXIT_ZONE_REFERENCE.x + EXIT_ZONE_REFERENCE.width >= glass_door_reference.x + glass_door_reference.width;
+
+    checar("UX-19", "A zona de saida cobre toda a faixa da porta por onde o jogador consegue chegar", zona_cobre_a_passagem);
+
+    npc_arrange_for_day(1, get_scale(), get_map_center());
+    Vector2 dia_1[NPC_COUNT];
+    for (int npc = 0; npc < NPC_COUNT; npc++) dia_1[npc] = npc_get_position(npc);
+
+    npc_arrange_for_day(3, get_scale(), get_map_center());
+    bool todos_mudaram = true;
+    for (int npc = 0; npc < NPC_COUNT; npc++)
+    {
+        Vector2 hoje = npc_get_position(npc);
+        if (hoje.x == dia_1[npc].x && hoje.y == dia_1[npc].y) todos_mudaram = false;
+    }
+    npc_arrange_for_day(1, get_scale(), get_map_center());
+
+    checar("UX-20", "Cada colega aparece em outro lugar no dia jogavel seguinte", todos_mudaram);
+
+    for (int npc = 0; npc < NPC_COUNT; npc++) npc_greeted_today[npc] = true;
+    active_npc_id = NPC_VASCO;
+    npc_greeted_today[NPC_VASCO] = true;
+    open_playable_day();
+    bool todos_cumprimentam = active_npc_id == -1;
+    for (int npc = 0; npc < NPC_COUNT; npc++) todos_cumprimentam = todos_cumprimentam && !npc_greeted_today[npc];
+
+    checar("UX-21", "Num dia novo todos voltam a cumprimentar e a conversa em curso se encerra", todos_cumprimentam);
+
+    select_day_script(1);
+    current_step_index = FIRST_TICKET_STEP;
+    current_wrong_answers = 0;
+    ticket_time = 0.0f;
+    computer_set_hint_giver("JV");
+    bool calado_no_comeco = get_hint_notification() == NULL;
+    current_wrong_answers = 1;
+    const char *aviso = get_hint_notification();
+    bool avisa_ao_errar = aviso != NULL && strstr(aviso, "JV") != NULL;
+    current_wrong_answers = 0;
+    ticket_time = HINT_NOTICE_DELAY;
+    bool avisa_ao_demorar = get_hint_notification() != NULL;
+    computer_set_hint_giver(NULL);
+    bool sem_dono_sem_aviso = get_hint_notification() == NULL;
+    ticket_time = 0.0f;
+
+    checar("UX-22", "O aviso da dica aparece no computador so ao errar ou demorar, e so se alguem tem a dica do dia",
+           calado_no_comeco && avisa_ao_errar && avisa_ao_demorar && sem_dono_sem_aviso);
+}
+
 int main(void)
 {
     SetTraceLogLevel(LOG_WARNING);
@@ -2018,6 +2082,7 @@ int main(void)
     testar_saida_no_meio_do_dia();
     testar_campanha();
     testar_ignorar_npcs();
+    testar_ajustes_do_modo_historia();
 
     /* CONFIGURACOES abre a propria tela e VOLTAR devolve o jogador ao menu. */
     current_game_state_variables.current_screen = handle_menu_action(CONFIGURACOES);

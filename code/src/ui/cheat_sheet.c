@@ -1,4 +1,5 @@
 #include "raylib.h"
+#include "rlgl.h"
 #include "cheat_sheet.h"
 #include "fonts.h"
 #include "logic_text.h"
@@ -95,4 +96,56 @@ void draw_cheat_sheet(Rectangle bounds)
         DrawTextEx(default_game_font, cheat_sheet_entries[i].text, (Vector2){x + (font_size * SYMBOL_COLUMN_RATIO), y + ((row_height - font_size) / 2.0f)},
                    font_size, letter_spacing, SHEET_TEXT_COLOR);
     }
+}
+
+// DrawTriangle só preenche triângulos em sentido anti-horário; esta versão aceita qualquer ordem.
+static void draw_triangle_any_order(Vector2 a, Vector2 b, Vector2 c, Color color)
+{
+    float cross = ((b.x - a.x) * (c.y - a.y)) - ((b.y - a.y) * (c.x - a.x));
+
+    if (cross > 0.0f) DrawTriangle(a, c, b, color);
+    else DrawTriangle(a, b, c, color);
+}
+
+// Post-it colado: inclinado em volta do centro, com uma fita segurando a borda de cima e a pontinha
+// de baixo levemente dobrada, para parecer papel de verdade preso ao monitor.
+void draw_cheat_sheet_stuck(Rectangle bounds, float tilt_degrees)
+{
+    Vector2 center = {bounds.x + (bounds.width / 2.0f), bounds.y + (bounds.height / 2.0f)};
+
+    rlPushMatrix();
+    rlTranslatef(center.x, center.y, 0.0f);
+    rlRotatef(tilt_degrees, 0.0f, 0.0f, 1.0f);
+    rlTranslatef(-center.x, -center.y, 0.0f);
+
+    draw_cheat_sheet(bounds);
+
+    // Pontinha dobrada no canto de baixo à direita
+    float fold = bounds.height * 0.12f;
+    Vector2 corner = {bounds.x + bounds.width, bounds.y + bounds.height};
+    draw_triangle_any_order((Vector2){corner.x - fold, corner.y}, (Vector2){corner.x, corner.y - fold}, (Vector2){corner.x - fold, corner.y - fold}, (Color){214, 190, 90, 255});
+    draw_triangle_any_order((Vector2){corner.x - fold, corner.y}, (Vector2){corner.x, corner.y}, (Vector2){corner.x, corner.y - fold}, (Color){0, 0, 0, 60});
+
+    // Fita adesiva meio transparente, um pouco torta em relação ao papel
+    float tape_width = bounds.width * 0.40f;
+    float tape_height = bounds.height * 0.13f;
+    Vector2 tape_center = {center.x + (bounds.width * 0.03f), bounds.y + (tape_height * 0.1f)};
+
+    rlPushMatrix();
+    rlTranslatef(tape_center.x, tape_center.y, 0.0f);
+    rlRotatef(2.5f, 0.0f, 0.0f, 1.0f);
+    Rectangle tape = {-tape_width / 2.0f, -tape_height / 2.0f, tape_width, tape_height};
+    DrawRectangleRec((Rectangle){tape.x, tape.y + (tape_height * 0.12f), tape.width, tape.height}, (Color){0, 0, 0, 55});
+    DrawRectangleRec(tape, (Color){232, 226, 196, 175});
+    DrawRectangleRec((Rectangle){tape.x, tape.y, tape.width, tape_height * 0.22f}, (Color){255, 252, 232, 120});
+    // Pontas serrilhadas da fita
+    for (int i = 0; i < 4; i++)
+    {
+        float tooth = tape_height / 4.0f;
+        draw_triangle_any_order((Vector2){tape.x, tape.y + (i * tooth)}, (Vector2){tape.x - (tooth * 0.5f), tape.y + ((i + 0.5f) * tooth)}, (Vector2){tape.x, tape.y + ((i + 1) * tooth)}, (Color){232, 226, 196, 175});
+        draw_triangle_any_order((Vector2){tape.x + tape.width, tape.y + ((i + 1) * tooth)}, (Vector2){tape.x + tape.width + (tooth * 0.5f), tape.y + ((i + 0.5f) * tooth)}, (Vector2){tape.x + tape.width, tape.y + (i * tooth)}, (Color){232, 226, 196, 175});
+    }
+    rlPopMatrix();
+
+    rlPopMatrix();
 }

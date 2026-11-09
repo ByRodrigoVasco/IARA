@@ -18,6 +18,14 @@ bool initialize_audio(void);
 void update_audio_for_screen(int screen);
 
 /**
+ * @brief Ajusta a tensão da trilha do jogo: 0 toca só o ambiente calmo e 1 só a trilha de suspense.
+ * A troca é gradual. Os primeiros dias ficam calmos, e a tensão sobe com o avanço da história.
+ *
+ * @param tension Valor de 0 a 1.
+ */
+void audio_set_game_tension(float tension);
+
+/**
  * @brief Reproduz o efeito sonoro de clique do mouse.
  */
 void play_click_sound(void);
