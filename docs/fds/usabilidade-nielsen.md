@@ -15,7 +15,7 @@ e o `test_fluxo.c`).
 | 4 | Consistência | Estilo comum nas telas de modo, de save e de carregamento | Menu, créditos e configurações sem dica de teclas, cada tela com seu jeito | Mesmas peças (`ui_theme.h`) e dicas de tecla no rodapé de todas as telas |
 | 5 | Prevenção de erros | Apagar save pede confirmação | **SAIR e ESC fechavam o jogo sem perguntar; DESISTIR da partida não perguntava** | Pergunta antes de sair (menu e pausa) e antes de desistir; o botão que cancela já vem escolhido |
 | 6 | Reconhecimento | Dicas de movimento e de ação na tela do escritório, "BLOQUEADO: como liberar" nos personagens | Teclas do menu e das configurações só na memória | Dicas de tecla sempre à vista |
-| 7 | Flexibilidade | Teclado e mouse em todas as telas, F11 para tela cheia | Sem atalho de pausa na campanha | ESC e P pausam, nas duas modalidades |
+| 7 | Flexibilidade | Teclado e mouse em todas as telas, F11 para tela cheia | Sem atalho de pausa na campanha, e a abertura não podia ser pulada | ESC e P pausam, nas duas modalidades, e qualquer tecla ou clique pula a abertura |
 | 8 | Minimalismo | Telas enxutas | Nada relevante | Sem mudança |
 | 9 | Erros claros | Nomes de save inválidos explicam o motivo | Falha ao salvar sem mensagem | "Não consegui salvar o progresso. Confira se há espaço livre no disco e se a pasta do jogo permite gravar arquivos." |
 | 10 | Ajuda | Nada | **Não havia ajuda em lugar nenhum** | AJUDA no menu, COMO JOGAR na pausa e no início do Sobrevivência |
@@ -31,6 +31,7 @@ e o `test_fluxo.c`).
 - `pause_menu.c`: pausa da campanha. Guarda a imagem do jogo como fundo e não atualiza nada enquanto está aberta.
 
 **Campanha**
+- Abertura: qualquer tecla (menos F11) ou clique pula, e a tela avisa "Aperte qualquer tecla para pular".
 - Menu: opção AJUDA, dicas de tecla no rodapé, ESC e SAIR perguntam antes de fechar.
 - Escritório: ESC ou P pausam. Dentro do computador o ESC continua só saindo do computador.
 - Voltar ao menu pela pausa salva e mostra "Progresso salvo.".
@@ -46,7 +47,6 @@ e o `test_fluxo.c`).
 - Desfazer uma resposta do quiz do computador, ou restaurar os padrões nas configurações: não existem hoje e pediriam
   uma decisão de design (a resposta errada tem consequência na história).
 - Passar das dicas de tecla textuais para ícones.
-- A abertura (pré-menu) ainda não pode ser pulada com uma tecla.
 - Teste com jogadores de verdade: as notas acima vêm da leitura do código e das capturas.
 
 ## Como conferir
@@ -56,4 +56,4 @@ powershell -ExecutionPolicy Bypass -File tools/tests/run_tests.ps1
 ```
 
 Casos: UX-01 a UX-03 (aviso), UX-04 a UX-06 (confirmação), UX-07 e UX-08 (ajuda), UX-09 a UX-12 (pausa),
-UX-13 e UX-14 (menu), UX-15 e UX-16 (ESC e ajuda no fluxo). Na branch do Sobrevivência, SV-94 e SV-95 (aviso de falha ao salvar).
+UX-13 e UX-14 (menu), UX-15 e UX-16 (ESC e ajuda no fluxo), UX-17 (pular a abertura). Na branch do Sobrevivência, SV-94 e SV-95 (aviso de falha ao salvar).
