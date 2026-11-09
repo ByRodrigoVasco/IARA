@@ -3,7 +3,8 @@
 Os BUG-01 a BUG-08 foram encontrados na execução dos testes de sistema de 22/10/2026
 (branch `develop`, commit `b366e7c`) e estão registrados como issue no repositório, com a
 label `bug`. Os BUG-09 a BUG-12 foram encontrados na revisão de 03/11/2026
-(branch `test/campanha-100-dias`) e também têm issue.
+(branch `test/campanha-100-dias`) e também têm issue. Os BUG-13 e BUG-14 foram encontrados em
+07/11/2026, ao cobrir a US03 (branch `test/us03-modo-automatico`), e ainda precisam de issue.
 
 Os blocos abaixo repetem o conteúdo de cada um, para consulta sem sair do repositório.
 
@@ -26,6 +27,8 @@ do BUG-01 ao BUG-11 as correções estão na `develop` e as issues foram fechada
 | BUG-10 | Falha ao trocar o save pode perder o progresso | Média | [#44](https://github.com/ByRodrigoVasco/IARA/issues/44) | Corrigido na `develop`, issue fechada |
 | BUG-11 | Fundo do cartão do dia é carregado e nunca desenhado | Baixa | [#45](https://github.com/ByRodrigoVasco/IARA/issues/45) | Corrigido na `develop`, issue fechada |
 | BUG-12 | Menu não tem como começar uma partida nova | Média | [#46](https://github.com/ByRodrigoVasco/IARA/issues/46) | Aberto: falta decidir onde fica a opção |
+| BUG-13 | Suíte de testes deixou de compilar depois do áudio | Alta | A abrir | Corrigido na branch `test/us03-modo-automatico` |
+| BUG-14 | "Enviar sem conferir" esperava a IARA terminar de escrever | Média | A abrir | Corrigido na branch `test/us03-modo-automatico` |
 
 **Sobre o BUG-02:** os dois vazamentos descritos abaixo já não existem. Restava uma carga duplicada do menu ao abrir o jogo, removida. O CT-24 oscilava porque media sem desenhar quadros, e o driver de vídeo só devolve uma textura apagada depois de um quadro. Com quadros, 400 voltas ao menu cresceram 19 MB (cerca de 0,05 MB por volta, contra os 7 MB originais).
 
@@ -374,3 +377,44 @@ sem querer.
 
 **Onde:** `code/src/screens/menu.c` e `handle_menu_action()` em `code/src/core/state_machine.c`
 **Coberto por:** nenhum teste automatizado (achado por inspeção)
+
+---
+
+<a id="bug-13"></a>
+
+## BUG-13 — Suíte de testes deixou de compilar depois do áudio
+
+**Labels:** `bug`, `testes`, `gravidade: alta`
+
+A PR #53 (áudio) fez `computer_loop.c`, `game_loop.c` e `state_machine.c` chamarem funções de
+`core/audio.c`, mas o `run_tests.ps1` não passou a compilar esse arquivo. Na `develop`, o
+`test_sistema`, o `test_conteudo` e o `test_fluxo` param no link com
+`undefined reference to update_iara_voice_typing`.
+
+**Correção:** `code/src/core/audio.c` entrou na lista de fontes desses três conjuntos. Sem
+placa de som, `IsAudioDeviceReady()` devolve `false` e as funções de áudio não fazem nada, então
+os testes rodam iguais.
+
+**Onde:** `tools/tests/run_tests.ps1`
+**Coberto por:** a própria execução da suíte
+
+---
+
+<a id="bug-14"></a>
+
+## BUG-14 — "Enviar sem conferir" esperava a IARA terminar de escrever
+
+**Labels:** `bug`, `ui`, `gravidade: média`
+
+Com a PR #53, a sugestão da IARA passou a aparecer letra por letra (45 por segundo), e os dois
+botões só eram liberados no fim. Numa sugestão comum, isso dá de 2 a 4 segundos de espera antes
+de poder delegar, o que contradiz a US03 (PI2-227): o modo automático deve resolver na hora.
+
+**Correção:** "Enviar sem conferir" fica liberado desde o início da digitação e encerra o
+chamado no mesmo clique. "Conferir" continua esperando o texto terminar, porque não dá para
+conferir o que ainda não foi lido. A diferença reforça o que o jogo já faz com o botão que cresce
+a cada envio: a imprudência é o caminho mais fácil.
+
+**Onde:** `render_ticket_suggestion()` em `code/src/screens/computer_loop.c`
+**Coberto por:** CT-78 cobre a lógica do envio. O clique durante a digitação é verificado à mão,
+porque a raylib não permite injetar o mouse

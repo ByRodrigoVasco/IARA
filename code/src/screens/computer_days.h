@@ -37,12 +37,15 @@ static DialogStep day_3_script[] = {
     {
         .type = STEP_TRIAGE,
         .board_mode = BOARD_TRUTH_TABLE,
+        // A norma e a legenda das colunas vêm do bilhete que o Tiago deixou na mesa,
+        // não de um texto do jogo explicando notação (PI2-214 e PI2-215).
         .lines = {
-            "Norma 8: vai ao TI se (P ∧ ¬B) ∨ I.",
-            "P: sistema parado. B: tem backup. I: invasão.",
-            "V é verdadeiro, F é falso. O resto fica na fila."
+            "Bilhete do Tiago, preso no monitor dele:",
+            "\"Norma 8: vai ao TI se (P ∧ ¬B) ∨ I.",
+            "P parado, B tem backup, I invasão. V é sim.",
+            "O que a norma não manda ao TI fica na fila.\""
         },
-        .line_count = 3,
+        .line_count = 4,
         .hints = {"Resolva o parêntese antes do ∨.", "Com I verdadeiro, o ∨ já basta."},
         .iara_confidence = 94,
         .iara_reason = "Apliquei a norma 8 linha por linha.",
@@ -94,13 +97,14 @@ static DialogStep day_12_script[] = {
     {
         .type = STEP_TRIAGE,
         .board_mode = BOARD_EQUIVALENCE,
+        // A pergunta é da Sônia, e não uma instrução de método na voz do jogo (PI2-215).
         .lines = {
             "De: Sônia, do Financeiro. Conciliação do mês.",
-            "A regra nova vale o mesmo que a antiga?",
-            "Compare cada par na tabela-verdade."
+            "A IARA encurtou as regras. Antes de eu assinar:",
+            "cada par abaixo continua dizendo a mesma coisa?"
         },
         .line_count = 3,
-        .hints = {"Negar um ∨ pede o ∧ do outro lado.", "Teste P verdadeiro e Q falso em cada par."},
+        .hints = {"Teste P falso e Q verdadeiro no par B.", "Teste P verdadeiro e Q falso em cada par."},
         .iara_confidence = 96,
         .iara_reason = "Todas as regras simplificadas são iguais.",
         .low_reason = "Conferi com a norma 22. Nada mudou.",
@@ -204,13 +208,15 @@ static DialogStep day_41_script[] = {
     {
         .type = STEP_TRIAGE,
         .board_mode = BOARD_TRAINING,
+        // As exigências são a ficha do treino, como nos outros dias têm remetente (PI2-215).
         .lines = {
+            "Ficha do treino, três exigências a cumprir:",
             "∀ registro usado: sem CPF.",
             "∃ aprovado e ∃ reprovado no Centro.",
             "∃ aprovado e ∃ reprovado na Periferia."
         },
-        .line_count = 3,
-        .hints = {"Um ∀ cai com um só contraexemplo.", "Um ∃ pede pelo menos um de cada bairro."},
+        .line_count = 4,
+        .hints = {"Um registro com CPF já quebra a exigência.", "Cada bairro pede 1 aprovado e 1 reprovado."},
         .iara_confidence = 95,
         .iara_reason = "Usei o Centro inteiro. É o dado mais limpo.",
         .low_reason = "Quanto mais dado, melhor. Usei tudo.",
@@ -372,7 +378,9 @@ static DialogStep day_89_script[] = {
             "Nenhum funcionário está desperto."
         },
         .line_count = 3,
-        .hints = {"Desenhe: convidados dentro de funcionários.", "\"Todo A é B\" não diz que todo B é A."},
+        // A segunda dica fala dos próprios conjuntos da lista, e não de um "A" e um "B"
+        // abstratos que não aparecem em lugar nenhum do jogo (PI2-214).
+        .hints = {"Desenhe: convidados dentro de funcionários.", "Todo convidado é funcionário; o contrário não."},
         .iara_confidence = 99,
         .iara_reason = "Todo funcionário é convidado. Todos são bem-vindos.",
         .low_reason = "Tudo segue. Tudo desce.",
@@ -412,10 +420,11 @@ static DialogStep day_100_script[] = {
     {
         .type = STEP_TRIAGE,
         .board_mode = BOARD_REFUTATION,
+        // O desafio continua na fala do Renê, em vez de virar regra de exercício (PI2-215).
         .lines = {
-            "Aceite as premissas de Renê e mostre o absurdo.",
-            "Use só o que a contradição precisa, com",
-            "pelo menos uma evidência sua."
+            "Renê: \"Aceite o que eu disse e me mostre",
+            "onde isso se contradiz. Só o necessário,",
+            "e ao menos uma prova que seja sua.\""
         },
         .line_count = 3,
         .hints = {"Procure uma premissa e sua negação.", "Sem encadear nada: um par já é absurdo."},
