@@ -4,8 +4,8 @@ Os BUG-01 a BUG-08 foram encontrados na execução dos testes de sistema de 22/1
 (branch `develop`, commit `b366e7c`) e estão registrados como issue no repositório, com a
 label `bug`. Os BUG-09 a BUG-12 foram encontrados na revisão de 03/11/2026
 (branch `test/campanha-100-dias`) e também têm issue. O BUG-13 foi relatado em 08/11/2026, durante o
-desenvolvimento do Modo Sobrevivência (branch `feature/modo-sobrevivencia`), e ainda não tem issue. Os BUG-14 a BUG-16
-saíram do teste à mão de 08/11/2026 e do retorno de um usuário final de 09/11/2026, na mesma branch, e também não têm issue.
+desenvolvimento do Modo Sobrevivência (branch `feature/modo-sobrevivencia`), e tem a issue #56. Os BUG-14 a BUG-16
+saíram do teste à mão de 08/11/2026 e do retorno de um usuário final de 09/11/2026, na mesma branch, e têm as issues #57 a #59.
 
 Os blocos abaixo repetem o conteúdo de cada um, para consulta sem sair do repositório.
 
@@ -32,10 +32,10 @@ abertos, com gravidade baixa: são quadros lentos medidos no teste real, sem efe
 | BUG-10 | Falha ao trocar o save pode perder o progresso | Média | [#44](https://github.com/ByRodrigoVasco/IARA/issues/44) | Corrigido na `develop`, issue fechada |
 | BUG-11 | Fundo do cartão do dia é carregado e nunca desenhado | Baixa | [#45](https://github.com/ByRodrigoVasco/IARA/issues/45) | Corrigido na `develop`, issue fechada |
 | BUG-12 | Menu não tem como começar uma partida nova | Média | [#46](https://github.com/ByRodrigoVasco/IARA/issues/46) | Resolvido na `feature/modo-sobrevivencia` (`ad1ec96`) e aprovado em teste real; issue aberta até a branch ir para a `develop` |
-| BUG-13 | Carregamentos sem retorno visual e engasgos no menu | Média | ainda sem issue | Corrigido na `feature/modo-sobrevivencia` e aprovado em teste real |
-| BUG-14 | Telas de modo e de save em lista vertical, pouco organizadas | Baixa | ainda sem issue | Corrigido na `feature/modo-sobrevivencia` |
-| BUG-15 | Quadro de 1,67 s no menu, sete segundos depois de abrir | Baixa | ainda sem issue | Aberto, não reproduzido |
-| BUG-16 | Troca de música e ambiente lê o arquivo na hora | Baixa | ainda sem issue | Aberto |
+| BUG-13 | Carregamentos sem retorno visual e engasgos no menu | Média | [#56](https://github.com/ByRodrigoVasco/IARA/issues/56) | Corrigido na `feature/modo-sobrevivencia` e aprovado em teste real |
+| BUG-14 | Telas de modo e de save em lista vertical, pouco organizadas | Baixa | [#57](https://github.com/ByRodrigoVasco/IARA/issues/57) | Corrigido na `feature/modo-sobrevivencia` |
+| BUG-15 | Quadro de 1,67 s no menu, sete segundos depois de abrir | Baixa | [#58](https://github.com/ByRodrigoVasco/IARA/issues/58) | Aberto, não reproduzido |
+| BUG-16 | Troca de música e ambiente lê o arquivo na hora | Baixa | [#59](https://github.com/ByRodrigoVasco/IARA/issues/59) | Aberto |
 
 **Sobre o BUG-02:** os dois vazamentos descritos abaixo já não existem. Restava uma carga duplicada do menu ao abrir o jogo, removida. O CT-24 oscilava porque media sem desenhar quadros, e o driver de vídeo só devolve uma textura apagada depois de um quadro. Com quadros, 400 voltas ao menu cresceram 19 MB (cerca de 0,05 MB por volta, contra os 7 MB originais).
 
