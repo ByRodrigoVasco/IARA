@@ -14,6 +14,7 @@ simulando o uso real de um jogador.
 | **Atualização de 03/11/2026** | Branch `test/campanha-100-dias`, com o CT-76 incluído: **76 de 76 aprovados**. BUG-09 a BUG-11 corrigidos e BUG-12 em aberto. [Log da execução](evidencias/execucao-2026-11-03.txt) |
 | **Screencast da Sprint 02** | Execução de 03/11/2026 sobre a `develop` (`63c2d01`), gravada: **76 de 76 aprovados**. [Vídeo](../sprint-02/screencast-testes.mp4) e [log](../sprint-02/execucao-screencast-2026-11-03.txt) |
 | **Atualização de 07/11/2026** | Branch `test/us03-modo-automatico`, com o CT-77 e o CT-78 incluídos (US03: PI2-226 a PI2-228). BUG-13 e BUG-14 corrigidos |
+| **Atualização de 09/11/2026** | Branch `test/us14-ignorar-npcs`, com o CT-79 incluído (US14: PI2-251). Bloco 3 com 28 de 28 aprovados |
 
 ## Como executar
 
@@ -34,7 +35,7 @@ A suíte monta o jogo de verdade — os mesmos módulos, os mesmos arquivos de m
 a mesma máquina de estados — e o conduz como um jogador faria. Não há simulação de
 fachada: `test_sistema` (CT-01 a CT-16) inclui `game_loop.c` para alcançar o estado
 interno real da partida, `test_conteudo` (CT-17 a CT-24, CT-37, CT-41, CT-43, CT-47 a CT-52, CT-57, CT-58, CT-61 a CT-70, CT-74, CT-77 e CT-78) percorre os chamados e o menu, e
-`test_fluxo` (CT-25 a CT-36, CT-42 e CT-44 a CT-46, CT-53 a CT-56, CT-59, CT-60, CT-71 a CT-73, CT-75 e CT-76) monta o jogo inteiro menos a `main.c` e o percorre do
+`test_fluxo` (CT-25 a CT-36, CT-42 e CT-44 a CT-46, CT-53 a CT-56, CT-59, CT-60, CT-71 a CT-73, CT-75, CT-76 e CT-79) monta o jogo inteiro menos a `main.c` e o percorre do
 começo ao fim com a janela à vista: abertura, menu, CRÉDITOS e a volta ao menu,
 INICIAR, cartão do dia, caminhada pelo escritório, tutorial, os cinco chamados (um deles conferindo a sugestão da IARA), o relatório do dia, a volta ao mapa e a saída pela porta, que encerra o dia. Depois repete o dia pelos outros caminhos: colinha do mural, tudo enviado sem conferir, failsafe e saída do computador no meio do dia. Junto rodam os testes de unidade
 `test_collisions`, `test_characters`, `test_save` e `test_hints`.
@@ -121,6 +122,21 @@ INICIAR, cartão do dia, caminhada pelo escritório, tutorial, os cinco chamados
 | CT-76 | Botões das mesas de todos os dias cabem, com o texto legível, em 7 tamanhos de janela | OK |
 | CT-77 | Todo chamado dos 9 dias jogáveis oferece resolver sozinho ou pedir à IARA, e o manual vale pontos (US03, PI2-226) | OK |
 | CT-78 | Modo automático resolve na hora, nunca trava nem aciona o failsafe e vale 0 em todos os dias, com e sem memória e com e sem tarja (US03, PI2-227 e PI2-228) | OK |
+| CT-79 | Sem falar com nenhum NPC, o jogador conclui os 9 dias jogáveis e chega ao final: anda desviando dos NPCs, e no computador e na porta nenhum NPC toma o ESPAÇO (US14, PI2-251) | OK |
+
+## Evidência da US14: ignorar os NPCs
+
+O CT-79 joga a campanha inteira sem nunca conversar com um NPC. Em cada um dos 9 dias
+jogáveis, o jogador anda da entrada até o computador e do computador até a porta
+desviando dos NPCs que barram a passagem, e para em um ponto onde nenhum NPC está
+perto: ali o ESPAÇO abre o computador ou a porta, e não um diálogo. Nenhuma conversa
+abre no caminho e todo dia termina salvo. As imagens são do Dia 1, geradas pela
+própria execução: no computador e na porta, com o Anderson oferecendo a dica do dia,
+ignorada.
+
+![Jogador no computador do Dia 1, com os NPCs no escritório](evidencias/us14-computador-sem-npc.png)
+
+![Jogador na porta do Dia 1, ignorando a dica do Anderson](evidencias/us14-porta-sem-npc.png)
 
 ## Evidência do percurso
 
