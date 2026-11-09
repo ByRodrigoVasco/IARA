@@ -21,7 +21,8 @@ static save_mode save_select_mode = SAVE_MODE_NORMAL;
 static view_state save_view = VIEW_LIST;
 
 static save_slot_info save_list[SAVE_SLOTS_MAX];
-static char save_details[SAVE_SLOTS_MAX][96];
+static char save_summaries[SAVE_SLOTS_MAX][64];
+static char save_dates[SAVE_SLOTS_MAX][32];
 static int save_count = 0;
 
 // Linhas da lista: 0 é NOVO SAVE, de 1 a save_count são os saves, e a última é VOLTAR
@@ -70,21 +71,14 @@ static void reload_slots(void)
 
     for (int i = 0; i < save_count; i++)
     {
-        char summary[64];
-
-        save_slot_summary(save_select_mode, save_list[i].name, summary, sizeof(summary));
+        save_slot_summary(save_select_mode, save_list[i].name, save_summaries[i], sizeof(save_summaries[i]));
+        save_dates[i][0] = '\0';
         if (save_list[i].modified > 0)
         {
             time_t moment = (time_t)save_list[i].modified;
             struct tm *local = localtime(&moment);
-            char date[32] = "";
 
-            if (local != NULL) strftime(date, sizeof(date), "%d/%m/%Y %H:%M", local);
-            snprintf(save_details[i], sizeof(save_details[i]), "%s   -   %s", summary, date);
-        }
-        else
-        {
-            snprintf(save_details[i], sizeof(save_details[i]), "%s", summary);
+            if (local != NULL) strftime(save_dates[i], sizeof(save_dates[i]), "%d/%m/%Y %H:%M", local);
         }
     }
 }
@@ -360,10 +354,20 @@ static void open_delete(int row)
 int render_save_select(void)
 {
     float scale = get_ui_scale();
-    float top = style_list_top();
-    float row_height = style_row_height();
-    float bottom = GetScreenHeight() - 120.0f * scale;
-    int visible = (int)((bottom - top) / row_height);
+    float screen_w = (float)GetScreenWidth();
+    float screen_h = (float)GetScreenHeight();
+    float column_width = screen_w * 0.74f;
+    float column_x;
+    float top = style_content_top();
+    float name_size = style_font_size(0.6f);
+    float detail_size = style_font_size(0.34f);
+    float card_height = name_size + detail_size + 46.0f * scale;
+    float card_gap = 14.0f * scale;
+    Rectangle back_button;
+    float bottom;
+    int card_total = save_count + 1;            // NOVO SAVE e os saves; o VOLTAR é o botão de baixo
+    int back_row = save_count + 1;
+    int visible;
     view_state active_view = save_view;   // A tela em que o quadro começou: uma tecla que abre uma janela não vale também dentro dela
     Rectangle create_button = {0}, cancel_button = {0}, delete_button = {0};
     Rectangle row_areas[SAVE_SLOTS_MAX + 2];
@@ -371,9 +375,21 @@ int render_save_select(void)
     int hovered = -1;
     bool hovered_remove = false;
 
-    if (visible < 3) visible = 3;
-    if (save_selected_row < save_first_visible) save_first_visible = save_selected_row;
-    if (save_selected_row >= save_first_visible + visible) save_first_visible = save_selected_row - visible + 1;
+    if (column_width > 1040.0f * scale) column_width = 1040.0f * scale;
+    column_x = (screen_w - column_width) / 2.0f;
+    back_button = (Rectangle){(screen_w - 260.0f * scale) / 2.0f, screen_h - 135.0f * scale, 260.0f * scale, 62.0f * scale};
+    bottom = back_button.y - 56.0f * scale;
+    visible = (int)((bottom - top + card_gap) / (card_height + card_gap));
+    if (visible < 2) visible = 2;
+
+    // A janela da lista segue a escolha; no VOLTAR ela fica onde estava
+    if (save_selected_row < card_total)
+    {
+        if (save_selected_row < save_first_visible) save_first_visible = save_selected_row;
+        if (save_selected_row >= save_first_visible + visible) save_first_visible = save_selected_row - visible + 1;
+    }
+    if (save_first_visible > card_total - visible) save_first_visible = card_total - visible;
+    if (save_first_visible < 0) save_first_visible = 0;
 
     // -------- entrada
     if (save_view == VIEW_LIST)
@@ -398,54 +414,66 @@ int render_save_select(void)
     // -------- desenho
     begin_game_drawing();
     style_backdrop();
-    style_title(save_mode_title(save_select_mode), "ESCOLHA O SAVE");
+    style_title_centered(save_mode_title(save_select_mode), "ESCOLHA O SAVE");
 
-    for (int row = save_first_visible; row < row_total() && row < save_first_visible + visible; row++)
+    for (int row = save_first_visible; row < card_total && row < save_first_visible + visible; row++)
     {
-        float y = top + (float)(row - save_first_visible) * row_height;
-        const char *label;
-        const char *detail;
+        float y = top + (float)(row - save_first_visible) * (card_height + card_gap);
+        bool selected = (row == save_selected_row && save_view == VIEW_LIST);
+        Rectangle card = {column_x, y, column_width, card_height};
+        float padding = 26.0f * scale;
+        const char *label = row == 0 ? "+  NOVO SAVE" : save_list[row - 1].name;
+
+        row_areas[row] = card;
+        style_card_frame(card, selected, row == 0);
+        DrawTextEx(default_game_font, label, (Vector2){card.x + padding, card.y + 12.0f * scale}, name_size, name_size * 0.06f, selected ? STYLE_TEXT_COLOR : (Color){200, 192, 206, 255});
 
         if (row == 0)
         {
-            label = "NOVO SAVE";
-            detail = "Começar do zero com um nome novo";
-        }
-        else if (row <= save_count)
-        {
-            label = save_list[row - 1].name;
-            detail = save_details[row - 1];
+            DrawTextEx(default_game_font, "Começar do zero com um nome novo", (Vector2){card.x + padding, card.y + 20.0f * scale + name_size}, detail_size, detail_size * 0.06f, STYLE_DIM_COLOR);
         }
         else
         {
-            label = "VOLTAR";
-            detail = "";
-        }
+            const char *date = save_dates[row - 1];
+            Vector2 date_measure = MeasureTextEx(default_game_font, date, detail_size, detail_size * 0.06f);
 
-        row_areas[row] = style_row(y, label, detail, row == save_selected_row && save_view == VIEW_LIST);
+            DrawTextEx(default_game_font, save_summaries[row - 1], (Vector2){card.x + padding, card.y + 20.0f * scale + name_size}, detail_size, detail_size * 0.06f, STYLE_DIM_COLOR);
+            DrawTextEx(default_game_font, date, (Vector2){card.x + card.width - padding - date_measure.x, card.y + 16.0f * scale}, detail_size, detail_size * 0.06f, STYLE_DIM_COLOR);
 
-        // O botão de apagar aparece na linha escolhida, à direita
-        if (row == save_selected_row && row >= 1 && row <= save_count && save_view == VIEW_LIST)
-        {
-            float size = DEFAULT_TEXT_FONT_SIZE * scale;
-            const char *text = "DEL: APAGAR";
-            Vector2 measure = MeasureTextEx(default_game_font, text, size, 2.0f * scale);
+            // O botão de apagar aparece no save escolhido, no canto de baixo à direita
+            if (selected)
+            {
+                float size = DEFAULT_TEXT_FONT_SIZE * 0.8f * scale;
+                const char *text = "DEL: APAGAR";
+                Vector2 measure = MeasureTextEx(default_game_font, text, size, 2.0f * scale);
 
-            remove_area = (Rectangle){row_areas[row].x + row_areas[row].width - measure.x - 16.0f * scale, y + 4.0f * scale, measure.x + 12.0f * scale, measure.y + 8.0f * scale};
-            DrawTextEx(default_game_font, text, (Vector2){remove_area.x + 6.0f * scale, remove_area.y + 4.0f * scale}, size, 2.0f * scale, style_mouse_over(remove_area) ? STYLE_WARNING_COLOR : (Color){170, 70, 70, 255});
+                remove_area = (Rectangle){card.x + card.width - padding - measure.x - 20.0f * scale, card.y + card.height - measure.y - 22.0f * scale, measure.x + 20.0f * scale, measure.y + 12.0f * scale};
+                DrawRectangleLinesEx(remove_area, 2.0f * scale, style_mouse_over(remove_area) ? STYLE_WARNING_COLOR : (Color){170, 70, 70, 255});
+                DrawTextEx(default_game_font, text, (Vector2){remove_area.x + 10.0f * scale, remove_area.y + 6.0f * scale}, size, 2.0f * scale, style_mouse_over(remove_area) ? STYLE_WARNING_COLOR : (Color){170, 70, 70, 255});
+            }
         }
     }
 
-    // Indicadores de que a lista continua
-    if (save_first_visible > 0) DrawTextEx(default_game_font, "^", (Vector2){GetScreenWidth() - 70.0f * scale, top - 30.0f * scale}, 36.0f * scale, 1.0f, STYLE_DIM_COLOR);
-    if (save_first_visible + visible < row_total()) DrawTextEx(default_game_font, "v", (Vector2){GetScreenWidth() - 70.0f * scale, bottom - 10.0f * scale}, 36.0f * scale, 1.0f, STYLE_DIM_COLOR);
+    // Barra de rolagem, quando nem todos os cartões cabem
+    if (card_total > visible)
+    {
+        float track_x = column_x + column_width + 16.0f * scale;
+        float track_height = (float)visible * (card_height + card_gap) - card_gap;
+        float thumb_height = track_height * (float)visible / (float)card_total;
+        float thumb_y = top + (track_height - thumb_height) * (float)save_first_visible / (float)(card_total - visible);
+
+        DrawRectangle((int)track_x, (int)top, (int)(6.0f * scale), (int)track_height, (Color){40, 28, 46, 255});
+        DrawRectangle((int)track_x, (int)thumb_y, (int)(6.0f * scale), (int)thumb_height, (Color){120, 90, 140, 255});
+    }
+
+    style_button(back_button, "VOLTAR", save_selected_row == back_row && save_view == VIEW_LIST, false);
 
     if (save_view == VIEW_LIST && GetTime() < save_notice_until)
     {
         float size = DEFAULT_TEXT_FONT_SIZE * scale;
         Vector2 measure = MeasureTextEx(default_game_font, save_notice, size, 2.0f * scale);
 
-        DrawTextEx(default_game_font, save_notice, (Vector2){(GetScreenWidth() - measure.x) / 2.0f, GetScreenHeight() - 150.0f * scale}, size, 2.0f * scale, (Color){150, 230, 160, 255});
+        DrawTextEx(default_game_font, save_notice, (Vector2){(screen_w - measure.x) / 2.0f, back_button.y - 44.0f * scale}, size, 2.0f * scale, (Color){150, 230, 160, 255});
     }
 
     if (save_view == VIEW_LIST)
@@ -468,10 +496,11 @@ int render_save_select(void)
     // -------- mouse (depois do desenho, quando as áreas já foram calculadas)
     if (active_view == VIEW_LIST && save_view == VIEW_LIST)
     {
-        for (int row = save_first_visible; row < row_total() && row < save_first_visible + visible; row++)
+        for (int row = save_first_visible; row < card_total && row < save_first_visible + visible; row++)
         {
             if (style_mouse_over(row_areas[row])) hovered = row;
         }
+        if (style_mouse_over(back_button)) hovered = back_row;
         hovered_remove = remove_area.width > 0.0f && style_mouse_over(remove_area);
 
         if (hovered >= 0 || hovered_remove) SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
