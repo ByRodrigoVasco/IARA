@@ -26,6 +26,21 @@ int main(void)
     Rectangle inside = {15, 0, 10, 10};                       // já começa sobreposto ao obstáculo
     assert(move_axis(100, 1, inside, true, wall, 1) == 100);  // continua preso, sem andar
 
+    collision_tile tiles[] = {
+        {{20, 0, 10, 30}, TILE_GLASS, 4},
+        {{50, 0, 10, 30}, TILE_SOLID, 0}
+    };
+    assert(!collides_with_tiles((Rectangle){21, 5, 5, 5}, tiles, 2));
+    assert(collides_with_tiles((Rectangle){21, 26, 5, 5}, tiles, 2));
+    assert(collides_with_tiles((Rectangle){51, 5, 5, 5}, tiles, 2));
+    assert(!collides_with_tiles((Rectangle){0, 0, 5, 5}, tiles, 0));
+    tiles[0].base_height = 0;
+    assert(!collides_with_tiles((Rectangle){21, 26, 5, 5}, tiles, 1));
+    Rectangle empty_base = tile_collision_rectangle(tiles[0]);
+    assert(!collides_with_any((Rectangle){21, 26, 5, 10}, &empty_base, 1));
+    tiles[0].base_height = 40;
+    assert(tile_collision_rectangle(tiles[0]).height == 30);
+
     printf("Todos os testes passaram\n");
     return 0;
 }
