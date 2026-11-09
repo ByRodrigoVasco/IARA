@@ -56,4 +56,4 @@ powershell -ExecutionPolicy Bypass -File tools/tests/run_tests.ps1
 ```
 
 Casos: UX-01 a UX-03 (aviso), UX-04 a UX-06 (confirmação), UX-07 e UX-08 (ajuda), UX-09 a UX-12 (pausa),
-UX-13 e UX-14 (menu), UX-15 e UX-16 (ESC e ajuda no fluxo), UX-17 (pular a abertura). Na branch do Sobrevivência, SV-94 e SV-95 (aviso de falha ao salvar).
+UX-13 e UX-14 (menu), UX-15 e UX-16 (ESC e ajuda no fluxo), UX-17 (pular a abertura), UX-18 a UX-22 (ajustes do modo história depois do teste com jogadores: fala digitada, zona da porta, lugares dos colegas e aviso da dica). Na branch do Sobrevivência, SV-94 e SV-95 (aviso de falha ao salvar).

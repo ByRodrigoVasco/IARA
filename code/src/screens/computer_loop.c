@@ -11,6 +11,7 @@
 #include "button.h"
 #include "fonts.h"
 #include "cheat_sheet.h"
+#include "computer_art.h"
 #include "logic.h"
 #include "logic_text.h"
 
@@ -36,6 +37,7 @@
 // Tempos dos chamados, em segundos.
 #define STEP_ARRIVAL_TIME 0.25f   // o novo chamado entra deslizando na janela
 #define BOSS_FIRST_DELAY 20.0f    // a chefia começa a cobrar
+#define HINT_NOTICE_DELAY 35.0f   // sem erro nenhum, o aviso da dica de um colega aparece depois disso
 #define BOSS_SECOND_DELAY 40.0f   // a chefia cobra com mais pressa
 #define BOSS_LAST_DAY 74          // neste dia, a chefia já não aparece mais
 #define IARA_TYPING_CHARACTERS_PER_SECOND 45.0f
@@ -68,10 +70,12 @@
 #define CLAIM_REJECTED 2
 
 // Colinha colada no canto inferior esquerdo do monitor, sobre o último ícone do desktop.
-#define CHEAT_SHEET_HEIGHT_RATIO 0.30f       // altura do post-it (altura da tela do monitor)
+#define CHEAT_SHEET_HEIGHT_RATIO 0.27f       // altura do post-it (altura da tela do monitor)
 #define CHEAT_SHEET_ASPECT 1.15f             // largura / altura do post-it
 #define CHEAT_SHEET_GAP_RATIO 0.006f         // folga até a janela da IARA e a barra de tarefas (largura da tela)
 #define CHEAT_SHEET_MIN_MARGIN_RATIO 0.01f   // folga mínima até a borda da janela do jogo (largura da janela)
+#define CHEAT_SHEET_EDGE_OVERLAP_RATIO 0.14f    // quanto do post-it passa da borda de baixo do monitor (altura do post-it)
+#define CHEAT_SHEET_TILT_DEGREES -3.0f        // inclinação: colado meio torto
 
 // Tempos das animações da cena, em segundos.
 #define SCENE_ENTER_TIME 0.6f   // o monitor sobe e o escritório aproxima
@@ -165,6 +169,7 @@ bool computer_exit_finished = false;
 static bool computer_leaving = false; // O jogador saiu antes de concluir: o roteiro fica onde parou
 bool computer_failsafe_triggered = false;
 bool computer_mouse_capture_enabled = true;
+static const char *computer_hint_giver = NULL; // Quem tem a dica do dia (nome do NPC), para o aviso discreto na barra de tarefas
 float computer_scene_progress = 0.0f;
 
 static float screen_power = 0.0f;            // 0 = tela do monitor desligada, 1 = ligada
@@ -177,8 +182,6 @@ static Rectangle taskbar_rect;      // Barra de tarefas do desktop
 static Rectangle iara_window_rect;  // Janela da IARA dentro do desktop
 static Rectangle quiz_area_rect;    // Área útil da janela da IARA, onde o quiz é jogado
 static float quiz_font_size;        // Tamanho da fonte do quiz na janela atual
-
-static Texture2D window_texture;
 
 static Texture2D correct_icon_texture;
 static Texture2D wrong_icon_texture;
@@ -837,26 +840,10 @@ static void draw_desk(void)
     DrawRectangleRec((Rectangle){0, desk_y, window_w, window_h * 0.008f}, DESK_EDGE_COLOR);
 
     float key_w = window_h * 0.60f;
-    float key_h = window_h * 0.085f;
+    float key_h = window_h * 0.105f;
     Rectangle keyboard = {(window_w - key_w) / 2.0f, desk_y + (window_h * 0.03f), key_w, key_h};
 
-    DrawRectangleRec(keyboard, KEYBOARD_COLOR);
-    DrawRectangleLinesEx(keyboard, 2.0f, HARDWARE_OUTLINE_COLOR);
-
-    int columns = 16;
-    int rows = 3;
-    float inset = window_h * 0.004f;
-    float cell_w = (key_w - (inset * 2.0f)) / columns;
-    float cell_h = (key_h - (inset * 2.0f)) / rows;
-
-    for (int row = 0; row < rows; row++)
-    {
-        for (int column = 0; column < columns; column++)
-        {
-            DrawRectangleRec((Rectangle){keyboard.x + inset + (column * cell_w) + 1.0f, keyboard.y + inset + (row * cell_h) + 1.0f,
-                                         cell_w - 2.0f, cell_h - 2.0f}, KEY_COLOR);
-        }
-    }
+    computer_art_draw_keyboard(keyboard);
 
     Vector2 pointer = GetMousePosition();
     float travel_x = (pointer.x - screen_final_rect.x) / screen_final_rect.width;
@@ -867,17 +854,15 @@ static void draw_desk(void)
     if (travel_y < 0.0f) travel_y = 0.0f;
     if (travel_y > 1.0f) travel_y = 1.0f;
 
-    float mouse_w = window_h * 0.035f;
-    float mouse_h = window_h * 0.055f;
+    float mouse_w = window_h * 0.04f;
+    float mouse_h = window_h * 0.068f;
     Rectangle desk_mouse = {
-        keyboard.x + key_w + (window_h * 0.03f) + (travel_x * window_h * 0.02f),
+        keyboard.x + key_w + (window_h * 0.035f) + (travel_x * window_h * 0.02f),
         desk_y + (window_h * 0.03f) + (travel_y * window_h * 0.015f),
         mouse_w,
         mouse_h};
 
-    DrawRectangleRec(desk_mouse, DESK_MOUSE_COLOR);
-    DrawRectangleLinesEx(desk_mouse, 2.0f, HARDWARE_OUTLINE_COLOR);
-    DrawRectangleRec((Rectangle){desk_mouse.x + (mouse_w / 2.0f) - 1.0f, desk_mouse.y + 2.0f, 2.0f, mouse_h * 0.35f}, HARDWARE_OUTLINE_COLOR);
+    computer_art_draw_mouse(desk_mouse);
 }
 
 // Monitor: pé apoiado na mesa, moldura, marca e LED de ligado.
@@ -935,21 +920,19 @@ static void draw_wallpaper(void)
 static void draw_desktop_icons(void)
 {
     const char *names[] = {"Lixeira", "Chamados", "Ponto", "Manual"};
-    Color colors[] = {{120, 128, 136, 255}, {226, 190, 80, 255}, {100, 170, 220, 255}, {214, 214, 204, 255}};
 
     float column_w = screen_rect.width * DESKTOP_WINDOW_LEFT_RATIO;
     float icon = column_w * 0.42f;
-    float row_h = (taskbar_rect.y - screen_rect.y) / 4.0f;
+    float row_h = ((taskbar_rect.y - screen_rect.y) * 0.8f) / 4.0f; // os ícones ficam na parte de cima: a colinha ocupa o canto de baixo
     float font_size = column_w * 0.15f;
 
     for (int i = 0; i < 4; i++)
     {
         float center_x = screen_rect.x + (column_w / 2.0f);
         float top = screen_rect.y + (row_h * 0.15f) + (i * row_h);
-        Rectangle square = {center_x - (icon / 2.0f), top, icon, icon};
+        Rectangle square = {roundf(center_x - (icon / 2.0f)), roundf(top), roundf(icon), roundf(icon)};
 
-        DrawRectangleRec(square, colors[i]);
-        DrawRectangleLinesEx(square, 2.0f, BLACK);
+        computer_art_draw_icon((DesktopIcon)i, square);
         draw_text_centered(names[i], (Vector2){center_x, top + icon + (font_size * 0.7f)}, font_size, WHITE);
     }
 }
@@ -964,6 +947,22 @@ static const char *get_boss_message(void)
     if (ticket_time >= BOSS_FIRST_DELAY) return "Chefia: cadê os chamados?";
 
     return NULL;
+}
+
+// Aviso discreto de que um colega tem a dica do dia: aparece na barra de tarefas quando o jogador
+// erra ou demora, no mesmo lugar da cobrança da chefia (e à frente dela, porque ajuda mais).
+void computer_set_hint_giver(const char *npc_name)
+{
+    computer_hint_giver = npc_name;
+}
+
+static const char *get_hint_notification(void)
+{
+    if (computer_hint_giver == NULL) return NULL;
+    if (current_step_index >= TOTAL_STEPS || !step_is_ticket(&dialog_sequence[current_step_index])) return NULL;
+    if (current_wrong_answers == 0 && ticket_time < HINT_NOTICE_DELAY) return NULL;
+
+    return TextFormat("Nova mensagem: %s tem uma dica para você.", computer_hint_giver);
 }
 
 // Botão de sair da barra de tarefas, à esquerda do dia atual.
@@ -995,9 +994,21 @@ static void draw_taskbar(void)
     DrawRectangleRec(program, TASKBAR_PROGRAM_COLOR);
     draw_text_centered("IARA", (Vector2){program.x + (program.width / 2.0f), center_y}, font_size, WHITE);
 
+    const char *hint_notice = get_hint_notification();
     const char *boss_message = get_boss_message();
 
-    if (boss_message != NULL)
+    if (hint_notice != NULL)
+    {
+        // Notificação discreta, com um pontinho que pisca como o aviso de mensagem nova
+        float notice_x = program.x + program.width + (padding * 3.0f);
+        float dot = font_size * 0.32f;
+        unsigned char dot_alpha = (unsigned char)(150.0f + (105.0f * (0.5f + (0.5f * sinf((float)GetTime() * 4.0f)))));
+
+        DrawCircleV((Vector2){notice_x + dot, center_y}, dot, (Color){150, 210, 215, dot_alpha});
+        DrawTextEx(default_game_font, hint_notice, (Vector2){notice_x + (dot * 3.0f), center_y - (font_size / 2.0f)},
+                   font_size * 0.92f, font_size * QUIZ_LETTER_SPACING_RATIO, (Color){170, 220, 225, 255});
+    }
+    else if (boss_message != NULL)
     {
         DrawTextEx(default_game_font, boss_message, (Vector2){program.x + program.width + (padding * 3.0f), center_y - (font_size / 2.0f)},
                    font_size, font_size * QUIZ_LETTER_SPACING_RATIO, BOSS_TEXT_COLOR);
@@ -1056,19 +1067,16 @@ static void draw_iara_memory(float center_y, float font_size, float letter_spaci
 // Janela da IARA: a arte da janela, o título e o progresso do quiz na barra de título.
 static void draw_iara_window(void)
 {
-    float art_margin = window_texture.width * WINDOW_ART_MARGIN_RATIO;
-    Rectangle art_source = {art_margin, art_margin, window_texture.width - (art_margin * 2.0f), window_texture.height - (art_margin * 2.0f)};
     float title_h = iara_window_rect.height * WINDOW_ART_TITLE_RATIO;
     float center_y = iara_window_rect.y + (title_h / 2.0f);
     float font_size = title_h * 0.72f;
     float letter_spacing = font_size * QUIZ_LETTER_SPACING_RATIO;
     float padding = iara_window_rect.width * 0.02f;
 
-    DrawRectangleRec((Rectangle){iara_window_rect.x + padding / 2.0f, iara_window_rect.y + padding / 2.0f, iara_window_rect.width, iara_window_rect.height}, WINDOW_SHADOW_COLOR);
-    DrawTexturePro(window_texture, art_source, iara_window_rect, (Vector2){0, 0}, 0.0f, WHITE);
+    computer_art_draw_window(iara_window_rect, title_h);
 
     DrawTextEx(default_game_font, "IARA - Chamados",
-               (Vector2){iara_window_rect.x + (iara_window_rect.width * WINDOW_ART_DOTS_WIDTH_RATIO), center_y - (font_size / 2.0f)},
+               (Vector2){iara_window_rect.x + computer_art_window_buttons_width(title_h) + (title_h * 0.35f), center_y - (font_size / 2.0f)},
                font_size, letter_spacing, WHITE);
 
     // Progresso: quantas perguntas já apareceram e quantas existem no roteiro
@@ -1171,12 +1179,10 @@ void reset_computer_progress(void)
 // Carrega as texturas e prepara a cena do computador para a animação de entrada.
 void initialize_computer_loop(void)
 {
-    window_texture = LoadTexture(COMPUTER_WINDOW_PNG_PATH);
+    computer_art_reset();
     correct_icon_texture = LoadTexture(COMPUTER_CORRECT_ICON);
     wrong_icon_texture = LoadTexture(COMPUTER_WRONG_ICON);
 
-    GenTextureMipmaps(&window_texture);
-    SetTextureFilter(window_texture, TEXTURE_FILTER_TRILINEAR);
     SetTextureFilter(correct_icon_texture, TEXTURE_FILTER_BILINEAR);
     SetTextureFilter(wrong_icon_texture, TEXTURE_FILTER_BILINEAR);
 
@@ -1204,27 +1210,30 @@ void render_computer_loop(void)
     draw_iara_window();
 }
 
-// Área da colinha: acima da barra de tarefas e à esquerda da janela da IARA. O que não
-// cabe no desktop avança sobre a moldura e para fora do monitor, como um post-it colado.
-static Rectangle get_cheat_sheet_rect(Rectangle iara_window, Rectangle taskbar, float screen_w, float screen_h, float window_w)
+// Área da colinha: colada na moldura de baixo do monitor, no canto da esquerda. Ela desce por cima da
+// barra de tarefas até a borda do monitor, e o que não cabe no desktop avança sobre a moldura.
+static Rectangle get_cheat_sheet_rect(Rectangle iara_window, Rectangle monitor, float screen_w, float screen_h, float window_w)
 {
     float gap = screen_w * CHEAT_SHEET_GAP_RATIO;
     float height = screen_h * CHEAT_SHEET_HEIGHT_RATIO;
     float right = iara_window.x - gap;
     float left = right - (height * CHEAT_SHEET_ASPECT);
     float min_left = window_w * CHEAT_SHEET_MIN_MARGIN_RATIO;
+    float bottom = monitor.y + monitor.height - (height * CHEAT_SHEET_EDGE_OVERLAP_RATIO);
 
     if (left < min_left) left = min_left;
 
-    return (Rectangle){left, taskbar.y - height - gap, right - left, height};
+    return (Rectangle){left, bottom - height, right - left, height};
 }
 
-// Depois de pega no mural, a colinha fica sempre à vista no monitor, nos dois modos.
+// Depois de pega no mural, a colinha fica sempre à vista no monitor, nos dois modos. Ela é um post-it
+// de verdade: levemente torto, preso por uma fita, e por cima da tela (o ponteiro passa por baixo dela).
 static void draw_stuck_cheat_sheet(void)
 {
     if (!current_game_state_variables.has_cheat_sheet) return;
 
-    draw_cheat_sheet(get_cheat_sheet_rect(iara_window_rect, taskbar_rect, screen_rect.width, screen_rect.height, (float)GetScreenWidth()));
+    draw_cheat_sheet_stuck(get_cheat_sheet_rect(iara_window_rect, monitor_rect, screen_rect.width, screen_rect.height, (float)GetScreenWidth()),
+                           CHEAT_SHEET_TILT_DEGREES);
 }
 
 // O que as escolhas do dia mudam, e a prova final. Entra uma vez só, junto com os pontos do dia.
@@ -2535,13 +2544,15 @@ void handle_computer_loop(void)
 
     DrawRectangleRec(screen_rect, Fade(SCREEN_OFF_COLOR, 1.0f - screen_power));
 
-    // O post-it fica na frente do monitor: não apaga junto com a tela
-    draw_stuck_cheat_sheet();
-
     if (computer_mouse_captured)
     {
+        computer_art_update_click_ripples(screen_final_rect);
+        computer_art_draw_click_ripples(GetScreenHeight() / 900.0f);
         draw_computer_cursor();
     }
+
+    // O post-it fica na frente do monitor e do ponteiro: não apaga junto com a tela
+    draw_stuck_cheat_sheet();
 
     if (is_computer_shutting_down() && screen_power <= 0.0f && computer_scene_progress <= 0.0f)
     {
@@ -2552,7 +2563,6 @@ void handle_computer_loop(void)
 // Libera da memória as texturas usadas pela tela do computador.
 void unload_computer_loop(void)
 {
-    UnloadTexture(window_texture);
     UnloadTexture(correct_icon_texture);
     UnloadTexture(wrong_icon_texture);
 }

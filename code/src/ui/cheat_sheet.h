@@ -17,4 +17,12 @@ float get_cheat_sheet_font_size(Rectangle bounds);
  */
 void draw_cheat_sheet(Rectangle bounds);
 
+/**
+ * @brief Desenha a colinha como um post-it colado: levemente inclinado, preso por uma fita na borda de cima.
+ *
+ * @param bounds Área do post-it antes de inclinar.
+ * @param tilt_degrees Inclinação em graus (negativa gira para a esquerda).
+ */
+void draw_cheat_sheet_stuck(Rectangle bounds, float tilt_degrees);
+
 #endif // CHEAT_SHEET_H
