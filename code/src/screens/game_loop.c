@@ -72,15 +72,15 @@
 // DIMENSÕES E OFFSETS DA HITBOX (CAIXA DE COLISÃO DO JOGADOR)
 // A colisão ocorre só nos pés do personagem, para ele poder passar atrás dos móveis (a cabeça fica por cima)
 // ============================================================================
-#define HITBOX_OFFSET_X_AT_REFERENCE 10.0f  // Distância do topo-esquerdo do sprite até o início da hitbox (X)
+#define HITBOX_OFFSET_X_AT_REFERENCE 19.5f  // Distância do topo-esquerdo do sprite até o início da hitbox (X): centrada, como o corpo
 #define HITBOX_OFFSET_Y_AT_REFERENCE 48.0f  // Distância do topo-esquerdo do sprite até o início da hitbox (Y)
-#define HITBOX_WIDTH_AT_REFERENCE    50.0f  // Largura efetiva da área de colisão do jogador
+#define HITBOX_WIDTH_AT_REFERENCE    36.0f  // Largura efetiva da área de colisão do jogador (cabe nos corredores estreitos entre móveis)
 #define HITBOX_HEIGHT_AT_REFERENCE   24.0f  // Altura da área de colisão do jogador (só os pés)
 #define PLAYER_SPAWN_OFFSET_X_AT_REFERENCE -37.0f  // Deslocamento X do spawn a partir do centro da tela
 #define PLAYER_SPAWN_OFFSET_Y_AT_REFERENCE 208.0f  // Deslocamento Y do spawn (logo acima da porta de entrada)
 
-// Zona em frente à porta de vidro, por onde o jogador encerra o dia
-static const Rectangle EXIT_ZONE_REFERENCE = {-80.0f, 282.0f, 156.0f, 30.0f};
+// Zona da porta de vidro, por onde o jogador encerra o dia: do começo da porta até a soleira, a faixa inteira por onde ele consegue passar
+static const Rectangle EXIT_ZONE_REFERENCE = {-91.0f, 282.0f, 184.0f, 86.0f};
 
 // ============================================================================
 // VARIÁVEIS ESTÁTICAS DE CONTROLE E ESTADO
@@ -100,7 +100,16 @@ static bool is_near_computer = false;                     // Flag que indica se 
 static int nearby_npc_id = -1;
 static int active_npc_id = -1;
 static int active_npc_dialogue_line = 0;
-static bool hint_bubble_unlocked = false;
+static bool active_npc_first_today = false;               // A conversa em curso começou com o cumprimento do dia
+static bool npc_greeted_today[NPC_COUNT];                 // Quem já cumprimentou o jogador no dia atual
+static float npc_typed_characters = 0.0f;                 // Quantos caracteres da fala já foram "digitados" na tela
+static float npc_balloon_open = 0.0f;                     // 0 = balão fechado, 1 = aberto (anima a abertura e o fechamento)
+static int npc_balloon_npc = -1;                          // Quem fala no balão, mesmo durante o fechamento
+static float skip_guard_time = 0.0f;                      // Segundos desde que o cartão do dia abriu: evita pular sem querer
+
+#define NPC_TYPE_SPEED 48.0f                              // Caracteres por segundo na fala dos NPCs
+#define NPC_BALLOON_SPEED 7.0f                            // Velocidade da abertura do balão (1/s)
+#define CARD_SKIP_GUARD_TIME 0.4f                         // O pulo só vale depois disso, para o toque que abriu o cartão não pular
 
 // Texturas gerais de interface e mapas
 static Color color_to_fade = {255, 255, 255, 0};          // Cor base de renderização (RGBA) usada para aplicar efeito de opacidade/fade
@@ -138,7 +147,6 @@ static Texture2D in_game_office;        // Mapa do escritório
 static Texture2D action_tip_texture;    // Textura da dica visual de ação (Espaço)
 static Texture2D move_tip_texture;      // Textura da dica visual de movimento (WASD)
 static Texture2D move_or_tip_texture;   // Textura da dica visual alternativa de movimento (Setas)
-static Texture2D arrow_down_texture;     // Seta indicativa flutuante sobre objetos interativos
 
 // Estruturas do personagem e caixas de colisão
 static char_textures estagiario_texture;                 // Array/Estrutura com as texturas de todas as direções do jogador
@@ -247,6 +255,8 @@ static void unload_glass(void)
 // FUNÇÕES DE REDIMENSIONAMENTO E ESCALA DINÂMICA
 // ---------------------------------------------------------------------------
 
+static Vector2 get_map_center(void);
+
 /**
  * @brief Calcula o fator de escala dinâmico proporcional à resolução atual da tela.
  * 
@@ -304,6 +314,7 @@ static void start_day_card(const char *title, const char *line_1, const char *li
     current_card_subtitle_line_2 = line_2;
     current_calendar_day_state = NONE;
     render_calendar_day_card_finished = false;
+    skip_guard_time = 0.0f;
 }
 
 /**
@@ -373,7 +384,15 @@ static void open_playable_day(void)
 {
     int day = current_game_state_variables.current_day;
 
-    hint_bubble_unlocked = false;
+    // Cada dia jogável traz os colegas em lugares novos, e todos cumprimentam de novo
+    npc_arrange_for_day(day, get_scale(), get_map_center());
+    for (int npc = 0; npc < NPC_COUNT; npc++) npc_greeted_today[npc] = false;
+    active_npc_id = -1;
+    npc_balloon_open = 0.0f;
+    audio_set_game_tension((float)(day - 1) / 80.0f);   // Calmo nos primeiros dias; a tensão da trilha sobe com a história
+    computer_set_hint_giver(npc_has_hint(npc_get_daily_hint_owner(day), day)
+                                ? npc_get_definition(npc_get_daily_hint_owner(day))->name
+                                : NULL);
 
     // Quem perdeu o bilhete do Dia 1 não fica sem a colinha nos puzzles seguintes (RF07)
     if (day > 1) current_game_state_variables.has_cheat_sheet = true;
@@ -550,7 +569,6 @@ void initialize_game_loop_variables(void)
     nearby_npc_id = -1;
     active_npc_id = -1;
     active_npc_dialogue_line = 0;
-    hint_bubble_unlocked = false;
     walk_time = 0.0f;
     color_to_fade.a = 0;
 
@@ -561,12 +579,6 @@ void initialize_game_loop_variables(void)
 
     // Carrega o mapa do escritório
     in_game_office = LoadTexture("code/assets/sprites/environment/office.png");
-
-    // Carregamento e redimensionamento na memória RAM (Image) antes de enviar para a VRAM (Texture2D) da seta de indicação
-    float rescaling_factor_arrow = 0.2f;
-    Image arrow_image = LoadImage(ARROW_DOWN_PNG_PATH);
-    ImageResize(&arrow_image, (float)arrow_image.width * rescaling_factor_arrow, (float)arrow_image.height * rescaling_factor_arrow);
-    arrow_down_texture = LoadTextureFromImage(arrow_image);
 
     // Carregamento e redimensionamento das imagens das dicas de controle na tela
     float rescaling_factor_tip = 1.3f;
@@ -583,7 +595,6 @@ void initialize_game_loop_variables(void)
     move_or_tip_texture = LoadTextureFromImage(move_or_image);
     
     // Libera a memória RAM das imagens intermediárias após o upload para a placa de vídeo
-    UnloadImage(arrow_image);
     UnloadImage(action_image); 
     UnloadImage(move_image);
     UnloadImage(move_or_image);
@@ -666,6 +677,28 @@ void render_calendar_day_card(void)
                subtitle_size, subtitle_spacing, color_to_fade);
 }
 
+// Botão PULAR do cartão do dia: quem lê rápido não precisa esperar o tempo todo. ESPAÇO, ENTER ou um
+// clique em qualquer lugar também pulam. O botão aparece de leve no canto de baixo.
+static bool card_skip_requested(void)
+{
+    float scale = get_ui_scale();
+    const char *label = "PULAR  [ESPAÇO]";
+    float font_size = 22.0f * scale;
+    float width = MeasureTextEx(default_game_font, label, font_size, 0.0f).x + (36.0f * scale);
+    float height = font_size + (18.0f * scale);
+    Rectangle button = {GetScreenWidth() - width - (28.0f * scale), GetScreenHeight() - height - (24.0f * scale), width, height};
+    bool hovered = CheckCollisionPointRec(GetMousePosition(), button) && IsWindowFocused();
+    unsigned char alpha = (unsigned char)(color_to_fade.a * 0.85f);
+
+    DrawRectangleRounded(button, 0.35f, 6, (Color){18, 10, 20, (unsigned char)(alpha * 0.7f)});
+    DrawRectangleRoundedLinesEx(button, 0.35f, 6, 2.0f, hovered ? (Color){255, 214, 70, alpha} : (Color){200, 190, 210, (unsigned char)(alpha * 0.8f)});
+    DrawTextEx(default_game_font, label, (Vector2){button.x + (18.0f * scale), button.y + ((height - font_size) / 2.0f)},
+               font_size, 0.0f, (Color){245, 240, 248, alpha});
+
+    if (skip_guard_time < CARD_SKIP_GUARD_TIME) return false;
+    return IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ENTER) || IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+}
+
 /**
  * @brief Gerencia a máquina de estados do cartão do dia, controlando o aparecimento (fade in),
  * o tempo de leitura visível e o desaparecimento (fade out).
@@ -674,6 +707,7 @@ void handle_calendar_day_card(void)
 {
     bool fading_in_finished = false;
     static double timer = DID_NOT_START;
+    skip_guard_time += GetFrameTime();
     double amount_of_seconds_to_wait = 5.0; // Tempo em segundos que a mensagem permanece visível na tela
 
     switch (current_calendar_day_state)
@@ -687,6 +721,12 @@ void handle_calendar_day_card(void)
         // Aumenta gradualmente a opacidade (Alpha) de color_to_fade
         fade_in_texture(MEDIUM_FADE_SPEED, &color_to_fade, &fading_in_finished);
         render_calendar_day_card();
+        if (card_skip_requested())
+        {
+            timer = DID_NOT_START;
+            current_calendar_day_state = FADING_OUT;
+            break;
+        }
 
         // Quando atingir 100% de opacidade, passa para o estado de espera
         if (fading_in_finished)
@@ -697,6 +737,12 @@ void handle_calendar_day_card(void)
 
     case AWAIT:
         render_calendar_day_card();
+        if (card_skip_requested())
+        {
+            timer = DID_NOT_START;
+            current_calendar_day_state = FADING_OUT;
+            break;
+        }
 
         // Marca o tempo exato de início da espera
         if (timer == DID_NOT_START)
@@ -724,6 +770,36 @@ void handle_calendar_day_card(void)
     }
 }
 
+// Quantos caracteres (e não bytes) o texto UTF-8 tem: a fala digitada conta letras, não bytes dos acentos.
+static int utf8_length(const char *text)
+{
+    int length = 0;
+
+    if (text == NULL) return 0;
+    for (; *text != '\0'; text++)
+    {
+        if (((unsigned char)*text & 0xC0) != 0x80) length++;
+    }
+    return length;
+}
+
+// Quantos bytes ocupam os primeiros `characters` caracteres do texto UTF-8.
+static int utf8_prefix_bytes(const char *text, int characters)
+{
+    int bytes = 0;
+
+    while (text[bytes] != '\0')
+    {
+        if (((unsigned char)text[bytes] & 0xC0) != 0x80)
+        {
+            if (characters == 0) break;
+            characters--;
+        }
+        bytes++;
+    }
+    return bytes;
+}
+
 /**
  * @brief Verifica interações do jogador com objetos do cenário (computador).
  * 
@@ -743,14 +819,30 @@ void handle_map_interactables(void)
 
     if (active_npc_id >= 0)
     {
-        if (IsKeyPressed(KEY_SPACE))
+        int day = current_game_state_variables.current_day;
+        const char *line = npc_get_dialogue_line(active_npc_id, day, active_npc_first_today, active_npc_dialogue_line);
+        float line_length = (float)utf8_length(line);
+
+        // A fala aparece letra por letra; ESPAÇO, ENTER ou clique completam a fala na hora e, com ela
+        // completa, passam para a próxima
+        npc_typed_characters += GetFrameTime() * NPC_TYPE_SPEED;
+        if (npc_typed_characters > line_length) npc_typed_characters = line_length;
+
+        if (IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ENTER) || IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
         {
-            active_npc_dialogue_line++;
-            if (active_npc_dialogue_line >=
-                npc_get_dialogue_line_count(active_npc_id, current_game_state_variables.current_day))
+            if (npc_typed_characters < line_length)
             {
-                active_npc_id = -1;
-                active_npc_dialogue_line = 0;
+                npc_typed_characters = line_length;
+            }
+            else
+            {
+                active_npc_dialogue_line++;
+                npc_typed_characters = 0.0f;
+                if (active_npc_dialogue_line >= npc_get_dialogue_line_count(active_npc_id, day, active_npc_first_today))
+                {
+                    active_npc_id = -1;
+                    active_npc_dialogue_line = 0;
+                }
             }
         }
         return;
@@ -764,8 +856,13 @@ void handle_map_interactables(void)
     }
     else if (nearby_npc_id >= 0)
     {
+        // Na primeira conversa do dia o NPC cumprimenta (no Dia 1, dá as boas-vindas); depois só fala do dia
         active_npc_id = nearby_npc_id;
+        active_npc_first_today = !npc_greeted_today[nearby_npc_id];
+        npc_greeted_today[nearby_npc_id] = true;
+        npc_balloon_npc = active_npc_id;
         active_npc_dialogue_line = 0;
+        npc_typed_characters = 0.0f;
     }
     else if (is_near_hint)
     {
@@ -945,6 +1042,7 @@ void render_debug_hitboxes(void)
     DrawRectangleLinesEx(map_collision_rec, 2.0f, RED);                           // Limite do mapa
     DrawRectangleLinesEx(estagiario_computer_collision_rectangle, 2.0f, YELLOW);  // Zona do computador
     DrawRectangleLinesEx(estagiario_collision_rec, 2.0f, GREEN);                  // Jogador
+    DrawRectangleLinesEx(get_exit_zone(), 2.0f, SKYBLUE);                         // Zona de saída (porta)
 
     for (int i = 0; i < OBSTACLE_COUNT; i++)
     {
@@ -1096,11 +1194,9 @@ static void render_computer_backdrop(void)
 static void render_office_scene(void)
 {
     render_game_loop_escritorio();
-    draw_npcs(get_scale(), color_to_fade, current_game_state_variables.current_day,
-              current_estagiario_position.y, true, hint_bubble_unlocked);
+    draw_npcs(get_scale(), color_to_fade, current_estagiario_position.y, true);
     render_player();
-    draw_npcs(get_scale(), color_to_fade, current_game_state_variables.current_day,
-              current_estagiario_position.y, false, hint_bubble_unlocked);
+    draw_npcs(get_scale(), color_to_fade, current_estagiario_position.y, false);
 }
 
 static void render_office_with_glass(void)
@@ -1227,43 +1323,103 @@ void render_control_tips(void)
     DrawTexturePro(action_tip_texture, action_src, action_dest, (Vector2){0, 0}, 0.0f, color_to_fade);
 }
 
+// DrawTriangle só preenche triângulos em sentido anti-horário; esta versão aceita qualquer ordem.
+static void draw_triangle_any_order(Vector2 a, Vector2 b, Vector2 c, Color color)
+{
+    float cross = ((b.x - a.x) * (c.y - a.y)) - ((b.y - a.y) * (c.x - a.x));
+
+    if (cross > 0.0f) DrawTriangle(a, c, b, color);
+    else DrawTriangle(a, b, c, color);
+}
+
 /**
- * @brief Desenha a seta amarela indicativa flutuando acima de um objeto interativo.
- * 
- * Utiliza a função matemática harmônica `sinf()` multiplicada pelo tempo do jogo (`GetTime()`)
- * para criar um efeito senoidal fluido de oscilação ("quicar"/bounce para cima e para baixo).
+ * @brief Seta pequena que acompanha o jogador e aponta para o próximo objetivo (o computador e, depois,
+ * a porta). Ela gira em volta do personagem e some quando ele já está perto, para não cobrir o mapa.
  *
  * @param target Objeto em coordenadas da tela.
  */
 void render_interact_arrow(Rectangle target)
 {
     float scale = get_scale();
-    
-    // Cálculo do desvio de flutuação vertical usando onda senoidal
-    float bounce_offset = sinf(GetTime() * 6.0f) * (10.0f * scale);
+    float player_size = get_player_size();
+    Vector2 player_center = {current_estagiario_position.x + (player_size / 2.0f),
+                             current_estagiario_position.y + (player_size * 0.45f)};
+    Vector2 target_center = {target.x + (target.width / 2.0f), target.y + (target.height / 2.0f)};
+    float dx = target_center.x - player_center.x;
+    float dy = target_center.y - player_center.y;
+    float distance = sqrtf((dx * dx) + (dy * dy));
 
-    float arrow_width  = arrow_down_texture.width  * scale;
-    float arrow_height = arrow_down_texture.height * scale;
+    // Já ao lado do objetivo: o anel e a tecla de interação assumem
+    if (distance < 110.0f * scale) return;
 
-    // Posição centralizada horizontalmente no topo da caixa de colisão do computador
-    float arrow_x = target.x
-                  + target.width / 2.0f
-                  - arrow_width / 2.0f;
-    
-    // Posição vertical logo acima do computador + offset animado da onda senoidal
-    float arrow_y = target.y
-                  - arrow_height - (10.0f * scale) + bounce_offset;
+    float direction_x = dx / distance;
+    float direction_y = dy / distance;
+    float pulse = 0.5f + (0.5f * sinf((float)GetTime() * 5.0f));
+    float orbit = (player_size * 0.78f) + (3.0f * scale * pulse);
+    float size = 11.0f * scale;
+    Vector2 center = {player_center.x + (direction_x * orbit), player_center.y + (direction_y * orbit)};
+    Vector2 perpendicular = {-direction_y, direction_x};
+    Vector2 tip = {center.x + (direction_x * size), center.y + (direction_y * size)};
+    Vector2 left = {center.x - (direction_x * size * 0.7f) + (perpendicular.x * size * 0.8f),
+                    center.y - (direction_y * size * 0.7f) + (perpendicular.y * size * 0.8f)};
+    Vector2 right = {center.x - (direction_x * size * 0.7f) - (perpendicular.x * size * 0.8f),
+                     center.y - (direction_y * size * 0.7f) - (perpendicular.y * size * 0.8f)};
+    unsigned char alpha = (unsigned char)((170.0f + (70.0f * pulse)) * color_to_fade.a / 255.0f);
 
-    Rectangle source = {0, 0, (float)arrow_down_texture.width, (float)arrow_down_texture.height};
-    Rectangle dest   = {arrow_x, arrow_y, arrow_width, arrow_height};
-
-    DrawTexturePro(arrow_down_texture, source, dest, (Vector2){0, 0}, 0.0f, color_to_fade);
+    // Contorno escuro por baixo: a setinha se destaca sobre qualquer piso
+    float grow = 1.7f * scale;
+    draw_triangle_any_order((Vector2){tip.x + (direction_x * grow), tip.y + (direction_y * grow)},
+                 (Vector2){left.x - (perpendicular.x * grow) - (direction_x * grow), left.y - (perpendicular.y * grow) - (direction_y * grow)},
+                 (Vector2){right.x + (perpendicular.x * grow) - (direction_x * grow), right.y + (perpendicular.y * grow) - (direction_y * grow)},
+                 (Color){20, 12, 28, (unsigned char)(alpha * 0.8f)});
+    draw_triangle_any_order(tip, left, right, (Color){255, 214, 70, alpha});
 }
 
-static void draw_npc_dialogue_line(const char *text, Vector2 position, float max_width,
-                                   float font_size, float letter_spacing)
+/**
+ * @brief Indicador de que algo ao alcance aceita interação (NPC, computador, mural ou porta): um anel
+ * que pulsa no chão e uma tecla ESPAÇO pequena e discreta, sem texto grande nem seta sobre o mapa.
+ *
+ * @param feet Retângulo dos "pés" do objeto, em coordenadas da tela (o anel acompanha a largura dele).
+ */
+static void render_interaction_marker(Rectangle feet)
 {
-    char line[256] = "";
+    float scale = get_scale();
+    float pulse = 0.5f + (0.5f * sinf((float)GetTime() * 4.0f));
+    float fade = color_to_fade.a / 255.0f;
+    Vector2 center = {feet.x + (feet.width / 2.0f), feet.y + (feet.height / 2.0f)};
+    float radius_x = (feet.width * 0.5f) + ((6.0f + (3.0f * pulse)) * scale);
+    float radius_y = radius_x * 0.38f;
+    unsigned char ring_alpha = (unsigned char)((120.0f + (100.0f * pulse)) * fade);
+
+    // Anel achatado no chão, como uma sombra luminosa
+    DrawEllipse((int)center.x, (int)center.y, radius_x, radius_y, (Color){255, 214, 70, (unsigned char)(34.0f * fade)});
+    DrawEllipseLines((int)center.x, (int)center.y, radius_x, radius_y, (Color){255, 214, 70, ring_alpha});
+
+    // Tecla ESPAÇO pequena, acima do objeto, subindo e descendo devagar
+    float font_size = 13.0f * scale;
+    const char *label = "ESPAÇO";
+    float text_width = MeasureTextEx(default_game_font, label, font_size, 0.0f).x;
+    float key_width = text_width + (12.0f * scale);
+    float key_height = font_size + (7.0f * scale);
+    float bob = sinf((float)GetTime() * 3.0f) * 1.8f * scale;
+    Rectangle key = {center.x - (key_width / 2.0f), feet.y - (46.0f * scale) + bob, key_width, key_height};
+    unsigned char key_alpha = (unsigned char)(235.0f * fade);
+
+    DrawRectangleRounded((Rectangle){key.x, key.y + (2.0f * scale), key.width, key.height}, 0.3f, 4, (Color){20, 12, 28, (unsigned char)(200.0f * fade)});
+    DrawRectangleRounded(key, 0.3f, 4, (Color){240, 234, 244, key_alpha});
+    DrawTextEx(default_game_font, label, (Vector2){key.x + (6.0f * scale), key.y + ((key.height - font_size) / 2.0f)},
+               font_size, 0.0f, (Color){28, 18, 34, key_alpha});
+}
+
+#define DIALOGUE_MAX_LINES 6
+#define DIALOGUE_LINE_BYTES 256
+
+// Quebra o texto em linhas que cabem em max_width. Devolve quantas linhas saíram.
+static int wrap_dialogue_text(const char *text, float max_width, float font_size,
+                              char lines[DIALOGUE_MAX_LINES][DIALOGUE_LINE_BYTES])
+{
+    int line_count = 0;
+    char line[DIALOGUE_LINE_BYTES] = "";
     const char *word_start = text;
 
     while (*word_start != '\0')
@@ -1273,20 +1429,19 @@ static void draw_npc_dialogue_line(const char *text, Vector2 position, float max
 
         const char *word_end = word_start;
         while (*word_end != '\0' && *word_end != ' ') word_end++;
+
+        char word[DIALOGUE_LINE_BYTES];
         size_t word_length = (size_t)(word_end - word_start);
-        char word[256];
         if (word_length >= sizeof(word)) word_length = sizeof(word) - 1;
         snprintf(word, sizeof(word), "%.*s", (int)word_length, word_start);
 
-        char candidate[256];
+        char candidate[DIALOGUE_LINE_BYTES];
         if (line[0] == '\0') snprintf(candidate, sizeof(candidate), "%s", word);
         else snprintf(candidate, sizeof(candidate), "%s %s", line, word);
 
-        if (line[0] != '\0' &&
-            MeasureTextEx(default_game_font, candidate, font_size, letter_spacing).x > max_width)
+        if (line[0] != '\0' && MeasureTextEx(default_game_font, candidate, font_size, 0.0f).x > max_width)
         {
-            DrawTextEx(default_game_font, line, position, font_size, letter_spacing, WHITE);
-            position.y += font_size * 1.15f;
+            if (line_count < DIALOGUE_MAX_LINES) snprintf(lines[line_count++], DIALOGUE_LINE_BYTES, "%s", line);
             snprintf(line, sizeof(line), "%s", word);
         }
         else
@@ -1297,40 +1452,87 @@ static void draw_npc_dialogue_line(const char *text, Vector2 position, float max
         word_start = word_end;
     }
 
-    if (line[0] != '\0') DrawTextEx(default_game_font, line, position, font_size, letter_spacing, WHITE);
+    if (line[0] != '\0' && line_count < DIALOGUE_MAX_LINES) snprintf(lines[line_count++], DIALOGUE_LINE_BYTES, "%s", line);
+    return line_count;
 }
 
+// Desenha o texto já quebrado, mostrando só os primeiros `visible` caracteres (a fala sendo digitada).
+static void draw_typed_dialogue(const char *text, Vector2 position, float max_width, float font_size,
+                                int visible, Color color)
+{
+    char lines[DIALOGUE_MAX_LINES][DIALOGUE_LINE_BYTES];
+    int line_count = wrap_dialogue_text(text, max_width, font_size, lines);
+
+    for (int i = 0; i < line_count && visible > 0; i++)
+    {
+        int line_length = utf8_length(lines[i]);
+        char shown[DIALOGUE_LINE_BYTES];
+        int shown_chars = visible < line_length ? visible : line_length;
+        int bytes = utf8_prefix_bytes(lines[i], shown_chars);
+
+        snprintf(shown, sizeof(shown), "%.*s", bytes, lines[i]);
+        DrawTextEx(default_game_font, shown, position, font_size, 0.0f, color);
+        position.y += font_size * 1.2f;
+        visible -= line_length + 1; // +1: o espaço que a quebra consumiu
+    }
+}
+
+// Balão de fala do NPC: abre deslizando de baixo com um leve quique, e a fala é digitada.
 static void render_npc_dialogue(void)
 {
-    if (active_npc_id < 0) return;
+    float target = active_npc_id >= 0 ? 1.0f : 0.0f;
+    float step = GetFrameTime() * NPC_BALLOON_SPEED;
+
+    if (npc_balloon_open < target) npc_balloon_open = fminf(target, npc_balloon_open + step);
+    else if (npc_balloon_open > target) npc_balloon_open = fmaxf(target, npc_balloon_open - step * 1.4f);
+
+    if (npc_balloon_open <= 0.0f) return;
 
     float scale = get_ui_scale();
     float panel_height = 230.0f * scale;
     float screen_height = (float)GetScreenHeight();
-    Rectangle panel = {0, screen_height - panel_height, (float)GetScreenWidth(), panel_height};
-    const NpcDefinition *definition = npc_get_definition(active_npc_id);
-    const char *line = npc_get_dialogue_line(active_npc_id, current_game_state_variables.current_day,
-                                             active_npc_dialogue_line);
-    if (definition == NULL || line == NULL) return;
+    float progress = npc_balloon_open;
+    // Ease-out com um pequeno excesso no fim da abertura (o "quique"); fechando, só desliza
+    float eased = (active_npc_id >= 0) ? (1.0f + 2.2f * powf(progress - 1.0f, 3.0f) + 1.2f * powf(progress - 1.0f, 2.0f))
+                                       : progress * progress;
+    float slide = (1.0f - eased) * panel_height * 1.05f;
+    unsigned char alpha = (unsigned char)(255.0f * fminf(1.0f, progress * 1.6f));
+    Rectangle panel = {0, screen_height - panel_height + slide, (float)GetScreenWidth(), panel_height};
+    const NpcDefinition *definition = npc_get_definition(npc_balloon_npc);
+    int day = current_game_state_variables.current_day;
+    const char *line = active_npc_id >= 0
+        ? npc_get_dialogue_line(active_npc_id, day, active_npc_first_today, active_npc_dialogue_line)
+        : NULL;
 
-    DrawRectangleRec(panel, (Color){18, 10, 20, 225});
-    draw_npc_portrait(active_npc_id,
+    if (definition == NULL) return;
+
+    // Painel com a faixa de cor em cima e o rabinho do balão apontando para o NPC que fala
+    DrawRectangleRec(panel, (Color){18, 10, 20, (unsigned char)(225 * alpha / 255)});
+    DrawRectangleRec((Rectangle){panel.x, panel.y, panel.width, 4.0f * scale}, (Color){200, 12, 20, alpha});
+    draw_npc_portrait(npc_balloon_npc,
                       (Rectangle){30.0f * scale, panel.y + 22.0f * scale, 165.0f * scale, 190.0f * scale});
 
-    float font_size = 34.0f * scale;
     float text_x = 230.0f * scale;
     DrawTextEx(default_game_font, definition->name, (Vector2){text_x, panel.y + 24.0f * scale},
-               26.0f * scale, 0.0f, RAYWHITE);
-    draw_npc_dialogue_line(line, (Vector2){text_x, panel.y + 70.0f * scale},
-                           GetScreenWidth() - text_x - 60.0f * scale, font_size, 0.0f);
+               26.0f * scale, 0.0f, (Color){255, 235, 235, alpha});
 
-    const char *continue_text = "ESPAÇO: CONTINUAR";
+    if (line == NULL) return; // Fechando: o painel só desliza para fora
+
+    float font_size = 34.0f * scale;
+    draw_typed_dialogue(line, (Vector2){text_x, panel.y + 70.0f * scale},
+                        GetScreenWidth() - text_x - 60.0f * scale, font_size, (int)npc_typed_characters, WHITE);
+
+    bool line_complete = npc_typed_characters >= (float)utf8_length(line);
+    const char *continue_text = line_complete ? "ESPAÇO: CONTINUAR" : "ESPAÇO: COMPLETAR A FALA";
     float continue_size = 20.0f * scale;
     float continue_width = MeasureTextEx(default_game_font, continue_text, continue_size, 0.0f).x;
+    // Pisca de leve quando a fala termina, chamando o próximo toque
+    float blink = line_complete ? 0.65f + 0.35f * sinf((float)GetTime() * 6.0f) : 0.7f;
+
     DrawTextEx(default_game_font, continue_text,
                (Vector2){GetScreenWidth() - continue_width - 24.0f * scale,
                           panel.y + panel.height - continue_size - 10.0f * scale},
-               continue_size, 0.0f, RAYWHITE);
+               continue_size, 0.0f, (Color){255, 255, 255, (unsigned char)(255.0f * blink)});
 }
 
 /**
@@ -1443,8 +1645,8 @@ void handle_game_loop_screens(void)
         bool interaction_open = is_hint_note_open() || active_npc_id >= 0;
 
         // Processa lógica de comandos do jogador, interações e colisões com o mapa.
-        // Enquanto lê o bilhete, o jogador fica parado.
-        if (is_hint_note_open())
+        // Enquanto lê o bilhete ou conversa com um NPC, o jogador fica parado.
+        if (interaction_open)
         {
             walk_time = 0.0f;
         }
@@ -1475,11 +1677,14 @@ void handle_game_loop_screens(void)
         render_control_tips();
         render_day_counter();
         render_high_contrast_outlines();
-        render_interact_arrow(get_next_objective_rectangle());
-        if (is_near_hint) render_interact_arrow(hint_item_rectangle);
-        if (nearby_npc_id >= 0 && active_npc_id < 0)
+        if (active_npc_id < 0 && !is_hint_note_open())
         {
-            render_interact_arrow(npc_get_hitbox(nearby_npc_id, get_scale()));
+            render_interact_arrow(get_next_objective_rectangle());
+
+            if (nearby_npc_id >= 0) render_interaction_marker(npc_get_hitbox(nearby_npc_id, get_scale()));
+            else if (is_near_hint) render_interaction_marker(hint_item_rectangle);
+            else if (is_near_exit) render_interaction_marker(get_glass_door_rectangle());
+            else if (is_near_computer && !current_game_state_variables.is_resolved) render_interaction_marker(estagiario_computer_collision_rectangle);
         }
         render_debug_hitboxes();
         render_npc_dialogue();
@@ -1496,7 +1701,6 @@ void handle_game_loop_screens(void)
         {
             initialize_computer_loop();
             computer_loop_loaded = true;
-            hint_bubble_unlocked = true;
             current_screen = COMPUTER_SCREEN;
             enter_computer_screen = false;
         }
@@ -1637,7 +1841,6 @@ void unload_game_loop(void)
 
     // Texturas do escritório e elementos gráficos
     UnloadTexture(in_game_office);
-    UnloadTexture(arrow_down_texture);
 
     UnloadTexture(action_tip_texture);
     UnloadTexture(move_tip_texture);

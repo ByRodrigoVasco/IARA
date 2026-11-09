@@ -17,21 +17,64 @@ static void test_each_npc_has_its_own_dialogue(void)
         assert(definition != NULL);
         assert(definition->name != NULL);
         assert(definition->sprite_folder != NULL);
-        assert(definition->dialogue_line_count >= 3);
 
-        for (int line = 0; line < definition->dialogue_line_count; line++)
-        {
-            assert(npc_get_dialogue_line(npc_id, 0, line) != NULL);
-        }
+        // O cumprimento do Dia 1 é de boas-vindas e o dos outros dias é outro
+        assert(npc_get_greeting(npc_id, 1) != NULL);
+        assert(npc_get_greeting(npc_id, 3) != NULL);
+        assert(strcmp(npc_get_greeting(npc_id, 1), npc_get_greeting(npc_id, 3)) != 0);
 
         for (int other_id = npc_id + 1; other_id < npc_get_count(); other_id++)
         {
-            assert(strcmp(definition->dialogue[0], npc_get_definition(other_id)->dialogue[0]) != 0);
+            assert(strcmp(npc_get_greeting(npc_id, 1), npc_get_greeting(other_id, 1)) != 0);
+            assert(strcmp(npc_get_greeting(npc_id, 3), npc_get_greeting(other_id, 3)) != 0);
         }
     }
 
     assert(npc_get_definition(-1) == NULL);
     assert(npc_get_definition(NPC_COUNT) == NULL);
+    assert(npc_get_greeting(-1, 1) == NULL);
+}
+
+static void test_every_npc_has_a_different_line_for_each_playable_day(void)
+{
+    int days[NPC_PLAYABLE_DAY_COUNT];
+    int count = 0;
+
+    for (int day = 1; day <= 100 && count < NPC_PLAYABLE_DAY_COUNT; day++)
+    {
+        if (calendar_get_day_type(day) == PLAYABLE_DAY) days[count++] = day;
+    }
+    assert(count == NPC_PLAYABLE_DAY_COUNT);
+
+    for (int npc_id = 0; npc_id < npc_get_count(); npc_id++)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            assert(npc_get_playable_day_index(days[i]) == i);
+
+            for (int line = 0; line < NPC_DAY_LINE_COUNT; line++)
+            {
+                assert(npc_get_day_line(npc_id, days[i], line) != NULL);
+                assert(strlen(npc_get_day_line(npc_id, days[i], line)) > 10);
+            }
+
+            // Cada dia tem a sua fala: nada repetido nos outros dias do mesmo NPC
+            for (int j = i + 1; j < count; j++)
+            {
+                assert(strcmp(npc_get_day_line(npc_id, days[i], 0), npc_get_day_line(npc_id, days[j], 0)) != 0);
+            }
+
+            // E cada NPC fala diferente dos colegas no mesmo dia
+            for (int other_id = npc_id + 1; other_id < npc_get_count(); other_id++)
+            {
+                assert(strcmp(npc_get_day_line(npc_id, days[i], 0), npc_get_day_line(other_id, days[i], 0)) != 0);
+            }
+        }
+    }
+
+    assert(npc_get_day_line(NPC_ANDERSON, 2, 0) == NULL);   // O Dia 2 é um flash, ninguém conversa
+    assert(npc_get_day_line(NPC_ANDERSON, 0, 0) == NULL);
+    assert(npc_get_playable_day_index(2) == -1);
 }
 
 static void test_exactly_one_npc_offers_a_hint_each_playable_day(void)
@@ -58,10 +101,12 @@ static void test_exactly_one_npc_offers_a_hint_each_playable_day(void)
         }
 
         assert(owners == 1);
-        assert(npc_get_dialogue_line_count(owner, day) ==
-               npc_get_definition(owner)->dialogue_line_count + npc_get_definition(owner)->hint_line_count);
-        assert(npc_get_dialogue_line(owner, day,
-               npc_get_definition(owner)->dialogue_line_count) != NULL);
+
+        // A dica vem depois da fala do dia, e a dica de cada dia é uma só
+        assert(npc_get_hint_line(day, 0) != NULL);
+        assert(npc_get_hint_line(day, NPC_HINT_LINE_COUNT - 1) != NULL);
+        assert(npc_get_hint_line(day, NPC_HINT_LINE_COUNT) == NULL);
+        assert(strcmp(npc_get_dialogue_line(owner, day, false, NPC_DAY_LINE_COUNT), npc_get_hint_line(day, 0)) == 0);
     }
 
     assert(playable_day_index == 9);
@@ -72,9 +117,20 @@ static void test_exactly_one_npc_offers_a_hint_each_playable_day(void)
     assert(!npc_has_hint(NPC_ANDERSON, 2));
     assert(npc_get_daily_hint_owner(1) != npc_get_daily_hint_owner(3));
     assert(npc_get_daily_hint_owner(1) == npc_get_daily_hint_owner(89));
+
+    // Cada dica é diferente das outras
+    for (int day = 1; day <= 100; day++)
+    {
+        if (calendar_get_day_type(day) != PLAYABLE_DAY) continue;
+        for (int other = day + 1; other <= 100; other++)
+        {
+            if (calendar_get_day_type(other) != PLAYABLE_DAY) continue;
+            assert(strcmp(npc_get_hint_line(day, 0), npc_get_hint_line(other, 0)) != 0);
+        }
+    }
 }
 
-static void test_non_owner_gets_no_hint_lines(void)
+static void test_conversation_starts_with_a_greeting_only_the_first_time_of_the_day(void)
 {
     for (int day = 1; day <= 100; day++)
     {
@@ -83,13 +139,57 @@ static void test_non_owner_gets_no_hint_lines(void)
 
         for (int npc_id = 0; npc_id < npc_get_count(); npc_id++)
         {
-            const NpcDefinition *definition = npc_get_definition(npc_id);
-            int expected = definition->dialogue_line_count;
-            if (npc_id == owner) expected += definition->hint_line_count;
+            int hint_lines = (npc_id == owner) ? NPC_HINT_LINE_COUNT : 0;
 
-            assert(npc_get_dialogue_line_count(npc_id, day) == expected);
+            // Só o dono da dica do dia tem as linhas da dica
+            assert(npc_get_dialogue_line_count(npc_id, day, true) == 1 + NPC_DAY_LINE_COUNT + hint_lines);
+            assert(npc_get_dialogue_line_count(npc_id, day, false) == NPC_DAY_LINE_COUNT + hint_lines);
+
+            // Primeira vez: cumprimento e depois a fala. Depois: só a fala do dia
+            assert(strcmp(npc_get_dialogue_line(npc_id, day, true, 0), npc_get_greeting(npc_id, day)) == 0);
+            assert(strcmp(npc_get_dialogue_line(npc_id, day, true, 1), npc_get_day_line(npc_id, day, 0)) == 0);
+            assert(strcmp(npc_get_dialogue_line(npc_id, day, false, 0), npc_get_day_line(npc_id, day, 0)) == 0);
+            assert(npc_get_dialogue_line(npc_id, day, true, npc_get_dialogue_line_count(npc_id, day, true)) == NULL);
+            assert(npc_get_dialogue_line(npc_id, day, false, -1) == NULL);
         }
     }
+
+    // O Dia 1 recebe o jogador com as boas-vindas
+    assert(strstr(npc_get_dialogue_line(NPC_LAURA, 1, true, 0), "bem-vind") != NULL ||
+           strstr(npc_get_dialogue_line(NPC_LAURA, 1, true, 0), "Bem-vind") != NULL);
+    assert(npc_get_dialogue_line_count(NPC_LAURA, 2, true) == 0);
+}
+
+static void test_seats_change_every_playable_day_and_never_repeat(void)
+{
+    int previous[NPC_COUNT];
+
+    for (int npc_id = 0; npc_id < NPC_COUNT; npc_id++) previous[npc_id] = npc_get_seat_for_day(npc_id, 1);
+
+    // No Dia 1 cada um fica no seu lugar de origem
+    for (int npc_id = 0; npc_id < NPC_COUNT; npc_id++) assert(previous[npc_id] == npc_id);
+
+    for (int day = 2; day <= 100; day++)
+    {
+        int seats[NPC_COUNT];
+        bool used[NPC_COUNT] = {false};
+
+        if (calendar_get_day_type(day) != PLAYABLE_DAY) continue;
+
+        for (int npc_id = 0; npc_id < NPC_COUNT; npc_id++)
+        {
+            seats[npc_id] = npc_get_seat_for_day(npc_id, day);
+            assert(seats[npc_id] >= 0 && seats[npc_id] < NPC_COUNT);
+            assert(!used[seats[npc_id]]);                       // Dois NPCs nunca dividem o mesmo lugar
+            used[seats[npc_id]] = true;
+            assert(seats[npc_id] != previous[npc_id]);          // Ninguém repete o lugar do dia jogável anterior
+            assert(npc_get_seat_for_day(npc_id, day) == seats[npc_id]);   // O mesmo dia sempre arruma igual
+        }
+
+        for (int npc_id = 0; npc_id < NPC_COUNT; npc_id++) previous[npc_id] = seats[npc_id];
+    }
+
+    assert(npc_get_seat_for_day(-1, 3) == -1);
 }
 
 static void test_npcs_are_stationary_and_face_the_requested_directions(void)
@@ -137,8 +237,10 @@ static void test_npcs_are_stationary_and_face_the_requested_directions(void)
 int main(void)
 {
     test_each_npc_has_its_own_dialogue();
+    test_every_npc_has_a_different_line_for_each_playable_day();
+    test_conversation_starts_with_a_greeting_only_the_first_time_of_the_day();
+    test_seats_change_every_playable_day_and_never_repeat();
     test_exactly_one_npc_offers_a_hint_each_playable_day();
-    test_non_owner_gets_no_hint_lines();
     test_npcs_are_stationary_and_face_the_requested_directions();
 
     printf("test_npcs: todos os testes passaram\n");

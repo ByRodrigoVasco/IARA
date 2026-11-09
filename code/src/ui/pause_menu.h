@@ -5,7 +5,7 @@
 
 /*
  * Menu de pausa da campanha: congela o jogo na imagem em que estava e oferece CONTINUAR,
- * COMO JOGAR, VOLTAR AO MENU e SAIR DO JOGO. Sair pede confirmação; voltar ao menu salva antes.
+ * SAIR PARA O MENU e SAIR PARA A ÁREA DE TRABALHO. Sair do jogo pede confirmação; voltar ao menu salva antes.
  */
 
 typedef enum
