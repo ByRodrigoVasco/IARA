@@ -14,6 +14,8 @@
 #include <math.h>
 
 #include "raylib.h"
+
+#include "rlgl.h"
 #include "janela_de_teste.h"
 #include "game_state.h"
 
@@ -685,6 +687,177 @@ static void testar_animacoes(void)
     checar("CT-16", "Fade out chega a transparencia total (alpha 0)", terminou && cor.a == 0);
 }
 
+static void testar_vidro(void)
+{
+    const int resolutions[][2] = {{800,450},{1280,720},{1366,768},{1920,1080},{1024,768}};
+    bool passage = true, blocked = true, effect = true, clipping = true, frames = true, stationary = true, depth = true, plants = true, floor_visible = true;
+    Vector2 saved_position = current_estagiario_position;
+    Color saved_color = color_to_fade;
+    color_to_fade = WHITE;
+    for (int r = 0; r < 5; r++)
+    {
+        SetWindowSize(resolutions[r][0], resolutions[r][1]);
+        PollInputEvents();
+        update_obstacle_recs();
+        float scale = get_scale();
+        for (int i = 0; i < GLASS_COUNT; i++)
+        {
+            Rectangle pane = office_glass_surface[i];
+            Rectangle feet = {pane.x+40*scale, pane.y+10*scale, 50*scale, 24*scale};
+            passage &= !collides_with_any(feet, office_obstacles, OBSTACLE_COUNT);
+            Rectangle approaching = feet;
+            approaching.y -= 20*scale;
+            passage &= fabsf(move_axis(approaching.y, 20*scale, approaching, false,
+                                       office_obstacles, OBSTACLE_COUNT) - feet.y) < 0.001f;
+            passage &= !collides_with_tiles(feet, office_glass, GLASS_COUNT);
+            float step = office_glass[i].bounds.y + office_glass[i].bounds.height - feet.y;
+            blocked &= move_axis(feet.y, step, feet, false, office_obstacles, OBSTACLE_COUNT) == feet.y;
+            current_estagiario_position = (Vector2){feet.x-10*scale, feet.y-48*scale};
+            BeginDrawing();
+            ClearBackground(BG_COLOR);
+            render_office_with_glass();
+            rlDrawRenderBatchActive();
+            Image output = LoadImageFromScreen();
+            EndDrawing();
+            Image original = LoadImageFromTexture(glass_scene.texture);
+            ImageFlipVertical(&original);
+            int differences = 0;
+            int x0 = (int)ceilf(pane.x+5*scale), y0 = (int)ceilf(pane.y+5*scale);
+            for (int y = y0; y < (int)(pane.y+pane.height-5*scale); y++)
+                for (int x = x0; x < (int)(pane.x+pane.width-5*scale); x++)
+                {
+                    Color a = GetImageColor(output,x,y), b = GetImageColor(original,x,y);
+                    if (a.r != b.r || a.g != b.g || a.b != b.b) differences++;
+                }
+            effect &= differences > 0 && glass_panel_loc >= 0;
+            int covered = 0;
+            int frame_y = (int)(pane.y-2*scale);
+            for (int x = (int)feet.x; x < (int)(feet.x+feet.width); x++)
+            {
+                Color a = GetImageColor(output,x,frame_y), b = GetImageColor(original,x,frame_y);
+                if (a.r != b.r || a.g != b.g || a.b != b.b) covered++;
+            }
+            frames &= covered > 0;
+            int clear_y = (int)(pane.y-20*scale);
+            for (int x = x0; x < (int)(pane.x+pane.width-5*scale); x += 4)
+            {
+                Color a = GetImageColor(output,x,clear_y), b = GetImageColor(original,x,clear_y);
+                clipping &= a.r == b.r && a.g == b.g && a.b == b.b;
+            }
+            Color a = GetImageColor(output, GetScreenWidth()/2, GetScreenHeight()/2);
+            Color b = GetImageColor(original, GetScreenWidth()/2, GetScreenHeight()/2);
+            clipping &= a.r == b.r && a.g == b.g && a.b == b.b;
+            if (r == 1)
+            {
+                if (i == 1) ExportImage(output,"docs/fds/testes/evidencias/vidro-inferior.png");
+                if (i == 2) ExportImage(output,"docs/fds/testes/evidencias/vidro-porta.png");
+            }
+            WaitTime(0.04);
+            BeginDrawing();
+            render_office_with_glass();
+            rlDrawRenderBatchActive();
+            Image next_frame = LoadImageFromScreen();
+            EndDrawing();
+            stationary &= output.width == next_frame.width && output.height == next_frame.height &&
+                          memcmp(output.data,next_frame.data,output.width*output.height*4) == 0;
+            UnloadImage(next_frame);
+            UnloadImage(output);
+            UnloadImage(original);
+        }
+        // Varre toda a fachada e pressiona para baixo, inclusive em diagonal.
+        float line = GetScreenHeight()/2.0f + 369.5f*scale;
+        depth &= fabsf(line - office_obstacles[24].y) < 0.001f;
+        for (int x = 8; x < 1000; x += 8)
+        {
+            current_estagiario_position = (Vector2){GetScreenWidth()/2.0f+(x-531)*scale,
+                                                  line-74*scale};
+            update_collision_rec();
+            if (collides_with_any(estagiario_collision_rec,office_obstacles,OBSTACLE_COUNT)) continue;
+            for (int step = 0; step < 50; step++)
+            {
+                simular_passo(step%3-1,1);
+                depth &= estagiario_collision_rec.y+estagiario_collision_rec.height <= line+0.001f;
+            }
+        }
+        // Evidencia na profundidade maxima permitida, sem posicionamento alem da colisao.
+        current_estagiario_position = (Vector2){GetScreenWidth()/2.0f+240*scale, line-120*scale};
+        for (int step = 0; step < 100; step++) simular_passo(0,1);
+        if (r == 1)
+        {
+            BeginDrawing();
+            render_office_with_glass();
+            DrawLineEx((Vector2){map_collision_rec.x,line},
+                       (Vector2){map_collision_rec.x+map_collision_rec.width,line},1,RED);
+            rlDrawRenderBatchActive();
+            Image boundary = LoadImageFromScreen();
+            EndDrawing();
+            ExportImage(boundary,"docs/fds/testes/evidencias/parede-inferior.png");
+            UnloadImage(boundary);
+        }
+        Vector2 center = {GetScreenWidth()/2.0f, GetScreenHeight()/2.0f};
+        plants &= collides_with_any(scale_reference_rect((Rectangle){-131,347.5f,2,2},scale,center),
+                                    office_obstacles,OBSTACLE_COUNT);
+        plants &= collides_with_any(scale_reference_rect((Rectangle){133,347.5f,2,2},scale,center),
+                                    office_obstacles,OBSTACLE_COUNT);
+        // Os intervalos entre pilares, jardineiras e porta sao piso, sem oclusao.
+        const float floor_x[] = {-248,177};
+        for (int gap = 0; gap < 2; gap++)
+        {
+            current_estagiario_position = (Vector2){center.x+floor_x[gap]*scale,line-74*scale};
+            update_collision_rec();
+            floor_visible &= !collides_with_any(estagiario_collision_rec,office_obstacles,OBSTACLE_COUNT);
+            BeginDrawing();
+            render_office_with_glass();
+            rlDrawRenderBatchActive();
+            Image visible = LoadImageFromScreen();
+            EndDrawing();
+            Image scene = LoadImageFromTexture(glass_scene.texture);
+            ImageFlipVertical(&scene);
+            Rectangle floor = scale_reference_rect((Rectangle){floor_x[gap]+20,339,30,30},scale,center);
+            for (int y = (int)ceilf(floor.y); y < (int)(floor.y+floor.height); y++)
+                for (int x = (int)ceilf(floor.x); x < (int)(floor.x+floor.width); x++)
+                {
+                    Color a = GetImageColor(visible,x,y), b = GetImageColor(scene,x,y);
+                    floor_visible &= a.r == b.r && a.g == b.g && a.b == b.b;
+                }
+            if (r == 1 && gap == 1)
+                ExportImage(visible,"docs/fds/testes/evidencias/personagem-no-piso.png");
+            UnloadImage(visible);
+            UnloadImage(scene);
+        }
+        // Todas as plantas do mapa devem bloquear entrada pelos quatro lados.
+        const int plant_indices[] = {3,10,12,16,17,19,20,22,23};
+        for (unsigned int j = 0; j < sizeof(plant_indices)/sizeof(plant_indices[0]); j++)
+        {
+            Rectangle plant = office_obstacles[plant_indices[j]];
+            float w = 50*scale, h = 24*scale, step = 2*scale, gap = 0.5f*scale;
+            Rectangle from[] = {
+                {plant.x+plant.width/2-w/2, plant.y-h-gap, w,h},
+                {plant.x+plant.width/2-w/2, plant.y+plant.height+gap, w,h},
+                {plant.x-w-gap, plant.y+plant.height/2-h/2, w,h},
+                {plant.x+plant.width+gap, plant.y+plant.height/2-h/2, w,h}
+            };
+            for (int side = 0; side < 4; side++)
+            {
+                bool axis_x = side >= 2;
+                float position = axis_x ? from[side].x : from[side].y;
+                float delta = (side%2 ? -step : step);
+                plants &= move_axis(position,delta,from[side],axis_x,office_obstacles,OBSTACLE_COUNT) == position;
+            }
+        }
+    }
+    checar("VID-01", "Passagem atras dos paineis, porta e pilares em cinco resolucoes", passage);
+    checar("VID-02", "Base dos vidros impede sair do mapa", blocked);
+    checar("VID-03", "Shader altera somente a cena vista pelo vidro", effect && clipping);
+    checar("VID-04", "Moldura cobre o sprite sem receber distorcao", frames);
+    checar("VID-05", "Vidro parado permanece identico entre quadros", stationary);
+    checar("VID-06", "Nenhum passo ultrapassa a linha inferior da porta", depth);
+    checar("VID-07", "Plantas e jardineiras bloqueiam os quatro lados", plants);
+    checar("VID-08", "Piso entre pilares e jardineiras nao encobre o sprite", floor_visible);
+    current_estagiario_position = saved_position;
+    color_to_fade = saved_color;
+}
+
 int main(void)
 {
     /* Sem logs da Raylib: o relatorio dos testes fica limpo para o screencast. */
@@ -716,6 +889,7 @@ int main(void)
     testar_alto_contraste();
     testar_redimensionamento(spawn);
     testar_animacoes();
+    testar_vidro();
 
     /* Refaz o percurso na janela original para a imagem de evidencia. */
     SetWindowSize(LARGURA_JANELA, ALTURA_JANELA);
@@ -745,6 +919,7 @@ int main(void)
 
     printf("\n========================================================================\n\n");
 
+    unload_glass();
     unload_fonts();
     CloseWindow();
 

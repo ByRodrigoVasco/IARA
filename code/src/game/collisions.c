@@ -19,7 +19,31 @@ bool collides_with_any(Rectangle hitbox, const Rectangle *obstacles, int count)
 {
     for (int i = 0; i < count; i++)
     {
-        if (CheckCollisionRecs(hitbox, obstacles[i])) return true;
+        if (obstacles[i].width > 0 && obstacles[i].height > 0 &&
+            CheckCollisionRecs(hitbox, obstacles[i])) return true;
+    }
+    return false;
+}
+
+Rectangle tile_collision_rectangle(collision_tile tile)
+{
+    if (tile.type == TILE_GLASS)
+    {
+        float base = tile.base_height < 0 ? 0 : tile.base_height;
+        if (base > tile.bounds.height) base = tile.bounds.height;
+        tile.bounds.y += tile.bounds.height - base;
+        tile.bounds.height = base;
+    }
+    return tile.bounds;
+}
+
+bool collides_with_tiles(Rectangle hitbox, const collision_tile *tiles, int count)
+{
+    for (int i = 0; i < count; i++)
+    {
+        Rectangle blocking = tile_collision_rectangle(tiles[i]);
+        if (blocking.width > 0 && blocking.height > 0 &&
+            collides_with_any(hitbox, &blocking, 1)) return true;
     }
     return false;
 }
