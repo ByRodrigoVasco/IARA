@@ -18,7 +18,7 @@ e o `test_fluxo.c`).
 | 7 | Flexibilidade | Teclado e mouse em todas as telas, F11 para tela cheia | Sem atalho de pausa na campanha, e a abertura não podia ser pulada | ESC e P pausam, nas duas modalidades, e qualquer tecla ou clique pula a abertura |
 | 8 | Minimalismo | Telas enxutas | Nada relevante | Sem mudança |
 | 9 | Erros claros | Nomes de save inválidos explicam o motivo | Falha ao salvar sem mensagem | "Não consegui salvar o progresso. Confira se há espaço livre no disco e se a pasta do jogo permite gravar arquivos." |
-| 10 | Ajuda | Nada | **Não havia ajuda em lugar nenhum** | AJUDA no menu, COMO JOGAR na pausa e no início do Sobrevivência |
+| 10 | Ajuda | Nada | **Não havia ajuda em lugar nenhum** | AJUDA no menu e COMO JOGAR no início e na pausa do Sobrevivência (a pausa da campanha tem só CONTINUAR, SAIR PARA O MENU e SAIR PARA A ÁREA DE TRABALHO, a pedido dos jogadores) |
 
 ## O que foi feito, onde
 

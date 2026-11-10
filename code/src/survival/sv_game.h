@@ -41,7 +41,7 @@ typedef enum { CHEAT_GOD, CHEAT_NO_SPAWN, CHEAT_ONE_HIT, CHEAT_FREEZE, CHEAT_COU
 
 typedef enum
 {
-    W_GRAMPEADOR, W_PONTEIRO, W_CANECA, W_POSTITS, W_NAOPERTURBE, W_DEPLOY, W_TARJA, W_MODUS,
+    W_GRAMPEADOR, W_PONTEIRO, W_CANECA, W_POSTITS, W_NAOPERTURBE, W_DEPLOY, W_NOTA, W_MODUS,
     W_TABELA, W_COLEGA, W_NOVACONVERSA, W_PROMPT, W_VERA, W_FIBRA, W_COUNT
 } SvWeaponId;
 
@@ -65,7 +65,7 @@ typedef struct
     float hurt_flash;
     float anim;
     float timer;          // Relógio próprio (zigue-zague, cuspe, puxão)
-    float confused;       // Segundos de confusão (Tarja Preta)
+    float confused;       // Segundos de confusão (inimigo desorientado, anda sem rumo)
     float wcd[W_COUNT];   // Intervalo de dano de cada arma sobre este inimigo
     float aux_angle;      // Direção fixa (Dado Enviesado)
     float detour;         // Segundos desviando de um objeto
@@ -84,13 +84,17 @@ typedef struct
     Vector2 pos, vel;
     float damage, radius, life;
     int pierce;
-    int kind;              // 0 grampo, 1 pacote de dados do Suporte de TI
+    int kind;              // 0 grampo, 1 pacote de dados do Suporte de TI, 2 nota fiscal (vai e volta)
+    float turn_time;       // Nota fiscal: quando a vida chega a este valor ela vira e volta para o jogador
+    float speed;           // Nota fiscal: velocidade de ida e de volta
+    float spin;            // Nota fiscal: ângulo atual do giro
+    bool returning;        // Nota fiscal: já está voltando
     unsigned hit_ids[4];
     bool alive;
 } SvShot;
 
 typedef enum { ZONE_CIRCLE, ZONE_RECT } SvZoneShape;
-typedef enum { ZK_CANECA, ZK_DEPLOY, ZK_PONTEIRO, ZK_TARJA, ZK_PROMPT, ZK_VERA, ZK_FIBRA } SvZoneKind;
+typedef enum { ZK_CANECA, ZK_DEPLOY, ZK_PONTEIRO, ZK_PROMPT, ZK_VERA, ZK_FIBRA } SvZoneKind;
 
 typedef struct
 {

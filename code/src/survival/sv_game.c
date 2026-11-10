@@ -79,7 +79,7 @@ static const SpawnWeight act_spawns[SV_ACT_COUNT][8] = {
     {{EN_ECO, 20}, {EN_AUDITOR, 7}, {EN_AFOGADO, 20}, {EN_CRACHA, 15}, {EN_AUTORESPOSTA, 15}, {EN_ALUCINACAO, 12}, {EN_DADO, 10}, {-1, 0}},
 };
 
-static const char *weapon_names[W_COUNT] = {"Grampeador", "Ponteiro", "Caneca Arremessada", "Post-its Orbitais", "Não Perturbe", "Deploy em Produção", "Tarja Preta", "Modus Ponens", "Tabela-Verdade", "Colega de Plantão", "Nova Conversa", "Prompt da IARA", "Vera Fischer", "Fibra Óptica"};
+static const char *weapon_names[W_COUNT] = {"Grampeador", "Ponteiro", "Caneca Arremessada", "Post-its Orbitais", "Não Perturbe", "Deploy em Produção", "Nota Fiscal", "Modus Ponens", "Tabela-Verdade", "Colega de Plantão", "Nova Conversa", "Prompt da IARA", "Vera Fischer", "Fibra Óptica"};
 static const char *weapon_descriptions[W_COUNT] = {
     "Tiros retos no inimigo mais próximo.",
     "Golpe em linha, para os dois lados, na direção do inimigo mais próximo.",
@@ -87,7 +87,7 @@ static const char *weapon_descriptions[W_COUNT] = {
     "Giram ao seu redor e protegem de perto.",
     "Aura de dano que afasta quem chega perto.",
     "Raios que caem sobre os inimigos mais próximos.",
-    "Faixa que confunde quem atinge.",
+    "Voa até o inimigo mais próximo, atravessa quem estiver no caminho e volta para a sua mão, ferindo na ida e na volta.",
     "Se acerta A, salta para B, e assim por diante.",
     "Grade no chão que fere quem pisa nas casas acesas.",
     "Colegas de plantão lutam ao seu lado, cada um com uma função: Segurança, Suporte de TI, Enfermeira do RH e Entregador.",
@@ -95,7 +95,7 @@ static const char *weapon_descriptions[W_COUNT] = {
     "Digita um comando na janela de terminal da IARA sobre o inimigo mais forte e o executa: dano alto nele e metade em quem está em volta.",
     "Se um golpe te acerta (V), o dano é falso (F): ele é anulado e solta uma onda. Também dispara sozinha quando alguém chega perto.",
     "Feixe de luz muito forte em linha reta, que atravessa todos os inimigos no caminho."};
-static const SvSpriteId weapon_icons[W_COUNT] = {SPR_ic_grampeador, SPR_ic_ponteiro, SPR_ic_caneca, SPR_ic_postits, SPR_ic_naoperturbe, SPR_ic_deploy, SPR_ic_tarja, SPR_ic_modus, SPR_ic_tabela, SPR_ic_colega, SPR_ic_novaconversa, SPR_ic_prompt, SPR_ps_cracha, SPR_ic_fibra};
+static const SvSpriteId weapon_icons[W_COUNT] = {SPR_ic_grampeador, SPR_ic_ponteiro, SPR_ic_caneca, SPR_ic_postits, SPR_ic_naoperturbe, SPR_ic_deploy, SPR_ic_nota, SPR_ic_modus, SPR_ic_tabela, SPR_ic_colega, SPR_ic_novaconversa, SPR_ic_prompt, SPR_ps_cracha, SPR_ic_fibra};
 
 static const char *passive_names[P_COUNT] = {"Café", "Manual", "Colinha", "Ergonomia", "Crachá", "Plano de Saúde", "Network", "Hora Extra", "Marmita Térmica", "Sorte de Principiante", "Espinhos Corporativos", "Foco"};
 static const char *passive_descriptions[P_COUNT] = {
@@ -130,7 +130,7 @@ static const WeaponDef weapon_defs[W_COUNT] = {
     [W_POSTITS]      = {{7, 7, 10, 10, 15}, {0.50f, 0.45f, 0.45f, 0.40f, 0.35f}, {0, 0, 0, 0, 0}, {54, 60, 60, 68, 76}, {0, 0, 0, 0, 0}},
     [W_NAOPERTURBE]  = {{4, 4, 6, 6, 10}, {0.55f, 0.50f, 0.50f, 0.45f, 0.40f}, {0, 0, 0, 0, 0}, {64, 72, 72, 84, 96}, {0, 0, 0, 0, 0}},
     [W_DEPLOY]       = {{28, 28, 36, 36, 48}, {2.60f, 2.40f, 2.40f, 2.10f, 1.80f}, {1, 1, 2, 2, 3}, {38, 42, 42, 46, 50}, {0, 0, 0, 0, 0}},
-    [W_TARJA]        = {{7, 7, 10, 10, 14}, {3.20f, 3.00f, 3.00f, 2.70f, 2.40f}, {0, 0, 0, 0, 0}, {120, 135, 135, 150, 170}, {2.0f, 2.5f, 2.5f, 3.0f, 3.5f}},
+    [W_NOTA]         = {{11, 11, 15, 15, 21}, {2.60f, 2.40f, 2.40f, 2.10f, 1.80f}, {1, 1, 2, 2, 3}, {210, 230, 230, 260, 290}, {0, 0, 0, 0, 0}},
     [W_MODUS]        = {{14, 14, 18, 18, 24}, {1.80f, 1.65f, 1.65f, 1.45f, 1.30f}, {3, 3, 4, 4, 5}, {170, 185, 185, 200, 220}, {0, 0, 0, 0, 0}},
     [W_TABELA]       = {{6, 6, 9, 9, 13}, {0.60f, 0.55f, 0.55f, 0.50f, 0.45f}, {0, 0, 0, 0, 0}, {50, 56, 56, 64, 72}, {0, 0, 0, 0, 0}},
     [W_COLEGA]       = {{13, 13, 18, 18, 26}, {0.75f, 0.65f, 0.65f, 0.55f, 0.50f}, {1, 1, 2, 2, 3}, {28, 30, 30, 34, 38}, {2, 2, 2, 3, 4}},
@@ -147,7 +147,7 @@ static const WeaponInfo weapon_infos[W_COUNT] = {
     [W_POSTITS]      = {"Intervalo", NULL, "Raio", NULL, false, true, false},
     [W_NAOPERTURBE]  = {"Intervalo", NULL, "Raio", NULL, false, true, false},
     [W_DEPLOY]       = {"Recarga", "Raios", "Raio", NULL, false, true, false},
-    [W_TARJA]        = {"Recarga", NULL, "Comprimento", "Confusão", true, true, false},
+    [W_NOTA]         = {"Recarga", "Notas", "Alcance", NULL, false, true, false},
     [W_MODUS]        = {"Recarga", "Saltos", "Alcance do salto", NULL, false, false, false},
     [W_TABELA]       = {"Intervalo", NULL, "Lado", NULL, false, true, false},
     [W_COLEGA]       = {"Intervalo", "Colegas", "Alcance", "Cura da enfermeira", false, false, false},
@@ -798,6 +798,10 @@ static Vector2 aim_vector(float max_distance)
     return sv_run.player.facing_vector;
 }
 
+#define NOTA_SPEED 360.0f          // Velocidade da nota fiscal, na ida
+#define NOTA_AIM_RANGE 380.0f     // Até onde procura o inimigo para mirar
+#define NOTA_RETURN_MARGIN 3.0f   // Folga de vida na volta: ela só some ao chegar ao jogador
+
 static void add_strike_zone(Vector2 origin, float angle, float length, float half_width, float damage, float confuse, int kind)
 {
     SvZone *z = new_zone();
@@ -933,14 +937,34 @@ static void fire_weapon(SvWeapon *w)
         if (struck_count == 0) base_cd = 0.25f; // Ninguém por perto: tenta de novo logo, sem gastar a recarga
         break;
     }
-    case W_TARJA:
+    case W_NOTA:
     {
-        float length = WS(W_TARJA, WSTAT_AREA, level) * p->area_mult;
+        // Nota fiscal: vai até onde o alcance deixa, vira e volta ao jogador, ferindo quem estiver no caminho nas duas passagens
+        int count = (int)WS(W_NOTA, WSTAT_COUNT, level);
+        float range = WS(W_NOTA, WSTAT_AREA, level) * p->area_mult;
+        Vector2 aim = aim_vector(NOTA_AIM_RANGE);
+        float base_angle = atan2f(aim.y, aim.x);
+        float travel = range / NOTA_SPEED;
 
-        base_cd = WS(W_TARJA, WSTAT_COOLDOWN, level);
-        angle = atan2f(p->facing_vector.y, p->facing_vector.x) * RAD2DEG;
-        add_strike_zone(p->pos, angle, length, 17.0f * p->area_mult, WS(W_TARJA, WSTAT_DAMAGE, level), WS(W_TARJA, WSTAT_EXTRA, level), ZK_TARJA);
-        sv_sfx(SND_tarja);
+        base_cd = WS(W_NOTA, WSTAT_COOLDOWN, level);
+        for (int i = 0; i < count; i++)
+        {
+            SvShot *s = new_shot();
+            float a = base_angle + ((float)i - (count - 1) / 2.0f) * 0.42f;
+
+            if (!s) break;
+            s->kind = 2;
+            s->pos = p->pos;
+            s->vel = (Vector2){cosf(a) * NOTA_SPEED, sinf(a) * NOTA_SPEED};
+            s->speed = NOTA_SPEED;
+            s->damage = WS(W_NOTA, WSTAT_DAMAGE, level);
+            s->radius = 15.0f;
+            s->pierce = 9999;
+            s->life = (travel * p->duration_mult) + NOTA_RETURN_MARGIN;
+            s->turn_time = NOTA_RETURN_MARGIN;
+            s->spin = (float)i * 120.0f;
+        }
+        sv_sfx(SND_grampeador);
         break;
     }
     case W_MODUS:
@@ -1451,6 +1475,36 @@ static void update_zones(float dt)
     }
 }
 
+// A nota fiscal vira e volta: a lista de inimigos já atingidos zera, e ela fere de novo na volta
+static void start_nota_return(SvShot *s)
+{
+    if (s->returning) return;
+    s->returning = true;
+    memset(s->hit_ids, 0, sizeof(s->hit_ids));
+}
+
+// Gira a nota e, na volta, a puxa de volta ao jogador. Devolve false quando ela chegou e sumiu.
+static bool update_nota_flight(SvShot *s, float dt)
+{
+    SvPlayer *p = &sv_run.player;
+
+    s->spin += 720.0f * dt;
+    if (!s->returning && s->life <= s->turn_time) start_nota_return(s);
+
+    if (s->returning)
+    {
+        Vector2 back = direction_of(s->pos, p->pos);
+
+        s->vel = Vector2Scale(back, s->speed * 1.15f);
+        if (Vector2Distance(s->pos, p->pos) < 24.0f)
+        {
+            s->alive = false;
+            return false;
+        }
+    }
+    return true;
+}
+
 static void update_shots(float dt)
 {
     for (int i = 0; i < SV_MAX_SHOTS; i++)
@@ -1459,17 +1513,27 @@ static void update_shots(float dt)
 
         if (!s->alive) continue;
 
+        if (s->kind == 2 && !update_nota_flight(s, dt)) continue;
+
         s->pos = Vector2Add(s->pos, Vector2Scale(s->vel, dt));
         if (sv_map_point_blocked(s->pos, 2.0f))
         {
-            s->alive = false;
-            continue;
+            if (s->kind == 2) start_nota_return(s);   // Bateu num objeto: a nota volta
+            else
+            {
+                s->alive = false;
+                continue;
+            }
         }
-        s->life -= dt;
-        if (s->life <= 0.0f)
+        if (s->kind != 2 || !s->returning) s->life -= dt;
+        if (s->life <= 0.0f && !(s->kind == 2 && s->returning))
         {
-            s->alive = false;
-            continue;
+            if (s->kind == 2) start_nota_return(s);
+            else
+            {
+                s->alive = false;
+                continue;
+            }
         }
 
         for (int j = 0; j < SV_MAX_ENEMIES && s->alive; j++)

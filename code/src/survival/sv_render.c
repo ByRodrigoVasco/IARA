@@ -280,8 +280,7 @@ static void draw_zones(void)
             Vector2 center = Vector2Add(z->pos, (Vector2){cosf(angle) * length / 2.0f, sinf(angle) * length / 2.0f});
 
             progress = 1.0f - z->life / z->max_life;
-            if (z->kind == ZK_TARJA) sv_draw_stretched(SPR_fx_tarja, (int)(progress * 4.0f), center, length, z->radius * 2.0f, z->angle, WHITE);
-            else if (z->kind == ZK_FIBRA) sv_draw_stretched(SPR_fx_fibra, (int)(progress * 4.0f), center, length, z->radius * 2.0f + 10.0f, z->angle, WHITE);
+            if (z->kind == ZK_FIBRA) sv_draw_stretched(SPR_fx_fibra, (int)(progress * 4.0f), center, length, z->radius * 2.0f + 10.0f, z->angle, WHITE);
             else sv_draw_stretched(SPR_fx_ponteiro, (int)(progress * 4.0f), center, length, 13.0f, z->angle, WHITE);
             continue;
         }
@@ -573,6 +572,29 @@ static void draw_shots(void)
             DrawRectanglePro((Rectangle){s->pos.x, s->pos.y, 8.0f, 6.0f}, (Vector2){4.0f, 3.0f}, angle, (Color){20, 70, 50, 255});
             DrawRectanglePro((Rectangle){s->pos.x, s->pos.y, 6.0f, 4.0f}, (Vector2){3.0f, 2.0f}, angle, (Color){120, 240, 170, 255});
             DrawRectanglePro((Rectangle){s->pos.x, s->pos.y, 2.0f, 2.0f}, (Vector2){1.0f, 1.0f}, angle, (Color){240, 255, 245, 255});
+            continue;
+        }
+        if (s->kind == 2)
+        {
+            // Nota fiscal: uma folha branca com linhas e o carimbo verde, girando e deixando um rastro
+            Vector2 tail = Vector2Subtract(s->pos, Vector2Scale(Vector2Normalize(s->vel), 16.0f));
+
+            DrawLineEx(tail, s->pos, 5.0f, (Color){240, 242, 236, 70});
+            DrawRectanglePro((Rectangle){s->pos.x, s->pos.y + 2.0f, 15.0f, 19.0f}, (Vector2){7.5f, 9.5f}, s->spin, (Color){0, 0, 0, 70});
+            DrawRectanglePro((Rectangle){s->pos.x, s->pos.y, 15.0f, 19.0f}, (Vector2){7.5f, 9.5f}, s->spin, (Color){10, 10, 13, 255});
+            DrawRectanglePro((Rectangle){s->pos.x, s->pos.y, 13.0f, 17.0f}, (Vector2){6.5f, 8.5f}, s->spin, (Color){240, 242, 236, 255});
+            for (int line = 0; line < 3; line++)
+            {
+                float offset = -4.0f + (float)line * 3.5f;
+                Vector2 rotated = Vector2Rotate((Vector2){0.0f, offset}, s->spin * DEG2RAD);
+
+                DrawRectanglePro((Rectangle){s->pos.x + rotated.x, s->pos.y + rotated.y, 8.0f, 1.5f}, (Vector2){4.0f, 0.75f}, s->spin, (Color){122, 130, 138, 255});
+            }
+            {
+                Vector2 stamp = Vector2Rotate((Vector2){3.0f, 5.0f}, s->spin * DEG2RAD);
+
+                DrawRectanglePro((Rectangle){s->pos.x + stamp.x, s->pos.y + stamp.y, 5.0f, 4.0f}, (Vector2){2.5f, 2.0f}, s->spin, (Color){64, 176, 104, 255});
+            }
             continue;
         }
         sv_draw(SPR_fx_grampeador, anim_frame(s->life, 12.0f) % 4, s->pos, 1.0f, atan2f(s->vel.y, s->vel.x) * RAD2DEG, false, WHITE);
