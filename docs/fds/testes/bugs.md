@@ -42,6 +42,14 @@ efeito na jogabilidade.
 | BUG-19 | ESC fecha o jogo na hora e a campanha não tem pausa | Média | ainda sem issue | Corrigido nas branches `feature/heuristicas-de-nielsen` e `feature/modo-sobrevivencia` |
 | BUG-20 | O jogo não tem ajuda | Baixa | ainda sem issue | Corrigido nas mesmas branches |
 | BUG-21 | Falha ao salvar o progresso não é avisada | Média | ainda sem issue | Corrigido nas mesmas branches |
+| BUG-22 | O jogador anda enquanto um NPC fala | Média | ainda sem issue | Corrigido na `feature/ajustes-modo-historia` e na `feature/modo-sobrevivencia` |
+| BUG-23 | Setas de interação grandes cobrem o mapa | Média | ainda sem issue | Corrigido nas mesmas branches |
+| BUG-24 | Zona de saída fica acima da faixa que o jogador alcança na porta | Média | ainda sem issue | Corrigido nas mesmas branches |
+| BUG-25 | Falas dos NPCs iguais em todos os dias, sem cumprimento nem dica própria | Média | ainda sem issue | Corrigido nas mesmas branches |
+| BUG-26 | Post-it do computador sob o ponteiro, sem fita; ícones, teclado, mouse e janela destoando | Baixa | ainda sem issue | Corrigido nas mesmas branches |
+| BUG-27 | Cartões de início e fim do dia sem como pular | Baixa | ainda sem issue | Corrigido nas mesmas branches |
+| BUG-28 | Trilha de suspense já no primeiro dia | Baixa | ainda sem issue | Corrigido nas mesmas branches |
+| BUG-29 | Tarja Preta (poder inicial do Zito) fraco e sem sentido para o personagem | Média | ainda sem issue | Trocada pela Nota Fiscal na `feature/modo-sobrevivencia` |
 
 **Sobre o BUG-02:** os dois vazamentos descritos abaixo já não existem. Restava uma carga duplicada do menu ao abrir o jogo, removida. O CT-24 oscilava porque media sem desenhar quadros, e o driver de vídeo só devolve uma textura apagada depois de um quadro. Com quadros, 400 voltas ao menu cresceram 19 MB (cerca de 0,05 MB por volta, contra os 7 MB originais).
 
@@ -602,3 +610,27 @@ escolher personagem e ao fim da partida.
 
 **Onde:** `code/src/ui/notice.c`, `code/src/core/state_machine.c`, `code/src/survival/survival.c`, `code/src/survival/sv_meta.c`
 **Coberto por:** UX-01 a UX-03, SV-94 e SV-95
+
+---
+
+<a id="bug-22"></a>
+
+## BUG-22 a BUG-29 — Achados do teste com jogadores (09/11/2026)
+
+**Labels:** `bug`, `ui`
+
+Testando a campanha e o Sobrevivência com jogadores, saíram estes problemas. Cada um já foi corrigido.
+
+| ID | O que acontecia | Correção |
+|---|---|---|
+| BUG-22 | O jogador continuava andando enquanto um NPC falava | Durante a conversa o jogador fica parado até a fala acabar (`interaction_open` em `handle_game_loop_screens`) |
+| BUG-23 | As setas das interações eram enormes e cortavam a tela | Uma seta pequena acompanha o jogador e aponta o próximo objetivo; perto de algo, um anel no chão e uma tecla ESPAÇO discreta indicam a interação |
+| BUG-24 | A zona de saída ficava acima da faixa onde o jogador consegue chegar na porta | A zona vai do começo da porta até a soleira; a hitbox do jogador ficou mais estreita (36 em vez de 50) |
+| BUG-25 | Os NPCs repetiam a mesma fala todos os dias, a dica aparecia sobre a cabeça do dono e eles ficavam sempre nos mesmos lugares | Cada NPC tem cumprimento, fala e, no dia dele, a dica (uma por dia); a dica é avisada de leve no computador; os lugares mudam a cada dia jogável |
+| BUG-26 | O post-it ficava sob o ponteiro, e os ícones, o teclado, o mouse e a janela eram quadrados e destoavam | Pixel art desenhada em código: ícones, janela, teclado e mouse que reagem a teclas e cliques, onda de clique e o post-it colado, inclinado, com fita e por cima do ponteiro |
+| BUG-27 | Os cartões de início e fim do dia só passavam sozinhos | Botão PULAR (ou ESPAÇO, ENTER e clique) |
+| BUG-28 | A música de suspense tocava desde o primeiro dia | O ambiente calmo toca nos primeiros dias, e a trilha de tensão entra aos poucos com a história |
+| BUG-29 | A Tarja Preta, poder inicial do Zito, era fraca e não combinava com ele | Virou a Nota Fiscal: um bumerangue de papel que vai até o inimigo mais próximo, atravessa quem estiver no caminho e volta, ferindo nas duas passagens |
+
+**Onde:** `code/src/game/npcs.c`, `code/src/screens/game_loop.c`, `code/src/screens/computer_loop.c`, `code/src/ui/computer_art.c`, `code/src/ui/cheat_sheet.c`, `code/src/core/audio.c`, `code/src/survival/sv_game.c`
+**Coberto por:** UX-18 a UX-22, `test_npcs` e a atualização do CT-35 e do CT-54

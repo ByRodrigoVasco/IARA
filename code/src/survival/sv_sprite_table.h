@@ -26,7 +26,6 @@
     X(fx_postits, "fx_postits", 50, 50, 4) \
     X(fx_naoperturbe, "fx_naoperturbe", 64, 64, 4) \
     X(fx_deploy, "fx_deploy", 26, 60, 4) \
-    X(fx_tarja, "fx_tarja", 64, 14, 4) \
     X(fx_modus, "fx_modus", 64, 28, 4) \
     X(fx_tabela, "fx_tabela", 61, 61, 4) \
     X(fx_novaconversa, "fx_novaconversa", 72, 72, 4) \
@@ -56,6 +55,7 @@
     X(ic_naoperturbe, "ic_naoperturbe", 24, 24, 4) \
     X(ic_deploy, "ic_deploy", 24, 24, 4) \
     X(ic_tarja, "ic_tarja", 24, 24, 4) \
+    X(ic_nota, "ic_nota", 24, 24, 4) \
     X(ic_modus, "ic_modus", 24, 24, 4) \
     X(ic_tabela, "ic_tabela", 24, 24, 4) \
     X(ic_colega, "ic_colega", 24, 24, 4) \
