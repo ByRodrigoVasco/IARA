@@ -9,6 +9,7 @@
 #include "sv_map.h"
 
 SvRun sv_run;
+int sv_time_scale = 1;
 
 static bool finished_flag = false;
 

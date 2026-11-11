@@ -9,6 +9,7 @@
 #include <stdbool.h>
 
 #define SV_RUN_SECONDS 600.0f   // Uma partida dura 10 minutos
+#define SV_SPEEDUP_LIMIT 420.0f // O jogador só pode acelerar o tempo até os 7:00; depois a tela já está cheia
 #define SV_ACT_COUNT 5          // Atos I a V
 #define SV_BASE_HP 100.0f       // "Vida base": o teto de dano dos chefes é percentual dela
 #define SV_BOSS_HIT_CAP 0.30f   // Nenhum golpe de chefe passa de 30% da vida base

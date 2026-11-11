@@ -196,6 +196,7 @@ static int mouse_pick(int count, float first_y, float spacing, float width, bool
 static void start_run(void)
 {
     sv_game_start((unsigned)(GetTime() * 1000.0) | 1u);
+    sv_time_scale = 1;
     screen = SCREEN_RUN;
     levelup_selected = 0;
     pause_selected = 0;
@@ -537,7 +538,15 @@ static void render_run(void)
         }
         else
         {
-            sv_game_update(dt, read_movement());
+            // Acelerar o tempo (TAB ou clique no botão) vale só até os 7:00
+            if (sv_run.time >= SV_SPEEDUP_LIMIT) sv_time_scale = 1;
+            else if (IsKeyPressed(KEY_TAB) || (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(GetMousePosition(), sv_speed_button_rect())))
+            {
+                sv_time_scale = sv_time_scale % 3 + 1;
+                sv_sfx(SND_escolha);
+            }
+
+            for (int step = 0; step < sv_time_scale && sv_run.phase == SV_PLAYING; step++) sv_game_update(dt, read_movement());
         }
     }
 
