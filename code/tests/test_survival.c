@@ -487,7 +487,7 @@ static void test_characters(void)
                 if (!strcmp(ca->folder, cb->folder) || !strcmp(ca->name, cb->name) || ca->start_weapon == cb->start_weapon) distinct = false;
             }
         }
-        check("SV-41", "os 8 personagens têm pasta, nome e poder inicial próprios", CH_COUNT == 8 && distinct && weapons_ok);
+        check("SV-41", "os 9 personagens têm pasta, nome e poder inicial próprios", CH_COUNT == 9 && distinct && weapons_ok);
     }
 
     check("SV-42", "só o Estagiário vem liberado; os outros abrem com o progresso",
@@ -969,6 +969,21 @@ static void test_ajustes_do_teste_com_jogadores(void)
     check("SV-96", "o começo da partida já tem inimigos de sobra (pelo menos 2 por segundo)", sv_spawn_rate(0.0f) >= 2.0f);
     check("SV-97", "acelerar o tempo só vale até os 7:00", SV_SPEEDUP_LIMIT == 420.0f && SV_SPEEDUP_LIMIT < sv_boss_spawn_time(BOSS_IARA));
     check("SV-98", "a partida começa na velocidade normal", sv_time_scale == 1);
+    {
+        float base_hp, base_cd;
+
+        sv_meta_reset();
+        unlock_everything();
+        sv_meta.character = CH_ESTAGIARIO;
+        sv_game_start(7);
+        base_hp = sv_run.player.max_hp;
+        base_cd = sv_run.player.cooldown_mult;
+        sv_meta.character = CH_LUCAS;
+        sv_game_start(7);
+        check("SV-99", "Prof. Lucas (Engenharia de Software): abre aos 8:30, começa com o Prompt, recarrega mais rápido e perde 10 de vida",
+              !sv_character_unlocked(CH_LUCAS, 99, 9, 509, 99999) && sv_character_unlocked(CH_LUCAS, 0, 0, 510, 0) &&
+              sv_run.player.weapons[0].id == W_PROMPT && sv_run.player.max_hp == base_hp - 10.0f && sv_run.player.cooldown_mult < base_cd);
+    }
 }
 
 int main(void)
