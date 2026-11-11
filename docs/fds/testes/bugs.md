@@ -39,17 +39,17 @@ efeito na jogabilidade.
 | BUG-16 | Telas de modo e de save em lista vertical, pouco organizadas | Baixa | [#57](https://github.com/ByRodrigoVasco/IARA/issues/57) | Corrigido na `feature/modo-sobrevivencia` |
 | BUG-17 | Quadro de 1,67 s no menu, sete segundos depois de abrir | Baixa | [#58](https://github.com/ByRodrigoVasco/IARA/issues/58) | Aberto, não reproduzido |
 | BUG-18 | Troca de música e ambiente lê o arquivo na hora | Baixa | [#59](https://github.com/ByRodrigoVasco/IARA/issues/59) | Aberto |
-| BUG-19 | ESC fecha o jogo na hora e a campanha não tem pausa | Média | ainda sem issue | Corrigido nas branches `feature/heuristicas-de-nielsen` e `feature/modo-sobrevivencia` |
-| BUG-20 | O jogo não tem ajuda | Baixa | ainda sem issue | Corrigido nas mesmas branches |
-| BUG-21 | Falha ao salvar o progresso não é avisada | Média | ainda sem issue | Corrigido nas mesmas branches |
-| BUG-22 | O jogador anda enquanto um NPC fala | Média | ainda sem issue | Corrigido na `feature/ajustes-modo-historia` e na `feature/modo-sobrevivencia` |
-| BUG-23 | Setas de interação grandes cobrem o mapa | Média | ainda sem issue | Corrigido nas mesmas branches |
-| BUG-24 | Zona de saída fica acima da faixa que o jogador alcança na porta | Média | ainda sem issue | Corrigido nas mesmas branches |
-| BUG-25 | Falas dos NPCs iguais em todos os dias, sem cumprimento nem dica própria | Média | ainda sem issue | Corrigido nas mesmas branches |
-| BUG-26 | Post-it do computador sob o ponteiro, sem fita; ícones, teclado, mouse e janela destoando | Baixa | ainda sem issue | Corrigido nas mesmas branches |
-| BUG-27 | Cartões de início e fim do dia sem como pular | Baixa | ainda sem issue | Corrigido nas mesmas branches |
-| BUG-28 | Trilha de suspense já no primeiro dia | Baixa | ainda sem issue | Corrigido nas mesmas branches |
-| BUG-29 | Tarja Preta (poder inicial do Zito) fraco e sem sentido para o personagem | Média | ainda sem issue | Trocada pela Nota Fiscal na `feature/modo-sobrevivencia` |
+| BUG-19 | ESC fecha o jogo na hora e a campanha não tem pausa | Média | [#64](https://github.com/ByRodrigoVasco/IARA/issues/64) | Corrigido na `develop`, issue fechada |
+| BUG-20 | O jogo não tem ajuda | Baixa | [#65](https://github.com/ByRodrigoVasco/IARA/issues/65) | Corrigido na `develop`, issue fechada |
+| BUG-21 | Falha ao salvar o progresso não é avisada | Média | [#66](https://github.com/ByRodrigoVasco/IARA/issues/66) | Corrigido na `develop`, issue fechada |
+| BUG-22 | O jogador anda enquanto um NPC fala | Média | [#67](https://github.com/ByRodrigoVasco/IARA/issues/67) | Corrigido na `develop`, issue fechada |
+| BUG-23 | Setas de interação grandes cobrem o mapa | Média | [#68](https://github.com/ByRodrigoVasco/IARA/issues/68) | Corrigido na `develop`, issue fechada |
+| BUG-24 | Zona de saída fica acima da faixa que o jogador alcança na porta | Média | [#69](https://github.com/ByRodrigoVasco/IARA/issues/69) | Corrigido na `develop`, issue fechada |
+| BUG-25 | Falas dos NPCs iguais em todos os dias, sem cumprimento nem dica própria | Média | [#70](https://github.com/ByRodrigoVasco/IARA/issues/70) | Corrigido na `develop`, issue fechada |
+| BUG-26 | Post-it do computador sob o ponteiro, sem fita; ícones, teclado, mouse e janela destoando | Baixa | [#71](https://github.com/ByRodrigoVasco/IARA/issues/71) | Corrigido na `develop`, issue fechada |
+| BUG-27 | Cartões de início e fim do dia sem como pular | Baixa | [#72](https://github.com/ByRodrigoVasco/IARA/issues/72) | Corrigido na `develop`, issue fechada |
+| BUG-28 | Trilha de suspense já no primeiro dia | Baixa | [#73](https://github.com/ByRodrigoVasco/IARA/issues/73) | Corrigido na `develop`, issue fechada |
+| BUG-29 | Tarja Preta (poder inicial do Zito) fraco e sem sentido para o personagem | Média | [#74](https://github.com/ByRodrigoVasco/IARA/issues/74) | Corrigido na `feature/modo-sobrevivencia`, issue aberta até entrar na `develop` |
 
 **Sobre o BUG-02:** os dois vazamentos descritos abaixo já não existem. Restava uma carga duplicada do menu ao abrir o jogo, removida. O CT-24 oscilava porque media sem desenhar quadros, e o driver de vídeo só devolve uma textura apagada depois de um quadro. Com quadros, 400 voltas ao menu cresceram 19 MB (cerca de 0,05 MB por volta, contra os 7 MB originais).
 
