@@ -3,6 +3,7 @@
 
 #include "raylib.h"
 #include "accessibility.h"
+#include "notice.h"
 
 // Filtro em tempo real: aumenta o contraste de luminância, que é o que continua
 // perceptível com daltonismo, sem depender da matiz. Vale para todas as telas.
@@ -109,6 +110,7 @@ void begin_game_drawing(void)
 
 void end_game_drawing(void)
 {
+    notice_draw();   // Os avisos (progresso salvo, erros) aparecem em qualquer tela
     end_high_contrast_filter();
     draw_brightness_overlay();
     EndDrawing();
