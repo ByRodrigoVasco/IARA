@@ -1108,12 +1108,15 @@ static void testar_menu(void)
     checar("CT-21", "Menu abre em INICIAR, destravado",
            selected_menu_option == INICIAR && !is_menu_to_close && next_screen == NONE);
 
-    /* Descer quatro vezes deve voltar para INICIAR (lista circular). */
+    /* Descer cinco vezes deve voltar para INICIAR (lista circular). */
     move_menu_selection(1);
     bool desceu_para_creditos = (selected_menu_option == CREDITOS);
 
     move_menu_selection(1);
     bool desceu_para_configuracoes = (selected_menu_option == CONFIGURACOES);
+
+    move_menu_selection(1);
+    bool desceu_para_ajuda = (selected_menu_option == AJUDA);
 
     move_menu_selection(1);
     bool desceu_para_sair = (selected_menu_option == SAIR);
@@ -1126,7 +1129,20 @@ static void testar_menu(void)
     bool subiu_para_o_fim = (selected_menu_option == SAIR);
 
     checar("CT-22", "Selecao do menu circula nos dois sentidos",
-           desceu_para_creditos && desceu_para_configuracoes && desceu_para_sair && voltou_ao_topo && subiu_para_o_fim);
+           desceu_para_creditos && desceu_para_configuracoes && desceu_para_ajuda && desceu_para_sair && voltou_ao_topo && subiu_para_o_fim);
+
+    /* SAIR pergunta antes de fechar: escolher a opcao abre a confirmacao e ainda nao pede o fechamento. */
+    selected_menu_option = SAIR;
+    confirm_menu_option();
+    checar("UX-13", "Escolher SAIR no menu abre a pergunta e nao fecha o menu na hora",
+           confirm_is_open() && !is_menu_to_close && next_screen == NONE);
+    confirm_close();
+
+    /* AJUDA vai para a tela de ajuda como as outras opcoes. */
+    selected_menu_option = AJUDA;
+    confirm_menu_option();
+    checar("UX-14", "Escolher AJUDA no menu pede a tela de ajuda", !confirm_is_open() && is_menu_to_close && next_screen == AJUDA);
+    initialize_menu_variables();
 
     /* As caixas da tela de configuracoes mudam na hora, e so VOLTAR sai dela. */
     bool saiu_ao_ligar = activate_settings_option(SETTINGS_CONTRAST);

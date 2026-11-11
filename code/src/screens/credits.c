@@ -3,6 +3,7 @@
 #include "fonts.h"
 #include "macros.h"
 #include "accessibility.h"
+#include "ui_theme.h"
 
 #define CREDITS_MEMBER_COUNT 7
 #define CREDITS_TOP_ROW_COUNT 5
@@ -107,6 +108,8 @@ bool render_credits_screen(void)
 
     DrawRectangleRounded(back_button, 0.25f, 8, is_back_button_hovered ? (Color){96, 64, 96, 255} : (Color){48, 32, 48, 255});
     DrawTextEx(default_game_font, button_text, button_text_position, button_font_size, button_letter_spacing, WHITE);
+
+    ui_draw_hint("ESC, ENTER ou ESPAÇO: voltar");
 
     end_game_drawing();
 
