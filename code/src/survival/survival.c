@@ -290,7 +290,11 @@ static Rectangle roster_cell(int index)
 {
     float ui = sv_ui();
     float cell_w = 210.0f * ui;
-    float total = cell_w * CH_COUNT;
+    float total;
+
+    // Com muitos personagens a fileira encolhe para caber na tela
+    if (cell_w * CH_COUNT > (float)GetScreenWidth() - 20.0f * ui) cell_w = ((float)GetScreenWidth() - 20.0f * ui) / CH_COUNT;
+    total = cell_w * CH_COUNT;
 
     return (Rectangle){(GetScreenWidth() - total) / 2.0f + cell_w * (float)index, 790.0f * ui, cell_w - 10.0f * ui, 190.0f * ui};
 }
