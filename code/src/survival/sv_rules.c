@@ -30,8 +30,8 @@ float sv_spawn_rate(float seconds)
 {
     float minutes = seconds / 60.0f;
 
-    // Começa leve e sobe sem parar: 1,2 por segundo no início e perto de 10 no fim
-    return 1.2f + 0.45f * minutes + 0.045f * minutes * minutes;
+    // Sobe sem parar: 2 por segundo no início (era 1,2 e os jogadores acharam o começo parado) e perto de 10 no fim
+    return 2.0f + 0.40f * minutes + 0.04f * minutes * minutes;
 }
 
 float sv_enemy_hp_scale(float seconds)
@@ -81,9 +81,9 @@ static const SvCharacter characters[CH_COUNT] = {
                   "Sobreviva 3:00 em uma partida.",
                   3, -10.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.15f, 1.0f, 0, false},
     [CH_ANDERSON] = {"Anderson", "Anderson", "Infraestrutura", "Servidor Estável",
-                     "Vida máxima +40 e -1 de dano em cada golpe. Velocidade -8%.",
+                     "Vida máxima +60 e -2 de dano em cada golpe. Velocidade -5%.",
                      "Elimine 500 inimigos no total.",
-                     W_VERA_ID, 40.0f, 1.0f, 0.92f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0, false},
+                     W_VERA_ID, 60.0f, 2.0f, 0.95f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0, false},
     [CH_JULIO] = {"Julio", "Julio", "Desenvolvedor back-end", "Deploy Contínuo",
                   "Velocidade +18% e, enquanto anda, os poderes recarregam 12% mais rápido. Vida máxima -10.",
                   "Jogue 5 partidas.",

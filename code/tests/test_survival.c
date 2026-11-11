@@ -515,8 +515,8 @@ static void test_characters(void)
         unlock_everything();
         sv_meta.character = CH_ANDERSON;
         sv_game_start(7);
-        check("SV-45", "Anderson: +40 de vida, +1 de armadura, mais lento, poder inicial próprio",
-              sv_run.player.max_hp == base_hp + 40.0f && sv_run.player.armor == 1.0f && sv_run.player.speed_mult < base_speed && sv_run.player.weapons[0].id == sv_character(CH_ANDERSON)->start_weapon);
+        check("SV-45", "Anderson: +60 de vida, +2 de armadura, mais lento, poder inicial próprio",
+              sv_run.player.max_hp == base_hp + 60.0f && sv_run.player.armor == 2.0f && sv_run.player.speed_mult < base_speed && sv_run.player.weapons[0].id == sv_character(CH_ANDERSON)->start_weapon);
 
         sv_meta.character = CH_JULIO;
         sv_game_start(7);
@@ -962,6 +962,15 @@ static void test_save_feedback(void)
     remove("build/tests/sv-aviso.survival");
 }
 
+static void test_ajustes_do_teste_com_jogadores(void)
+{
+    printf("\nAjustes do teste com jogadores\n");
+
+    check("SV-96", "o começo da partida já tem inimigos de sobra (pelo menos 2 por segundo)", sv_spawn_rate(0.0f) >= 2.0f);
+    check("SV-97", "acelerar o tempo só vale até os 7:00", SV_SPEEDUP_LIMIT == 420.0f && SV_SPEEDUP_LIMIT < sv_boss_spawn_time(BOSS_IARA));
+    check("SV-98", "a partida começa na velocidade normal", sv_time_scale == 1);
+}
+
 int main(void)
 {
     printf("Testes do Modo Sobrevivencia\n");
@@ -976,6 +985,7 @@ int main(void)
     test_boss_balance();
     test_debug_cheats();
     test_save_feedback();
+    test_ajustes_do_teste_com_jogadores();
 
     printf("\n%d verificacoes, todas passaram.\n", checks);
     return 0;

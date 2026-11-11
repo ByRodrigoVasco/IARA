@@ -752,6 +752,15 @@ static void draw_offscreen_boss_arrow(Camera2D camera)
     }
 }
 
+Rectangle sv_speed_button_rect(void)
+{
+    float ui = sv_ui();
+    float w = (float)GetScreenWidth();
+    float width = 150.0f * ui, height = 34.0f * ui;
+
+    return (Rectangle){w / 2.0f - width / 2.0f, 18.0f * ui + 66.0f * ui, width, height};
+}
+
 static void draw_hud(Camera2D camera)
 {
     SvPlayer *p = &sv_run.player;
@@ -783,6 +792,19 @@ static void draw_hud(Camera2D camera)
         else snprintf(text, sizeof(text), "%d:%02d", seconds / 60, seconds % 60);
         sv_text_centered(text, w / 2.0f, pad - 4.0f * ui, 44.0f * ui, remaining < 0.0f ? (Color){230, 60, 60, 255} : WHITE);
         sv_text_centered(sv_act_name(sv_run.act), w / 2.0f, pad + 38.0f * ui, 22.0f * ui, (Color){200, 170, 170, 255});
+    }
+
+    // Botão de velocidade do tempo: só até os 7:00, depois a tela já está cheia
+    if (sv_run.time < SV_SPEEDUP_LIMIT && sv_run.phase == SV_PLAYING)
+    {
+        Rectangle button = sv_speed_button_rect();
+        bool hot = sv_time_scale > 1;
+        bool hover = CheckCollisionPointRec(GetMousePosition(), button);
+
+        DrawRectangleRec(button, hot ? (Color){120, 40, 40, 230} : (Color){20, 20, 28, hover ? 230 : 170});
+        DrawRectangleLinesEx(button, 2.0f * ui, hot ? (Color){255, 120, 100, 255} : (Color){160, 160, 175, 255});
+        snprintf(text, sizeof(text), "TEMPO  x%d  [TAB]", sv_time_scale);
+        sv_text_centered(text, button.x + button.width / 2.0f, button.y + 5.0f * ui, 22.0f * ui, WHITE);
     }
 
     // Banco de Horas e abates

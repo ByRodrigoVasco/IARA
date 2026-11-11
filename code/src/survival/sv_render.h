@@ -24,4 +24,7 @@ float sv_text_width(const char *text, float size);
 // Fator de escala da interface do modo (1.0 em 1080p).
 float sv_ui(void);
 
+/** @brief Retângulo do botão de velocidade do tempo no HUD (x1, x2, x3). */
+Rectangle sv_speed_button_rect(void);
+
 #endif // SV_RENDER_H
