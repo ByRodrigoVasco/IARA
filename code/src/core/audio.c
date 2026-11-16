@@ -16,6 +16,26 @@ static Sound iara_voice_sound = {0};
 static Sound player_footsteps_sound = {0};
 static int active_music_screen = -1;
 
+// Volumes escolhidos em CONFIGURAÇÕES, de 0 a 1. Ficam guardados mesmo sem dispositivo de áudio,
+// para valerem assim que ele estiver pronto e para o arquivo de preferências gravar o valor certo.
+static float music_volume = 1.0f;   // Trilha: menu, ambiente calmo e trilha de tensão
+static float effects_volume = 1.0f; // Efeitos: clique, passos e voz da IARA
+
+static float clamp_volume(float volume)
+{
+    if (volume < 0.0f) return 0.0f;
+    if (volume > 1.0f) return 1.0f;
+    return volume;
+}
+
+// Os efeitos não têm mistura própria: o volume deles é o escolhido pelo jogador.
+static void apply_effects_volume(void)
+{
+    if (mouse_click_sound.stream.buffer != NULL) SetSoundVolume(mouse_click_sound, effects_volume);
+    if (iara_voice_sound.stream.buffer != NULL) SetSoundVolume(iara_voice_sound, effects_volume);
+    if (player_footsteps_sound.stream.buffer != NULL) SetSoundVolume(player_footsteps_sound, effects_volume);
+}
+
 bool initialize_audio(void)
 {
     InitAudioDevice();
@@ -77,6 +97,10 @@ bool initialize_audio(void)
     menu_music.looping = true;
     game_music.looping = true;
     calm_music.looping = true;
+
+    // As preferências podem ter sido lidas antes: aplica o que já estiver escolhido
+    SetMusicVolume(menu_music, music_volume);
+    apply_effects_volume();
     return true;
 }
 
@@ -111,7 +135,11 @@ void update_audio_for_screen(int screen)
         }
     }
 
-    if (active_music_screen == MENU_SCREEN) UpdateMusicStream(menu_music);
+    if (active_music_screen == MENU_SCREEN)
+    {
+        SetMusicVolume(menu_music, music_volume);
+        UpdateMusicStream(menu_music);
+    }
     else if (active_music_screen == PLAYING_SCREEN)
     {
         // A tensão sobe e desce devagar (cerca de 3 s de ponta a ponta), sem corte entre as faixas
@@ -120,8 +148,10 @@ void update_audio_for_screen(int screen)
         if (game_tension_current < game_tension_target) game_tension_current = fminf(game_tension_target, game_tension_current + step);
         else if (game_tension_current > game_tension_target) game_tension_current = fmaxf(game_tension_target, game_tension_current - step);
 
-        SetMusicVolume(calm_music, 1.0f - game_tension_current);
-        SetMusicVolume(game_music, game_tension_current);
+        // A tensão decide a proporção entre as duas faixas; o volume da trilha só escala o conjunto,
+        // então a soma das duas continua igual ao volume escolhido durante todo o crossfade
+        SetMusicVolume(calm_music, (1.0f - game_tension_current) * music_volume);
+        SetMusicVolume(game_music, game_tension_current * music_volume);
         UpdateMusicStream(calm_music);
         UpdateMusicStream(game_music);
     }
@@ -132,6 +162,27 @@ void audio_set_game_tension(float tension)
     if (tension < 0.0f) tension = 0.0f;
     if (tension > 1.0f) tension = 1.0f;
     game_tension_target = tension;
+}
+
+void audio_set_music_volume(float volume)
+{
+    music_volume = clamp_volume(volume);
+}
+
+float audio_get_music_volume(void)
+{
+    return music_volume;
+}
+
+void audio_set_effects_volume(float volume)
+{
+    effects_volume = clamp_volume(volume);
+    apply_effects_volume();
+}
+
+float audio_get_effects_volume(void)
+{
+    return effects_volume;
 }
 
 void play_click_sound(void)
