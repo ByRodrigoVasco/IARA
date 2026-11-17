@@ -63,10 +63,17 @@ AudioContext audio_get_context(void);
  * @param in_game_group true na campanha (PLAYING_SCREEN).
  * @param context Contexto da campanha.
  * @param tension Tensão de 0 a 1.
+ * @param jump_progress Progresso do bloco de salto puro, de 0 a 1 (só vale no contexto JUMP).
  * @param out_targets Recebe AUDIO_LAYER_COUNT valores.
  */
 void audio_compute_layer_targets(bool in_menu_group, bool in_game_group, AudioContext context,
-                                 float tension, float out_targets[AUDIO_LAYER_COUNT]);
+                                 float tension, float jump_progress, float out_targets[AUDIO_LAYER_COUNT]);
+
+/**
+ * @brief Quanto do bloco de salto puro já passou, de 0 (primeiro dia) a quase 1 (último). A trilha
+ * perde uma fatia a cada dia do bloco, reforçando a sensação de tempo acelerando.
+ */
+void audio_set_jump_progress(float progress);
 
 /**
  * @brief Anda de current até target no máximo seconds_to_full * (de 0 a 1) por segundo.

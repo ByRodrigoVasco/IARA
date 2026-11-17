@@ -1233,32 +1233,39 @@ static void testar_menu(void)
      * nao muda com a tensao (o crossfade nao fica mais alto nem mais baixo no meio). */
     float alvo[AUDIO_LAYER_COUNT];
 
-    audio_compute_layer_targets(true, false, AUDIO_CONTEXT_OFFICE, 0.5f, alvo);
+    audio_compute_layer_targets(true, false, AUDIO_CONTEXT_OFFICE, 0.5f, 0.0f, alvo);
     bool so_menu = alvo[AUDIO_LAYER_MENU] == 1.0f && alvo[AUDIO_LAYER_CALM] == 0.0f &&
                    alvo[AUDIO_LAYER_TENSION] == 0.0f && alvo[AUDIO_LAYER_QUIZ] == 0.0f;
 
-    audio_compute_layer_targets(false, false, AUDIO_CONTEXT_OFFICE, 0.5f, alvo);
+    audio_compute_layer_targets(false, false, AUDIO_CONTEXT_OFFICE, 0.5f, 0.0f, alvo);
     bool silencio_fora = alvo[AUDIO_LAYER_MENU] + alvo[AUDIO_LAYER_CALM] + alvo[AUDIO_LAYER_TENSION] + alvo[AUDIO_LAYER_QUIZ] == 0.0f;
 
-    audio_compute_layer_targets(false, true, AUDIO_CONTEXT_OFFICE, 0.0f, alvo);
+    audio_compute_layer_targets(false, true, AUDIO_CONTEXT_OFFICE, 0.0f, 0.0f, alvo);
     bool escritorio_calmo = alvo[AUDIO_LAYER_CALM] == 1.0f && alvo[AUDIO_LAYER_TENSION] == 0.0f && alvo[AUDIO_LAYER_QUIZ] == 0.0f;
-    audio_compute_layer_targets(false, true, AUDIO_CONTEXT_OFFICE, 1.0f, alvo);
+    audio_compute_layer_targets(false, true, AUDIO_CONTEXT_OFFICE, 1.0f, 0.0f, alvo);
     bool escritorio_tenso = alvo[AUDIO_LAYER_CALM] == 0.0f && alvo[AUDIO_LAYER_TENSION] == 1.0f;
 
-    audio_compute_layer_targets(false, true, AUDIO_CONTEXT_OFFICE, 0.37f, alvo);
+    audio_compute_layer_targets(false, true, AUDIO_CONTEXT_OFFICE, 0.37f, 0.0f, alvo);
     bool soma_constante = fabsf(alvo[AUDIO_LAYER_CALM] + alvo[AUDIO_LAYER_TENSION] - 1.0f) < 0.0001f;
 
-    audio_compute_layer_targets(false, true, AUDIO_CONTEXT_QUIZ, 0.4f, alvo);
+    audio_compute_layer_targets(false, true, AUDIO_CONTEXT_QUIZ, 0.4f, 0.0f, alvo);
     float cama_quiz = alvo[AUDIO_LAYER_CALM] + alvo[AUDIO_LAYER_TENSION];
     bool quiz_tem_faixa_propria = alvo[AUDIO_LAYER_QUIZ] == 1.0f && cama_quiz > 0.0f && cama_quiz < 0.5f;
 
-    audio_compute_layer_targets(false, true, AUDIO_CONTEXT_FLASH, 0.4f, alvo);
+    audio_compute_layer_targets(false, true, AUDIO_CONTEXT_FLASH, 0.4f, 0.0f, alvo);
     float cama_flash = alvo[AUDIO_LAYER_CALM] + alvo[AUDIO_LAYER_TENSION];
-    audio_compute_layer_targets(false, true, AUDIO_CONTEXT_JUMP, 0.4f, alvo);
-    float cama_salto = alvo[AUDIO_LAYER_CALM] + alvo[AUDIO_LAYER_TENSION];
-    bool passagem_abafada = alvo[AUDIO_LAYER_QUIZ] == 0.0f && cama_salto > 0.0f && cama_salto < cama_flash && cama_flash < 1.0f;
+    audio_compute_layer_targets(false, true, AUDIO_CONTEXT_JUMP, 0.4f, 0.0f, alvo);
+    float cama_salto_inicio = alvo[AUDIO_LAYER_CALM] + alvo[AUDIO_LAYER_TENSION];
+    audio_compute_layer_targets(false, true, AUDIO_CONTEXT_JUMP, 0.4f, 0.5f, alvo);
+    float cama_salto_meio = alvo[AUDIO_LAYER_CALM] + alvo[AUDIO_LAYER_TENSION];
+    audio_compute_layer_targets(false, true, AUDIO_CONTEXT_JUMP, 0.4f, 0.9f, alvo);
+    float cama_salto_fim = alvo[AUDIO_LAYER_CALM] + alvo[AUDIO_LAYER_TENSION];
+    /* No salto puro a trilha perde uma fatia a cada dia do bloco, e o flash fica abafado sem mudar. */
+    bool passagem_abafada = alvo[AUDIO_LAYER_QUIZ] == 0.0f && cama_flash < 1.0f && cama_flash > 0.0f &&
+                            cama_salto_inicio > cama_salto_meio && cama_salto_meio > cama_salto_fim &&
+                            cama_salto_fim >= 0.0f && cama_salto_inicio < 1.0f;
 
-    checar("CT-92", "Trilha: menu sozinho, escritorio calmo ou tenso com soma fixa, quiz com faixa propria e flash e salto abafados",
+    checar("CT-92", "Trilha: menu sozinho, escritorio calmo ou tenso com soma fixa, quiz com faixa propria e flash abafado e salto que perde uma fatia por dia",
            so_menu && silencio_fora && escritorio_calmo && escritorio_tenso && soma_constante &&
            quiz_tem_faixa_propria && passagem_abafada);
 

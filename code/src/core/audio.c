@@ -15,6 +15,7 @@ static Music quiz_music = {0};            // Faixa da tela do computador (quiz)
 static Sound flash_stinger = {0};         // Som curto na entrada de um Flash do dia
 static Sound jump_stinger = {0};          // Som curto na entrada de um salto puro
 static AudioContext audio_context = AUDIO_CONTEXT_OFFICE;
+static float jump_progress_value = 0.0f; // Quanto do bloco de salto puro já passou
 static float layer_weight[AUDIO_LAYER_COUNT] = {0}; // Peso atual de cada camada; anda até o alvo a cada quadro
 static Sound mouse_click_sound = {0};
 static Sound iara_voice_sound = {0};
@@ -123,7 +124,7 @@ bool initialize_audio(void)
 // Quanto da trilha do escritório continua por baixo em cada contexto de passagem
 #define AUDIO_QUIZ_BED_RATIO 0.2f
 #define AUDIO_FLASH_BED_RATIO 0.5f
-#define AUDIO_JUMP_BED_RATIO 0.3f
+#define AUDIO_JUMP_BED_RATIO 0.5f   // Trilha no primeiro dia do salto; perde uma fatia a cada dia do bloco
 
 float audio_step_toward(float current, float target, float delta_seconds, float seconds_for_full_fade)
 {
@@ -137,7 +138,7 @@ float audio_step_toward(float current, float target, float delta_seconds, float 
 }
 
 void audio_compute_layer_targets(bool in_menu_group, bool in_game_group, AudioContext context,
-                                 float tension, float out_targets[AUDIO_LAYER_COUNT])
+                                 float tension, float jump_progress, float out_targets[AUDIO_LAYER_COUNT])
 {
     for (int layer = 0; layer < AUDIO_LAYER_COUNT; layer++) out_targets[layer] = 0.0f;
 
@@ -163,7 +164,7 @@ void audio_compute_layer_targets(bool in_menu_group, bool in_game_group, AudioCo
         bed = AUDIO_FLASH_BED_RATIO;
         break;
     case AUDIO_CONTEXT_JUMP:
-        bed = AUDIO_JUMP_BED_RATIO;
+        bed = AUDIO_JUMP_BED_RATIO * (1.0f - clamp_volume(jump_progress));
         break;
     default:
         break;
@@ -220,7 +221,7 @@ void update_audio_for_screen(int screen)
     if (effective_context == AUDIO_CONTEXT_QUIZ && quiz_music.ctxData == NULL) effective_context = AUDIO_CONTEXT_OFFICE;
 
     float targets[AUDIO_LAYER_COUNT];
-    audio_compute_layer_targets(in_menu_group, in_game_group, effective_context, game_tension_current, targets);
+    audio_compute_layer_targets(in_menu_group, in_game_group, effective_context, game_tension_current, jump_progress_value, targets);
 
     // Cada camada anda até o alvo: a faixa que sai some enquanto a que entra sobe (crossfade entre telas e contextos).
     // O volume da trilha só escala o conjunto, então a soma continua igual ao volume escolhido.
@@ -252,6 +253,11 @@ void audio_set_context(AudioContext context)
         SetSoundVolume(*stinger, music_volume);
         PlaySound(*stinger);
     }
+}
+
+void audio_set_jump_progress(float progress)
+{
+    jump_progress_value = clamp_volume(progress);
 }
 
 AudioContext audio_get_context(void)
@@ -333,6 +339,7 @@ void unload_audio(void)
 
     active_music_screen = -1;
     audio_context = AUDIO_CONTEXT_OFFICE;
+    jump_progress_value = 0.0f;
     for (int layer = 0; layer < AUDIO_LAYER_COUNT; layer++) layer_weight[layer] = 0.0f;
 
     if (menu_music.ctxData != NULL) UnloadMusicStream(menu_music);
