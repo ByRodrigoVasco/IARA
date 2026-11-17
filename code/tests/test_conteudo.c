@@ -8,6 +8,7 @@
  */
 
 #include <stdio.h>
+#include <math.h>
 #include <string.h>
 #include <stdbool.h>
 
@@ -1227,6 +1228,67 @@ static void testar_menu(void)
 
     checar("CT-81", "Volume da trilha e dos efeitos sao independentes, ficam entre 0 e 1 e o arquivo antigo continua valendo",
            musica_sozinha && efeitos_sozinhos && limites && arquivo_antigo);
+
+    /* Trilha por momento do jogo (US15): cada contexto tem a sua mistura, e a soma da trilha do escritorio
+     * nao muda com a tensao (o crossfade nao fica mais alto nem mais baixo no meio). */
+    float alvo[AUDIO_LAYER_COUNT];
+
+    audio_compute_layer_targets(true, false, AUDIO_CONTEXT_OFFICE, 0.5f, alvo);
+    bool so_menu = alvo[AUDIO_LAYER_MENU] == 1.0f && alvo[AUDIO_LAYER_CALM] == 0.0f &&
+                   alvo[AUDIO_LAYER_TENSION] == 0.0f && alvo[AUDIO_LAYER_QUIZ] == 0.0f;
+
+    audio_compute_layer_targets(false, false, AUDIO_CONTEXT_OFFICE, 0.5f, alvo);
+    bool silencio_fora = alvo[AUDIO_LAYER_MENU] + alvo[AUDIO_LAYER_CALM] + alvo[AUDIO_LAYER_TENSION] + alvo[AUDIO_LAYER_QUIZ] == 0.0f;
+
+    audio_compute_layer_targets(false, true, AUDIO_CONTEXT_OFFICE, 0.0f, alvo);
+    bool escritorio_calmo = alvo[AUDIO_LAYER_CALM] == 1.0f && alvo[AUDIO_LAYER_TENSION] == 0.0f && alvo[AUDIO_LAYER_QUIZ] == 0.0f;
+    audio_compute_layer_targets(false, true, AUDIO_CONTEXT_OFFICE, 1.0f, alvo);
+    bool escritorio_tenso = alvo[AUDIO_LAYER_CALM] == 0.0f && alvo[AUDIO_LAYER_TENSION] == 1.0f;
+
+    audio_compute_layer_targets(false, true, AUDIO_CONTEXT_OFFICE, 0.37f, alvo);
+    bool soma_constante = fabsf(alvo[AUDIO_LAYER_CALM] + alvo[AUDIO_LAYER_TENSION] - 1.0f) < 0.0001f;
+
+    audio_compute_layer_targets(false, true, AUDIO_CONTEXT_QUIZ, 0.4f, alvo);
+    float cama_quiz = alvo[AUDIO_LAYER_CALM] + alvo[AUDIO_LAYER_TENSION];
+    bool quiz_tem_faixa_propria = alvo[AUDIO_LAYER_QUIZ] == 1.0f && cama_quiz > 0.0f && cama_quiz < 0.5f;
+
+    audio_compute_layer_targets(false, true, AUDIO_CONTEXT_FLASH, 0.4f, alvo);
+    float cama_flash = alvo[AUDIO_LAYER_CALM] + alvo[AUDIO_LAYER_TENSION];
+    audio_compute_layer_targets(false, true, AUDIO_CONTEXT_JUMP, 0.4f, alvo);
+    float cama_salto = alvo[AUDIO_LAYER_CALM] + alvo[AUDIO_LAYER_TENSION];
+    bool passagem_abafada = alvo[AUDIO_LAYER_QUIZ] == 0.0f && cama_salto > 0.0f && cama_salto < cama_flash && cama_flash < 1.0f;
+
+    checar("CT-92", "Trilha: menu sozinho, escritorio calmo ou tenso com soma fixa, quiz com faixa propria e flash e salto abafados",
+           so_menu && silencio_fora && escritorio_calmo && escritorio_tenso && soma_constante &&
+           quiz_tem_faixa_propria && passagem_abafada);
+
+    /* A troca de faixa e suave: cada camada anda aos poucos, sem pulo nem passar do alvo, nos dois sentidos. */
+    float peso = 0.0f;
+    float anterior = 0.0f;
+    bool subiu_aos_poucos = true;
+    int quadros = 0;
+
+    while (peso < 1.0f && quadros < 1000)
+    {
+        peso = audio_step_toward(peso, 1.0f, 1.0f / 60.0f, 0.8f);
+        if (peso - anterior > 0.05f || peso > 1.0f) subiu_aos_poucos = false;
+        anterior = peso;
+        quadros++;
+    }
+
+    bool tempo_certo = quadros >= 47 && quadros <= 49;   /* 0,8 s a 60 quadros por segundo */
+    bool desce = audio_step_toward(1.0f, 0.0f, 0.1f, 0.8f) < 1.0f && audio_step_toward(1.0f, 0.0f, 5.0f, 0.8f) == 0.0f;
+    bool parado = audio_step_toward(0.4f, 0.4f, 0.1f, 0.8f) == 0.4f;
+    bool sem_duracao = audio_step_toward(0.0f, 1.0f, 0.016f, 0.0f) == 1.0f;
+
+    audio_set_context(AUDIO_CONTEXT_QUIZ);
+    bool guardou_quiz = audio_get_context() == AUDIO_CONTEXT_QUIZ;
+    audio_set_context(AUDIO_CONTEXT_QUIZ);
+    audio_set_context(AUDIO_CONTEXT_OFFICE);
+    bool voltou_escritorio = audio_get_context() == AUDIO_CONTEXT_OFFICE;
+
+    checar("CT-93", "Troca de faixa e gradual nos dois sentidos, no tempo do fade, e o contexto da trilha e guardado",
+           subiu_aos_poucos && tempo_certo && desce && parado && sem_duracao && guardou_quiz && voltou_escritorio);
 
     /* Confirmar guarda a escolha e sinaliza o fechamento do menu. */
     selected_menu_option = CREDITOS;
