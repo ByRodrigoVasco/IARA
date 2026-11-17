@@ -8,6 +8,7 @@
 #include "helper.h"
 #include "macros.h"
 #include "sv_render.h"
+#include "sv_light.h"
 #include "sv_meta.h"
 #include "sv_map.h"
 #include "sv_debug.h"
@@ -929,6 +930,7 @@ void sv_render_game(void)
     if (sv_debug_mode) sv_debug_draw_world();
     EndMode2D();
 
+    sv_light_draw(camera);
     draw_hud(camera);
     if (sv_debug_mode) sv_debug_draw_hud();
 }

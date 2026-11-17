@@ -98,12 +98,12 @@ static const char *weapon_descriptions[W_COUNT] = {
     "Feixe de luz muito forte em linha reta, que atravessa todos os inimigos no caminho."};
 static const SvSpriteId weapon_icons[W_COUNT] = {SPR_ic_grampeador, SPR_ic_ponteiro, SPR_ic_caneca, SPR_ic_postits, SPR_ic_naoperturbe, SPR_ic_deploy, SPR_ic_nota, SPR_ic_modus, SPR_ic_tabela, SPR_ic_colega, SPR_ic_novaconversa, SPR_ic_prompt, SPR_ps_cracha, SPR_ic_fibra};
 
-static const char *passive_names[P_COUNT] = {"Café", "Manual", "Colinha", "Ergonomia", "Crachá", "Plano de Saúde", "Network", "Hora Extra", "Marmita Térmica", "Sorte de Principiante", "Espinhos Corporativos", "Foco"};
+static const char *passive_names[P_COUNT] = {"Café", "Manual", "Colinha", "Ergonomia", "Crachá", "Plano de Saúde", "Network", "Hora Extra", "Marmita Térmica", "Sorte de Principiante", "Espinhos Corporativos", "Foco", "Lanterna do Celular"};
 static const char *passive_descriptions[P_COUNT] = {
     "Recarga mais rápida.", "Mais área nos poderes.", "Mais XP dos chips.", "Mais velocidade.",
     "Menos dano recebido.", "Mais vida máxima.", "Pega os itens de mais longe.", "Poderes duram mais.",
-    "Recupera vida sozinho, aos poucos.", "Mais chance de Banco de Horas e marmita.", "Quem encosta em você leva dano.", "Mais dano em tudo."};
-static const SvSpriteId passive_icons[P_COUNT] = {SPR_ps_cafe, SPR_ps_manual, SPR_ps_colinha, SPR_ps_ergonomia, SPR_ps_cracha, SPR_ps_saude, SPR_ps_network, SPR_ps_horaextra, SPR_it_marmita, SPR_it_moeda, SPR_ic_tarja, SPR_ic_prompt};
+    "Recupera vida sozinho, aos poucos.", "Mais chance de Banco de Horas e marmita.", "Quem encosta em você leva dano.", "Mais dano em tudo.", "Ilumina mais longe no escuro."};
+static const SvSpriteId passive_icons[P_COUNT] = {SPR_ps_cafe, SPR_ps_manual, SPR_ps_colinha, SPR_ps_ergonomia, SPR_ps_cracha, SPR_ps_saude, SPR_ps_network, SPR_ps_horaextra, SPR_it_marmita, SPR_it_moeda, SPR_ic_tarja, SPR_ic_prompt, SPR_ps_lanterna};
 
 static const char *boss_names[BOSS_COUNT] = {"Impressora de Rescisões", "Modelo Enviesado", "Diego, o Crachá Ativo", "Renê, na cabeceira", "IARA, a Mãe-d'Água"};
 static const char *act_names[SV_ACT_COUNT] = {"ATO I", "ATO II", "ATO III", "ATO IV", "ATO V"};
@@ -316,6 +316,7 @@ static void recompute_stats(void)
     p->duration_mult = 1.0f + 0.10f * passive_level(P_HORAEXTRA);
     p->dmg_mult += 0.06f * passive_level(P_FOCO);
     p->regen = 0.4f * passive_level(P_REGEN);
+    p->vision_mult = 1.0f + 0.15f * passive_level(P_LANTERNA);
 
     // Habilidade do personagem escolhido
     {
@@ -1871,6 +1872,7 @@ static const PassiveDef passive_defs[P_COUNT] = {
     [P_SORTE] = {"Chance de Banco de Horas", 2.0f, 0},
     [P_ESPINHOS] = {"Dano a quem encosta", 8.0f, 1},
     [P_FOCO] = {"Dano", 6.0f, 0},
+    [P_LANTERNA] = {"Campo de visão", 15.0f, 0},
 };
 
 // Escreve um número com vírgula, sem zeros sobrando
