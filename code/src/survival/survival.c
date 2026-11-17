@@ -6,6 +6,7 @@
 #include "sv_game.h"
 #include "sv_render.h"
 #include "sv_light.h"
+#include "sv_ranking.h"
 #include "sv_meta.h"
 #include "sv_audio.h"
 #include "sv_assets.h"
@@ -19,7 +20,7 @@
 #include "notice.h"
 #include "ui_theme.h"
 
-typedef enum { SCREEN_HUB, SCREEN_SHOP, SCREEN_CHARS, SCREEN_RUN, SCREEN_PAUSE, SCREEN_OVER } SvScreen;
+typedef enum { SCREEN_HUB, SCREEN_SHOP, SCREEN_CHARS, SCREEN_NAME, SCREEN_RUN, SCREEN_PAUSE, SCREEN_OVER } SvScreen;
 
 static SvScreen screen = SCREEN_HUB;
 static bool loaded = false;
@@ -36,6 +37,15 @@ static bool pause_help_open = false;   // O painel de ajuda está aberto por cim
 static int earned_coins = 0;
 static float shop_message_timer = 0.0f;
 static const char *shop_message = "";
+
+// Ranking: nome de quem vai jogar e a colocação da última partida
+static char player_name[SV_NAME_BYTES] = "";
+static char name_input[SV_NAME_BYTES] = "";
+static bool run_ranked = false;        // A partida atual já entrou no ranking
+static int last_rank_position = 0;     // 1 = primeiro lugar; 0 = não entrou
+static long last_rank_order = 0;       // Para destacar a linha da partida no ranking
+
+static void finish_run(void);
 
 static const char *upgrade_names[UPG_COUNT] = {
     "Plano de Saúde Premium", "Bônus de Desempenho", "Sapato Confortável", "Atalhos de Teclado", "Monitor Ultrawide",
@@ -58,6 +68,8 @@ static void warn_if_save_failed(void)
 static float job_read_save(void)
 {
     char path[512];
+
+    sv_ranking_load();   // O ranking é um só para todos os saves (a feira inteira joga no mesmo computador)
 
     // Cada save tem o seu arquivo de progresso; sem save escolhido (testes), vale o arquivo antigo
     if (active_save_is_set() && active_save_mode() == SAVE_MODE_SURVIVAL && active_save_path(path, sizeof(path))) sv_meta_set_path(path);
@@ -129,7 +141,7 @@ void unload_survival(void)
     if (!loaded) return;
 
     // Quem sai no meio da partida leva o que juntou até aqui
-    if (screen == SCREEN_RUN || screen == SCREEN_PAUSE) sv_game_finish();
+    if (screen == SCREEN_RUN || screen == SCREEN_PAUSE) finish_run();
 
     for (int i = 0; i < CH_COUNT; i++)
     {
@@ -195,8 +207,21 @@ static int mouse_pick(int count, float first_y, float spacing, float width, bool
 // Início e Plano de Carreira
 // -----------------------------------------------------------------------------
 
+// Termina a partida: paga o Banco de Horas e coloca o resultado no ranking (uma vez só)
+static void finish_run(void)
+{
+    earned_coins = sv_game_finish();
+    if (run_ranked || sv_run.cheated) return;   // Partida com cheat não entra no ranking
+    run_ranked = true;
+    last_rank_position = sv_ranking_add(player_name, (int)sv_run.time, sv_run.kills, sv_run.player.level, sv_run.bosses_defeated, sv_run.player.character, sv_run.phase == SV_WON);
+    last_rank_order = last_rank_position > 0 ? sv_ranking_get(last_rank_position - 1)->order : 0;
+}
+
 static void start_run(void)
 {
+    run_ranked = false;
+    last_rank_position = 0;
+    last_rank_order = 0;
     sv_game_start((unsigned)(GetTime() * 1000.0) | 1u);
     sv_time_scale = 1;
     screen = SCREEN_RUN;
@@ -212,6 +237,119 @@ static void draw_backdrop(void)
     sv_draw(SPR_fl_4_6, 0, (Vector2){GetScreenWidth() * 0.5f, GetScreenHeight() * 0.5f}, GetScreenHeight() / 438.0f * 1.05f, 0.0f, false, (Color){70, 40, 60, 255});
     DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), (Color){6, 2, 10, 150});
     (void)ui;
+}
+
+// -----------------------------------------------------------------------------
+// Ranking
+// -----------------------------------------------------------------------------
+
+// Tabela do ranking: posição, nome, tempo e abates. A partida que acabou de terminar aparece destacada.
+static void draw_ranking(float x, float y, float width, int rows, float size)
+{
+    float ui = sv_ui();
+    float line = size * 1.25f;
+    float pad = 16.0f * ui;
+    int count = sv_ranking_count();
+    char text[96];
+
+    DrawRectangleRec((Rectangle){x, y, width, pad * 2.0f + line * (float)(rows + 1) + size * 0.4f}, (Color){10, 4, 16, 215});
+    DrawRectangleLinesEx((Rectangle){x, y, width, pad * 2.0f + line * (float)(rows + 1) + size * 0.4f}, 2.0f * ui, (Color){120, 30, 44, 255});
+
+    sv_text("#", x + pad, y + pad, size, (Color){160, 150, 165, 255});
+    sv_text("NOME", x + pad + size * 1.6f, y + pad, size, (Color){160, 150, 165, 255});
+    sv_text("TEMPO", x + width - pad - size * 5.6f, y + pad, size, (Color){160, 150, 165, 255});
+    sv_text("ABATES", x + width - pad - sv_text_width("ABATES", size), y + pad, size, (Color){160, 150, 165, 255});
+
+    for (int i = 0; i < rows; i++)
+    {
+        const SvRankEntry *e = sv_ranking_get(i);
+        float ry = y + pad + line * (float)(i + 1) + size * 0.4f;
+        Color color = i == 0 ? (Color){255, 214, 80, 255} : (i < 3 ? (Color){235, 225, 235, 255} : (Color){200, 190, 205, 255});
+
+        if (!e)
+        {
+            if (i == 0 && count == 0) sv_text("Ninguém jogou ainda. Seja o primeiro!", x + pad, ry, size * 0.85f, (Color){160, 150, 165, 255});
+            break;
+        }
+        if (last_rank_order != 0 && e->order == last_rank_order)
+        {
+            DrawRectangleRec((Rectangle){x + 4.0f * ui, ry - size * 0.1f, width - 8.0f * ui, line}, (Color){90, 20, 34, 230});
+            color = (Color){255, 120, 130, 255};
+        }
+        snprintf(text, sizeof(text), "%d", i + 1);
+        sv_text(text, x + pad, ry, size, color);
+        sv_text(e->name, x + pad + size * 1.6f, ry, size, color);
+        snprintf(text, sizeof(text), "%d:%02d", e->seconds / 60, e->seconds % 60);
+        sv_text(text, x + width - pad - size * 5.6f, ry, size, e->won ? (Color){120, 230, 160, 255} : color);
+        snprintf(text, sizeof(text), "%d", e->kills);
+        sv_text(text, x + width - pad - sv_text_width(text, size), ry, size, color);
+    }
+}
+
+// Tela do nome: quem vai jogar digita o nome antes de cada partida (vem preenchido com o último)
+static void render_name(void)
+{
+    float ui = sv_ui();
+    float w = (float)GetScreenWidth();
+    int cp;
+    char shown[SV_NAME_BYTES + 4];
+    char cleaned[SV_NAME_BYTES];
+    bool has_letters;
+
+    // Letras digitadas (com acento: a fonte do jogo tem o Latin-1)
+    while ((cp = GetCharPressed()) > 0)
+    {
+        int bytes = 0;
+        const char *utf8 = CodepointToUTF8(cp, &bytes);
+        int letters = 0;
+
+        for (int i = 0; name_input[i]; i++) if (((unsigned char)name_input[i] & 0xC0) != 0x80) letters++;
+        if (cp < 32 || cp == '|' || cp > 0xFF || letters >= SV_NAME_MAX_CHARS) continue;
+        if ((int)strlen(name_input) + bytes >= SV_NAME_BYTES) continue;
+        strncat(name_input, utf8, (size_t)bytes);
+    }
+    if (IsKeyPressed(KEY_BACKSPACE) || IsKeyPressedRepeat(KEY_BACKSPACE))
+    {
+        int len = (int)strlen(name_input);
+
+        while (len > 0 && ((unsigned char)name_input[len - 1] & 0xC0) == 0x80) len--;   // bytes de continuação
+        if (len > 0) len--;
+        name_input[len] = '\0';
+    }
+
+    sv_ranking_clean_name(name_input, cleaned, sizeof(cleaned));
+    has_letters = name_input[0] != '\0' && strcmp(cleaned, "Anônimo") != 0;
+
+    if ((IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER)) && has_letters)
+    {
+        snprintf(player_name, sizeof(player_name), "%s", cleaned);
+        sv_sfx(SND_confirma);
+        start_run();
+        return;
+    }
+    if (IsKeyPressed(KEY_ESCAPE))
+    {
+        screen = SCREEN_HUB;
+        sv_sfx(SND_escolha);
+    }
+
+    begin_game_drawing();
+    draw_backdrop();
+
+    sv_text_centered("QUEM VAI JOGAR?", w / 2.0f, 150.0f * ui, 96.0f * ui, (Color){230, 40, 50, 255});
+    sv_text_centered("Digite seu nome para entrar no ranking", w / 2.0f, 280.0f * ui, 34.0f * ui, (Color){220, 205, 215, 255});
+
+    DrawRectangleRec((Rectangle){w / 2.0f - 420.0f * ui, 350.0f * ui, 840.0f * ui, 110.0f * ui}, (Color){10, 4, 16, 230});
+    DrawRectangleLinesEx((Rectangle){w / 2.0f - 420.0f * ui, 350.0f * ui, 840.0f * ui, 110.0f * ui}, 3.0f * ui, (Color){230, 40, 50, 255});
+    snprintf(shown, sizeof(shown), "%s%s", name_input, ((int)(GetTime() * 2.0) % 2) ? "_" : " ");
+    sv_text_centered(shown, w / 2.0f, 368.0f * ui, 72.0f * ui, (Color){255, 240, 240, 255});
+
+    sv_text_centered(has_letters ? "ENTER: começar a partida" : "Digite pelo menos uma letra", w / 2.0f, 490.0f * ui, 34.0f * ui, has_letters ? (Color){120, 230, 160, 255} : (Color){180, 170, 185, 255});
+
+    draw_ranking(w / 2.0f - 420.0f * ui, 570.0f * ui, 840.0f * ui, 5, 36.0f * ui);
+
+    ui_draw_hint("Digite o nome    BACKSPACE: apagar    ENTER: jogar    ESC: voltar");
+    end_game_drawing();
 }
 
 static void render_hub(void)
@@ -234,7 +372,11 @@ static void render_hub(void)
         if (pressed_confirm() || clicked)
         {
             sv_sfx(SND_confirma);
-            if (hub_selected == 0) start_run();
+            if (hub_selected == 0)
+            {
+                snprintf(name_input, sizeof(name_input), "%s", player_name);
+                screen = SCREEN_NAME;
+            }
             else if (hub_selected == 1) { screen = SCREEN_CHARS; char_cursor = sv_meta.character; char_message_timer = 0.0f; }
             else if (hub_selected == 2) { screen = SCREEN_SHOP; shop_selected = 0; sv_music_play(MUS_LOJA); }
             else if (hub_selected == 3) { help_select_page(1); hub_help_open = true; }
@@ -265,6 +407,9 @@ static void render_hub(void)
         if (selected) DrawRectangleRec(row, (Color){70, 14, 26, 220});
         sv_text_centered(hub_labels[i], w / 2.0f, row.y + 8.0f * ui, 52.0f * ui, selected ? (Color){255, 70, 80, 255} : (Color){225, 215, 225, 255});
     }
+
+    sv_text_centered("RANKING", w - 300.0f * ui, 470.0f * ui, 52.0f * ui, (Color){255, 214, 80, 255});
+    draw_ranking(w - 560.0f * ui, 530.0f * ui, 520.0f * ui, 10, 30.0f * ui);
 
     if (hub_help_open)
     {
@@ -560,7 +705,7 @@ static void render_run(void)
 
     if (sv_run.phase == SV_DEAD || sv_run.phase == SV_WON)
     {
-        earned_coins = sv_game_finish(); warn_if_save_failed();
+        finish_run(); warn_if_save_failed();
         screen = SCREEN_OVER;
         return;
     }
@@ -579,7 +724,7 @@ static void render_run(void)
 static void abandon_run(void)
 {
     sv_run.phase = SV_DEAD;
-    earned_coins = sv_game_finish(); warn_if_save_failed();
+    finish_run(); warn_if_save_failed();
     screen = SCREEN_OVER;
     sv_music_play(MUS_GAMEOVER);
 }
@@ -680,9 +825,16 @@ static void render_over(void)
     snprintf(text, sizeof(text), "Saldo %d", sv_meta.coins);
     sv_text_centered(text, w / 2.0f, 470.0f * ui, 36.0f * ui, (Color){255, 214, 80, 255});
 
-    if (sv_run.cheated) sv_text_centered("Cheats usados: esta partida não conta para o progresso do save.", w / 2.0f, 530.0f * ui, 28.0f * ui, (Color){255, 140, 120, 255});
+    if (sv_run.cheated) sv_text_centered("Cheats usados: esta partida não conta para o progresso nem para o ranking.", w / 2.0f, 530.0f * ui, 28.0f * ui, (Color){255, 140, 120, 255});
+    else if (last_rank_position > 0)
+    {
+        snprintf(text, sizeof(text), "%s, você ficou em %dº de %d no ranking!", player_name, last_rank_position, sv_ranking_count());
+        sv_text_centered(text, w / 2.0f, 530.0f * ui, 40.0f * ui, last_rank_position <= 5 ? (Color){255, 214, 80, 255} : (Color){230, 220, 230, 255});
+    }
 
-    sv_text_centered("Enter para voltar", w / 2.0f, 600.0f * ui, 34.0f * ui, (Color){190, 180, 195, 255});
+    draw_ranking(w / 2.0f - 420.0f * ui, 600.0f * ui, 840.0f * ui, 5, 34.0f * ui);
+
+    sv_text_centered("Enter para voltar", w / 2.0f, 1000.0f * ui, 34.0f * ui, (Color){190, 180, 195, 255});
 
     end_game_drawing();
 }
@@ -705,6 +857,10 @@ bool render_survival(void)
     case SCREEN_CHARS:
         sv_audio_update(GetFrameTime());
         render_characters();
+        break;
+    case SCREEN_NAME:
+        sv_audio_update(GetFrameTime());
+        render_name();
         break;
     case SCREEN_RUN:
         render_run();
