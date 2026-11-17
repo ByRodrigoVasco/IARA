@@ -72,6 +72,10 @@ int main(void)
     SetWindowPosition((int)monitor_position.x + ((monitor_width - window_width) / 2),
                       (int)monitor_position.y + ((monitor_height - window_height) / 2));
 
+    /* A janela abre no tamanho fixo (sem bordas para arrastar). Maximizar ou tela cheia
+     * ficam nas configurações e no F11. */
+    mark_window_fixed_at_startup();
+
     update_screen_metrics();
 
     SetTargetFPS(60);
