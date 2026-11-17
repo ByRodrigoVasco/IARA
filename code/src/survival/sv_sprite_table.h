@@ -148,17 +148,17 @@
     X(pr_mesaVerde, "pr_mesaVerde", 48, 65, 1) \
     X(pr_mesaVermelha, "pr_mesaVermelha", 48, 64, 1) \
     X(pr_mesaSec, "pr_mesaSec", 48, 65, 1) \
-    X(pr_mesaVirada, "pr_mesaVirada", 70, 42, 1) \
+    X(pr_mesaVirada, "pr_mesaVirada", 40, 48, 1) \
     X(pr_cadeiraCaida, "pr_cadeiraCaida", 40, 18, 1) \
     X(pr_nucleo, "pr_nucleo", 120, 100, 1) \
     X(pr_cofre, "pr_cofre", 28, 48, 1) \
-    X(pr_escada, "pr_escada", 40, 72, 1) \
+    X(pr_escada, "pr_escada", 22, 60, 1) \
     X(pr_arquivo, "pr_arquivo", 44, 61, 1) \
     X(pr_bancadaTI, "pr_bancadaTI", 160, 62, 1) \
-    X(pr_prateleiraPecas, "pr_prateleiraPecas", 90, 66, 1) \
+    X(pr_prateleiraPecas, "pr_prateleiraPecas", 46, 68, 1) \
     X(pr_pilhaCaixas, "pr_pilhaCaixas", 42, 46, 1) \
     X(pr_alga, "pr_alga", 26, 60, 1) \
-    X(pr_estanteTombada, "pr_estanteTombada", 100, 56, 1) \
+    X(pr_estanteTombada, "pr_estanteTombada", 62, 44, 1) \
     X(pr_balcao, "pr_balcao", 190, 62, 1) \
     X(pr_catraca, "pr_catraca", 34, 44, 1) \
     X(pr_impressoraRH, "pr_impressoraRH", 90, 68, 1) \

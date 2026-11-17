@@ -26,6 +26,7 @@ typedef struct
     int frame_width;
     int frame_height;
     int frames;
+    Texture2D glow;   // Só os pixels vermelhos-vivos (olhos, sangue), que brilham no escuro. id 0 = sem brilho
 } SvSprite;
 
 extern SvSprite sv_sprites[SPR_COUNT];
@@ -42,6 +43,9 @@ void sv_unload_sprites(void);
  * @param rotation Graus. @param flip Espelha na horizontal.
  */
 void sv_draw(SvSpriteId id, int frame, Vector2 center, float scale, float rotation, bool flip, Color tint);
+
+/** @brief Desenha só a parte que brilha de um quadro (mesmos parâmetros de sv_draw). Não faz nada se a imagem não tem brilho. */
+void sv_draw_glow(SvSpriteId id, int frame, Vector2 center, bool flip, Color tint);
 
 /** @brief Desenha um quadro esticado em largura e altura próprias (feixes e linhas). */
 void sv_draw_stretched(SvSpriteId id, int frame, Vector2 center, float width, float height, float rotation, Color tint);
