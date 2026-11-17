@@ -1602,6 +1602,14 @@ void handle_game_loop_screens(void)
 {
     if (current_screen != IN_GAME_SCREEN) update_player_footstep_audio(false);
 
+    // A trilha acompanha o momento: faixa própria no quiz, trilha abafada e som curto nos cartões de flash e salto
+    if (current_screen == COMPUTER_SCREEN) audio_set_context(AUDIO_CONTEXT_QUIZ);
+    else if (current_screen == DAY_TRANSITION_SCREEN)
+    {
+        audio_set_context(current_game_state_variables.day_type == FLASH_DAY ? AUDIO_CONTEXT_FLASH : AUDIO_CONTEXT_JUMP);
+    }
+    else audio_set_context(AUDIO_CONTEXT_OFFICE);
+
     // Fora do quadro da cena: as texturas do computador ainda seriam usadas se fossem liberadas depois de desenhar
     if (current_screen == COMPUTER_SCREEN && computer_exit_finished)
     {
