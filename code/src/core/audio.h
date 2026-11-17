@@ -26,6 +26,23 @@ void update_audio_for_screen(int screen);
 void audio_set_game_tension(float tension);
 
 /**
+ * @brief Volume da trilha (menu, ambiente calmo e trilha de tensão), de 0 a 1.
+ * Multiplica a mistura da tensão, então o crossfade entre as faixas continua igual.
+ *
+ * @param volume Valor de 0 a 1; fora disso é limitado.
+ */
+void audio_set_music_volume(float volume);
+float audio_get_music_volume(void);
+
+/**
+ * @brief Volume dos efeitos sonoros (clique, passos e voz da IARA), de 0 a 1.
+ *
+ * @param volume Valor de 0 a 1; fora disso é limitado.
+ */
+void audio_set_effects_volume(float volume);
+float audio_get_effects_volume(void);
+
+/**
  * @brief Reproduz o efeito sonoro de clique do mouse.
  */
 void play_click_sound(void);
