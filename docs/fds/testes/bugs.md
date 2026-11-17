@@ -11,7 +11,7 @@ Os blocos abaixo repetem o conteúdo de cada um, para consulta sem sair do repos
 
 ## Status
 
-Atualizar a coluna Status conforme as issues forem corrigidas e fechadas. Conferido em 17/11/2026: do BUG-01 ao BUG-16 e do BUG-19 ao BUG-32 as correções estão na `develop` (o Modo Sobrevivência entrou pelo PR #76) e as issues foram fechadas, menos as dos BUG-30 a BUG-32, que fecham quando o PR desta correção entrar. Os BUG-17 e BUG-18 seguem abertos, com gravidade baixa: são quadros lentos medidos no teste real, sem efeito na jogabilidade. O BUG-17 não voltou a acontecer, e o BUG-18 pede carregar a música e o ambiente da primeira fase na tela de carregamento.
+Atualizar a coluna Status conforme as issues forem corrigidas e fechadas. Conferido em 17/11/2026: do BUG-01 ao BUG-16 e do BUG-19 ao BUG-32 as correções estão na `develop` (o Modo Sobrevivência entrou pelo PR #76) e as issues foram fechadas, inclusive as dos BUG-30 a BUG-32 (PR #82). Os BUG-17 e BUG-18 seguem abertos, com gravidade baixa: são quadros lentos medidos no teste real, sem efeito na jogabilidade. O BUG-17 não voltou a acontecer, e o BUG-18 pede carregar a música e o ambiente da primeira fase na tela de carregamento.
 
 | ID | Problema | Gravidade | Issue | Status |
 |---|---|---|---|---|
@@ -44,9 +44,9 @@ Atualizar a coluna Status conforme as issues forem corrigidas e fechadas. Confer
 | BUG-27 | Cartões de início e fim do dia sem como pular | Baixa | [#72](https://github.com/ByRodrigoVasco/IARA/issues/72) | Corrigido na `develop`, issue fechada |
 | BUG-28 | Trilha de suspense já no primeiro dia | Baixa | [#73](https://github.com/ByRodrigoVasco/IARA/issues/73) | Corrigido na `develop`, issue fechada |
 | BUG-29 | Tarja Preta (poder inicial do Zito) fraco e sem sentido para o personagem | Média | [#74](https://github.com/ByRodrigoVasco/IARA/issues/74) | Corrigido na `develop` (PR #76), issue fechada |
-| BUG-30 | Descrição das cartas de escolha passa por cima das linhas de mudança | Média | [#77](https://github.com/ByRodrigoVasco/IARA/issues/77) | Corrigido, issue fecha com o PR |
-| BUG-31 | Botão de velocidade (2x) no centro cobre o nome do chefe e o texto vaza do botão | Média | [#78](https://github.com/ByRodrigoVasco/IARA/issues/78) | Corrigido, issue fecha com o PR |
-| BUG-32 | Janela sem opção de maximizar e com tamanho solto | Média | [#79](https://github.com/ByRodrigoVasco/IARA/issues/79) | Corrigido, issue fecha com o PR |
+| BUG-30 | Descrição das cartas de escolha passa por cima das linhas de mudança | Média | [#77](https://github.com/ByRodrigoVasco/IARA/issues/77) | Corrigido na `develop` (PR #82), issue fechada |
+| BUG-31 | Botão de velocidade (2x) no centro cobre o nome do chefe e o texto vaza do botão | Média | [#78](https://github.com/ByRodrigoVasco/IARA/issues/78) | Corrigido na `develop` (PR #82), issue fechada |
+| BUG-32 | Janela sem opção de maximizar e com tamanho solto | Média | [#79](https://github.com/ByRodrigoVasco/IARA/issues/79) | Corrigido na `develop` (PR #82), issue fechada |
 
 **Sobre o BUG-02:** os dois vazamentos descritos abaixo já não existem. Restava uma carga duplicada do menu ao abrir o jogo, removida. O CT-24 oscilava porque media sem desenhar quadros, e o driver de vídeo só devolve uma textura apagada depois de um quadro. Com quadros, 400 voltas ao menu cresceram 19 MB (cerca de 0,05 MB por volta, contra os 7 MB originais).
 
