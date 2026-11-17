@@ -1109,7 +1109,7 @@ static void testar_menu(void)
     checar("CT-21", "Menu abre em INICIAR, destravado",
            selected_menu_option == INICIAR && !is_menu_to_close && next_screen == NONE);
 
-    /* Descer cinco vezes deve voltar para INICIAR (lista circular). */
+    /* Descer cinco vezes deve voltar para INICIAR (lista circular). O modo de jogo e escolhido depois de INICIAR. */
     move_menu_selection(1);
     bool desceu_para_creditos = (selected_menu_option == CREDITOS);
 

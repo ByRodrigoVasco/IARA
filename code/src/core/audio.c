@@ -108,7 +108,8 @@ void update_audio_for_screen(int screen)
 {
     int next_music_screen = -1;
     if (screen == PRE_MENU_SCREEN || screen == MENU_SCREEN ||
-        screen == CREDITS_SCREEN || screen == SETTINGS_SCREEN)
+        screen == CREDITS_SCREEN || screen == SETTINGS_SCREEN ||
+        screen == MODE_SELECT_SCREEN || screen == SAVE_SELECT_SCREEN)
     {
         next_music_screen = MENU_SCREEN;
     }

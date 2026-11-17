@@ -27,6 +27,16 @@ static const help_page help_pages[] = {
       "Pausa: ESC (ou P) pausa o jogo, e de lá você volta ao menu ou sai.",
       "Salvar: o progresso é salvo sozinho ao voltar ao menu e ao fechar o jogo.",
       "Tela: F11 alterna entre janela e tela cheia. Brilho, volume e contraste ficam em CONFIGURAÇÕES.",
+      NULL}},
+    {"SOBREVIVÊNCIA",
+     {"Objetivo: aguente dez minutos de expediente contra os pesadelos da empresa e desligue a IARA, que aparece no fim.",
+      "Andar: WASD ou as setas. Os poderes atacam sozinhos, então o seu trabalho é fugir e escolher bem onde ficar.",
+      "Subir de nível: escolha um poder novo ou uma melhoria com as setas (ou 1, 2 e 3) e ENTER. Os poderes ficam mais fortes a cada melhoria.",
+      "Chefes: inimigos grandes chegam em horários fixos, aos 3:00, 4:45, 6:30, 8:15 e 10:00. A IARA é o último.",
+      "Banco de Horas: o que você junta vira moeda para o Plano de Carreira, onde compra melhorias permanentes. Morrer ou desistir não perde o que já juntou.",
+      "Personagens: cada um começa com um poder e um jeito de jogar. Os bloqueados mostram o que falta para liberar.",
+      "Pausa: ESC (ou P) pausa a partida. Desistir pede confirmação e vale como derrota.",
+      "Saves: cada save guarda o progresso do próprio modo, e o Modo Normal e o Sobrevivência têm saves separados.",
       NULL}}};
 
 static int help_current_page = 0;
@@ -39,6 +49,11 @@ int help_page_count(void)
 void initialize_help_screen(void)
 {
     help_current_page = 0;
+}
+
+void help_select_page(int page)
+{
+    help_current_page = (page >= 0 && page < help_page_count()) ? page : 0;
 }
 
 // Desenha o painel e lê as teclas. Devolve true quando o jogador pediu para fechar.
