@@ -143,12 +143,96 @@ void draw_texture_cover(Texture2D texture, Rectangle dest, Color tint)
     DrawTexturePro(texture, source, dest, (Vector2){0, 0}, 0.0f, tint);
 }
 
+static WindowMode current_window_mode = WINDOW_MODE_FIXED;
+static WindowMode last_window_mode = WINDOW_MODE_FIXED; // Janela a que a tela cheia volta
+
+// Posição e tamanho da janela fixa: o que ela tinha ao abrir o jogo (tamanho padrão, centralizada no monitor).
+static Rectangle fixed_window_rect = {0};
+static bool has_fixed_window_rect = false;
+
+// Janela de tamanho fixo: volta ao tamanho e ao lugar de quando o jogo abriu, sem bordas para arrastar.
+static void apply_fixed_window(void)
+{
+    if (IsWindowMaximized()) RestoreWindow();
+    ClearWindowState(FLAG_WINDOW_RESIZABLE);
+
+    if (has_fixed_window_rect)
+    {
+        SetWindowSize((int)fixed_window_rect.width, (int)fixed_window_rect.height);
+        SetWindowPosition((int)fixed_window_rect.x, (int)fixed_window_rect.y);
+    }
+}
+
+void set_window_mode(WindowMode mode)
+{
+    if (mode == current_window_mode) return;
+
+    if (current_window_mode == WINDOW_MODE_FULLSCREEN)
+    {
+        if (IsWindowState(FLAG_BORDERLESS_WINDOWED_MODE)) ToggleBorderlessWindowed();
+    }
+    else
+    {
+        last_window_mode = current_window_mode;
+    }
+
+    switch (mode)
+    {
+    case WINDOW_MODE_FULLSCREEN:
+        if (!IsWindowState(FLAG_BORDERLESS_WINDOWED_MODE)) ToggleBorderlessWindowed();
+        break;
+
+    case WINDOW_MODE_MAXIMIZED:
+        SetWindowState(FLAG_WINDOW_RESIZABLE); // Sem isso o sistema nao maximiza
+        if (!IsWindowMaximized()) MaximizeWindow();
+        break;
+
+    case WINDOW_MODE_FIXED:
+    default:
+        apply_fixed_window();
+        break;
+    }
+
+    current_window_mode = mode;
+}
+
+WindowMode get_window_mode(void)
+{
+    return current_window_mode;
+}
+
+WindowMode get_windowed_mode(void)
+{
+    return (current_window_mode == WINDOW_MODE_FULLSCREEN) ? last_window_mode : current_window_mode;
+}
+
 void toggle_fullscreen(void)
 {
-    ToggleBorderlessWindowed();
+    set_window_mode((current_window_mode == WINDOW_MODE_FULLSCREEN) ? last_window_mode : WINDOW_MODE_FULLSCREEN);
+}
+
+void toggle_window_maximized(void)
+{
+    set_window_mode((current_window_mode == WINDOW_MODE_MAXIMIZED) ? WINDOW_MODE_FIXED : WINDOW_MODE_MAXIMIZED);
 }
 
 bool is_fullscreen_enabled(void)
 {
-    return IsWindowState(FLAG_BORDERLESS_WINDOWED_MODE);
+    return current_window_mode == WINDOW_MODE_FULLSCREEN;
+}
+
+bool is_window_maximized_enabled(void)
+{
+    return current_window_mode == WINDOW_MODE_MAXIMIZED;
+}
+
+void mark_window_fixed_at_startup(void)
+{
+    Vector2 position = GetWindowPosition();
+
+    ClearWindowState(FLAG_WINDOW_RESIZABLE);
+    fixed_window_rect = (Rectangle){position.x, position.y, (float)GetScreenWidth(), (float)GetScreenHeight()};
+    has_fixed_window_rect = true;
+    current_window_mode = WINDOW_MODE_FIXED;
+    last_window_mode = WINDOW_MODE_FIXED;
 }

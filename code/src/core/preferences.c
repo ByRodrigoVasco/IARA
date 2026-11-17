@@ -47,8 +47,13 @@ bool load_preferences(const char *path)
         {
             if ((enabled != 0) != is_high_contrast_enabled()) toggle_high_contrast();
         }
+        else if (sscanf(line, "janela_maximizada=%d", &enabled) == 1)
+        {
+            if (enabled != 0) set_window_mode(WINDOW_MODE_MAXIMIZED);
+        }
         else if (sscanf(line, "tela_cheia=%d", &enabled) == 1)
         {
+            // Vem depois da janela_maximizada no arquivo: a tela cheia volta para a janela que ja estava escolhida
             if ((enabled != 0) != is_fullscreen_enabled()) toggle_fullscreen();
         }
     }
@@ -68,6 +73,8 @@ bool save_preferences(const char *path)
     fprintf(file, "volume_musica=%.2f\n", audio_get_music_volume());
     fprintf(file, "volume_efeitos=%.2f\n", audio_get_effects_volume());
     fprintf(file, "alto_contraste=%d\n", is_high_contrast_enabled() ? 1 : 0);
+    // Na tela cheia vale a janela a que ela volta: o arquivo guarda as duas escolhas
+    fprintf(file, "janela_maximizada=%d\n", get_windowed_mode() == WINDOW_MODE_MAXIMIZED ? 1 : 0);
     fprintf(file, "tela_cheia=%d\n", is_fullscreen_enabled() ? 1 : 0);
 
     return fclose(file) == 0;

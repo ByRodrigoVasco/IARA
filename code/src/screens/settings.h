@@ -9,8 +9,9 @@
 #define SETTINGS_MUSIC_VOLUME 2
 #define SETTINGS_EFFECTS_VOLUME 3
 #define SETTINGS_FULLSCREEN 4
-#define SETTINGS_BACK 5
-#define SETTINGS_OPTION_COUNT 6
+#define SETTINGS_MAXIMIZED 5
+#define SETTINGS_BACK 6
+#define SETTINGS_OPTION_COUNT 7
 
 // Passo dos sliders de volume pelo teclado.
 #define VOLUME_STEP 0.1f
