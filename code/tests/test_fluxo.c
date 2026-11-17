@@ -25,6 +25,7 @@
 #include "pre_menu.h"
 #include "fonts.h"
 #include "settings.h"
+#include "preferences.h"
 #include "mode_select.h"
 #include "save_select.h"
 #include "save_slots.h"
@@ -1985,6 +1986,171 @@ static void testar_layout_do_quiz(void)
            problemas_nas_mesas == 0);
 }
 
+/* Textos do Sobrevivencia: nenhuma carta de escolha deixa texto sobre texto ou fora da carta,
+ * e o botao de velocidade nao toca no resto do HUD, em varios tamanhos de janela. */
+static int problemas_da_carta(const SvChoice *escolha)
+{
+    SvCardLayout layout;
+    char mudancas[SV_CHOICE_LINES][96];
+    int n = sv_choice_lines(escolha, mudancas);
+    int problemas = 0;
+
+    sv_levelup_layout(escolha, &layout);
+
+    if (layout.bottom > SV_CARD_H - SV_CARD_BOTTOM_MARGIN + 0.01f) problemas++;                       /* passa do fim da carta */
+    if (layout.desc_size < SV_CARD_DESC_MIN) problemas++;                                              /* descricao ilegivel */
+    if (layout.desc_lines > SV_CARD_MAX_DESC_LINES) problemas++;
+    if (sv_text_width(sv_choice_title(escolha), layout.title_size) > SV_CARD_W - 2.0f * SV_CARD_TEXT_MARGIN + 0.5f) problemas++;
+    if (layout.changes_y < SV_CARD_DESC_Y + layout.desc_lines * layout.desc_size * 1.15f) problemas++; /* mudancas por cima da descricao */
+
+    for (int k = 0; k < n; k++)
+    {
+        if (sv_text_width(mudancas[k], SV_CARD_CHANGE_MIN) > SV_CARD_W - 2.0f * SV_CARD_TEXT_MARGIN) problemas++;
+    }
+    return problemas;
+}
+
+static void testar_textos_do_sobrevivencia(void)
+{
+    int problemas = 0;
+    int cartas = 0;
+    int janelas[][2] = {{960, 540}, {1280, 720}, {1920, 1080}, {1024, 768}, {2560, 1080}};
+    int problemas_do_botao = 0;
+
+    titulo("Textos das cartas e do HUD do Sobrevivencia (UX-23 e UX-24)");
+    sv_audio_disable(true);
+    sv_game_start(11);
+
+    for (int w = 0; w < W_COUNT; w++)
+    {
+        SvChoice nova = {0, w};
+
+        problemas += problemas_da_carta(&nova);
+        cartas++;
+        for (int nivel = 1; nivel < 5; nivel++)
+        {
+            SvChoice evolui = {1, w};
+
+            sv_cheat_set_weapon(w, nivel);
+            problemas += problemas_da_carta(&evolui);
+            cartas++;
+        }
+        sv_cheat_set_weapon(w, 0);
+    }
+    for (int p = 0; p < P_COUNT; p++)
+    {
+        SvChoice novo = {2, p};
+
+        problemas += problemas_da_carta(&novo);
+        cartas++;
+        for (int nivel = 1; nivel < 5; nivel++)
+        {
+            SvChoice evolui = {3, p};
+
+            sv_cheat_set_passive(p, nivel);
+            problemas += problemas_da_carta(&evolui);
+            cartas++;
+        }
+        sv_cheat_set_passive(p, 0);
+    }
+    {
+        SvChoice marmita = {4, 0};
+        SvChoice banco = {5, 0};
+
+        problemas += problemas_da_carta(&marmita) + problemas_da_carta(&banco);
+        cartas += 2;
+    }
+
+    checar("UX-23", "O texto de todas as cartas de escolha (poderes e passivos, novos e em cada nivel) cabe na carta sem ficar por cima de outro", problemas == 0 && cartas > 80);
+
+    for (int i = 0; i < (int)(sizeof(janelas) / sizeof(janelas[0])); i++)
+    {
+        float ui;
+        Rectangle botao;
+        float largura_do_texto;
+
+        SetWindowSize(janelas[i][0], janelas[i][1]);
+        rodar_por(0.1);
+        ui = sv_ui();
+        botao = sv_speed_button_rect();
+        largura_do_texto = sv_text_width("TEMPO  x3  [TAB]", 24.0f * ui);
+
+        /* Dentro da tela */
+        if (botao.x < 0.0f || botao.y < 0.0f || botao.x + botao.width > (float)GetScreenWidth() || botao.y + botao.height > (float)GetScreenHeight()) problemas_do_botao++;
+        /* O texto cabe no botao */
+        if (largura_do_texto > botao.width - 2.0f * ui) problemas_do_botao++;
+        /* Abaixo do bloco do chefe (nome, barra e escudos terminam em 170) */
+        if (botao.y < 170.0f * ui) problemas_do_botao++;
+        /* Depois da fileira de poderes (ate 6 icones) */
+        if (botao.x < 18.0f * ui + 6.0f * (48.0f + 8.0f) * ui) problemas_do_botao++;
+        /* No canto de baixo, rente a borda */
+        if (botao.y + botao.height < (float)GetScreenHeight() - 40.0f * ui) problemas_do_botao++;
+    }
+    SetWindowSize(LARGURA_JANELA, ALTURA_JANELA);
+    rodar_por(0.1);
+
+    checar("UX-24", "O botao de velocidade fica no canto de baixo, com o texto dentro dele, sem tocar no bloco do chefe nem nos poderes, em 5 tamanhos de janela", problemas_do_botao == 0);
+}
+
+/* Modos da janela: ou tela cheia, ou janela (fixa ou maximizada). */
+static void testar_modos_de_janela(void)
+{
+    WindowMode inicial = get_windowed_mode();
+    bool inicial_cheia = is_fullscreen_enabled();
+    bool exclusivos = true;
+    bool f11_volta = true;
+    bool configuracoes_certas;
+    bool preferencias_voltam;
+    const char *arquivo = "iara_teste_janela.ini";
+
+    titulo("Modos da janela: fixa, maximizada e tela cheia (UX-25 e UX-26)");
+
+    set_window_mode(WINDOW_MODE_FIXED);
+    exclusivos = exclusivos && !is_fullscreen_enabled() && !is_window_maximized_enabled() && get_window_mode() == WINDOW_MODE_FIXED;
+
+    set_window_mode(WINDOW_MODE_MAXIMIZED);
+    exclusivos = exclusivos && !is_fullscreen_enabled() && is_window_maximized_enabled();
+
+    set_window_mode(WINDOW_MODE_FULLSCREEN);
+    exclusivos = exclusivos && is_fullscreen_enabled() && !is_window_maximized_enabled();
+
+    /* F11 sai da tela cheia para a janela que estava antes (a maximizada) e volta */
+    toggle_fullscreen();
+    f11_volta = f11_volta && !is_fullscreen_enabled() && is_window_maximized_enabled();
+    toggle_fullscreen();
+    f11_volta = f11_volta && is_fullscreen_enabled();
+
+    /* Escolher "Janela maximizada" nas configuracoes tira da tela cheia */
+    activate_settings_option(SETTINGS_MAXIMIZED);
+    configuracoes_certas = !is_fullscreen_enabled() && is_window_maximized_enabled();
+    activate_settings_option(SETTINGS_MAXIMIZED);
+    configuracoes_certas = configuracoes_certas && !is_window_maximized_enabled() && !is_fullscreen_enabled();
+    activate_settings_option(SETTINGS_FULLSCREEN);
+    configuracoes_certas = configuracoes_certas && is_fullscreen_enabled() && !is_window_maximized_enabled();
+
+    checar("UX-25", "A janela esta sempre em um so modo (fixa, maximizada ou tela cheia), e F11 e as configuracoes alternam sem deixar dois ligados",
+           exclusivos && f11_volta && configuracoes_certas);
+
+    /* As preferencias guardam a tela cheia e a janela a que ela volta */
+    set_window_mode(WINDOW_MODE_MAXIMIZED);
+    set_window_mode(WINDOW_MODE_FULLSCREEN);
+    save_preferences(arquivo);
+    set_window_mode(WINDOW_MODE_FIXED);
+    load_preferences(arquivo);
+    preferencias_voltam = is_fullscreen_enabled();
+    toggle_fullscreen();
+    preferencias_voltam = preferencias_voltam && is_window_maximized_enabled();
+    remove(arquivo);
+
+    checar("UX-26", "O iara.ini guarda a tela cheia e a janela maximizada, e carregar o arquivo reproduz os dois", preferencias_voltam);
+
+    /* Devolve a janela como estava para os casos seguintes */
+    set_window_mode(inicial);
+    if (inicial_cheia) set_window_mode(WINDOW_MODE_FULLSCREEN);
+    SetWindowSize(LARGURA_JANELA, ALTURA_JANELA);
+    rodar_por(0.1);
+}
+
 /* Ajustes pedidos depois do teste com jogadores: fala digitada, porta, lugares dos colegas e aviso da dica. */
 /* Confere as cinco opcoes de CONFIGURACOES de uma vez. */
 static bool configuracoes_iguais(bool contraste, bool tela_cheia, float brilho, float musica, float efeitos)
@@ -2170,6 +2336,8 @@ int main(void)
     testar_computador();
     testar_quiz();
     testar_layout_do_quiz();
+    testar_textos_do_sobrevivencia();
+    testar_modos_de_janela();
     testar_fim_do_dia();
     testar_caminhos_do_dia();
     testar_saida_no_meio_do_dia();
