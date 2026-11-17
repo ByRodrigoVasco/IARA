@@ -24,7 +24,8 @@ colors = int(sys.argv[4]) if len(sys.argv) > 4 else 16
 OUTLINE = (22, 16, 20, 255)
 
 im = Image.open(src).convert('RGB'); a = np.asarray(im).astype(int)
-fg = ~((a[:, :, 0] > 160) & (a[:, :, 1] < 120) & (a[:, :, 2] > 160))
+# Fundo: magenta e as bordas rosadas que a IA deixa em volta do desenho
+fg = ~((a[:, :, 0] > 120) & (a[:, :, 2] > 100) & (a[:, :, 1] < np.minimum(a[:, :, 0], a[:, :, 2]) - 50))
 # Separa as 3 vistas: corta nas colunas mais vazias perto de 1/3 e 2/3 da largura
 colsum = fg.sum(0); W = len(colsum)
 def cut(c):
