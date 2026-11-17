@@ -5,10 +5,11 @@
 #include "helper.h"
 #include "accessibility.h"
 #include "ui_theme.h"
+#include "audio.h"
 
 // Medidas em 1920x1080, multiplicadas por get_ui_scale().
 #define PANEL_WIDTH 1000.0f
-#define PANEL_HEIGHT 680.0f
+#define PANEL_HEIGHT 780.0f
 #define PANEL_PADDING 50.0f
 #define ROW_HEIGHT 95.0f
 #define ROWS_TOP 150.0f
@@ -67,12 +68,54 @@ static bool is_option_checked(int option)
     return (option == SETTINGS_CONTRAST) ? is_high_contrast_enabled() : is_fullscreen_enabled();
 }
 
-static void set_master_volume(float volume)
+static bool is_slider_option(int option)
 {
-    if (volume < 0.0f) volume = 0.0f;
-    if (volume > 1.0f) volume = 1.0f;
+    return option == SETTINGS_BRIGHTNESS || option == SETTINGS_MUSIC_VOLUME || option == SETTINGS_EFFECTS_VOLUME;
+}
 
-    SetMasterVolume(volume);
+// Posição do slider, de 0 a 1.
+static float get_slider_progress(int option)
+{
+    switch (option)
+    {
+    case SETTINGS_BRIGHTNESS:     return (get_game_brightness() - BRIGHTNESS_MIN) / (BRIGHTNESS_MAX - BRIGHTNESS_MIN);
+    case SETTINGS_MUSIC_VOLUME:   return audio_get_music_volume();
+    case SETTINGS_EFFECTS_VOLUME: return audio_get_effects_volume();
+    default:                      return 0.0f;
+    }
+}
+
+// Valor mostrado ao lado do slider, em porcentagem.
+static float get_slider_display_value(int option)
+{
+    return (option == SETTINGS_BRIGHTNESS) ? get_game_brightness() : get_slider_progress(option);
+}
+
+static void set_slider_progress(int option, float progress)
+{
+    if (progress < 0.0f) progress = 0.0f;
+    if (progress > 1.0f) progress = 1.0f;
+
+    switch (option)
+    {
+    case SETTINGS_BRIGHTNESS:     set_game_brightness(BRIGHTNESS_MIN + (progress * (BRIGHTNESS_MAX - BRIGHTNESS_MIN))); break;
+    case SETTINGS_MUSIC_VOLUME:   audio_set_music_volume(progress); break;
+    case SETTINGS_EFFECTS_VOLUME: audio_set_effects_volume(progress); break;
+    default: break;
+    }
+}
+
+// Um passo do teclado. O volume arredonda para o décimo, para nunca parar em 29% ou 101%.
+static void step_slider(int option, int direction)
+{
+    if (option == SETTINGS_BRIGHTNESS)
+    {
+        set_game_brightness(get_game_brightness() + (direction * BRIGHTNESS_STEP));
+        return;
+    }
+
+    float volume = get_slider_progress(option) + (direction * VOLUME_STEP);
+    set_slider_progress(option, (float)((int)((volume * 10.0f) + 0.5f)) / 10.0f);
 }
 
 bool activate_settings_option(int option)
@@ -110,15 +153,10 @@ static bool handle_settings_keyboard(void)
         selected_option = (selected_option + SETTINGS_OPTION_COUNT - 1) % SETTINGS_OPTION_COUNT;
     }
 
-    if (selected_option == SETTINGS_BRIGHTNESS)
+    if (is_slider_option(selected_option))
     {
-        if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D)) set_game_brightness(get_game_brightness() + BRIGHTNESS_STEP);
-        if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_A)) set_game_brightness(get_game_brightness() - BRIGHTNESS_STEP);
-    }
-    else if (selected_option == SETTINGS_VOLUME)
-    {
-        if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D)) set_master_volume(GetMasterVolume() + 0.1f);
-        if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_A)) set_master_volume(GetMasterVolume() - 0.1f);
+        if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D)) step_slider(selected_option, 1);
+        if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_A)) step_slider(selected_option, -1);
     }
 
     if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE))
@@ -150,7 +188,7 @@ static bool handle_settings_mouse(void)
 
     if (mouse_moved || IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) selected_option = hovered;
 
-    if (hovered == SETTINGS_BRIGHTNESS || hovered == SETTINGS_VOLUME)
+    if (is_slider_option(hovered))
     {
         Rectangle slider = get_slider_rectangle(hovered);
         float reach = SLIDER_HANDLE_WIDTH * get_ui_scale();
@@ -158,18 +196,7 @@ static bool handle_settings_mouse(void)
 
         if (on_slider && IsMouseButtonDown(MOUSE_BUTTON_LEFT))
         {
-            float progress = (mouse.x - slider.x) / slider.width;
-            if (progress < 0.0f) progress = 0.0f;
-            if (progress > 1.0f) progress = 1.0f;
-
-            if (hovered == SETTINGS_BRIGHTNESS)
-            {
-                set_game_brightness(BRIGHTNESS_MIN + (progress * (BRIGHTNESS_MAX - BRIGHTNESS_MIN)));
-            }
-            else
-            {
-                set_master_volume(progress);
-            }
+            set_slider_progress(hovered, (mouse.x - slider.x) / slider.width);
         }
 
         return false;
@@ -207,11 +234,12 @@ static void draw_checkbox(Rectangle row, bool checked)
     }
 }
 
-static void draw_brightness_slider(Rectangle row, float font_size)
+// Mesmo desenho para brilho e volumes: barra, alça e a porcentagem à direita.
+static void draw_slider(int option, Rectangle row, float font_size)
 {
     float scale = get_ui_scale();
-    Rectangle slider = get_slider_rectangle(SETTINGS_BRIGHTNESS);
-    float progress = (get_game_brightness() - BRIGHTNESS_MIN) / (BRIGHTNESS_MAX - BRIGHTNESS_MIN);
+    Rectangle slider = get_slider_rectangle(option);
+    float progress = get_slider_progress(option);
     float handle_w = SLIDER_HANDLE_WIDTH * scale;
     float handle_h = SLIDER_HANDLE_HEIGHT * scale;
     float handle_x = slider.x + (progress * slider.width) - (handle_w / 2.0f);
@@ -221,30 +249,7 @@ static void draw_brightness_slider(Rectangle row, float font_size)
     DrawRectangleLinesEx(slider, 2.0f, WHITE);
     DrawRectangleRec((Rectangle){handle_x, handle_y, handle_w, handle_h}, WHITE);
 
-    const char *value = TextFormat("%d%%", (int)((get_game_brightness() * 100.0f) + 0.5f));
-    float letter_spacing = font_size * LETTER_SPACING_RATIO;
-    Vector2 size = MeasureTextEx(default_game_font, value, font_size, letter_spacing);
-
-    DrawTextEx(default_game_font, value,
-               (Vector2){row.x + row.width - size.x - (SELECTION_BAR_WIDTH * 2.0f * scale), row.y + (row.height - size.y) / 2.0f},
-               font_size, letter_spacing, WHITE);
-}
-
-static void draw_volume_slider(Rectangle row, float font_size)
-{
-    float scale = get_ui_scale();
-    Rectangle slider = get_slider_rectangle(SETTINGS_VOLUME);
-    float volume = GetMasterVolume();
-    float handle_w = SLIDER_HANDLE_WIDTH * scale;
-    float handle_h = SLIDER_HANDLE_HEIGHT * scale;
-    float handle_x = slider.x + (volume * slider.width) - (handle_w / 2.0f);
-    float handle_y = row.y + (row.height - handle_h) / 2.0f;
-
-    DrawRectangleRec(slider, CONTROL_COLOR);
-    DrawRectangleLinesEx(slider, 2.0f, WHITE);
-    DrawRectangleRec((Rectangle){handle_x, handle_y, handle_w, handle_h}, WHITE);
-
-    const char *value = TextFormat("%d%%", (int)((volume * 100.0f) + 0.5f));
+    const char *value = TextFormat("%d%%", (int)((get_slider_display_value(option) * 100.0f) + 0.5f));
     float letter_spacing = font_size * LETTER_SPACING_RATIO;
     Vector2 size = MeasureTextEx(default_game_font, value, font_size, letter_spacing);
 
@@ -262,7 +267,7 @@ void initialize_settings_screen(void)
 
 bool render_settings_screen(void)
 {
-    const char *labels[SETTINGS_OPTION_COUNT] = {"Alto contraste", "Brilho", "Volume", "Tela cheia", "VOLTAR AO MENU"};
+    const char *labels[SETTINGS_OPTION_COUNT] = {"Alto contraste", "Brilho", "Música", "Efeitos sonoros", "Tela cheia", "VOLTAR AO MENU"};
 
     bool go_back = handle_settings_keyboard();
     go_back = handle_settings_mouse() || go_back;
@@ -301,13 +306,9 @@ bool render_settings_screen(void)
 
         draw_row_text(labels[option], row, row_font, WHITE);
 
-        if (option == SETTINGS_BRIGHTNESS)
+        if (is_slider_option(option))
         {
-            draw_brightness_slider(row, row_font);
-        }
-        else if (option == SETTINGS_VOLUME)
-        {
-            draw_volume_slider(row, row_font);
+            draw_slider(option, row, row_font);
         }
         else if (option != SETTINGS_BACK)
         {

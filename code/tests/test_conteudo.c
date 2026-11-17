@@ -27,6 +27,7 @@ unsigned int middle_screen_y = 0;
 #include "settings.h"
 #include "preferences.h"
 #include "accessibility.h"
+#include "audio.h"
 
 #define LARGURA_JANELA 1280
 #define ALTURA_JANELA 720
@@ -1173,12 +1174,18 @@ static void testar_menu(void)
 
     set_game_brightness(0.7f);
     toggle_high_contrast();
+    audio_set_music_volume(0.3f);
+    audio_set_effects_volume(0.6f);
     bool gravou = save_preferences(arquivo);
 
     set_game_brightness(1.0f);
     toggle_high_contrast();
+    audio_set_music_volume(1.0f);
+    audio_set_effects_volume(1.0f);
     bool leu = load_preferences(arquivo);
-    bool voltou_igual = leu && is_high_contrast_enabled() && (int)((get_game_brightness() * 10.0f) + 0.5f) == 7;
+    bool voltou_igual = leu && is_high_contrast_enabled() && (int)((get_game_brightness() * 10.0f) + 0.5f) == 7 &&
+                        (int)((audio_get_music_volume() * 10.0f) + 0.5f) == 3 &&
+                        (int)((audio_get_effects_volume() * 10.0f) + 0.5f) == 6;
 
     toggle_high_contrast();
     set_game_brightness(1.0f);
@@ -1191,9 +1198,35 @@ static void testar_menu(void)
     bool sem_arquivo = !load_preferences(arquivo);
 
     set_game_brightness(1.0f);
+    audio_set_music_volume(1.0f);
+    audio_set_effects_volume(1.0f);
 
     checar("CT-43", "Preferencias voltam do arquivo e arquivo invalido nao quebra o jogo",
            gravou && voltou_igual && leu_invalido && valores_validos && sem_arquivo);
+
+    /* Trilha e efeitos sao volumes separados (US20): mexer em um nao muda o outro. */
+    audio_set_music_volume(0.2f);
+    bool musica_sozinha = audio_get_effects_volume() == 1.0f;
+    audio_set_effects_volume(0.5f);
+    bool efeitos_sozinhos = (int)((audio_get_music_volume() * 10.0f) + 0.5f) == 2;
+
+    /* Fora de 0 a 1 o volume fica no limite, sem estourar nem ficar negativo. */
+    audio_set_music_volume(1.7f);
+    audio_set_effects_volume(-0.4f);
+    bool limites = audio_get_music_volume() == 1.0f && audio_get_effects_volume() == 0.0f;
+
+    /* Arquivo antigo, com um volume so: vale para os dois, e um volume invalido e ignorado. */
+    SaveFileText(arquivo, "volume=0.40\nvolume_musica=7\nvolume_efeitos=-1\n");
+    load_preferences(arquivo);
+    bool arquivo_antigo = (int)((audio_get_music_volume() * 10.0f) + 0.5f) == 4 &&
+                          (int)((audio_get_effects_volume() * 10.0f) + 0.5f) == 4;
+    remove(arquivo);
+
+    audio_set_music_volume(1.0f);
+    audio_set_effects_volume(1.0f);
+
+    checar("CT-81", "Volume da trilha e dos efeitos sao independentes, ficam entre 0 e 1 e o arquivo antigo continua valendo",
+           musica_sozinha && efeitos_sozinhos && limites && arquivo_antigo);
 
     /* Confirmar guarda a escolha e sinaliza o fechamento do menu. */
     selected_menu_option = CREDITOS;
