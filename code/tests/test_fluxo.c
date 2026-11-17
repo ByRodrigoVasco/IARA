@@ -30,6 +30,9 @@
 #include "save_slots.h"
 #include "loading.h"
 #include "save.h"
+#include "audio.h"
+#include "accessibility.h"
+#include "helper.h"
 
 /* A main.c define estas globais; aqui o teste assume esse papel. */
 unsigned int screen_width = 0;
@@ -1983,6 +1986,96 @@ static void testar_layout_do_quiz(void)
 }
 
 /* Ajustes pedidos depois do teste com jogadores: fala digitada, porta, lugares dos colegas e aviso da dica. */
+/* Confere as cinco opcoes de CONFIGURACOES de uma vez. */
+static bool configuracoes_iguais(bool contraste, bool tela_cheia, float brilho, float musica, float efeitos)
+{
+    return is_high_contrast_enabled() == contraste && is_fullscreen_enabled() == tela_cheia &&
+           fabsf(get_game_brightness() - brilho) < 0.001f &&
+           fabsf(audio_get_music_volume() - musica) < 0.001f &&
+           fabsf(audio_get_effects_volume() - efeitos) < 0.001f;
+}
+
+/* O que o jogador escolhe em CONFIGURACOES vale a sessao inteira (US20, PI2-281):
+ * nenhuma tela do caminho volta as opcoes para o padrao. */
+static void testar_configuracoes_na_sessao(void)
+{
+    titulo("Configuracoes valem a sessao inteira (CT-80)");
+
+    bool contraste_inicial = is_high_contrast_enabled();
+    bool tela_cheia_inicial = is_fullscreen_enabled();
+    float brilho_inicial = get_game_brightness();
+    float musica_inicial = audio_get_music_volume();
+    float efeitos_inicial = audio_get_effects_volume();
+
+    /* Todas as opcoes mudam, para nenhuma passar por ja estar no padrao. */
+    bool contraste = !contraste_inicial;
+    bool tela_cheia = !tela_cheia_inicial;
+    float brilho = 0.8f;
+    float musica = 0.3f;
+    float efeitos = 0.6f;
+
+    current_game_state_variables.current_screen = handle_menu_action(CONFIGURACOES);
+    rodar_por(0.2);
+
+    activate_settings_option(SETTINGS_CONTRAST);
+    activate_settings_option(SETTINGS_FULLSCREEN);
+    set_game_brightness(brilho);
+    audio_set_music_volume(musica);
+    audio_set_effects_volume(efeitos);
+    rodar_por(0.3);
+
+    bool nas_configuracoes = configuracoes_iguais(contraste, tela_cheia, brilho, musica, efeitos);
+
+    /* VOLTAR AO MENU, pelo mesmo caminho da maquina de estados. Sem gravar o iara.ini:
+     * o teste nao pode mexer nas preferencias de quem o executa. */
+    unload_settings_screen();
+    initialize_menu_variables();
+    current_game_state_variables.current_screen = MENU_SCREEN;
+    rodar_por(0.3);
+
+    bool no_menu = configuracoes_iguais(contraste, tela_cheia, brilho, musica, efeitos);
+
+    iniciar_partida_nova();
+    rodar_por(0.5);
+
+    bool no_cartao_do_dia = configuracoes_iguais(contraste, tela_cheia, brilho, musica, efeitos);
+
+    current_screen = IN_GAME_SCREEN;
+    rodar_por(0.3);
+
+    bool no_escritorio = configuracoes_iguais(contraste, tela_cheia, brilho, musica, efeitos);
+
+    enter_computer_screen = true;
+    rodar_ate_a_tela(COMPUTER_SCREEN, 5.0);
+    rodar_por(0.3);
+
+    bool no_computador = current_screen == COMPUTER_SCREEN && configuracoes_iguais(contraste, tela_cheia, brilho, musica, efeitos);
+
+    leave_computer();
+    rodar_ate_a_tela(IN_GAME_SCREEN, 5.0);
+
+    /* Reabrir CONFIGURACOES mostra o que foi escolhido, e nao o padrao. */
+    current_game_state_variables.current_screen = handle_menu_action(CONFIGURACOES);
+    rodar_por(0.2);
+
+    bool ao_reabrir = configuracoes_iguais(contraste, tela_cheia, brilho, musica, efeitos);
+
+    checar("CT-80", "Configuracoes escolhidas seguem valendo no menu, no cartao do dia, no escritorio, no computador e ao reabrir",
+           nas_configuracoes && no_menu && no_cartao_do_dia && no_escritorio && no_computador && ao_reabrir);
+
+    /* Devolve tudo como estava, para os casos seguintes */
+    if (is_high_contrast_enabled() != contraste_inicial) activate_settings_option(SETTINGS_CONTRAST);
+    if (is_fullscreen_enabled() != tela_cheia_inicial) activate_settings_option(SETTINGS_FULLSCREEN);
+    set_game_brightness(brilho_inicial);
+    audio_set_music_volume(musica_inicial);
+    audio_set_effects_volume(efeitos_inicial);
+
+    unload_settings_screen();
+    initialize_menu_variables();
+    current_game_state_variables.current_screen = MENU_SCREEN;
+    rodar_por(0.2);
+}
+
 static void testar_ajustes_do_modo_historia(void)
 {
     titulo("Ajustes do modo historia (UX-18 a UX-22)");
@@ -2099,6 +2192,8 @@ int main(void)
            abriu_configuracoes && continua_nas_configuracoes && activate_settings_option(SETTINGS_BACK));
 
     unload_settings_screen();
+
+    testar_configuracoes_na_sessao();
 
     /* SAIR nao fecha a janela na hora: a main.c ainda precisa salvar e descarregar tudo. */
     int tela_apos_sair = handle_menu_action(SAIR);
