@@ -15,6 +15,7 @@ simulando o uso real de um jogador.
 | **Screencast da Sprint 02** | Execução de 03/11/2026 sobre a `develop` (`63c2d01`), gravada: **76 de 76 aprovados**. [Vídeo](../sprint-02/screencast-testes.mp4) e [log](../sprint-02/execucao-screencast-2026-11-03.txt) |
 | **Atualização de 07/11/2026** | Branch `test/us03-modo-automatico`, com o CT-77 e o CT-78 incluídos (US03: PI2-226 a PI2-228). BUG-13 e BUG-14 corrigidos |
 | **Atualização de 09/11/2026** | Branch `test/us14-ignorar-npcs`, com o CT-79 incluído (US14: PI2-251). Bloco 3 com 28 de 28 aprovados |
+| **Atualização de 17/11/2026** | Branch `fix/textos-sobrepostos-e-modos-de-janela`, com UX-23 a UX-26 no bloco 3 (textos das cartas e do HUD do Sobrevivência, modos da janela). BUG-30 a BUG-32. Bloco 3 com 56 de 56 aprovados |
 | **Atualização de 16/11/2026** | Branch `feature/volume-trilha-efeitos`, com o CT-80 e o CT-81 incluídos (US20: PI2-279 e PI2-281). CT-43 passa a conferir os dois volumes. Bloco 2 com 35 de 35 e bloco 3 com 37 de 37 aprovados |
 
 ## Como executar

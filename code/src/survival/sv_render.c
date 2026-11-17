@@ -752,13 +752,19 @@ static void draw_offscreen_boss_arrow(Camera2D camera)
     }
 }
 
+// O botão fica no canto de baixo à direita: é a única parte da tela que o HUD deixa livre
+// (vida no alto à esquerda, tempo no centro, Banco de Horas no alto à direita, poderes embaixo à esquerda).
+// A largura vem do maior texto que ele mostra, então o texto nunca passa da borda.
+#define SPEED_BUTTON_TEXT_SIZE 24.0f
+
 Rectangle sv_speed_button_rect(void)
 {
     float ui = sv_ui();
-    float w = (float)GetScreenWidth();
-    float width = 150.0f * ui, height = 34.0f * ui;
+    float pad = 18.0f * ui;
+    float width = sv_text_width("TEMPO  x3  [TAB]", SPEED_BUTTON_TEXT_SIZE * ui) + 36.0f * ui;
+    float height = 44.0f * ui;
 
-    return (Rectangle){w / 2.0f - width / 2.0f, 18.0f * ui + 66.0f * ui, width, height};
+    return (Rectangle){(float)GetScreenWidth() - pad - width, (float)GetScreenHeight() - pad - height, width, height};
 }
 
 static void draw_hud(Camera2D camera)
@@ -804,7 +810,7 @@ static void draw_hud(Camera2D camera)
         DrawRectangleRec(button, hot ? (Color){120, 40, 40, 230} : (Color){20, 20, 28, hover ? 230 : 170});
         DrawRectangleLinesEx(button, 2.0f * ui, hot ? (Color){255, 120, 100, 255} : (Color){160, 160, 175, 255});
         snprintf(text, sizeof(text), "TEMPO  x%d  [TAB]", sv_time_scale);
-        sv_text_centered(text, button.x + button.width / 2.0f, button.y + 5.0f * ui, 22.0f * ui, WHITE);
+        sv_text_centered(text, button.x + button.width / 2.0f, button.y + (button.height - SPEED_BUTTON_TEXT_SIZE * ui) / 2.0f - 2.0f * ui, SPEED_BUTTON_TEXT_SIZE * ui, WHITE);
     }
 
     // Banco de Horas e abates
@@ -844,18 +850,18 @@ static void draw_hud(Camera2D camera)
         }
     }
 
-    // Barra do chefe
+    // Barra do chefe: logo abaixo do ato (que termina em 78), sem encostar em nada do HUD
     if (sv_run.boss.active)
     {
         SvBoss *b = &sv_run.boss;
-        float bar_w = w * 0.5f;
+        float bar_w = fminf(w * 0.5f, 900.0f * ui);
 
-        sv_text_centered(sv_boss_name(b->id), w / 2.0f, 76.0f * ui, 28.0f * ui, (Color){255, 120, 110, 255});
-        draw_bar(w / 2.0f - bar_w / 2.0f, 118.0f * ui, bar_w, 14.0f * ui, b->hp / b->max_hp, (Color){180, 20, 40, 255});
+        sv_text_centered(sv_boss_name(b->id), w / 2.0f, 92.0f * ui, 28.0f * ui, (Color){255, 120, 110, 255});
+        draw_bar(w / 2.0f - bar_w / 2.0f, 128.0f * ui, bar_w, 14.0f * ui, b->hp / b->max_hp, (Color){180, 20, 40, 255});
         if (b->id == BOSS_RENE)
         {
             snprintf(text, sizeof(text), "ESCUDOS %d", b->shields);
-            sv_text_centered(text, w / 2.0f, 138.0f * ui, 20.0f * ui, (Color){190, 200, 255, 255});
+            sv_text_centered(text, w / 2.0f, 148.0f * ui, 20.0f * ui, (Color){190, 200, 255, 255});
         }
         draw_offscreen_boss_arrow(camera);
     }
@@ -934,24 +940,26 @@ void sv_render_game(void)
 Rectangle sv_levelup_card(int index)
 {
     float ui = sv_ui();
-    float card_w = 360.0f * ui, card_h = 500.0f * ui, gap = 30.0f * ui;
+    float card_w = SV_CARD_W * ui, card_h = SV_CARD_H * ui, gap = 30.0f * ui;
     float total = card_w * 3.0f + gap * 2.0f;
     float x = (GetScreenWidth() - total) / 2.0f + (float)index * (card_w + gap);
-    float y = GetScreenHeight() / 2.0f - card_h / 2.0f + 70.0f * ui;
+    float y = GetScreenHeight() / 2.0f - card_h / 2.0f + 60.0f * ui;
 
     return (Rectangle){x, y, card_w, card_h};
 }
 
-static void draw_wrapped(const char *text, Rectangle area, float size, Color color)
+// Quebra o texto em linhas que cabem em width (mesma unidade de size). Devolve quantas linhas o texto tem,
+// e preenche até max_lines delas.
+static int wrap_text(const char *text, float size, float width, char lines[][SV_CARD_LINE_CHARS], int max_lines)
 {
-    char line[260] = {0};
-    int length = 0;
-    float y = area.y;
-    char word[48];
+    int count = 0;
+    char line[SV_CARD_LINE_CHARS] = {0};
     const char *cursor = text;
 
     while (*cursor)
     {
+        char word[48];
+        char trial[SV_CARD_LINE_CHARS];
         int wl = 0;
 
         while (*cursor == ' ') cursor++;
@@ -959,25 +967,55 @@ static void draw_wrapped(const char *text, Rectangle area, float size, Color col
         word[wl] = '\0';
         if (wl == 0) break;
 
+        snprintf(trial, sizeof(trial), line[0] ? "%s %s" : "%s%s", line, word);
+        if (line[0] && sv_text_width(trial, size) > width)
         {
-            char trial[256];
-
-            snprintf(trial, sizeof(trial), length ? "%s %s" : "%s%s", line, word);
-            if (length && sv_text_width(trial, size) > area.width)
-            {
-                sv_text_centered(line, area.x + area.width / 2.0f, y, size, color);
-                y += size * 1.15f;
-                snprintf(line, sizeof(line), "%s", word);
-                length = (int)strlen(line);
-            }
-            else
-            {
-                snprintf(line, sizeof(line), "%s", trial);
-                length = (int)strlen(line);
-            }
+            if (count < max_lines) snprintf(lines[count], SV_CARD_LINE_CHARS, "%s", line);
+            count++;
+            snprintf(line, sizeof(line), "%s", word);
+        }
+        else
+        {
+            snprintf(line, sizeof(line), "%s", trial);
         }
     }
-    if (length) sv_text_centered(line, area.x + area.width / 2.0f, y, size, color);
+    if (line[0])
+    {
+        if (count < max_lines) snprintf(lines[count], SV_CARD_LINE_CHARS, "%s", line);
+        count++;
+    }
+    return count;
+}
+
+// Diminui o texto até ele caber na largura, sem passar de um mínimo.
+static float fit_text_size(const char *text, float size, float width, float min_size)
+{
+    while (size > min_size && sv_text_width(text, size) > width) size -= 1.0f;
+    return size;
+}
+
+void sv_levelup_layout(const SvChoice *choice, SvCardLayout *layout)
+{
+    char changes[SV_CHOICE_LINES][96];
+    char lines[SV_CARD_MAX_DESC_LINES][SV_CARD_LINE_CHARS];
+    int change_count = sv_choice_lines(choice, changes);
+    float desc_width = SV_CARD_W - 2.0f * SV_CARD_DESC_MARGIN;
+
+    layout->title_size = fit_text_size(sv_choice_title(choice), SV_CARD_TITLE_SIZE, SV_CARD_W - 2.0f * SV_CARD_TEXT_MARGIN, SV_CARD_TITLE_MIN);
+    layout->change_count = change_count;
+    layout->change_size = SV_CARD_CHANGE_SIZE;
+    layout->desc_size = SV_CARD_DESC_SIZE;
+
+    // A descrição encolhe até ela e as linhas de "de -> para" caberem juntas dentro da carta
+    for (;;)
+    {
+        layout->desc_lines = wrap_text(sv_choice_text(choice), layout->desc_size, desc_width, lines, SV_CARD_MAX_DESC_LINES);
+        layout->divider_y = SV_CARD_DESC_Y + layout->desc_lines * layout->desc_size * 1.15f + SV_CARD_GAP;
+        layout->changes_y = layout->divider_y + SV_CARD_GAP;
+        layout->bottom = layout->changes_y + change_count * SV_CARD_CHANGE_STEP;
+        if (layout->bottom <= SV_CARD_H - SV_CARD_BOTTOM_MARGIN || layout->desc_size <= SV_CARD_DESC_MIN) break;
+        layout->desc_size -= 1.0f;
+    }
 }
 
 void sv_render_levelup(int selected)
@@ -986,42 +1024,55 @@ void sv_render_levelup(int selected)
     float w = (float)GetScreenWidth();
 
     DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), (Color){4, 0, 8, 200});
-    sv_text_centered("NOVO NÍVEL", w / 2.0f, GetScreenHeight() / 2.0f - 330.0f * ui, 70.0f * ui, (Color){230, 40, 50, 255});
-    sv_text_centered("Escolha um poder. Setas ou 1, 2, 3 e Enter.", w / 2.0f, GetScreenHeight() / 2.0f - 250.0f * ui, 28.0f * ui, (Color){210, 200, 210, 255});
+    sv_text_centered("NOVO NÍVEL", w / 2.0f, GetScreenHeight() / 2.0f - 340.0f * ui, 70.0f * ui, (Color){230, 40, 50, 255});
+    sv_text_centered("Escolha um poder. Setas ou 1, 2, 3 e Enter.", w / 2.0f, GetScreenHeight() / 2.0f - 260.0f * ui, 28.0f * ui, (Color){210, 200, 210, 255});
 
     for (int i = 0; i < sv_run.choice_count; i++)
     {
         Rectangle card = sv_levelup_card(i);
         SvChoice *c = &sv_run.choices[i];
+        SvCardLayout layout;
         bool is_selected = i == selected;
         int level = sv_choice_level(c);
+        float center = card.x + card.width / 2.0f;
         char text[64];
+
+        sv_levelup_layout(c, &layout);
 
         DrawRectangleRec(card, is_selected ? (Color){60, 14, 24, 245} : (Color){24, 12, 28, 235});
         DrawRectangleLinesEx(card, is_selected ? 5.0f * ui : 2.0f * ui, is_selected ? (Color){240, 50, 60, 255} : (Color){110, 70, 90, 255});
 
-        sv_draw(sv_choice_icon(c), anim_frame(GetTime(), 4.0f) % 4, (Vector2){card.x + card.width / 2.0f, card.y + 80.0f * ui}, 4.0f * ui, 0.0f, false, WHITE);
-        sv_text_centered(sv_choice_title(c), card.x + card.width / 2.0f, card.y + 145.0f * ui, 31.0f * ui, WHITE);
+        sv_draw(sv_choice_icon(c), anim_frame(GetTime(), 4.0f) % 4, (Vector2){center, card.y + SV_CARD_ICON_Y * ui}, 4.0f * ui, 0.0f, false, WHITE);
+        sv_text_centered(sv_choice_title(c), center, card.y + SV_CARD_TITLE_Y * ui, layout.title_size * ui, WHITE);
 
         if (c->kind == 0 || c->kind == 2) snprintf(text, sizeof(text), "NOVO");
         else if (level > 0) snprintf(text, sizeof(text), "NÍVEL %d", level);
         else snprintf(text, sizeof(text), "BÔNUS");
-        sv_text_centered(text, card.x + card.width / 2.0f, card.y + 192.0f * ui, 25.0f * ui, (Color){255, 214, 80, 255});
+        sv_text_centered(text, center, card.y + SV_CARD_TAG_Y * ui, SV_CARD_TAG_SIZE * ui, (Color){255, 214, 80, 255});
 
-        draw_wrapped(sv_choice_text(c), (Rectangle){card.x + 16.0f * ui, card.y + 240.0f * ui, card.width - 32.0f * ui, 70.0f * ui}, 21.0f * ui, (Color){170, 165, 178, 255});
+        // Descrição, linha por linha
+        {
+            char lines[SV_CARD_MAX_DESC_LINES][SV_CARD_LINE_CHARS];
+            int count = wrap_text(sv_choice_text(c), layout.desc_size * ui, (SV_CARD_W - 2.0f * SV_CARD_DESC_MARGIN) * ui, lines, SV_CARD_MAX_DESC_LINES);
+
+            if (count > SV_CARD_MAX_DESC_LINES) count = SV_CARD_MAX_DESC_LINES;
+            for (int k = 0; k < count; k++)
+            {
+                sv_text_centered(lines[k], center, card.y + (SV_CARD_DESC_Y + (float)k * layout.desc_size * 1.15f) * ui, layout.desc_size * ui, (Color){170, 165, 178, 255});
+            }
+        }
 
         // O que muda: atributo, de -> para
         {
             char changes[SV_CHOICE_LINES][96];
             int n = sv_choice_lines(c, changes);
 
-            DrawRectangle((int)(card.x + 20.0f * ui), (int)(card.y + 318.0f * ui), (int)(card.width - 40.0f * ui), (int)(2.0f * ui), (Color){110, 70, 90, 255});
+            DrawRectangle((int)(card.x + 20.0f * ui), (int)(card.y + layout.divider_y * ui), (int)(card.width - 40.0f * ui), (int)(2.0f * ui + 0.5f), (Color){110, 70, 90, 255});
             for (int k = 0; k < n; k++)
             {
-                float size = 23.0f * ui;
+                float size = fit_text_size(changes[k], layout.change_size * ui, card.width - 2.0f * SV_CARD_TEXT_MARGIN * ui, SV_CARD_CHANGE_MIN * ui);
 
-                while (size > 14.0f * ui && sv_text_width(changes[k], size) > card.width - 24.0f * ui) size -= 1.0f * ui;
-                sv_text_centered(changes[k], card.x + card.width / 2.0f, card.y + (332.0f + 28.0f * (float)k) * ui, size, (Color){255, 226, 120, 255});
+                sv_text_centered(changes[k], center, card.y + (layout.changes_y + (float)k * SV_CARD_CHANGE_STEP) * ui, size, (Color){255, 226, 120, 255});
             }
         }
 

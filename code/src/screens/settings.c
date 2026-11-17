@@ -9,7 +9,7 @@
 
 // Medidas em 1920x1080, multiplicadas por get_ui_scale().
 #define PANEL_WIDTH 1000.0f
-#define PANEL_HEIGHT 780.0f
+#define PANEL_HEIGHT 880.0f
 #define PANEL_PADDING 50.0f
 #define ROW_HEIGHT 95.0f
 #define ROWS_TOP 150.0f
@@ -65,7 +65,13 @@ static Rectangle get_slider_rectangle(int option)
 
 static bool is_option_checked(int option)
 {
-    return (option == SETTINGS_CONTRAST) ? is_high_contrast_enabled() : is_fullscreen_enabled();
+    switch (option)
+    {
+    case SETTINGS_CONTRAST:   return is_high_contrast_enabled();
+    case SETTINGS_FULLSCREEN: return is_fullscreen_enabled();
+    case SETTINGS_MAXIMIZED:  return is_window_maximized_enabled();
+    default:                  return false;
+    }
 }
 
 static bool is_slider_option(int option)
@@ -128,6 +134,10 @@ bool activate_settings_option(int option)
 
     case SETTINGS_FULLSCREEN:
         toggle_fullscreen();
+        return false;
+
+    case SETTINGS_MAXIMIZED:
+        toggle_window_maximized();
         return false;
 
     case SETTINGS_BACK:
@@ -267,7 +277,7 @@ void initialize_settings_screen(void)
 
 bool render_settings_screen(void)
 {
-    const char *labels[SETTINGS_OPTION_COUNT] = {"Alto contraste", "Brilho", "Música", "Efeitos sonoros", "Tela cheia", "VOLTAR AO MENU"};
+    const char *labels[SETTINGS_OPTION_COUNT] = {"Alto contraste", "Brilho", "Música", "Efeitos sonoros", "Tela cheia", "Janela maximizada", "VOLTAR AO MENU"};
 
     bool go_back = handle_settings_keyboard();
     go_back = handle_settings_mouse() || go_back;

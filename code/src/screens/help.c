@@ -26,7 +26,7 @@ static const help_page help_pages[] = {
       "Fim do dia: com a tarefa resolvida, vá até a porta de vidro para encerrar o expediente.",
       "Pausa: ESC (ou P) pausa o jogo, e de lá você volta ao menu ou sai.",
       "Salvar: o progresso é salvo sozinho ao voltar ao menu e ao fechar o jogo.",
-      "Tela: F11 alterna entre janela e tela cheia. Brilho, volume e contraste ficam em CONFIGURAÇÕES.",
+      "Tela: F11 liga e desliga a tela cheia. Janela maximizada, brilho, volume e contraste ficam em CONFIGURAÇÕES.",
       NULL}},
     {"SOBREVIVÊNCIA",
      {"Objetivo: aguente dez minutos de expediente contra os pesadelos da empresa e desligue a IARA, que aparece no fim.",
