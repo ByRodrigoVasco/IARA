@@ -987,10 +987,11 @@ static void test_ajustes_do_teste_com_jogadores(void)
     }
 }
 
-// Ranking da feira: ordem, nomes, arquivo e limite
+// Ranking da feira: cada save é um jogador, que aparece uma vez só, com o recorde dele
 static void test_ranking(void)
 {
     char name[SV_NAME_BYTES];
+    bool record = false;
 
     printf("\nRanking\n");
     sv_ranking_set_path("teste.ranking");
@@ -999,19 +1000,26 @@ static void test_ranking(void)
 
     check("SV-100", "ranking vazio comeca sem ninguem", sv_ranking_count() == 0 && sv_ranking_get(0) == NULL);
 
-    sv_ranking_add("Ana", 300, 120, 10, 1, 0, false);
-    sv_ranking_add("Bruno", 420, 90, 12, 2, 1, false);
+    sv_ranking_add("Ana", 300, 120, 10, 1, 0, false, NULL);
+    sv_ranking_add("Bruno", 420, 90, 12, 2, 1, false, NULL);
     {
-        int pos = sv_ranking_add("Caio", 300, 150, 9, 1, 2, false);
+        int pos = sv_ranking_add("Caio", 300, 150, 9, 1, 2, false, NULL);
 
         check("SV-101", "mais tempo fica na frente; no empate de tempo, mais abates", pos == 2 && strcmp(sv_ranking_get(0)->name, "Bruno") == 0 && strcmp(sv_ranking_get(1)->name, "Caio") == 0 && strcmp(sv_ranking_get(2)->name, "Ana") == 0);
     }
-    check("SV-102", "quem desligou a IARA fica na frente de qualquer derrota", sv_ranking_add("Duda", 600, 10, 20, 5, 3, true) == 1);
-    check("SV-103", "empate total: quem chegou primeiro fica na frente", sv_ranking_add("Eva", 300, 120, 10, 1, 0, false) == 5 && strcmp(sv_ranking_get(3)->name, "Ana") == 0);
+    check("SV-102", "quem desligou a IARA fica na frente de qualquer derrota", sv_ranking_add("Duda", 600, 10, 20, 5, 3, true, NULL) == 1);
+    check("SV-103", "empate total: quem chegou primeiro fica na frente", sv_ranking_add("Eva", 300, 120, 10, 1, 0, false, NULL) == 5 && strcmp(sv_ranking_get(3)->name, "Ana") == 0);
+
+    // Mesmo jogador: uma linha só, e só o recorde conta
+    check("SV-112", "partida pior do mesmo jogador nao muda o ranking", sv_ranking_add("Bruno", 100, 10, 3, 0, 1, false, &record) == 2 && !record && sv_ranking_count() == 5 && sv_ranking_get(1)->seconds == 420);
+    check("SV-113", "recorde novo substitui o antigo e sobe o jogador", sv_ranking_add("bruno", 700, 300, 25, 5, 1, true, &record) == 1 && record && sv_ranking_count() == 5 && sv_ranking_get(0)->seconds == 700);
+    check("SV-114", "o nome e o mesmo sem diferenciar maiusculas", sv_ranking_find("BRUNO") == 0 && sv_ranking_find("ninguem") == -1);
 
     sv_ranking_load();
-    check("SV-104", "o ranking volta igual depois de gravar e ler o arquivo", sv_ranking_count() == 5 && strcmp(sv_ranking_get(0)->name, "Duda") == 0 && sv_ranking_get(0)->won && sv_ranking_get(4)->kills == 120);
-    check("SV-105", "a ordem de chegada continua depois de ler o arquivo", sv_ranking_add("Fabi", 300, 120, 10, 1, 0, false) == 6);
+    check("SV-104", "o ranking volta igual depois de gravar e ler o arquivo", sv_ranking_count() == 5 && sv_ranking_get(0)->won && sv_ranking_get(0)->seconds == 700 && strcmp(sv_ranking_get(1)->name, "Duda") == 0);
+    check("SV-105", "a ordem de chegada continua depois de ler o arquivo", sv_ranking_add("Fabi", 300, 120, 10, 1, 0, false, NULL) == 6);
+
+    check("SV-115", "apagar o jogador tira ele do ranking e do arquivo", sv_ranking_remove("Caio") && sv_ranking_find("Caio") == -1 && sv_ranking_load() && sv_ranking_count() == 5 && sv_ranking_find("Caio") == -1);
 
     sv_ranking_clean_name("  João   da  Silva  ", name, sizeof(name));
     check("SV-106", "nome: tira espacos das pontas e repetidos, mantem acento", strcmp(name, "João da Silva") == 0);
@@ -1023,9 +1031,15 @@ static void test_ranking(void)
     check("SV-109", "nome vazio vira Anonimo", strcmp(name, "Anônimo") == 0);
 
     sv_ranking_clear();
-    for (int i = 0; i < SV_RANKING_MAX; i++) sv_ranking_add("Jogador", 100 + i, 0, 1, 0, 0, false);
-    check("SV-110", "com o ranking cheio, uma partida pior fica de fora", sv_ranking_add("Pior", 1, 0, 1, 0, 0, false) == 0 && sv_ranking_count() == SV_RANKING_MAX);
-    check("SV-111", "com o ranking cheio, uma partida melhor entra e a pior sai", sv_ranking_add("Melhor", 9999, 0, 1, 0, 0, false) == 1 && sv_ranking_count() == SV_RANKING_MAX && sv_ranking_get(SV_RANKING_MAX - 1)->seconds == 101);
+    for (int i = 0; i < SV_RANKING_MAX; i++)
+    {
+        char n[16];
+
+        snprintf(n, sizeof(n), "J%d", i);
+        sv_ranking_add(n, 100 + i, 0, 1, 0, 0, false, NULL);
+    }
+    check("SV-110", "com o ranking cheio, um jogador novo pior fica de fora", sv_ranking_add("Pior", 1, 0, 1, 0, 0, false, NULL) == 0 && sv_ranking_count() == SV_RANKING_MAX);
+    check("SV-111", "com o ranking cheio, um jogador novo melhor entra e o pior sai", sv_ranking_add("Melhor", 9999, 0, 1, 0, 0, false, NULL) == 1 && sv_ranking_count() == SV_RANKING_MAX && sv_ranking_get(SV_RANKING_MAX - 1)->seconds == 101);
 
     remove("teste.ranking");
     sv_ranking_clear();
