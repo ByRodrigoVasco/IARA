@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include "sv_ranking.h"
 
 static SvRankEntry entries[SV_RANKING_MAX];
@@ -85,6 +86,44 @@ void sv_ranking_clean_name(const char *in, char *out, int out_size)
     if (o == 0) snprintf(out, (size_t)out_size, "%s", "Anônimo");
 }
 
+static bool same_name(const char *a, const char *b)
+{
+    while (*a != '\0' && *b != '\0')
+    {
+        if (tolower((unsigned char)*a) != tolower((unsigned char)*b)) return false;
+        a++;
+        b++;
+    }
+    return *a == *b;
+}
+
+int sv_ranking_find(const char *name)
+{
+    char clean[SV_NAME_BYTES];
+
+    sv_ranking_clean_name(name, clean, sizeof(clean));
+    for (int i = 0; i < entry_count; i++)
+    {
+        if (same_name(entries[i].name, clean)) return i;
+    }
+    return -1;
+}
+
+static void remove_at(int index)
+{
+    memmove(&entries[index], &entries[index + 1], sizeof(SvRankEntry) * (size_t)(entry_count - 1 - index));
+    entry_count--;
+}
+
+bool sv_ranking_remove(const char *name)
+{
+    int index = sv_ranking_find(name);
+
+    if (index < 0) return false;
+    remove_at(index);
+    return sv_ranking_save();
+}
+
 static void insert_sorted(const SvRankEntry *e)
 {
     int pos = entry_count;
@@ -96,9 +135,25 @@ static void insert_sorted(const SvRankEntry *e)
     entries[pos] = *e;
 }
 
-int sv_ranking_add(const char *name, int seconds, int kills, int level, int bosses, int character, bool won)
+// Fica só com o melhor resultado de cada nome. true se a entrada nova ficou no ranking.
+static bool keep_best(const SvRankEntry *e)
+{
+    int old = sv_ranking_find(e->name);
+
+    if (old >= 0)
+    {
+        if (!sv_ranking_better(e, &entries[old])) return false;
+        remove_at(old);
+    }
+    insert_sorted(e);
+    return true;
+}
+
+int sv_ranking_add(const char *name, int seconds, int kills, int level, int bosses, int character, bool won, bool *new_record)
 {
     SvRankEntry e = {0};
+    bool record;
+    int index;
 
     sv_ranking_clean_name(name, e.name, sizeof(e.name));
     e.seconds = seconds < 0 ? 0 : seconds;
@@ -109,13 +164,11 @@ int sv_ranking_add(const char *name, int seconds, int kills, int level, int boss
     e.won = won;
     e.order = next_order++;
 
-    insert_sorted(&e);
-    sv_ranking_save();
-    for (int i = 0; i < entry_count; i++)
-    {
-        if (entries[i].order == e.order) return i + 1;
-    }
-    return 0;
+    record = keep_best(&e) && sv_ranking_find(e.name) >= 0 && entries[sv_ranking_find(e.name)].order == e.order;
+    if (new_record) *new_record = record;
+    if (record) sv_ranking_save();
+    index = sv_ranking_find(e.name);
+    return index >= 0 ? index + 1 : 0;
 }
 
 int sv_ranking_count(void)
@@ -148,7 +201,8 @@ bool sv_ranking_load(void)
         sv_ranking_clean_name(line, e.name, sizeof(e.name));
         if (sscanf(bar + 1, "%d|%d|%d|%d|%d|%d|%ld", &e.seconds, &e.kills, &e.level, &e.bosses, &e.character, &won, &e.order) != 7) continue;
         e.won = won != 0;
-        insert_sorted(&e);
+        keep_best(&e);   // Arquivo de uma versão antiga pode ter o mesmo nome várias vezes
+
         if (e.order >= next_order) next_order = e.order + 1;
     }
     fclose(file);
