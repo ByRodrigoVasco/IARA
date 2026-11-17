@@ -541,6 +541,28 @@ static void draw_world_objects(Camera2D camera)
     }
 }
 
+// Depois da escuridão: os olhos e o sangue dos monstros voltam com a cor cheia, como se brilhassem
+static void draw_glows(Camera2D camera)
+{
+    float half_w = GetScreenWidth() / 2.0f / camera.zoom + 40.0f, half_h = GetScreenHeight() / 2.0f / camera.zoom + 40.0f;
+
+    BeginMode2D(camera);
+    for (int i = 0; i < SV_MAX_ENEMIES; i++)
+    {
+        SvEnemy *e = &sv_run.enemies[i];
+
+        if (!e->alive || fabsf(e->pos.x - camera.target.x) > half_w || fabsf(e->pos.y - camera.target.y) > half_h) continue;
+        sv_draw_glow(sv_enemy_sprite(e->type), e->facing * 4 + anim_frame(e->anim, 6.0f) % 4, e->pos, e->facing == 1 && e->flip, (Color){255, 255, 255, e->type == EN_CRACHA ? 190 : 230});
+    }
+    if (sv_run.boss.active)
+    {
+        SvBoss *b = &sv_run.boss;
+
+        sv_draw_glow(boss_sprites[b->id], (b->attack_anim > 0.0f ? 12 : 0) + b->facing * 4 + anim_frame(b->timer, 6.0f) % 4, b->pos, b->facing == 1 && b->flip, WHITE);
+    }
+    EndMode2D();
+}
+
 static void draw_boss(void)
 {
     SvBoss *b = &sv_run.boss;
@@ -931,6 +953,7 @@ void sv_render_game(void)
     EndMode2D();
 
     sv_light_draw(camera);
+    draw_glows(camera);
     draw_hud(camera);
     if (sv_debug_mode) sv_debug_draw_hud();
 }
