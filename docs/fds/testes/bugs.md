@@ -4,20 +4,14 @@ Os BUG-01 a BUG-08 foram encontrados na execução dos testes de sistema de 22/1
 (branch `develop`, commit `b366e7c`) e estão registrados como issue no repositório, com a
 label `bug`. Os BUG-09 a BUG-12 foram encontrados na revisão de 03/11/2026
 (branch `test/campanha-100-dias`) e também têm issue. Os BUG-13 e BUG-14 foram encontrados em
-07/11/2026, ao cobrir a US03 (branch `test/us03-modo-automatico`), e ainda precisam de issue.
-O BUG-15 foi relatado em 08/11/2026, durante o desenvolvimento do Modo Sobrevivência (branch `feature/modo-sobrevivencia`), e tem a issue #56. Os BUG-16 a BUG-18 saíram do teste à mão de 08/11/2026 e do retorno de um usuário final de 09/11/2026, na mesma branch, e têm as issues #57 a #59.
+07/11/2026, ao cobrir a US03 (branch `test/us03-modo-automatico`), e têm as issues #80 e #81 (abertas depois, já fechadas).
+O BUG-15 foi relatado em 08/11/2026, durante o desenvolvimento do Modo Sobrevivência (branch `feature/modo-sobrevivencia`), e tem a issue #56. Os BUG-16 a BUG-18 saíram do teste à mão de 08/11/2026 e do retorno de um usuário final de 09/11/2026, na mesma branch, e têm as issues #57 a #59. Os BUG-30 a BUG-32 foram achados em 17/11/2026, ao revisar os textos e a janela do jogo, e têm as issues #77 a #79.
 
 Os blocos abaixo repetem o conteúdo de cada um, para consulta sem sair do repositório.
 
 ## Status
 
-Atualizar a coluna Status conforme as issues forem corrigidas e fechadas. Conferido em 03/11/2026:
-do BUG-01 ao BUG-11 as correções estão na `develop` e as issues foram fechadas. Em 09/11/2026, o BUG-13 e o BUG-14
-estão corrigidos na `develop` (PR #55). Na branch `feature/modo-sobrevivencia`, que segue separada da `develop`, o
-BUG-12 foi resolvido e o BUG-15 foi corrigido em 08/11/2026, e o usuário testou os dois no jogo real e aprovou.
-O BUG-16 foi corrigido na mesma branch em 09/11/2026. A issue do BUG-12 fica aberta até a branch ir para a
-`develop`. Os BUG-17 e BUG-18 seguem abertos, com gravidade baixa: são quadros lentos medidos no teste real, sem
-efeito na jogabilidade.
+Atualizar a coluna Status conforme as issues forem corrigidas e fechadas. Conferido em 17/11/2026: do BUG-01 ao BUG-16 e do BUG-19 ao BUG-32 as correções estão na `develop` (o Modo Sobrevivência entrou pelo PR #76) e as issues foram fechadas, menos as dos BUG-30 a BUG-32, que fecham quando o PR desta correção entrar. Os BUG-17 e BUG-18 seguem abertos, com gravidade baixa: são quadros lentos medidos no teste real, sem efeito na jogabilidade. O BUG-17 não voltou a acontecer, e o BUG-18 pede carregar a música e o ambiente da primeira fase na tela de carregamento.
 
 | ID | Problema | Gravidade | Issue | Status |
 |---|---|---|---|---|
@@ -32,11 +26,11 @@ efeito na jogabilidade.
 | BUG-09 | Rótulos das mesas vazam dos botões | Média | [#43](https://github.com/ByRodrigoVasco/IARA/issues/43) | Corrigido na `develop`, issue fechada |
 | BUG-10 | Falha ao trocar o save pode perder o progresso | Média | [#44](https://github.com/ByRodrigoVasco/IARA/issues/44) | Corrigido na `develop`, issue fechada |
 | BUG-11 | Fundo do cartão do dia é carregado e nunca desenhado | Baixa | [#45](https://github.com/ByRodrigoVasco/IARA/issues/45) | Corrigido na `develop`, issue fechada |
-| BUG-12 | Menu não tem como começar uma partida nova | Média | [#46](https://github.com/ByRodrigoVasco/IARA/issues/46) | Resolvido na `feature/modo-sobrevivencia` (`ad1ec96`) e aprovado em teste real; issue aberta até a branch ir para a `develop` |
-| BUG-13 | Suíte de testes deixou de compilar depois do áudio | Alta | A abrir | Corrigido na `develop` (PR #55) |
-| BUG-14 | "Enviar sem conferir" esperava a IARA terminar de escrever | Média | A abrir | Corrigido na `develop` (PR #55) |
-| BUG-15 | Carregamentos sem retorno visual e engasgos no menu | Média | [#56](https://github.com/ByRodrigoVasco/IARA/issues/56) | Corrigido na `feature/modo-sobrevivencia` e aprovado em teste real |
-| BUG-16 | Telas de modo e de save em lista vertical, pouco organizadas | Baixa | [#57](https://github.com/ByRodrigoVasco/IARA/issues/57) | Corrigido na `feature/modo-sobrevivencia` |
+| BUG-12 | Menu não tem como começar uma partida nova | Média | [#46](https://github.com/ByRodrigoVasco/IARA/issues/46) | Corrigido na `develop` (PR #76), issue fechada |
+| BUG-13 | Suíte de testes deixou de compilar depois do áudio | Alta | [#80](https://github.com/ByRodrigoVasco/IARA/issues/80) | Corrigido na `develop` (PR #55), issue fechada |
+| BUG-14 | "Enviar sem conferir" esperava a IARA terminar de escrever | Média | [#81](https://github.com/ByRodrigoVasco/IARA/issues/81) | Corrigido na `develop` (PR #55), issue fechada |
+| BUG-15 | Carregamentos sem retorno visual e engasgos no menu | Média | [#56](https://github.com/ByRodrigoVasco/IARA/issues/56) | Corrigido na `develop` (PR #76), issue fechada |
+| BUG-16 | Telas de modo e de save em lista vertical, pouco organizadas | Baixa | [#57](https://github.com/ByRodrigoVasco/IARA/issues/57) | Corrigido na `develop` (PR #76), issue fechada |
 | BUG-17 | Quadro de 1,67 s no menu, sete segundos depois de abrir | Baixa | [#58](https://github.com/ByRodrigoVasco/IARA/issues/58) | Aberto, não reproduzido |
 | BUG-18 | Troca de música e ambiente lê o arquivo na hora | Baixa | [#59](https://github.com/ByRodrigoVasco/IARA/issues/59) | Aberto |
 | BUG-19 | ESC fecha o jogo na hora e a campanha não tem pausa | Média | [#64](https://github.com/ByRodrigoVasco/IARA/issues/64) | Corrigido na `develop`, issue fechada |
@@ -49,7 +43,10 @@ efeito na jogabilidade.
 | BUG-26 | Post-it do computador sob o ponteiro, sem fita; ícones, teclado, mouse e janela destoando | Baixa | [#71](https://github.com/ByRodrigoVasco/IARA/issues/71) | Corrigido na `develop`, issue fechada |
 | BUG-27 | Cartões de início e fim do dia sem como pular | Baixa | [#72](https://github.com/ByRodrigoVasco/IARA/issues/72) | Corrigido na `develop`, issue fechada |
 | BUG-28 | Trilha de suspense já no primeiro dia | Baixa | [#73](https://github.com/ByRodrigoVasco/IARA/issues/73) | Corrigido na `develop`, issue fechada |
-| BUG-29 | Tarja Preta (poder inicial do Zito) fraco e sem sentido para o personagem | Média | [#74](https://github.com/ByRodrigoVasco/IARA/issues/74) | Corrigido na `feature/modo-sobrevivencia`, issue aberta até entrar na `develop` |
+| BUG-29 | Tarja Preta (poder inicial do Zito) fraco e sem sentido para o personagem | Média | [#74](https://github.com/ByRodrigoVasco/IARA/issues/74) | Corrigido na `develop` (PR #76), issue fechada |
+| BUG-30 | Descrição das cartas de escolha passa por cima das linhas de mudança | Média | [#77](https://github.com/ByRodrigoVasco/IARA/issues/77) | Corrigido, issue fecha com o PR |
+| BUG-31 | Botão de velocidade (2x) no centro cobre o nome do chefe e o texto vaza do botão | Média | [#78](https://github.com/ByRodrigoVasco/IARA/issues/78) | Corrigido, issue fecha com o PR |
+| BUG-32 | Janela sem opção de maximizar e com tamanho solto | Média | [#79](https://github.com/ByRodrigoVasco/IARA/issues/79) | Corrigido, issue fecha com o PR |
 
 **Sobre o BUG-02:** os dois vazamentos descritos abaixo já não existem. Restava uma carga duplicada do menu ao abrir o jogo, removida. O CT-24 oscilava porque media sem desenhar quadros, e o driver de vídeo só devolve uma textura apagada depois de um quadro. Com quadros, 400 voltas ao menu cresceram 19 MB (cerca de 0,05 MB por volta, contra os 7 MB originais).
 
@@ -634,3 +631,20 @@ Testando a campanha e o Sobrevivência com jogadores, saíram estes problemas. C
 
 **Onde:** `code/src/game/npcs.c`, `code/src/screens/game_loop.c`, `code/src/screens/computer_loop.c`, `code/src/ui/computer_art.c`, `code/src/ui/cheat_sheet.c`, `code/src/core/audio.c`, `code/src/survival/sv_game.c`
 **Coberto por:** UX-18 a UX-22, `test_npcs` e a atualização do CT-35 e do CT-54
+
+---
+
+## BUG-30 a BUG-32 — Textos do Sobrevivência e modos da janela (17/11/2026)
+
+**Labels:** `bug`, `ui`
+
+Revisando os textos do Modo Sobrevivência e a janela do jogo, saíram estes problemas. Cada um já foi corrigido.
+
+| ID | O que acontecia | Correção |
+|---|---|---|
+| BUG-30 | A descrição das cartas de escolha de nível tinha espaço para 3 linhas, mas Nota Fiscal, Colega de Plantão, Prompt da IARA e Vera Fischer escrevem 4 ou 5: as linhas extras ficavam por cima do separador e das linhas "atributo: de -> para". Títulos longos e mudanças longas também passavam da carta | A carta calcula o layout a partir do texto (`sv_levelup_layout`): quebra a descrição em linhas, reduz a fonte até tudo caber, encolhe o título até caber na largura e ficou mais alta (560 em vez de 500) |
+| BUG-31 | O botão de velocidade ficava no centro do HUD, em 150 px fixos: o texto "TEMPO  x3  [TAB]" passava das bordas e, com um chefe em campo, o botão cobria o nome e a barra de vida dele. O nome do chefe também encostava na linha do ato | O botão foi para o canto de baixo à direita, com a largura calculada pelo texto; o nome, a barra e os escudos do chefe desceram para depois do ato |
+| BUG-32 | A janela abria num tamanho padrão mas podia ser arrastada para qualquer tamanho, e só alternava com a tela cheia: não havia janela maximizada, e o tamanho fixo não era garantido | Três modos, sempre um só: janela de tamanho fixo (o padrão, sem bordas de arrastar), janela maximizada e tela cheia. Vêm das caixas Tela cheia e Janela maximizada em CONFIGURAÇÕES e do F11 (que alterna a tela cheia com a última janela) e ficam no `iara.ini` (`janela_maximizada` e `tela_cheia`) |
+
+**Onde:** `code/src/survival/sv_render.c`, `code/src/core/helper.c`, `code/src/core/preferences.c`, `code/src/screens/settings.c`, `code/src/main.c`
+**Coberto por:** UX-23 (todas as cartas de escolha), UX-24 (botão de velocidade em 5 tamanhos de janela), UX-25 e UX-26 (modos da janela e `iara.ini`)

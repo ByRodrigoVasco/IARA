@@ -55,13 +55,54 @@ int shared_texture_users(const char *path);
 void draw_texture_cover(Texture2D texture, Rectangle dest, Color tint);
 
 /*
- * @brief Alterna entre janela e tela cheia sem bordas. A interface se ajusta sozinha ao novo tamanho.
+ * Os modos da janela: ou tela cheia, ou janela. A janela pode ter o tamanho fixo padrao
+ * (um pouco menor que o monitor, centralizada) ou estar maximizada.
+ */
+typedef enum
+{
+    WINDOW_MODE_FIXED = 0,
+    WINDOW_MODE_MAXIMIZED,
+    WINDOW_MODE_FULLSCREEN
+} WindowMode;
+
+/*
+ * @brief Poe a janela no modo pedido. A interface se ajusta sozinha ao novo tamanho.
+ */
+void set_window_mode(WindowMode mode);
+
+/*
+ * @brief Modo em que a janela esta agora.
+ */
+WindowMode get_window_mode(void);
+
+/*
+ * @brief Janela em uso: a atual ou, na tela cheia, aquela a que ela volta.
+ */
+WindowMode get_windowed_mode(void);
+
+/*
+ * @brief Alterna entre tela cheia e o ultimo modo de janela (fixa ou maximizada). Tecla F11.
  */
 void toggle_fullscreen(void);
 
 /*
- * @brief Informa se o jogo está em tela cheia.
+ * @brief Alterna a janela entre o tamanho fixo e maximizada. Se estava em tela cheia, sai dela.
+ */
+void toggle_window_maximized(void);
+
+/*
+ * @brief Informa se o jogo esta em tela cheia.
  */
 bool is_fullscreen_enabled(void);
+
+/*
+ * @brief Informa se o jogo esta em janela maximizada.
+ */
+bool is_window_maximized_enabled(void);
+
+/*
+ * @brief Avisa o helper que a janela acabou de abrir no tamanho fixo (sem bordas redimensionaveis).
+ */
+void mark_window_fixed_at_startup(void);
 
 #endif // GAME_TEXTURE_H
