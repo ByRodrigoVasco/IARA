@@ -20,11 +20,12 @@
 #include "notice.h"
 #include "ui_theme.h"
 
-typedef enum { SCREEN_HUB, SCREEN_SHOP, SCREEN_CHARS, SCREEN_NAME, SCREEN_RUN, SCREEN_PAUSE, SCREEN_OVER } SvScreen;
+typedef enum { SCREEN_HUB, SCREEN_SHOP, SCREEN_CHARS, SCREEN_RUN, SCREEN_PAUSE, SCREEN_OVER } SvScreen;
 
 static SvScreen screen = SCREEN_HUB;
 static bool loaded = false;
 static bool leave_to_menu = false;
+static bool leave_to_saves = false;    // TROCAR JOGADOR: volta para a lista de saves do modo
 static int hub_selected = 0;
 static int char_cursor = 0;
 static Texture2D roster_icons[CH_COUNT];
@@ -38,12 +39,11 @@ static int earned_coins = 0;
 static float shop_message_timer = 0.0f;
 static const char *shop_message = "";
 
-// Ranking: nome de quem vai jogar e a colocação da última partida
-static char player_name[SV_NAME_BYTES] = "";
-static char name_input[SV_NAME_BYTES] = "";
-static bool run_ranked = false;        // A partida atual já entrou no ranking
-static int last_rank_position = 0;     // 1 = primeiro lugar; 0 = não entrou
-static long last_rank_order = 0;       // Para destacar a linha da partida no ranking
+// Ranking: cada save é um jogador, e o nome do save é o nome no ranking
+static bool run_ranked = false;        // A partida atual já foi registrada no ranking
+static bool last_run_record = false;   // A última partida virou o recorde do jogador
+static int last_rank_position = 0;     // Posição do jogador depois da última partida (1 = primeiro)
+static long last_rank_order = 0;       // Para destacar a linha do jogador no ranking
 
 static void finish_run(void);
 
@@ -54,8 +54,8 @@ static const char *upgrade_descriptions[UPG_COUNT] = {
     "+10 de vida máxima por nível", "+5% de dano por nível", "+4% de velocidade por nível", "-4% de recarga por nível", "+5% de área por nível",
     "+15% de alcance de coleta por nível", "+5% de XP por nível", "-1 de dano em cada golpe por nível", "Ao morrer, volta uma vez com 50% da vida"};
 
-#define HUB_OPTIONS 5
-static const char *hub_labels[HUB_OPTIONS] = {"JOGAR", "PERSONAGEM", "PLANO DE CARREIRA", "COMO JOGAR", "VOLTAR"};
+#define HUB_OPTIONS 6
+static const char *hub_labels[HUB_OPTIONS] = {"JOGAR", "PERSONAGEM", "PLANO DE CARREIRA", "COMO JOGAR", "TROCAR JOGADOR", "VOLTAR"};
 static bool hub_help_open = false;   // A ajuda está aberta por cima do início
 
 // O carregamento é dividido em trabalhos pequenos: a tela de carregamento roda um pedaço por quadro e mostra a porcentagem.
@@ -106,6 +106,7 @@ static float job_ready(void)
 {
     loaded = true;
     leave_to_menu = false;
+    leave_to_saves = false;
     hub_help_open = false;
     screen = SCREEN_HUB;
     hub_selected = 0;
@@ -207,19 +208,26 @@ static int mouse_pick(int count, float first_y, float spacing, float width, bool
 // Início e Plano de Carreira
 // -----------------------------------------------------------------------------
 
-// Termina a partida: paga o Banco de Horas e coloca o resultado no ranking (uma vez só)
+// Nome do jogador no ranking: o nome do save em uso
+static const char *player_name(void)
+{
+    return active_save_is_set() ? active_save_name() : "Anônimo";
+}
+
+// Termina a partida: paga o Banco de Horas e registra o resultado no ranking (uma vez só)
 static void finish_run(void)
 {
     earned_coins = sv_game_finish();
     if (run_ranked || sv_run.cheated) return;   // Partida com cheat não entra no ranking
     run_ranked = true;
-    last_rank_position = sv_ranking_add(player_name, (int)sv_run.time, sv_run.kills, sv_run.player.level, sv_run.bosses_defeated, sv_run.player.character, sv_run.phase == SV_WON);
+    last_rank_position = sv_ranking_add(player_name(), (int)sv_run.time, sv_run.kills, sv_run.player.level, sv_run.bosses_defeated, sv_run.player.character, sv_run.phase == SV_WON, &last_run_record);
     last_rank_order = last_rank_position > 0 ? sv_ranking_get(last_rank_position - 1)->order : 0;
 }
 
 static void start_run(void)
 {
     run_ranked = false;
+    last_run_record = false;
     last_rank_position = 0;
     last_rank_order = 0;
     sv_game_start((unsigned)(GetTime() * 1000.0) | 1u);
@@ -278,78 +286,30 @@ static void draw_ranking(float x, float y, float width, int rows, float size)
         }
         snprintf(text, sizeof(text), "%d", i + 1);
         sv_text(text, x + pad, ry, size, color);
-        sv_text(e->name, x + pad + size * 1.6f, ry, size, color);
+        {
+            // Nome comprido é cortado com ".." para não invadir a coluna do tempo
+            char shown[SV_NAME_BYTES + 4];
+            float room = (x + width - pad - size * 5.6f) - (x + pad + size * 1.6f) - size * 0.4f;
+            int len;
+
+            snprintf(shown, sizeof(shown), "%s", e->name);
+            len = (int)strlen(shown);
+            while (len > 0 && sv_text_width(shown, size) > room)
+            {
+                len--;
+                while (len > 0 && ((unsigned char)shown[len] & 0xC0) == 0x80) len--;   // não corta no meio de um acento
+                shown[len] = '\0';
+                if (len > 0) snprintf(shown + len, sizeof(shown) - (size_t)len, "..");
+                if (sv_text_width(shown, size) <= room) break;
+                shown[len] = '\0';
+            }
+            sv_text(shown, x + pad + size * 1.6f, ry, size, color);
+        }
         snprintf(text, sizeof(text), "%d:%02d", e->seconds / 60, e->seconds % 60);
         sv_text(text, x + width - pad - size * 5.6f, ry, size, e->won ? (Color){120, 230, 160, 255} : color);
         snprintf(text, sizeof(text), "%d", e->kills);
         sv_text(text, x + width - pad - sv_text_width(text, size), ry, size, color);
     }
-}
-
-// Tela do nome: quem vai jogar digita o nome antes de cada partida (vem preenchido com o último)
-static void render_name(void)
-{
-    float ui = sv_ui();
-    float w = (float)GetScreenWidth();
-    int cp;
-    char shown[SV_NAME_BYTES + 4];
-    char cleaned[SV_NAME_BYTES];
-    bool has_letters;
-
-    // Letras digitadas (com acento: a fonte do jogo tem o Latin-1)
-    while ((cp = GetCharPressed()) > 0)
-    {
-        int bytes = 0;
-        const char *utf8 = CodepointToUTF8(cp, &bytes);
-        int letters = 0;
-
-        for (int i = 0; name_input[i]; i++) if (((unsigned char)name_input[i] & 0xC0) != 0x80) letters++;
-        if (cp < 32 || cp == '|' || cp > 0xFF || letters >= SV_NAME_MAX_CHARS) continue;
-        if ((int)strlen(name_input) + bytes >= SV_NAME_BYTES) continue;
-        strncat(name_input, utf8, (size_t)bytes);
-    }
-    if (IsKeyPressed(KEY_BACKSPACE) || IsKeyPressedRepeat(KEY_BACKSPACE))
-    {
-        int len = (int)strlen(name_input);
-
-        while (len > 0 && ((unsigned char)name_input[len - 1] & 0xC0) == 0x80) len--;   // bytes de continuação
-        if (len > 0) len--;
-        name_input[len] = '\0';
-    }
-
-    sv_ranking_clean_name(name_input, cleaned, sizeof(cleaned));
-    has_letters = name_input[0] != '\0' && strcmp(cleaned, "Anônimo") != 0;
-
-    if ((IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER)) && has_letters)
-    {
-        snprintf(player_name, sizeof(player_name), "%s", cleaned);
-        sv_sfx(SND_confirma);
-        start_run();
-        return;
-    }
-    if (IsKeyPressed(KEY_ESCAPE))
-    {
-        screen = SCREEN_HUB;
-        sv_sfx(SND_escolha);
-    }
-
-    begin_game_drawing();
-    draw_backdrop();
-
-    sv_text_centered("QUEM VAI JOGAR?", w / 2.0f, 150.0f * ui, 96.0f * ui, (Color){230, 40, 50, 255});
-    sv_text_centered("Digite seu nome para entrar no ranking", w / 2.0f, 280.0f * ui, 34.0f * ui, (Color){220, 205, 215, 255});
-
-    DrawRectangleRec((Rectangle){w / 2.0f - 420.0f * ui, 350.0f * ui, 840.0f * ui, 110.0f * ui}, (Color){10, 4, 16, 230});
-    DrawRectangleLinesEx((Rectangle){w / 2.0f - 420.0f * ui, 350.0f * ui, 840.0f * ui, 110.0f * ui}, 3.0f * ui, (Color){230, 40, 50, 255});
-    snprintf(shown, sizeof(shown), "%s%s", name_input, ((int)(GetTime() * 2.0) % 2) ? "_" : " ");
-    sv_text_centered(shown, w / 2.0f, 368.0f * ui, 72.0f * ui, (Color){255, 240, 240, 255});
-
-    sv_text_centered(has_letters ? "ENTER: começar a partida" : "Digite pelo menos uma letra", w / 2.0f, 490.0f * ui, 34.0f * ui, has_letters ? (Color){120, 230, 160, 255} : (Color){180, 170, 185, 255});
-
-    draw_ranking(w / 2.0f - 420.0f * ui, 570.0f * ui, 840.0f * ui, 5, 36.0f * ui);
-
-    ui_draw_hint("Digite o nome    BACKSPACE: apagar    ENTER: jogar    ESC: voltar");
-    end_game_drawing();
 }
 
 static void render_hub(void)
@@ -366,20 +326,17 @@ static void render_hub(void)
         if (pressed_down()) { hub_selected = (hub_selected + 1) % HUB_OPTIONS; sv_sfx(SND_escolha); }
         if (pressed_up()) { hub_selected = (hub_selected + HUB_OPTIONS - 1) % HUB_OPTIONS; sv_sfx(SND_escolha); }
 
-        hovered = mouse_pick(HUB_OPTIONS, 560.0f, 80.0f, 620.0f, &clicked);
+        hovered = mouse_pick(HUB_OPTIONS, 540.0f, 72.0f, 620.0f, &clicked);
         if (hovered >= 0 && hovered != hub_selected) { hub_selected = hovered; sv_sfx(SND_escolha); }
 
         if (pressed_confirm() || clicked)
         {
             sv_sfx(SND_confirma);
-            if (hub_selected == 0)
-            {
-                snprintf(name_input, sizeof(name_input), "%s", player_name);
-                screen = SCREEN_NAME;
-            }
+            if (hub_selected == 0) start_run();
             else if (hub_selected == 1) { screen = SCREEN_CHARS; char_cursor = sv_meta.character; char_message_timer = 0.0f; }
             else if (hub_selected == 2) { screen = SCREEN_SHOP; shop_selected = 0; sv_music_play(MUS_LOJA); }
             else if (hub_selected == 3) { help_select_page(1); hub_help_open = true; }
+            else if (hub_selected == 4) leave_to_saves = true;
             else leave_to_menu = true;
         }
 
@@ -392,7 +349,7 @@ static void render_hub(void)
     sv_text_centered("SOBREVIVÊNCIA", w / 2.0f, 90.0f * ui, 120.0f * ui, (Color){230, 40, 50, 255});
     sv_text_centered("Dez minutos de expediente. Sobreviva às cinco áreas e desligue a IARA.", w / 2.0f, 235.0f * ui, 30.0f * ui, (Color){220, 205, 215, 255});
 
-    snprintf(text, sizeof(text), "BANCO DE HORAS  %d", sv_meta.coins);
+    snprintf(text, sizeof(text), "%s   BANCO DE HORAS  %d", player_name(), sv_meta.coins);
     sv_text_centered(text, w / 2.0f, 310.0f * ui, 44.0f * ui, (Color){255, 214, 80, 255});
     snprintf(text, sizeof(text), "Partidas %d   Vitórias %d   Melhor tempo %d:%02d   Abates %d", sv_meta.runs, sv_meta.wins, sv_meta.best_seconds / 60, sv_meta.best_seconds % 60, sv_meta.kills);
     sv_text_centered(text, w / 2.0f, 370.0f * ui, 26.0f * ui, (Color){180, 170, 185, 255});
@@ -401,7 +358,7 @@ static void render_hub(void)
 
     for (int i = 0; i < HUB_OPTIONS; i++)
     {
-        Rectangle row = menu_row(i, 560.0f, 80.0f, 620.0f);
+        Rectangle row = menu_row(i, 540.0f, 72.0f, 620.0f);
         bool selected = i == hub_selected;
 
         if (selected) DrawRectangleRec(row, (Color){70, 14, 26, 220});
@@ -828,7 +785,8 @@ static void render_over(void)
     if (sv_run.cheated) sv_text_centered("Cheats usados: esta partida não conta para o progresso nem para o ranking.", w / 2.0f, 530.0f * ui, 28.0f * ui, (Color){255, 140, 120, 255});
     else if (last_rank_position > 0)
     {
-        snprintf(text, sizeof(text), "%s, você ficou em %dº de %d no ranking!", player_name, last_rank_position, sv_ranking_count());
+        if (last_run_record) snprintf(text, sizeof(text), "NOVO RECORDE! %s agora está em %dº de %d no ranking!", player_name(), last_rank_position, sv_ranking_count());
+        else snprintf(text, sizeof(text), "%s, seu recorde continua em %dº de %d no ranking.", player_name(), last_rank_position, sv_ranking_count());
         sv_text_centered(text, w / 2.0f, 530.0f * ui, 40.0f * ui, last_rank_position <= 5 ? (Color){255, 214, 80, 255} : (Color){230, 220, 230, 255});
     }
 
@@ -858,10 +816,6 @@ bool render_survival(void)
         sv_audio_update(GetFrameTime());
         render_characters();
         break;
-    case SCREEN_NAME:
-        sv_audio_update(GetFrameTime());
-        render_name();
-        break;
     case SCREEN_RUN:
         render_run();
         break;
@@ -873,5 +827,10 @@ bool render_survival(void)
         break;
     }
 
-    return leave_to_menu;
+    return leave_to_menu || leave_to_saves;
+}
+
+bool survival_wants_player_switch(void)
+{
+    return leave_to_saves;
 }

@@ -18,6 +18,9 @@ void initialize_survival(void);
 // Desenha um quadro. Devolve true quando o jogador volta ao menu principal.
 bool render_survival(void);
 
+/** @brief Depois que render_survival() devolve true: se o jogador escolheu TROCAR JOGADOR (volta para a lista de saves). */
+bool survival_wants_player_switch(void);
+
 void unload_survival(void);
 
 #endif // SURVIVAL_H
