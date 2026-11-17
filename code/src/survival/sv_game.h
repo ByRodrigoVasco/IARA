@@ -48,7 +48,7 @@ typedef enum
 typedef enum
 {
     P_CAFE, P_MANUAL, P_COLINHA, P_ERGONOMIA, P_CRACHA, P_SAUDE, P_NETWORK, P_HORAEXTRA,
-    P_REGEN, P_SORTE, P_ESPINHOS, P_FOCO, P_COUNT
+    P_REGEN, P_SORTE, P_ESPINHOS, P_FOCO, P_LANTERNA, P_COUNT
 } SvPassiveId;
 
 typedef enum
@@ -199,6 +199,7 @@ typedef struct
     float dmg_mult, cooldown_mult, area_mult, speed_mult, xp_mult, magnet_range, armor, duration_mult;
     float step_timer;
     float regen;           // Vida recuperada por segundo
+    float vision_mult;     // Multiplica o raio da luz do jogador (passivo Lanterna)
     int character;         // SvCharacterId em uso nesta partida
     float crit_chance;     // Chance de golpe crítico (dobro do dano)
     float coin_mult;       // Multiplica o Banco de Horas ganho ao fim
