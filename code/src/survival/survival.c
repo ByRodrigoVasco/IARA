@@ -5,6 +5,7 @@
 #include "survival.h"
 #include "sv_game.h"
 #include "sv_render.h"
+#include "sv_light.h"
 #include "sv_meta.h"
 #include "sv_audio.h"
 #include "sv_assets.h"
@@ -138,6 +139,7 @@ void unload_survival(void)
     sv_audio_close();
     sv_unload_player();
     sv_unload_sprites();
+    sv_light_unload();
     SetMouseCursor(MOUSE_CURSOR_ARROW);
     loaded = false;
 }
