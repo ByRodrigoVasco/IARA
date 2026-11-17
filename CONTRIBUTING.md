@@ -184,3 +184,25 @@ Os bugs também ficam em [docs/fds/testes/bugs.md](docs/fds/testes/bugs.md), com
 ### Ligação com o Jira
 
 Cada item do Jira (história ou subtarefa) corresponde a uma branch. Cite a chave no corpo do PR (por exemplo `PI2-231`), e mova o card para **Concluído** quando o trabalho estiver pronto.
+
+## 5. Definição de pronto
+
+Um item (história, subtarefa ou bug) está pronto quando:
+
+1. O código compila sem erro com o comando da seção 0.
+2. A suíte de testes passa inteira, e há teste novo para o que foi criado ou corrigido.
+3. Docs afetadas estão atualizadas (README, `docs/`, e o `bugs.md` quando for bug).
+4. O PR para a `develop` foi aprovado por outra pessoa da equipe e mesclado.
+5. A issue ligada foi fechada (à mão, veja a seção 4) e o card do Jira está em **Concluído**.
+
+### Referência ao Jira nos commits e PRs
+
+O hook de commits exige só `tipo: descrição` na primeira linha, então a chave do Jira vai no **corpo** do commit ou do PR:
+
+```
+feat: adiciona troca suave de faixa entre telas
+
+PI2-260
+```
+
+No título do PR segue valendo a mesma convenção do commit, sem a chave.
