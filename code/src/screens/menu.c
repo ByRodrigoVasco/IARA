@@ -54,24 +54,68 @@ static Rectangle configuracoes_text_rectangle;
 static Rectangle ajuda_text_rectangle;
 static Rectangle sair_text_rectangle;
 
+// As imagens do menu ficam na memória durante o jogo todo: voltar ao menu não carrega nada de novo.
+// A abertura do jogo carrega uma por quadro (menu_preload_step), então o menu já nasce pronto.
+#define MENU_TEXTURE_COUNT 4
+static int menu_textures_loaded = 0;
+
+float menu_preload_step(void)
+{
+    if (menu_textures_loaded >= MENU_TEXTURE_COUNT) return 1.0f;
+
+    // Carregadas no tamanho original: o tamanho na tela é calculado a cada quadro
+    switch (menu_textures_loaded)
+    {
+    case 0:
+        arrow_icon_texture = acquire_smooth_texture("code/assets/icons/arrow-icon.png");
+        break;
+    case 1:
+        // O escritório e o nome IARA já foram carregados pela abertura: aqui só se pega a mesma textura
+        bg_office_texture = acquire_smooth_texture("code/assets/sprites/tela-inicial/escritorio-tela-inicial.png");
+        break;
+    case 2:
+        iara_name_texture = acquire_smooth_texture("code/assets/sprites/tela-inicial/iara-nome.png");
+        break;
+    default:
+        second_bg_texture = acquire_smooth_texture("code/assets/background/second-background.png");
+        break;
+    }
+
+    menu_textures_loaded++;
+    return (float)menu_textures_loaded / (float)MENU_TEXTURE_COUNT;
+}
+
+bool menu_preload_done(void)
+{
+    return menu_textures_loaded >= MENU_TEXTURE_COUNT;
+}
+
 static void initialize_menu_textures(void)
 {
-    // Carregadas no tamanho original: o tamanho na tela é calculado a cada quadro
-    arrow_icon_texture = load_smooth_texture("code/assets/icons/arrow-icon.png");
-    bg_office_texture = load_smooth_texture("code/assets/sprites/tela-inicial/escritorio-tela-inicial.png");
-    second_bg_texture = load_smooth_texture("code/assets/background/second-background.png");
-    iara_name_texture = load_smooth_texture("code/assets/sprites/tela-inicial/iara-nome.png");
+    // Se a abertura ainda não carregou tudo (ou o menu foi aberto direto, como nos testes), termina aqui
+    while (menu_preload_step() < 1.0f) { }
+}
+
+void unload_menu_textures(void)
+{
+    if (menu_textures_loaded == 0) return;
+    if (menu_textures_loaded > 0) release_smooth_texture(arrow_icon_texture);
+    if (menu_textures_loaded > 1) release_smooth_texture(bg_office_texture);
+    if (menu_textures_loaded > 2) release_smooth_texture(iara_name_texture);
+    if (menu_textures_loaded > 3) release_smooth_texture(second_bg_texture);
+    arrow_icon_texture = bg_office_texture = iara_name_texture = second_bg_texture = (Texture2D){0};
+    menu_textures_loaded = 0;
 }
 
 // Recalcula as opções do menu para o tamanho atual da janela.
 static void update_menu_layout(void)
 {
     menu_scale = get_ui_scale();
-    menu_font_size = DEFAULT_MENU_FONT_SIZE * menu_scale;
+    menu_font_size = DEFAULT_MENU_FONT_SIZE * 0.8f * menu_scale;
     menu_letter_spacing = DEFAULT_LETTER_SPACING * menu_scale;
 
     float margin_x = TEXT_HORIZONTAL_MARGIN * menu_scale;
-    float margin_y = TEXT_VERTICAL_MARGIN * menu_scale;
+    float margin_y = TEXT_VERTICAL_MARGIN * 0.8f * menu_scale;
 
     iniciar_text_size = MeasureTextEx(default_game_font, "INICIAR", menu_font_size, menu_letter_spacing);
     creditos_text_size = MeasureTextEx(default_game_font, "CRÉDITOS", menu_font_size, menu_letter_spacing);
@@ -346,8 +390,6 @@ void render_menu(void)
 
 void unload_menu()
 {
-    UnloadTexture(bg_office_texture);
-    UnloadTexture(second_bg_texture);
-    UnloadTexture(arrow_icon_texture);
-    UnloadTexture(iara_name_texture);
+    // As imagens ficam carregadas para o próximo retorno ao menu; unload_menu_textures() as libera ao encerrar o jogo
+    SetMouseCursor(MOUSE_CURSOR_ARROW);
 }

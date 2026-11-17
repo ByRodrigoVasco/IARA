@@ -34,6 +34,9 @@ void initialize_pre_menu_textures(void);
  */
 void render_pre_menu(void);
 
+/** @brief Andamento do carregamento do menu (0 a 100). Abaixo de 100, a abertura mostra uma barra com a porcentagem. */
+void pre_menu_set_loading_percent(float percent);
+
 /**
  * @brief Faz a animação de fade_out antes de descarregar as texturas.
  */

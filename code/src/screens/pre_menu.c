@@ -8,6 +8,7 @@
 #include "macros.h"
 #include "helper.h"
 #include "accessibility.h"
+#include "screen_style.h"
 #include "fonts.h"
 
 // Largura do nome IARA em 1080p, como fração da imagem original.
@@ -16,6 +17,13 @@
 static bool fade_in_animation_finished = false;
 
 bool can_close_pre_menu_safely = false;
+
+static float menu_loading_percent = 100.0f;   // Enquanto o menu carrega por trás da abertura, uma barra mostra quanto falta
+
+void pre_menu_set_loading_percent(float percent)
+{
+    menu_loading_percent = percent;
+}
 
 // O jogador pediu para pular a abertura (tecla ou clique): a abertura some depressa em vez de esperar o fim
 static bool skip_requested = false;
@@ -43,8 +51,9 @@ void initialize_pre_menu_textures(void)
     can_close_pre_menu_safely = false;
     textures_color.a = 0;
 
-    bg_office_texture = load_smooth_texture("code/assets/sprites/tela-inicial/escritorio-tela-inicial.png");
-    iara_name_texture = load_smooth_texture("code/assets/sprites/tela-inicial/iara-nome.png");
+    // O menu usa as mesmas duas imagens: elas carregam aqui e o menu só pega as que já estão na memória
+    bg_office_texture = acquire_smooth_texture("code/assets/sprites/tela-inicial/escritorio-tela-inicial.png");
+    iara_name_texture = acquire_smooth_texture("code/assets/sprites/tela-inicial/iara-nome.png");
 }
 
 // Desenha o fundo cobrindo a janela e o nome IARA centralizado, conforme o tamanho atual da janela.
@@ -91,6 +100,7 @@ void render_pre_menu(void)
     ClearBackground(bg_color);
 
     draw_pre_menu_textures();
+    if (menu_loading_percent < 100.0f) style_progress_small(menu_loading_percent);
 
     // O jogador precisa saber que dá para pular
     {
@@ -106,6 +116,10 @@ void render_pre_menu(void)
 
 void unload_pre_menu_textures(void)
 {
-    UnloadTexture(bg_office_texture);
-    UnloadTexture(iara_name_texture);
+    release_smooth_texture(bg_office_texture);
+    release_smooth_texture(iara_name_texture);
+
+    // Zeradas: devolver de novo (a abertura pode ser descarregada pelo menu e pelo encerramento) não conta duas vezes
+    bg_office_texture = (Texture2D){0};
+    iara_name_texture = (Texture2D){0};
 }

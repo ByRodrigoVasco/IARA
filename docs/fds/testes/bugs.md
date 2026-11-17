@@ -5,13 +5,19 @@ Os BUG-01 a BUG-08 foram encontrados na execução dos testes de sistema de 22/1
 label `bug`. Os BUG-09 a BUG-12 foram encontrados na revisão de 03/11/2026
 (branch `test/campanha-100-dias`) e também têm issue. Os BUG-13 e BUG-14 foram encontrados em
 07/11/2026, ao cobrir a US03 (branch `test/us03-modo-automatico`), e ainda precisam de issue.
+O BUG-15 foi relatado em 08/11/2026, durante o desenvolvimento do Modo Sobrevivência (branch `feature/modo-sobrevivencia`), e tem a issue #56. Os BUG-16 a BUG-18 saíram do teste à mão de 08/11/2026 e do retorno de um usuário final de 09/11/2026, na mesma branch, e têm as issues #57 a #59.
 
 Os blocos abaixo repetem o conteúdo de cada um, para consulta sem sair do repositório.
 
 ## Status
 
 Atualizar a coluna Status conforme as issues forem corrigidas e fechadas. Conferido em 03/11/2026:
-do BUG-01 ao BUG-11 as correções estão na `develop` e as issues foram fechadas. Só o BUG-12 segue aberto.
+do BUG-01 ao BUG-11 as correções estão na `develop` e as issues foram fechadas. Em 09/11/2026, o BUG-13 e o BUG-14
+estão corrigidos na `develop` (PR #55). Na branch `feature/modo-sobrevivencia`, que segue separada da `develop`, o
+BUG-12 foi resolvido e o BUG-15 foi corrigido em 08/11/2026, e o usuário testou os dois no jogo real e aprovou.
+O BUG-16 foi corrigido na mesma branch em 09/11/2026. A issue do BUG-12 fica aberta até a branch ir para a
+`develop`. Os BUG-17 e BUG-18 seguem abertos, com gravidade baixa: são quadros lentos medidos no teste real, sem
+efeito na jogabilidade.
 
 | ID | Problema | Gravidade | Issue | Status |
 |---|---|---|---|---|
@@ -26,9 +32,24 @@ do BUG-01 ao BUG-11 as correções estão na `develop` e as issues foram fechada
 | BUG-09 | Rótulos das mesas vazam dos botões | Média | [#43](https://github.com/ByRodrigoVasco/IARA/issues/43) | Corrigido na `develop`, issue fechada |
 | BUG-10 | Falha ao trocar o save pode perder o progresso | Média | [#44](https://github.com/ByRodrigoVasco/IARA/issues/44) | Corrigido na `develop`, issue fechada |
 | BUG-11 | Fundo do cartão do dia é carregado e nunca desenhado | Baixa | [#45](https://github.com/ByRodrigoVasco/IARA/issues/45) | Corrigido na `develop`, issue fechada |
-| BUG-12 | Menu não tem como começar uma partida nova | Média | [#46](https://github.com/ByRodrigoVasco/IARA/issues/46) | Aberto: falta decidir onde fica a opção |
-| BUG-13 | Suíte de testes deixou de compilar depois do áudio | Alta | A abrir | Corrigido na branch `test/us03-modo-automatico` |
-| BUG-14 | "Enviar sem conferir" esperava a IARA terminar de escrever | Média | A abrir | Corrigido na branch `test/us03-modo-automatico` |
+| BUG-12 | Menu não tem como começar uma partida nova | Média | [#46](https://github.com/ByRodrigoVasco/IARA/issues/46) | Resolvido na `feature/modo-sobrevivencia` (`ad1ec96`) e aprovado em teste real; issue aberta até a branch ir para a `develop` |
+| BUG-13 | Suíte de testes deixou de compilar depois do áudio | Alta | A abrir | Corrigido na `develop` (PR #55) |
+| BUG-14 | "Enviar sem conferir" esperava a IARA terminar de escrever | Média | A abrir | Corrigido na `develop` (PR #55) |
+| BUG-15 | Carregamentos sem retorno visual e engasgos no menu | Média | [#56](https://github.com/ByRodrigoVasco/IARA/issues/56) | Corrigido na `feature/modo-sobrevivencia` e aprovado em teste real |
+| BUG-16 | Telas de modo e de save em lista vertical, pouco organizadas | Baixa | [#57](https://github.com/ByRodrigoVasco/IARA/issues/57) | Corrigido na `feature/modo-sobrevivencia` |
+| BUG-17 | Quadro de 1,67 s no menu, sete segundos depois de abrir | Baixa | [#58](https://github.com/ByRodrigoVasco/IARA/issues/58) | Aberto, não reproduzido |
+| BUG-18 | Troca de música e ambiente lê o arquivo na hora | Baixa | [#59](https://github.com/ByRodrigoVasco/IARA/issues/59) | Aberto |
+| BUG-19 | ESC fecha o jogo na hora e a campanha não tem pausa | Média | [#64](https://github.com/ByRodrigoVasco/IARA/issues/64) | Corrigido na `develop`, issue fechada |
+| BUG-20 | O jogo não tem ajuda | Baixa | [#65](https://github.com/ByRodrigoVasco/IARA/issues/65) | Corrigido na `develop`, issue fechada |
+| BUG-21 | Falha ao salvar o progresso não é avisada | Média | [#66](https://github.com/ByRodrigoVasco/IARA/issues/66) | Corrigido na `develop`, issue fechada |
+| BUG-22 | O jogador anda enquanto um NPC fala | Média | [#67](https://github.com/ByRodrigoVasco/IARA/issues/67) | Corrigido na `develop`, issue fechada |
+| BUG-23 | Setas de interação grandes cobrem o mapa | Média | [#68](https://github.com/ByRodrigoVasco/IARA/issues/68) | Corrigido na `develop`, issue fechada |
+| BUG-24 | Zona de saída fica acima da faixa que o jogador alcança na porta | Média | [#69](https://github.com/ByRodrigoVasco/IARA/issues/69) | Corrigido na `develop`, issue fechada |
+| BUG-25 | Falas dos NPCs iguais em todos os dias, sem cumprimento nem dica própria | Média | [#70](https://github.com/ByRodrigoVasco/IARA/issues/70) | Corrigido na `develop`, issue fechada |
+| BUG-26 | Post-it do computador sob o ponteiro, sem fita; ícones, teclado, mouse e janela destoando | Baixa | [#71](https://github.com/ByRodrigoVasco/IARA/issues/71) | Corrigido na `develop`, issue fechada |
+| BUG-27 | Cartões de início e fim do dia sem como pular | Baixa | [#72](https://github.com/ByRodrigoVasco/IARA/issues/72) | Corrigido na `develop`, issue fechada |
+| BUG-28 | Trilha de suspense já no primeiro dia | Baixa | [#73](https://github.com/ByRodrigoVasco/IARA/issues/73) | Corrigido na `develop`, issue fechada |
+| BUG-29 | Tarja Preta (poder inicial do Zito) fraco e sem sentido para o personagem | Média | [#74](https://github.com/ByRodrigoVasco/IARA/issues/74) | Corrigido na `feature/modo-sobrevivencia`, issue aberta até entrar na `develop` |
 
 **Sobre o BUG-02:** os dois vazamentos descritos abaixo já não existem. Restava uma carga duplicada do menu ao abrir o jogo, removida. O CT-24 oscilava porque media sem desenhar quadros, e o driver de vídeo só devolve uma textura apagada depois de um quadro. Com quadros, 400 voltas ao menu cresceram 19 MB (cerca de 0,05 MB por volta, contra os 7 MB originais).
 
@@ -375,8 +396,14 @@ sem querer.
 
 **Em aberto:** decidir se a opção fica no menu ou em `CONFIGURAÇÕES`.
 
+**Correção (08/11/2026):** a decisão foi uma escolha em duas telas depois de `INICIAR`: primeiro o modo, depois
+o save. Cada modo aceita vários saves, cada um com nome único e na própria pasta (`saves/normal/<nome>/`).
+Criar um save novo começa do Dia 1 sem tocar nos outros, e um save pode ser apagado, com confirmação. Branch
+`feature/modo-sobrevivencia`, commit `ad1ec96`. O usuário testou o fluxo no jogo real em 08/11/2026 e aprovou.
+O visual das duas telas mudou depois, no BUG-16.
+
 **Onde:** `code/src/screens/menu.c` e `handle_menu_action()` em `code/src/core/state_machine.c`
-**Coberto por:** nenhum teste automatizado (achado por inspeção)
+**Coberto por:** CT-79 a CT-87 (fluxo) e SL-01 a SL-29 (saves em pastas); antes, nenhum teste automatizado (achado por inspeção)
 
 ---
 
@@ -418,3 +445,192 @@ a cada envio: a imprudência é o caminho mais fácil.
 **Onde:** `render_ticket_suggestion()` em `code/src/screens/computer_loop.c`
 **Coberto por:** CT-78 cobre a lógica do envio. O clique durante a digitação é verificado à mão,
 porque a raylib não permite injetar o mouse
+
+---
+
+<a id="bug-15"></a>
+
+## BUG-15 — Carregamentos sem retorno visual e engasgos no menu
+
+**Labels:** `bug`, `desempenho`, `gravidade: média`
+
+Relatado em 08/11/2026: o jogo travava algumas vezes e demorava para carregar, até no menu, e durante o
+carregamento a tela ficava congelada, sem nenhum sinal de que algo acontecia.
+
+**Esperado:** quadros regulares no menu e nas telas de escolha, e uma tela de carregamento com a porcentagem
+sempre que a carga passar de um quadro.
+**Obtido:** o fundo do menu tinha 3334x2160 e levava cerca de 210 ms para decodificar. O menu carregava o escritório
+e o nome IARA que a abertura já tinha carregado (166 ms a mais), e as configurações recarregavam o escritório a
+cada abertura. A partida do Sobrevivência decodificava todas as imagens e os sons antes do primeiro quadro,
+com a tela parada.
+
+**Correção:** (1) tela de carregamento com a porcentagem, que só cresce, e a carga dividida em passos, com
+orçamento de 10 ms por quadro; (2) as imagens do menu carregam por trás da abertura, uma por quadro; (3) fundo do
+menu reduzido para 1112x720 (15 ms para decodificar); (4) cada imagem grande carrega uma vez só, com contagem de
+usos (`acquire_smooth_texture`); (5) o jogo grava em `iara-desempenho.log` os quadros acima de 60 ms. Medido com o
+jogo real: em 18 s de abertura e menu parado, os únicos quadros acima de 60 ms foram dois, perto de 1,4 s, quando a
+placa de vídeo usa pela primeira vez as imagens grandes.
+
+**Teste real (08/11/2026):** o usuário jogou cerca de 18 minutos no Sobrevivência e aprovou. Depois do carregamento,
+nenhum quadro passou de 60 ms durante a partida. Os quadros lentos que sobraram estão nos BUG-17 e BUG-18.
+
+**Onde:** `code/src/screens/loading.c`, `code/src/screens/menu.c`, `code/src/core/helper.c`, `code/src/core/state_machine.c`, `code/src/main.c`
+**Coberto por:** CT-88 (a porcentagem sobe) e CT-89 a CT-91 (imagens compartilhadas); os tempos foram medidos à parte, sem teste automatizado
+
+---
+
+<a id="bug-16"></a>
+
+## BUG-16 — Telas de modo e de save em lista vertical, pouco organizadas
+
+**Labels:** `bug`, `ui`, `gravidade: baixa`
+
+Retorno de um usuário final, repassado em 09/11/2026: a escolha do modo mostrava os dois modos um embaixo do outro,
+colados à esquerda, e a lista de saves era uma pilha de linhas sem separação, com o nome, o resumo e a data
+misturados numa linha só.
+
+**Esperado:** o modo no centro da tela, com os dois lado a lado e a opção de passar de um para o outro; os saves
+em cartões organizados.
+**Obtido:** lista vertical alinhada à esquerda nas duas telas.
+
+**Correção (09/11/2026):** a escolha de modo virou dois cartões lado a lado no centro, com esquerda e direita para
+passar de um para o outro, o cartão escolhido destacado e o botão `VOLTAR` embaixo. A lista de saves virou uma coluna
+centralizada de cartões, cada um com o nome, o resumo do progresso à esquerda e a data à direita; o save escolhido
+mostra o botão de apagar no canto, a barra de rolagem aparece quando nem todos cabem, e `VOLTAR` é um botão fixo
+embaixo. O mouse e o teclado seguem iguais. Branch `feature/modo-sobrevivencia`.
+
+**Onde:** `code/src/screens/mode_select.c`, `code/src/screens/save_select.c`, `code/src/ui/screen_style.c`
+**Coberto por:** CT-79 a CT-87 (fluxo) seguem passando; o visual foi conferido por captura de tela em 1600x900 e 1280x720
+
+---
+
+<a id="bug-17"></a>
+
+## BUG-17 — Quadro de 1,67 s no menu, sete segundos depois de abrir
+
+**Labels:** `bug`, `desempenho`, `gravidade: baixa`
+
+No teste real de 08/11/2026, `iara-desempenho.log` registrou um quadro de 1671 ms na tela do menu, 7,1 s depois
+de abrir o jogo. Não voltou nos 18 minutos seguintes, e o jogo não registrou erro.
+
+**Esperado:** nenhum quadro acima de 60 ms no menu.
+**Obtido:** um quadro de 1,67 s. Entre a abertura e o menu o jogo só carrega quatro imagens pequenas e não inicia o áudio,
+então a causa não está numa carga pesada do código. Pode ter sido um evento do Windows (arrastar ou focar a janela)
+ou a placa de vídeo, mas isso não foi confirmado.
+
+**Em aberto:** reproduzir. Se voltar, medir o tempo por etapa dentro do quadro (`handle_state_machine()` e `EndDrawing()`).
+
+**Onde:** abertura e menu (`code/src/screens/pre_menu.c`, `code/src/screens/menu.c`)
+**Coberto por:** nenhum teste; achado pelo log do jogo real
+
+---
+
+<a id="bug-18"></a>
+
+## BUG-18 — Troca de música e ambiente lê o arquivo na hora
+
+**Labels:** `bug`, `desempenho`, `gravidade: baixa`
+
+No mesmo teste real, três quadros passaram de 60 ms: 78 ms e 129 ms na tela de carregamento do Sobrevivência (abrir
+o dispositivo de áudio e carregar o lote de sons) e 130 ms no começo de uma partida, quando `sv_music_play()` e
+`sv_ambient_play()` carregam a música e o ambiente com `LoadMusicStream` no próprio quadro. Durante a partida, as
+trocas de música e de ambiente ficaram abaixo de 60 ms.
+
+**Esperado:** nenhum quadro acima de 60 ms ao começar a partida.
+**Obtido:** 130 ms no quadro em que a partida começa; nos dois quadros do carregamento a barra de progresso fica
+parada por um instante.
+
+**Em aberto:** carregar a música e o ambiente da primeira fase durante a tela de carregamento, e dividir o lote de
+sons em passos menores.
+
+**Onde:** `code/src/survival/sv_audio.c` (`start_stream()`, `sv_audio_init_step()`)
+**Coberto por:** nenhum teste; achado pelo log do jogo real
+
+---
+
+<a id="bug-19"></a>
+
+## BUG-19 — ESC fecha o jogo na hora e a campanha não tem pausa
+
+**Labels:** `bug`, `ui`, `gravidade: média`
+
+Achado na auditoria de usabilidade de 09/11/2026 (`docs/fds/usabilidade-nielsen.md`, heurísticas 3 e 5). No menu
+principal e no escritório, o ESC encerrava o jogo sem perguntar, a opção SAIR fazia o mesmo, e no Modo Sobrevivência
+DESISTIR da partida valia na hora. A campanha também não tinha pausa nem como voltar ao menu antes do final.
+
+**Esperado:** nenhuma ação difícil de desfazer acontece com uma tecla só, e o jogador consegue parar o jogo e sair.
+**Obtido:** uma tecla errada fechava o jogo.
+
+**Correção (09/11/2026):** SAIR e ESC no menu abrem a pergunta "SAIR DO JOGO?", com o botão que cancela já escolhido.
+No escritório, ESC (ou P) abre a pausa, com CONTINUAR, COMO JOGAR, VOLTAR AO MENU (salva antes) e SAIR DO JOGO (pergunta).
+No Sobrevivência, DESISTIR também pergunta. Branches `feature/heuristicas-de-nielsen` (campanha) e
+`feature/modo-sobrevivencia`.
+
+**Onde:** `code/src/core/state_machine.c`, `code/src/screens/menu.c`, `code/src/screens/game_loop.c`, `code/src/ui/pause_menu.c`, `code/src/ui/confirm_dialog.c`, `code/src/survival/survival.c`
+**Coberto por:** UX-04 a UX-06 e UX-09 a UX-15
+
+---
+
+<a id="bug-20"></a>
+
+## BUG-20 — O jogo não tem ajuda
+
+**Labels:** `bug`, `ui`, `gravidade: baixa`
+
+Heurística 10. Os controles só apareciam como imagens no escritório, e nada explicava o objetivo, o computador, a
+pausa, os saves nem o Modo Sobrevivência.
+
+**Esperado:** uma ajuda curta, fácil de achar e focada no que o jogador faz.
+**Obtido:** nenhuma.
+
+**Correção (09/11/2026):** opção AJUDA no menu principal, COMO JOGAR na pausa da campanha e no início e na pausa do
+Sobrevivência, com uma página por modo e as teclas escritas no rodapé de cada tela.
+
+**Onde:** `code/src/screens/help.c`, `code/src/screens/menu.c`
+**Coberto por:** UX-07, UX-08, UX-14 e UX-16
+
+---
+
+<a id="bug-21"></a>
+
+## BUG-21 — Falha ao salvar o progresso não é avisada
+
+**Labels:** `bug`, `ui`, `gravidade: média`
+
+Heurísticas 1 e 9. Salvar era silencioso, e uma falha (disco cheio, pasta sem permissão) só ia para o log do console:
+o jogador perdia o progresso sem saber.
+
+**Esperado:** o jogo diz que salvou e, se não conseguiu, explica o que conferir.
+**Obtido:** nenhum aviso.
+
+**Correção (09/11/2026):** aviso "Progresso salvo." ao voltar ao menu, e aviso de erro de 7 s ("Não consegui salvar o
+progresso. Confira se há espaço livre no disco e se a pasta do jogo permite gravar arquivos.") quando a gravação
+falha. No Sobrevivência, `sv_meta_last_save_ok()` diz se a última gravação deu certo, e a tela avisa ao comprar, ao
+escolher personagem e ao fim da partida.
+
+**Onde:** `code/src/ui/notice.c`, `code/src/core/state_machine.c`, `code/src/survival/survival.c`, `code/src/survival/sv_meta.c`
+**Coberto por:** UX-01 a UX-03, SV-94 e SV-95
+
+---
+
+<a id="bug-22"></a>
+
+## BUG-22 a BUG-29 — Achados do teste com jogadores (09/11/2026)
+
+**Labels:** `bug`, `ui`
+
+Testando a campanha e o Sobrevivência com jogadores, saíram estes problemas. Cada um já foi corrigido.
+
+| ID | O que acontecia | Correção |
+|---|---|---|
+| BUG-22 | O jogador continuava andando enquanto um NPC falava | Durante a conversa o jogador fica parado até a fala acabar (`interaction_open` em `handle_game_loop_screens`) |
+| BUG-23 | As setas das interações eram enormes e cortavam a tela | Uma seta pequena acompanha o jogador e aponta o próximo objetivo; perto de algo, um anel no chão e uma tecla ESPAÇO discreta indicam a interação |
+| BUG-24 | A zona de saída ficava acima da faixa onde o jogador consegue chegar na porta | A zona vai do começo da porta até a soleira; a hitbox do jogador ficou mais estreita (36 em vez de 50) |
+| BUG-25 | Os NPCs repetiam a mesma fala todos os dias, a dica aparecia sobre a cabeça do dono e eles ficavam sempre nos mesmos lugares | Cada NPC tem cumprimento, fala e, no dia dele, a dica (uma por dia); a dica é avisada de leve no computador; os lugares mudam a cada dia jogável |
+| BUG-26 | O post-it ficava sob o ponteiro, e os ícones, o teclado, o mouse e a janela eram quadrados e destoavam | Pixel art desenhada em código: ícones, janela, teclado e mouse que reagem a teclas e cliques, onda de clique e o post-it colado, inclinado, com fita e por cima do ponteiro |
+| BUG-27 | Os cartões de início e fim do dia só passavam sozinhos | Botão PULAR (ou ESPAÇO, ENTER e clique) |
+| BUG-28 | A música de suspense tocava desde o primeiro dia | O ambiente calmo toca nos primeiros dias, e a trilha de tensão entra aos poucos com a história |
+| BUG-29 | A Tarja Preta, poder inicial do Zito, era fraca e não combinava com ele | Virou a Nota Fiscal: um bumerangue de papel que vai até o inimigo mais próximo, atravessa quem estiver no caminho e volta, ferindo nas duas passagens |
+
+**Onde:** `code/src/game/npcs.c`, `code/src/screens/game_loop.c`, `code/src/screens/computer_loop.c`, `code/src/ui/computer_art.c`, `code/src/ui/cheat_sheet.c`, `code/src/core/audio.c`, `code/src/survival/sv_game.c`
+**Coberto por:** UX-18 a UX-22, `test_npcs` e a atualização do CT-35 e do CT-54
