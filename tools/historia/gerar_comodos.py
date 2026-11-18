@@ -96,6 +96,7 @@ COMODOS = {
             ("lixeira_1", 240, 30, True), ("planta_cinza", 372, 34, True),
         ],
         "na_parede": [("relogio", 115), ("mural", 223), ("mod_quadro_3", 366)],
+        "animacoes": [],
         "tapete": None,
     },
     # Copa: pacote Professional Kitchen. Bancada no fundo (geladeira, pia, micro-ondas, cafeteira) e duas mesinhas.
@@ -105,6 +106,8 @@ COMODOS = {
         "piso": "coz_piso",
         "parede": "coz_parede",
         "portas": [("corredor", "baixo", 144, 52, "corredor", "copa", "CORREDOR")],
+        "animacoes": [("vapor", "coz_cafeteira", 160, 24), ("vapor", "coz_cafeteira_2", 176, 24),
+                      ("luz", "coz_microondas", 213, 22)],
         "moveis": [
             ("coz_geladeira_aberta", 24, 66, True), ("coz_balcao_portas", 72, 44, True), ("coz_pia_dupla", 119, 46, True),
             ("coz_balcao_gavetas", 166, 44, True), ("coz_balcao_liso", 213, 44, True), ("coz_balcao_porta", 252, 44, True),
@@ -138,6 +141,7 @@ COMODOS = {
             ("cla_mesinha", 56, 176, True), ("cla_sofa_costas", 56, 214, True), ("cla_poltrona_lado~", 16, 180, True),
             ("cla_poltrona_lado", 324, 176, True), ("cla_planta_alta", 300, 214, True), ("cla_planta_2", 326, 214, True),
         ],
+        "animacoes": [],
         "na_parede": [("cla_diploma", 140), ("cla_quadro", 172), ("cla_diploma_2", 204), ("cla_quadrinho", 250)],
         "tapete": (112, 70, 116, 94, (110, 40, 36), (196, 150, 70)),
     },
@@ -149,6 +153,7 @@ COMODOS = {
         "parede": "mod_parede",
         "portas": [("corredor", "baixo", 174, 52, "corredor", "reunioes", "CORREDOR")],
         "mesa": (110, 112, 180, 34),
+        "animacoes": [("tv", "mod_tv", 200, 62)],
         "moveis": [
             ("mod_tv", 200, 62, True), ("mod_estante_vidro", 32, 60, True), ("mod_estante_alta", 66, 60, True),
             ("mod_rack", 336, 46, True), ("mod_orquidea", 320, 24, False, 30), ("mod_planta", 384, 52, True),
@@ -178,6 +183,10 @@ COMODOS = {
         "na_parede": [("janela_2", 100), ("relogio", 232)],
         "tapete": None,
         "cabos": 3,
+        # O servidor vermelho (vivo) dá defeito de vez em quando; o rack azul pisca a atividade da rede
+        "animacoes": [("servidor_vivo", "pr_rackVivo", 30, 70), ("rack", "pr_rack", 84, 70),
+                      ("servidor_vivo", "pr_rackVivo", 270, 70), ("rack", "pr_rack", 318, 70),
+                      ("console", "pr_console", 216, 214), ("monitor", "pc_verde", 258, 120)],
     },
     "porao": {
         "titulo": "PORÃO",
@@ -195,6 +204,7 @@ COMODOS = {
         "na_parede": [],
         "tapete": None,
         "poco": (200, 174, 34),
+        "animacoes": [("agua",), ("apagao",)],
         "sujeira": ["rachadura_1", "rachadura_2", "poeira_1", "poeira_3", "entulho", "mato_1", "gosma", "jornal_2", "pedra_2"],
     },
 }
@@ -455,6 +465,125 @@ def portas(comodo):
 
 
 # -----------------------------------------------------------------------------
+# Animações: o script acha nas próprias peças os pixels que mexem (LEDs, olhos, telas)
+# e o jogo desenha o efeito por cima da imagem do cômodo (rooms.c)
+# -----------------------------------------------------------------------------
+
+ANIM_C = {"leds": "ROOM_ANIM_LEDS", "onda": "ROOM_ANIM_LEDS_WAVE", "olhos": "ROOM_ANIM_EYES",
+          "defeito": "ROOM_ANIM_GLITCH", "pisca": "ROOM_ANIM_BLINK", "tela": "ROOM_ANIM_SCREEN",
+          "slides": "ROOM_ANIM_SLIDES", "vapor": "ROOM_ANIM_STEAM", "luz": "ROOM_ANIM_GLOW",
+          "agua": "ROOM_ANIM_WATER", "apagao": "ROOM_ANIM_DARK_FLICKER"}
+
+
+def _pixels(arr, cond, ox, oy):
+    ys, xs = np.nonzero(cond)
+    return [(ox + int(x), oy + int(y), *[int(c) for c in arr[y, x, :3]]) for y, x in zip(ys, xs)]
+
+
+def maior_mancha(mascara):
+    """Maior grupo de pixels vizinhos (4 direções) da máscara."""
+    visto = np.zeros_like(mascara)
+    melhor = []
+    for y0, x0 in zip(*np.nonzero(mascara)):
+        if visto[y0, x0]:
+            continue
+        pilha, grupo = [(y0, x0)], []
+        visto[y0, x0] = True
+        while pilha:
+            y, x = pilha.pop()
+            grupo.append((y, x))
+            for ny, nx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+                if 0 <= ny < mascara.shape[0] and 0 <= nx < mascara.shape[1] and mascara[ny, nx] and not visto[ny, nx]:
+                    visto[ny, nx] = True
+                    pilha.append((ny, nx))
+        if len(grupo) > len(melhor):
+            melhor = grupo
+    saida = np.zeros_like(mascara)
+    for y, x in melhor:
+        saida[y, x] = True
+    return saida
+
+
+def _bbox(cond, ox, oy):
+    ys, xs = np.nonzero(cond)
+    if len(xs) == 0:
+        return None
+    return (ox + xs.min(), oy + ys.min(), xs.max() - xs.min() + 1, ys.max() - ys.min() + 1)
+
+
+def analisar_animacoes(comodo, rng):
+    """Lista de (tipo, área em pixels de arte, pixels [(x, y, r, g, b)])."""
+    x0, y0, w, h = comodo["interior"]
+    out = []
+    for spec in comodo.get("animacoes", []):
+        tipo = spec[0]
+        if tipo == "agua":
+            cx, cy, r = comodo["poco"]
+            out.append(("agua", (x0 + cx - r + 6, y0 + cy - (r - 6) / 1.4, 2 * (r - 6), 2 * (r - 6) / 1.4), []))
+            continue
+        if tipo == "apagao":
+            out.append(("apagao", (0, 0, W, H), []))
+            continue
+        nome, mx, my = spec[1:]
+        p = peca(nome)
+        a = np.asarray(p).astype(int)
+        ox, oy = int(round(x0 + mx - p.width / 2)), int(round(y0 + my - p.height))
+        r_, g_, b_, al = a[:, :, 0], a[:, :, 1], a[:, :, 2], a[:, :, 3] > 0
+        vermelho = al & (r_ > 150) & (g_ < 100) & (b_ < 100)
+        verde = al & (g_ > 140) & (r_ < 130)
+        if tipo == "servidor_vivo":
+            # Olhos: vermelho dentro do painel preto; LEDs: o resto do vermelho vivo
+            preto = al & (a[:, :, :3].max(axis=2) < 16)
+            painel = _bbox(maior_mancha(preto), 0, 0)          # O painel é a maior mancha preta
+            px, py, pw, ph = painel
+            dentro = np.zeros_like(vermelho)
+            dentro[py:py + ph, px:px + pw] = True
+            out.append(("onda", (ox, oy, p.width, p.height), _pixels(a, vermelho & ~dentro, ox, oy)))
+            out.append(("olhos", (ox, oy, p.width, p.height), _pixels(a, vermelho & dentro, ox, oy)))
+            out.append(("defeito", (ox, oy, p.width, p.height), []))
+        elif tipo == "rack":
+            out.append(("leds", (ox, oy, p.width, p.height), _pixels(a, vermelho | verde, ox, oy)))
+        elif tipo == "console":
+            metade = np.zeros_like(vermelho)
+            metade[:, p.width // 2:] = True
+            letras = al & (r_ > 200) & (r_ > g_ + 60) & (b_ < 160)                      # "ERRO" em vermelho claro
+            out.append(("pisca", (ox, oy, p.width, p.height), _pixels(a, letras & metade, ox, oy)))
+            tela = al & (g_ > 70) & (g_ > r_ + 25) & (g_ > b_ + 10) & ~metade
+            out.append(("tela", _bbox(tela, ox, oy), []))
+        elif tipo == "monitor":
+            tela = al & (g_ > 80) & (b_ > 60) & (r_ < 30)
+            out.append(("tela", _bbox(tela, ox, oy), []))
+        elif tipo == "tv":
+            tela = al & (a[:, :, :3].max(axis=2) < 40)
+            out.append(("slides", _bbox(tela, ox, oy), []))
+        elif tipo == "vapor":
+            out.append(("vapor", (ox + p.width / 2 - 3, oy - 12, 6, 16), []))
+        elif tipo == "luz":
+            janela = al & (r_ > 200) & (g_ > 170) & (b_ < 140)
+            out.append(("luz", _bbox(janela, ox, oy), []))
+    return out
+
+
+def animacoes_escritorio():
+    """LEDs dos racks no canto de cima à direita do office.png (pixels coloridos e vivos)."""
+    a = np.asarray(Image.open(RAIZ / "code/assets/sprites/environment/office.png").convert("RGB")).astype(int)
+    x0, y0, x1, y1 = 920, 42, 1050, 97
+    c = a[y0:y1, x0:x1]
+    vivo = (c.max(axis=2) > 110) & (c.max(axis=2) - c.min(axis=2) > 60)
+    ow, oh = 1062 / 2, 877 / 2
+    pix = [(x - ow, y - oh, r, g, b) for (x, y, r, g, b) in _pixels(c, vivo, x0, y0)]
+    return [("leds", (x0 - ow, y0 - oh, x1 - x0, y1 - y0), pix, 1.0)]
+
+
+def anims_em_ref(lista):
+    """Converte de pixels de arte do cômodo para o espaço de referência (pixel de arte = 2)."""
+    out = []
+    for tipo, area, pix in lista:
+        out.append((tipo, ref_rect(*area), [(*ref_ponto(x, y), r, g, b) for x, y, r, g, b in pix], float(ESCALA)))
+    return out
+
+
+# -----------------------------------------------------------------------------
 # Saída em C
 # -----------------------------------------------------------------------------
 
@@ -489,13 +618,25 @@ def escrever_c(dados):
             linhas.append('    {%s, %s, %d, {%.1ff, %.1ff}, %s, "%s"},' % (
                 c_rect(p["zona"]), ENUM[p["destino"]], alvo, p["chegada"][0], p["chegada"][1], DIRECAO_C[p["olhar"]], p["rotulo"]))
         linhas.append("};")
+        for k, (tipo, area, pix, tam) in enumerate(d["anims"]):
+            if pix:
+                linhas.append(f"static const room_pixel room_pixels_{n}_{k}[] = {{")
+                linhas += ["    " + " ".join("{%.1ff, %.1ff, %d, %d, %d}," % q for q in pix[i:i + 4]) for i in range(0, len(pix), 4)]
+                linhas.append("};")
+        if d["anims"]:
+            linhas.append(f"static const room_anim room_anims_{n}[] = {{")
+            for k, (tipo, area, pix, tam) in enumerate(d["anims"]):
+                ref = f"room_pixels_{n}_{k}, (int)(sizeof(room_pixels_{n}_{k}) / sizeof(room_pixels_{n}_{k}[0]))" if pix else "NULL, 0"
+                linhas.append("    {%s, %s, %s, %.1ff, %.2ff}," % (ANIM_C[tipo], c_rect(area), ref, tam, (k * 0.37 + len(n) * 0.61) % 1.0))
+            linhas.append("};")
         linhas.append("")
     linhas.append("static const room_def room_defs[ROOM_COUNT] = {")
     for n in ordem:
         d = dados[n]
         img = f'"code/assets/sprites/environment/comodos/{n}.png"' if n != "escritorio" else "NULL"
         obs = f"room_obstacles_{n}, (int)(sizeof(room_obstacles_{n}) / sizeof(room_obstacles_{n}[0]))" if d["colisoes"] else "NULL, 0"
-        linhas.append(f'    [{ENUM[n]}] = {{"{d["titulo"]}", {img}, {obs}, room_doors_{n}, (int)(sizeof(room_doors_{n}) / sizeof(room_doors_{n}[0]))}},')
+        anims = f"room_anims_{n}, (int)(sizeof(room_anims_{n}) / sizeof(room_anims_{n}[0]))" if d["anims"] else "NULL, 0"
+        linhas.append(f'    [{ENUM[n]}] = {{"{d["titulo"]}", {img}, {obs}, room_doors_{n}, (int)(sizeof(room_doors_{n}) / sizeof(room_doors_{n}[0])), {anims}}},')
     linhas += ["};", "", "#endif // ROOMS_DATA_H", ""]
     SAIDA_C.write_text("\n".join(linhas), encoding="utf-8")
 
@@ -504,13 +645,15 @@ def gerar(previa=False):
     SAIDA_IMG.mkdir(parents=True, exist_ok=True)
     dados = {"escritorio": {"titulo": "ESCRITÓRIO", "colisoes": [], "portas": [{
         "nome": "corredor", "zona": PORTA_ESCRITORIO["zona"], "chegada": PORTA_ESCRITORIO["chegada"],
-        "olhar": PORTA_ESCRITORIO["olhar"], "destino": "corredor", "porta_destino": "escritorio", "rotulo": "CORREDOR"}]}}
+        "olhar": PORTA_ESCRITORIO["olhar"], "destino": "corredor", "porta_destino": "escritorio", "rotulo": "CORREDOR"}],
+        "anims": animacoes_escritorio()}}
     imagens = []
     for i, (nome, comodo) in enumerate(COMODOS.items()):
         img = desenhar(nome, comodo, np.random.default_rng(100 + i))
         img.save(SAIDA_IMG / f"{nome}.png", optimize=True)
         imagens.append(img)
-        dados[nome] = {"titulo": comodo["titulo"], "colisoes": colisoes(comodo), "portas": portas(comodo)}
+        dados[nome] = {"titulo": comodo["titulo"], "colisoes": colisoes(comodo), "portas": portas(comodo),
+                       "anims": anims_em_ref(analisar_animacoes(comodo, None))}
     escrever_c(dados)
     if previa:
         cols = 3

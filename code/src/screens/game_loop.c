@@ -180,6 +180,8 @@ static int room_obstacle_count = 0;
 static int pending_door = -1;          // Porta por onde o jogador está saindo, enquanto a tela escurece
 static float room_fade_time = 0.0f;    // De 0 a 2 * ROOM_FADE_TIME: escurece, troca o cômodo e clareia
 static bool door_armed = true;         // Só vale pisar numa porta depois de sair da zona por onde chegou
+static Color last_map_tint = {255, 255, 255, 255}; // Brilho e opacidade do último mapa desenhado (as animações usam o mesmo)
+static float animation_time = 0.0f;    // Relógio das animações dos cômodos: só anda com o jogador no mapa (para na pausa)
 
 // Obstáculos medidos no mapa de referência (office.png), relativos ao centro da tela
 // Linha inferior da porta no asset: y = 808 px (centro vertical do mapa = 438,5).
@@ -1324,6 +1326,7 @@ static void draw_map_texture(Texture2D map, float art_scale, float extra_darkeni
     Color office_tint = {brightness, brightness, brightness, color_to_fade.a};
 
     DrawTexturePro(map, source, dest, (Vector2){0, 0}, 0.0f, office_tint);
+    last_map_tint = office_tint;
 
     if (water_level > 0.0f)
     {
@@ -1447,7 +1450,11 @@ static void render_room_scene(void)
     float extra = (current_room == ROOM_PORAO) ? BASEMENT_EXTRA_DARKENING : 0.0f;
 
     draw_map_texture(room_textures[current_room], ROOM_ART_SCALE, extra);
+    room_draw_animations(current_room, animation_time, get_scale(), get_map_center(), room_textures[current_room],
+                         ROOM_ART_SCALE, last_map_tint, false);
     render_player();
+    room_draw_animations(current_room, animation_time, get_scale(), get_map_center(), room_textures[current_room],
+                         ROOM_ART_SCALE, last_map_tint, true);
 }
 
 /**
@@ -1472,6 +1479,7 @@ static void render_room_name(void)
 static void render_office_scene(void)
 {
     render_game_loop_escritorio();
+    room_draw_animations(ROOM_ESCRITORIO, animation_time, get_scale(), get_map_center(), in_game_office, 1.0f, last_map_tint, false);
     draw_npcs(get_scale(), color_to_fade, current_estagiario_position.y, true);
     render_player();
     draw_npcs(get_scale(), color_to_fade, current_estagiario_position.y, false);
@@ -1926,6 +1934,7 @@ void handle_game_loop_screens(void)
         update_obstacle_recs();
         update_room_obstacles();
         update_room_transition();
+        animation_time += GetFrameTime();
 
         hint_item_rectangle = get_hint_item_rectangle(get_scale(), get_map_center());
 
