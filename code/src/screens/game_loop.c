@@ -122,6 +122,7 @@ static char card_title_text[32];                // Título do cartão com o núm
 
 // Passagem entre os dias
 static float transition_time = 0.0f;            // Segundos no dia de flash ou de salto atual
+static int jump_block_total_days = 0;             // Tamanho do bloco de salto puro atual, para a trilha perder uma fatia por dia
 static float jump_day_time = 0.0f;              // Quanto dura cada dia do bloco de salto atual
 
 #define DAY_END_CARD_FIRST_LINE_1 "Você encerra seu primeiro expediente e deixa o escritório."
@@ -417,6 +418,8 @@ static void enter_current_day(void)
 
     if (current_game_state_variables.day_type == PLAYABLE_DAY)
     {
+        jump_block_total_days = 0;
+        audio_set_jump_progress(0.0f);
         open_playable_day();
         return;
     }
@@ -424,6 +427,15 @@ static void enter_current_day(void)
     if (current_game_state_variables.day_type == JUMP_DAY)
     {
         jump_day_time = JUMP_BLOCK_TIME / calendar_get_jump_block_length(day);
+
+        int days_left = calendar_get_jump_block_length(day);
+        if (days_left > jump_block_total_days) jump_block_total_days = days_left;
+        audio_set_jump_progress((float)(jump_block_total_days - days_left) / (float)jump_block_total_days);
+    }
+    else
+    {
+        jump_block_total_days = 0;
+        audio_set_jump_progress(0.0f);
     }
 
     current_screen = DAY_TRANSITION_SCREEN;
@@ -1601,6 +1613,14 @@ static void render_high_contrast_outlines(void)
 void handle_game_loop_screens(void)
 {
     if (current_screen != IN_GAME_SCREEN) update_player_footstep_audio(false);
+
+    // A trilha acompanha o momento: faixa própria no quiz, trilha abafada e som curto nos cartões de flash e salto
+    if (current_screen == COMPUTER_SCREEN) audio_set_context(AUDIO_CONTEXT_QUIZ);
+    else if (current_screen == DAY_TRANSITION_SCREEN)
+    {
+        audio_set_context(current_game_state_variables.day_type == FLASH_DAY ? AUDIO_CONTEXT_FLASH : AUDIO_CONTEXT_JUMP);
+    }
+    else audio_set_context(AUDIO_CONTEXT_OFFICE);
 
     // Fora do quadro da cena: as texturas do computador ainda seriam usadas se fossem liberadas depois de desenhar
     if (current_screen == COMPUTER_SCREEN && computer_exit_finished)

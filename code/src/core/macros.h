@@ -98,6 +98,9 @@ extern unsigned int middle_screen_y;
 #define MENU_MUSIC_PATH SOUNDS_PATH "DEMO -  MENU.mp3"
 #define GAME_MUSIC_PATH SOUNDS_PATH "DEMO - GAME.mp3"
 #define CALM_MUSIC_PATH SOUNDS_PATH "SOM AMBIENTE.mp3"
+#define QUIZ_MUSIC_PATH SOUNDS_PATH "SOM AMBIENTE SUSPENSE.mp3"   // Tela do computador (quiz)
+#define FLASH_STINGER_PATH SOUNDS_PATH "TRANSIÇÃO 2.mp3"          // Entrada de um Flash do dia
+#define JUMP_STINGER_PATH SOUNDS_PATH "TRANSIÇÃO 1.mp3"           // Entrada de um bloco de salto puro
 #define MOUSE_CLICK_SOUND_PATH SOUNDS_PATH "CLICK MOUSE.mp3"
 #define IARA_VOICE_SOUND_PATH SOUNDS_PATH "ARI VOICE BLIP.mp3"
 #define PLAYER_FOOTSTEPS_SOUND_PATH SOUNDS_PATH "SOM DE PASSOS.mp3"

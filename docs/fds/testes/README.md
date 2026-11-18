@@ -15,6 +15,7 @@ simulando o uso real de um jogador.
 | **Screencast da Sprint 02** | Execução de 03/11/2026 sobre a `develop` (`63c2d01`), gravada: **76 de 76 aprovados**. [Vídeo](../sprint-02/screencast-testes.mp4) e [log](../sprint-02/execucao-screencast-2026-11-03.txt) |
 | **Atualização de 07/11/2026** | Branch `test/us03-modo-automatico`, com o CT-77 e o CT-78 incluídos (US03: PI2-226 a PI2-228). BUG-13 e BUG-14 corrigidos |
 | **Atualização de 09/11/2026** | Branch `test/us14-ignorar-npcs`, com o CT-79 incluído (US14: PI2-251). Bloco 3 com 28 de 28 aprovados |
+| **Atualização de 17/11/2026 (trilha)** | Branch `feat/trilha-por-momento`, com o CT-92 e o CT-93 incluídos (US15: PI2-231, PI2-259 e PI2-260). Bloco 2 com 37 de 37 aprovados |
 | **Atualização de 17/11/2026** | Branch `fix/textos-sobrepostos-e-modos-de-janela`, com UX-23 a UX-26 no bloco 3 (textos das cartas e do HUD do Sobrevivência, modos da janela). BUG-30 a BUG-32. Bloco 3 com 56 de 56 aprovados |
 | **Atualização de 16/11/2026** | Branch `feature/volume-trilha-efeitos`, com o CT-80 e o CT-81 incluídos (US20: PI2-279 e PI2-281). CT-43 passa a conferir os dois volumes. Bloco 2 com 35 de 35 e bloco 3 com 37 de 37 aprovados |
 
@@ -36,7 +37,7 @@ de narrar durante a gravação do screencast.
 A suíte monta o jogo de verdade — os mesmos módulos, os mesmos arquivos de mídia,
 a mesma máquina de estados — e o conduz como um jogador faria. Não há simulação de
 fachada: `test_sistema` (CT-01 a CT-16) inclui `game_loop.c` para alcançar o estado
-interno real da partida, `test_conteudo` (CT-17 a CT-24, CT-37, CT-41, CT-43, CT-47 a CT-52, CT-57, CT-58, CT-61 a CT-70, CT-74, CT-77, CT-78 e CT-81) percorre os chamados e o menu, e
+interno real da partida, `test_conteudo` (CT-17 a CT-24, CT-37, CT-41, CT-43, CT-47 a CT-52, CT-57, CT-58, CT-61 a CT-70, CT-74, CT-77, CT-78, CT-81, CT-92 e CT-93) percorre os chamados e o menu, e
 `test_fluxo` (CT-25 a CT-36, CT-42 e CT-44 a CT-46, CT-53 a CT-56, CT-59, CT-60, CT-71 a CT-73, CT-75, CT-76, CT-79 e CT-80) monta o jogo inteiro menos a `main.c` e o percorre do
 começo ao fim com a janela à vista: abertura, menu, CRÉDITOS e a volta ao menu,
 INICIAR, cartão do dia, caminhada pelo escritório, tutorial, os cinco chamados (um deles conferindo a sugestão da IARA), o relatório do dia, a volta ao mapa e a saída pela porta, que encerra o dia. Depois repete o dia pelos outros caminhos: colinha do mural, tudo enviado sem conferir, failsafe e saída do computador no meio do dia. Junto rodam os testes de unidade
@@ -127,6 +128,8 @@ INICIAR, cartão do dia, caminhada pelo escritório, tutorial, os cinco chamados
 | CT-79 | Sem falar com nenhum NPC, o jogador conclui os 9 dias jogáveis e chega ao final: anda desviando dos NPCs, e no computador e na porta nenhum NPC toma o ESPAÇO (US14, PI2-251) | OK |
 | CT-80 | Configurações escolhidas (contraste, brilho, música, efeitos e tela cheia) seguem valendo no menu, no cartão do dia, no escritório, no computador e ao reabrir a tela (US20, PI2-281) | OK |
 | CT-81 | Volume da trilha e dos efeitos são independentes, ficam entre 0 e 1, e um `iara.ini` antigo, com um volume só, continua valendo para os dois (US20, PI2-279) | OK |
+| CT-92 | A trilha tem uma mistura por momento: menu sozinho, escritório calmo ou tenso (a soma das duas faixas não muda com a tensão), faixa própria no quiz e trilha abafada no flash e no salto puro (US15, PI2-231 e PI2-259) | OK |
+| CT-93 | A troca de faixa é gradual nos dois sentidos, dura o tempo do fade (0,8 s) sem pulo nem passar do alvo, e o contexto da trilha é guardado (US15, PI2-260) | OK |
 
 ## Evidência da US14: ignorar os NPCs
 
