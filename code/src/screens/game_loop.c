@@ -18,6 +18,7 @@
 #include "calendar.h"
 #include "audio.h"
 #include "pause_menu.h"
+#include "rooms.h"
 
 // Valor de sentinela para indicar que o temporizador do cartão de introdução ainda não começou a contar
 #define DID_NOT_START -30
@@ -165,6 +166,20 @@ static Rectangle estagiario_computer_collision_rectangle; // Área de gatilho pa
 static Rectangle estagiario_collision_rec;               // Hitbox atualizada dinamicamente do jogador
 static Rectangle hint_item_rectangle;                     // Mural onde fica o bilhete com a dica
 static bool show_debug_hitboxes = false;                 // Modo debug (F1): desenha as hitboxes de colisão
+
+// Cômodos além do escritório (ver rooms.h): um por vez na tela, trocando ao passar pela porta
+#define ROOM_ART_SCALE 2.0f                       // Cada pixel da imagem do cômodo vale 2 pixels do office.png
+#define ROOM_FADE_TIME 0.18f                      // Segundos para escurecer (e depois para clarear) ao trocar de cômodo
+#define DOOR_LABEL_DISTANCE_AT_REFERENCE 190.0f   // Perto assim de uma porta, aparece o nome do cômodo do outro lado
+#define DOOR_LABEL_FONT_AT_REFERENCE 24.0f
+#define BASEMENT_EXTRA_DARKENING 45.0f            // O porão é mais escuro que o resto do prédio
+static room_id current_room = ROOM_ESCRITORIO;
+static Texture2D room_textures[ROOM_COUNT];
+static Rectangle room_obstacles_screen[ROOM_MAX_OBSTACLES];
+static int room_obstacle_count = 0;
+static int pending_door = -1;          // Porta por onde o jogador está saindo, enquanto a tela escurece
+static float room_fade_time = 0.0f;    // De 0 a 2 * ROOM_FADE_TIME: escurece, troca o cômodo e clareia
+static bool door_armed = true;         // Só vale pisar numa porta depois de sair da zona por onde chegou
 
 // Obstáculos medidos no mapa de referência (office.png), relativos ao centro da tela
 // Linha inferior da porta no asset: y = 808 px (centro vertical do mapa = 438,5).
@@ -376,6 +391,10 @@ static void place_player_at_entrance(void)
     current_direction = NORTH;
     current_estagiario_texture_direction = estagiario_texture[NORTH];
     walk_time = 0.0f;
+    current_room = ROOM_ESCRITORIO;
+    pending_door = -1;
+    room_fade_time = 0.0f;
+    door_armed = true;
 }
 
 /**
@@ -563,6 +582,167 @@ static Vector2 get_map_center(void)
     return (Vector2){GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f};
 }
 
+// ---------------------------------------------------------------------------
+// CÔMODOS
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief Hitbox do jogador no espaço de referência do mapa (o mesmo de rooms_data.h).
+ */
+static Rectangle get_player_hitbox_reference(void)
+{
+    Vector2 center = get_map_center();
+    float scale = get_scale();
+
+    update_collision_rec();
+    return (Rectangle){(estagiario_collision_rec.x - center.x) / scale, (estagiario_collision_rec.y - center.y) / scale,
+                       estagiario_collision_rec.width / scale, estagiario_collision_rec.height / scale};
+}
+
+/**
+ * @brief Converte as paredes e os móveis do cômodo atual para a tela (a janela pode mudar de tamanho).
+ */
+static void update_room_obstacles(void)
+{
+    const room_def *room = room_get(current_room);
+
+    room_obstacle_count = 0;
+    if (current_room == ROOM_ESCRITORIO || !room) return;
+
+    for (int i = 0; i < room->obstacle_count && i < ROOM_MAX_OBSTACLES; i++)
+    {
+        room_obstacles_screen[room_obstacle_count++] = scale_reference_rect(room->obstacles[i], get_scale(), get_map_center());
+    }
+}
+
+/**
+ * @brief Põe o jogador do lado de dentro da porta por onde ele chega, olhando para o cômodo.
+ */
+static void place_player_at_door(room_id room_id_value, int door_index)
+{
+    const room_door *door = &room_get(room_id_value)->doors[door_index];
+    Vector2 center = get_map_center();
+    float scale = get_scale();
+
+    current_estagiario_position.x = center.x + (door->spawn.x - HITBOX_OFFSET_X_AT_REFERENCE - HITBOX_WIDTH_AT_REFERENCE / 2.0f) * scale;
+    current_estagiario_position.y = center.y + (door->spawn.y - HITBOX_OFFSET_Y_AT_REFERENCE - HITBOX_HEIGHT_AT_REFERENCE / 2.0f) * scale;
+    current_direction = door->facing;
+    current_estagiario_texture_direction = estagiario_texture[current_direction];
+    walk_time = 0.0f;
+    update_collision_rec();
+}
+
+/**
+ * @brief Começa a trocar de cômodo quando o jogador pisa numa porta.
+ *
+ * Ao chegar, o jogador aparece fora da zona da porta; mesmo assim, a porta por onde ele entrou
+ * só volta a valer depois que ele sai de qualquer zona (evita ir e voltar sem querer).
+ */
+static void check_room_doors(void)
+{
+    if (pending_door >= 0) return;
+
+    int door = room_door_touching(current_room, get_player_hitbox_reference());
+
+    if (door < 0)
+    {
+        door_armed = true;
+        return;
+    }
+    if (!door_armed) return;
+
+    pending_door = door;
+    room_fade_time = 0.0f;
+    walk_time = 0.0f;
+}
+
+/**
+ * @brief Avança a troca de cômodo: no meio do escurecer, muda o cômodo e põe o jogador na porta de chegada.
+ */
+static void update_room_transition(void)
+{
+    if (pending_door < 0) return;
+
+    float before = room_fade_time;
+
+    room_fade_time += GetFrameTime();
+    if (before < ROOM_FADE_TIME && room_fade_time >= ROOM_FADE_TIME)
+    {
+        room_door door = room_get(current_room)->doors[pending_door];
+
+        current_room = door.to_room;
+        place_player_at_door(current_room, door.to_door);
+        update_room_obstacles();
+        nearby_npc_id = -1;
+        door_armed = false;
+    }
+    if (room_fade_time >= 2.0f * ROOM_FADE_TIME)
+    {
+        pending_door = -1;
+        room_fade_time = 0.0f;
+    }
+}
+
+/**
+ * @brief Tela preta que escurece e clareia durante a troca de cômodo.
+ */
+static void render_room_fade(void)
+{
+    if (pending_door < 0) return;
+
+    float t = room_fade_time / ROOM_FADE_TIME;
+    float amount = (t < 1.0f) ? t : 2.0f - t;
+
+    if (amount < 0.0f) amount = 0.0f;
+    if (amount > 1.0f) amount = 1.0f;
+    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), (Color){0, 0, 0, (unsigned char)(255.0f * amount)});
+}
+
+/**
+ * @brief Nome do cômodo do outro lado, numa plaquinha perto de cada porta próxima do jogador.
+ */
+static void render_door_labels(void)
+{
+    const room_def *room = room_get(current_room);
+    Rectangle player = get_player_hitbox_reference();
+    Vector2 player_center = {player.x + player.width / 2.0f, player.y + player.height / 2.0f};
+    float scale = get_scale();
+    float font_size = DOOR_LABEL_FONT_AT_REFERENCE * scale;
+    float padding = 6.0f * scale;
+
+    if (!room || pending_door >= 0) return;
+
+    for (int i = 0; i < room->door_count; i++)
+    {
+        Rectangle zone = room->doors[i].zone;
+        Vector2 zone_center = {zone.x + zone.width / 2.0f, zone.y + zone.height / 2.0f};
+
+        if (hypotf(player_center.x - zone_center.x, player_center.y - zone_center.y) > DOOR_LABEL_DISTANCE_AT_REFERENCE) continue;
+
+        // A placa fica do lado de dentro do cômodo: abaixo das portas de cima, acima das de baixo
+        float inside = (zone_center.y < 0.0f) ? 44.0f : -44.0f;
+        Vector2 size = MeasureTextEx(default_game_font, room->doors[i].label, font_size, font_size * 0.04f);
+        Vector2 center = get_map_center();
+        float x = center.x + zone_center.x * scale - size.x / 2.0f;
+        float y = center.y + (zone_center.y + inside) * scale - size.y / 2.0f;
+        Color background = {20, 18, 26, (unsigned char)(200 * color_to_fade.a / 255)};
+
+        DrawRectangleRounded((Rectangle){x - padding, y - padding / 2.0f, size.x + 2.0f * padding, size.y + padding}, 0.3f, 6, background);
+        DrawTextEx(default_game_font, room->doors[i].label, (Vector2){x, y}, font_size, font_size * 0.04f, color_to_fade);
+    }
+}
+
+/**
+ * @brief Retângulo (na tela) da porta que leva de volta ao escritório, para a seta de objetivo.
+ */
+static Rectangle get_door_toward_office_rectangle(void)
+{
+    int door = room_door_toward_office(current_room);
+
+    if (door < 0) return (Rectangle){0};
+    return scale_reference_rect(room_get(current_room)->doors[door].zone, get_scale(), get_map_center());
+}
+
 /**
  * @brief Inicializa todas as variáveis, carrega imagens da memória de disco para a GPU,
  * redimensiona ativos visuais, calcula tamanhos de fontes e define os estados iniciais.
@@ -591,6 +771,13 @@ void initialize_game_loop_variables(void)
 
     // Carrega o mapa do escritório
     in_game_office = LoadTexture("code/assets/sprites/environment/office.png");
+
+    // Carrega a imagem de cada cômodo (o escritório usa o office.png acima)
+    for (int i = 0; i < ROOM_COUNT; i++)
+    {
+        const char *image = room_get((room_id)i)->image;
+        room_textures[i] = image ? LoadTexture(image) : (Texture2D){0};
+    }
 
     // Carregamento e redimensionamento das imagens das dicas de controle na tela
     float rescaling_factor_tip = 1.3f;
@@ -822,6 +1009,16 @@ static int utf8_prefix_bytes(const char *text, int characters)
  */
 void handle_map_interactables(void)
 {
+    // Computador, mural, NPCs e saída ficam todos no escritório
+    if (current_room != ROOM_ESCRITORIO)
+    {
+        is_near_computer = false;
+        is_near_hint = false;
+        is_near_exit = false;
+        nearby_npc_id = -1;
+        return;
+    }
+
     // Checa colisão AABB (Axis-Aligned Bounding Box) entre o jogador e o computador
     is_near_computer = CheckCollisionRecs(estagiario_collision_rec, estagiario_computer_collision_rectangle);
     is_near_hint = calendar_has_investigation(current_game_state_variables.current_day) &&
@@ -939,6 +1136,16 @@ static int get_player_movement_obstacles(Rectangle obstacles[])
 {
     int movement_obstacle_count = 0;
 
+    // Fora do escritório valem só as paredes e os móveis do cômodo
+    if (current_room != ROOM_ESCRITORIO)
+    {
+        for (int i = 0; i < room_obstacle_count; i++)
+        {
+            obstacles[movement_obstacle_count++] = room_obstacles_screen[i];
+        }
+        return movement_obstacle_count;
+    }
+
     for (int i = 0; i < OBSTACLE_COUNT; i++)
     {
         obstacles[movement_obstacle_count++] = office_obstacles[i];
@@ -963,7 +1170,7 @@ static int get_player_movement_obstacles(Rectangle obstacles[])
 void handle_player_input(void)
 {
     float speed = DEFAULT_PLAYER_MOVEMENT_SPEED * get_scale();
-    Rectangle movement_obstacles[OBSTACLE_COUNT + NPC_COUNT];
+    Rectangle movement_obstacles[OBSTACLE_COUNT + NPC_COUNT + ROOM_MAX_OBSTACLES];
     int movement_obstacle_count = get_player_movement_obstacles(movement_obstacles);
 
     // Modificadores vetoriais de direção (-1, 0, 1)
@@ -1051,6 +1258,25 @@ void render_debug_hitboxes(void)
 {
     if (!show_debug_hitboxes) return;
 
+    if (current_room != ROOM_ESCRITORIO)
+    {
+        const room_def *room = room_get(current_room);
+
+        for (int i = 0; i < room_obstacle_count; i++) DrawRectangleLinesEx(room_obstacles_screen[i], 2.0f, ORANGE);
+        for (int i = 0; i < room->door_count; i++)
+        {
+            DrawRectangleLinesEx(scale_reference_rect(room->doors[i].zone, get_scale(), get_map_center()), 2.0f, SKYBLUE);
+        }
+        DrawRectangleLinesEx(estagiario_collision_rec, 2.0f, GREEN);
+        return;
+    }
+
+    const room_def *office = room_get(ROOM_ESCRITORIO);
+    for (int i = 0; i < office->door_count; i++)
+    {
+        DrawRectangleLinesEx(scale_reference_rect(office->doors[i].zone, get_scale(), get_map_center()), 2.0f, SKYBLUE);
+    }
+
     DrawRectangleLinesEx(map_collision_rec, 2.0f, RED);                           // Limite do mapa
     DrawRectangleLinesEx(estagiario_computer_collision_rectangle, 2.0f, YELLOW);  // Zona do computador
     DrawRectangleLinesEx(estagiario_collision_rec, 2.0f, GREEN);                  // Jogador
@@ -1070,23 +1296,34 @@ void render_debug_hitboxes(void)
 /**
  * @brief Renderiza o cenário/fundo do escritório centralizado na janela do jogo.
  */
+static void draw_map_texture(Texture2D map, float art_scale, float extra_darkening);
+
 void render_game_loop_escritorio(void)
 {
-    float scale = get_scale();
-    float office_width = in_game_office.width * scale;
-    float office_height = in_game_office.height * scale;
+    draw_map_texture(in_game_office, 1.0f, 0.0f);
+}
 
-    Rectangle source = {0, 0, (float)in_game_office.width, (float)in_game_office.height};
+/**
+ * @brief Desenha um mapa (escritório ou cômodo) centralizado, escurecido e alagado conforme o dia.
+ */
+static void draw_map_texture(Texture2D map, float art_scale, float extra_darkening)
+{
+    float scale = get_scale();
+    float office_width = map.width * art_scale * scale;
+    float office_height = map.height * art_scale * scale;
+
+    Rectangle source = {0, 0, (float)map.width, (float)map.height};
     Rectangle dest = {(GetScreenWidth() - office_width) / 2.0f,
                       (GetScreenHeight() - office_height) / 2.0f,
                       office_width, office_height};
 
     // Sem nenhum número na tela: quanto mais tarde na campanha, mais escuro e mais alagado
     float water_level = calendar_get_water_level(current_game_state_variables.current_day);
-    unsigned char brightness = (unsigned char)(255.0f - (OFFICE_MAX_DARKENING * water_level));
+    float darkening = (OFFICE_MAX_DARKENING * water_level) + extra_darkening;
+    unsigned char brightness = (unsigned char)(255.0f - (darkening > 200.0f ? 200.0f : darkening));
     Color office_tint = {brightness, brightness, brightness, color_to_fade.a};
 
-    DrawTexturePro(in_game_office, source, dest, (Vector2){0, 0}, 0.0f, office_tint);
+    DrawTexturePro(map, source, dest, (Vector2){0, 0}, 0.0f, office_tint);
 
     if (water_level > 0.0f)
     {
@@ -1200,6 +1437,35 @@ static void render_computer_backdrop(void)
 
     unsigned char dim_alpha = (unsigned char)(COMPUTER_SCENE_DIM_ALPHA * computer_scene_progress);
     DrawRectangle(0, 0, (int)window_w, (int)window_h, (Color){0, 0, 0, dim_alpha});
+}
+
+/**
+ * @brief Desenha o cômodo atual (fora do escritório) com o jogador.
+ */
+static void render_room_scene(void)
+{
+    float extra = (current_room == ROOM_PORAO) ? BASEMENT_EXTRA_DARKENING : 0.0f;
+
+    draw_map_texture(room_textures[current_room], ROOM_ART_SCALE, extra);
+    render_player();
+}
+
+/**
+ * @brief Nome do cômodo atual na margem de cima, alinhado à direita do mapa (o escritório não mostra).
+ */
+static void render_room_name(void)
+{
+    if (current_room == ROOM_ESCRITORIO) return;
+
+    float scale = get_scale();
+    float font_size = DAY_COUNTER_FONT_AT_REFERENCE * scale;
+    float letter_spacing = font_size * 0.04f;
+    float office_top_y = (GetScreenHeight() - (in_game_office.height * scale)) / 2.0f;
+    float right_x = (GetScreenWidth() + (in_game_office.width * scale)) / 2.0f;
+    const char *name = room_get(current_room)->name;
+    Vector2 size = MeasureTextEx(default_game_font, name, font_size, letter_spacing);
+
+    DrawTextEx(default_game_font, name, (Vector2){right_x - size.x, (office_top_y - font_size) / 2.0f}, font_size, letter_spacing, color_to_fade);
 }
 
 // Chamado no ciclo de desenho existente, antes da interface.
@@ -1658,11 +1924,13 @@ void handle_game_loop_screens(void)
         estagiario_computer_collision_rectangle = get_computer_collision_rectangle();
         keep_player_place_on_resize();
         update_obstacle_recs();
+        update_room_obstacles();
+        update_room_transition();
 
         hint_item_rectangle = get_hint_item_rectangle(get_scale(), get_map_center());
 
         Vector2 previous_player_position = current_estagiario_position;
-        bool interaction_open = is_hint_note_open() || active_npc_id >= 0;
+        bool interaction_open = is_hint_note_open() || active_npc_id >= 0 || pending_door >= 0;
 
         // Processa lógica de comandos do jogador, interações e colisões com o mapa.
         // Enquanto lê o bilhete ou conversa com um NPC, o jogador fica parado.
@@ -1675,7 +1943,7 @@ void handle_game_loop_screens(void)
             handle_player_input();
         }
 
-        if (!interaction_open)
+        if (!interaction_open && current_room == ROOM_ESCRITORIO)
         {
             update_npcs(GetFrameTime(), get_scale(), get_map_center(), map_collision_rec,
                         office_obstacles, OBSTACLE_COUNT, estagiario_collision_rec);
@@ -1683,6 +1951,7 @@ void handle_game_loop_screens(void)
 
         handle_map_interactables();
         handle_map_collisions();
+        if (!interaction_open) check_room_doors();
         bool player_moved = current_estagiario_position.x != previous_player_position.x ||
                             current_estagiario_position.y != previous_player_position.y;
         update_player_footstep_audio(player_moved && !leave_office && !enter_computer_screen);
@@ -1693,13 +1962,18 @@ void handle_game_loop_screens(void)
         // 3º As dicas de controle no rodapé
         // 4º A seta indicativa por cima do cenário
         // 5º Os diálogos e bilhetes, por cima de tudo
-        render_office_with_glass();
+        if (current_room == ROOM_ESCRITORIO) render_office_with_glass();
+        else render_room_scene();
         render_control_tips();
         render_day_counter();
-        render_high_contrast_outlines();
+        render_room_name();
+        if (current_room == ROOM_ESCRITORIO) render_high_contrast_outlines();
+        render_door_labels();
         if (active_npc_id < 0 && !is_hint_note_open())
         {
-            render_interact_arrow(get_next_objective_rectangle());
+            // Fora do escritório, a seta aponta o caminho de volta para ele
+            if (current_room == ROOM_ESCRITORIO) render_interact_arrow(get_next_objective_rectangle());
+            else render_interact_arrow(get_door_toward_office_rectangle());
 
             if (nearby_npc_id >= 0) render_interaction_marker(npc_get_hitbox(nearby_npc_id, get_scale()));
             else if (is_near_hint) render_interaction_marker(hint_item_rectangle);
@@ -1709,6 +1983,7 @@ void handle_game_loop_screens(void)
         render_debug_hitboxes();
         render_npc_dialogue();
         draw_hint_note();
+        render_room_fade();
 
         // Se a interação com o computador foi acionada, abre a cena do computador.
         // O escritório continua carregado: ele é o fundo da cena.
@@ -1861,6 +2136,11 @@ void unload_game_loop(void)
 
     // Texturas do escritório e elementos gráficos
     UnloadTexture(in_game_office);
+    for (int i = 0; i < ROOM_COUNT; i++)
+    {
+        if (room_textures[i].id) UnloadTexture(room_textures[i]);
+        room_textures[i] = (Texture2D){0};
+    }
 
     UnloadTexture(action_tip_texture);
     UnloadTexture(move_tip_texture);

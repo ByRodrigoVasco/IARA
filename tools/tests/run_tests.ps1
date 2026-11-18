@@ -113,6 +113,11 @@ $suite = @(
         Fonte = @("code/tests/test_save_slots.c", "code/src/core/save_slots.c")
     },
     @{
+        Nome  = "test_rooms"
+        Nota  = "Unidade: comodos do modo historia, portas e caminhos"
+        Fonte = @("code/tests/test_rooms.c", "code/src/game/rooms.c")
+    },
+    @{
         Nome  = "test_hints"
         Nota  = "Unidade: dica no mural e pontuacao"
         Fonte = @(
@@ -158,7 +163,7 @@ $suite = @(
             "code/src/core/state_machine.c", "code/src/core/game_state.c", "code/src/core/save.c", "code/src/core/save_slots.c",
             "code/src/screens/mode_select.c", "code/src/screens/save_select.c", "code/src/screens/loading.c", "code/src/ui/screen_style.c",
             "code/src/core/helper.c", "code/src/screens/pre_menu.c",
-            "code/src/game/collisions.c", "code/src/game/characters.c", "code/src/game/npcs.c",
+            "code/src/game/collisions.c", "code/src/game/characters.c", "code/src/game/npcs.c", "code/src/game/rooms.c",
             "code/src/ui/fonts.c", "code/src/ui/animations.c", "code/src/ui/button.c",
             "code/src/ui/accessibility.c", "code/src/game/hints.c", "code/src/screens/settings.c",
             "code/src/core/preferences.c", "code/src/ui/cheat_sheet.c", "code/src/ui/computer_art.c", "code/src/ui/logic_text.c", "code/src/game/logic.c", "code/src/game/calendar.c",

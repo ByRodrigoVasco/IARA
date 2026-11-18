@@ -133,6 +133,8 @@ O primeiro comando gera `build/IARA-windows.zip`, com o executável, as DLLs e o
 
 Os móveis do Modo Sobrevivência (mesas, cadeiras, arquivos, estantes, cofre, caixas, lixeira, planta e longarina) foram recortados do pacote gratuito [Post Apoc Office](https://0-mem0ry.itch.io/), de **0_mem0ry**. A licença permite usar e modificar os assets em projetos comerciais e não comerciais, mas não permite revender ou redistribuir o pacote original; por isso o repositório guarda só os recortes usados no jogo.
 
+Os cômodos do Modo História (corredor, copa, RH, sala de reuniões, TI e porão) usam recortes do mesmo Post Apoc Office e dos pacotes gratuitos [Professional Kitchen](https://0-mem0ry.itch.io/), [Classic Furniture](https://0-mem0ry.itch.io/) e [Stylish Furniture](https://0-mem0ry.itch.io/), também de **0_mem0ry**, com as mesmas condições. As imagens dos cômodos e as colisões saem de `tools/historia/gerar_comodos.py` (rode `python tools/historia/gerar_comodos.py` depois de mudar um cômodo).
+
 ## Squad
  
 Fotos e sprites ficam em [`docs/assets/`](docs/assets).
