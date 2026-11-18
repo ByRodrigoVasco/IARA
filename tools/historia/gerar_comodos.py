@@ -90,11 +90,12 @@ COMODOS = {
             ("ti", "baixo", 300, 52, "ti", "corredor", "TI"),
             ("porao", "escada", 0, 44, "porao", "corredor", "PORÃO"),
         ],
+        # Parede livre entre as portas: 0-46, 78-152, 184-262 e 326-407 (depois vem a escada)
         "moveis": [
-            ("planta_laranja", 22, 30, True), ("longarina", 120, 34, True), ("lixeira_1", 226, 26, True),
-            ("planta_cinza", 375, 32, True), ("garrafao", 214, 22, True),
+            ("planta_laranja", 22, 34, True), ("longarina", 115, 36, True), ("garrafao", 204, 30, True),
+            ("lixeira_1", 240, 30, True), ("planta_cinza", 372, 34, True),
         ],
-        "na_parede": [("relogio", 100), ("graficos", 186), ("mural", 362)],
+        "na_parede": [("relogio", 115), ("mural", 223), ("mod_quadro_3", 366)],
         "tapete": None,
     },
     # Copa: pacote Professional Kitchen. Bancada no fundo (geladeira, pia, micro-ondas, cafeteira) e duas mesinhas.
