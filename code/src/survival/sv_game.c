@@ -1809,6 +1809,13 @@ static void update_gems(float dt)
 // Nível e escolhas
 // -----------------------------------------------------------------------------
 
+#define LANTERNA_WEIGHT 4          // Peso da Lanterna no sorteio das cartas (as outras pesam 1)
+
+static int choice_weight(const SvChoice *c)
+{
+    return (c->kind == 2 || c->kind == 3) && c->id == P_LANTERNA ? LANTERNA_WEIGHT : 1;
+}
+
 static void build_choices(void)
 {
     SvChoice pool[32];
@@ -1831,18 +1838,27 @@ static void build_choices(void)
         else if (level == 0 && p->passive_count < SV_MAX_PASSIVES) pool[count++] = (SvChoice){2, i};
     }
 
-    // Embaralha
-    for (int i = count - 1; i > 0; i--)
-    {
-        int j = (int)(sv_rand() * (i + 1));
-        SvChoice tmp = pool[i];
-
-        pool[i] = pool[j];
-        pool[j] = tmp;
-    }
-
+    // Sorteia até 3 cartas sem repetir. A Lanterna pesa mais que as outras: no escuro ela faz falta
     sv_run.choice_count = 0;
-    for (int i = 0; i < count && sv_run.choice_count < 3; i++) sv_run.choices[sv_run.choice_count++] = pool[i];
+    while (count > 0 && sv_run.choice_count < 3)
+    {
+        int total = 0, pick = count - 1;
+        float roll;
+
+        for (int i = 0; i < count; i++) total += choice_weight(&pool[i]);
+        roll = sv_rand() * (float)total;
+        for (int i = 0; i < count; i++)
+        {
+            roll -= (float)choice_weight(&pool[i]);
+            if (roll < 0.0f)
+            {
+                pick = i;
+                break;
+            }
+        }
+        sv_run.choices[sv_run.choice_count++] = pool[pick];
+        pool[pick] = pool[--count];
+    }
     if (sv_run.choice_count < 3) sv_run.choices[sv_run.choice_count++] = (SvChoice){4, 0};
     if (sv_run.choice_count < 3) sv_run.choices[sv_run.choice_count++] = (SvChoice){5, 0};
     if (sv_run.choice_count < 3) sv_run.choices[sv_run.choice_count++] = (SvChoice){6, 0};
