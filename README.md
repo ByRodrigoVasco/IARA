@@ -20,7 +20,7 @@ as inconsistências. Assim, a mecânica ensina ao mesmo tempo ética em IA e ló
 
 - **Motor e gameplay:** C, para o game loop, menus, gerenciamento de estado e persistência.
 - **Renderização:** [raylib](https://www.raylib.com/), biblioteca gráfica em C, 2D.
-- **Áudio:** raylib, com música em loop durante a navegação do menu, configurações e créditos, música de gameplay e efeitos para cliques e passos durante a movimentação. A voz da IARA acompanha a digitação da sugestão e para quando o texto termina. O volume geral pode ser ajustado nas configurações e fica salvo nas preferências.
+- **Áudio:** raylib, com música em loop durante a navegação do menu, configurações e créditos, música de gameplay e efeitos para cliques e passos durante a movimentação. A trilha acompanha o momento da campanha: o ambiente do escritório (que fica mais tenso com os dias), uma faixa própria na tela do quiz, e a trilha abafada com um som curto de entrada nos cartões de Flash do dia e de salto puro. A troca entre faixas e entre telas é um fade suave de 0,8 s. A voz da IARA acompanha a digitação da sugestão e para quando o texto termina. O volume geral pode ser ajustado nas configurações e fica salvo nas preferências.
 - **Regras puras:** Haskell, para pontuação, validação de respostas e seleção de conteúdo.
 - **Versionamento:** GitHub, com o fluxo descrito no [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
