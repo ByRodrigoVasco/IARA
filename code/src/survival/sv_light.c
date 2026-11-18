@@ -12,16 +12,19 @@
 #define VISION_BASE 190.0f         // Raio da luz do jogador sem nenhum bônus
 #define LIGHT_RINGS 6              // Degraus da luz (mais degraus = borda mais suave)
 #define CEILING_SPACING 290.0f     // Distância entre as lâmpadas do teto
-#define CEILING_CHANCE 38          // % dos pontos do teto que têm lâmpada acesa
+#define CEILING_CHANCE 0           // % dos pontos do teto que têm lâmpada acesa (0 = andar todo apagado)
 #define FAULTY_CHANCE 30           // % das lâmpadas que têm defeito e piscam
+#define PROP_RADIUS_SCALE 0.35f    // Encolhe a luz dos objetos: só a tela/LED brilha, o chão em volta fica escuro
+#define PROP_STRENGTH_SCALE 0.8f
 #define MAX_LIGHTS 768
 #define MAX_GEM_LIGHTS 160         // Chips de XP que brilham ao mesmo tempo (os mais próximos da câmera)
 
 // Cor do escuro: um roxo bem fechado. É multiplicada pela claridade do ato.
 static const Color AMBIENT_TINT = {150, 135, 210, 255};
 
-// Claridade do ambiente em cada ato: a energia vai caindo ao longo da partida
-static const float ACT_AMBIENT[SV_ACT_COUNT] = {0.40f, 0.34f, 0.29f, 0.25f, 0.21f};
+// Claridade do ambiente em cada ato: praticamente breu. Fora da lanterna só aparecem os olhos dos
+// monstros e as telas e LEDs dos objetos; a energia ainda cai um pouco a cada ato
+static const float ACT_AMBIENT[SV_ACT_COUNT] = {0.05f, 0.04f, 0.03f, 0.025f, 0.02f};
 
 typedef enum { LK_STEADY, LK_FAULTY, LK_PULSE, LK_TWINKLE } LightKind;
 
@@ -140,7 +143,7 @@ void sv_light_init(void)
         {
             float lift = sv_sprites[prop->sprite].frame_height > 0 ? sv_sprites[prop->sprite].frame_height * 0.7f : 18.0f;
 
-            add_light((Vector2){prop->x, prop->y - lift}, radius, color, kind, strength);
+            add_light((Vector2){prop->x, prop->y - lift}, radius * PROP_RADIUS_SCALE, color, kind, strength * PROP_STRENGTH_SCALE);
         }
     }
 
