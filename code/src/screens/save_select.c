@@ -148,11 +148,14 @@ void save_select_go_back(void)
     save_select_result = SAVE_SELECT_BACK;
 }
 
-// No modo sobrevivência cada save é um jogador (o nome do save é o nome no ranking)
+// No modo sobrevivência cada save é um jogador (o nome do save é o nome no ranking); na dupla, cada save é uma dupla
 static bool is_player_mode(void)
 {
-    return save_select_mode == SAVE_MODE_SURVIVAL;
+    return save_mode_is_survival(save_select_mode);
 }
+
+// Texto conforme o modo: save do modo normal, jogador do Sobrevivência ou dupla
+#define MODE_TEXT(normal, player, duo) (save_select_mode == SAVE_MODE_DUO ? (duo) : is_player_mode() ? (player) : (normal))
 
 bool save_select_delete_named(const char *name)
 {
@@ -161,8 +164,11 @@ bool save_select_delete_named(const char *name)
     // Jogador apagado sai do ranking junto com o progresso
     if (deleted && is_player_mode())
     {
+        // A dupla tem o ranking dela, separado do solo
+        sv_ranking_set_path(save_select_mode == SAVE_MODE_DUO ? SV_RANKING_DUO_PATH : NULL);
         sv_ranking_load();
         sv_ranking_remove(name);
+        sv_ranking_set_path(NULL);
     }
 
     reload_slots();
@@ -288,7 +294,7 @@ static void draw_name_panel(Rectangle *create_button, Rectangle *cancel_button)
     Vector2 measure;
 
     style_panel(panel);
-    DrawTextEx(default_game_font, is_player_mode() ? "NOME DO NOVO JOGADOR" : "NOME DO NOVO SAVE", (Vector2){panel.x + padding, panel.y + padding}, title_size, title_size * 0.06f, STYLE_TEXT_COLOR);
+    DrawTextEx(default_game_font, MODE_TEXT("NOME DO NOVO SAVE", "NOME DO NOVO JOGADOR", "NOME DA NOVA DUPLA"), (Vector2){panel.x + padding, panel.y + padding}, title_size, title_size * 0.06f, STYLE_TEXT_COLOR);
 
     DrawRectangleRec(box, (Color){10, 6, 12, 255});
     DrawRectangleLinesEx(box, 2.0f * scale, save_show_name_message && save_name_status != SAVE_NAME_OK ? STYLE_WARNING_COLOR : (Color){120, 90, 140, 255});
@@ -302,7 +308,7 @@ static void draw_name_panel(Rectangle *create_button, Rectangle *cancel_button)
     }
     else
     {
-        DrawTextEx(default_game_font, is_player_mode() ? "É o nome que aparece no ranking. Até 20 letras, números, espaço, - ou _." : "Até 20 letras, números, espaço, - ou _. O nome não pode se repetir.", (Vector2){box.x, box.y + box.height + 14.0f * scale}, DEFAULT_TEXT_FONT_SIZE * 0.8f * scale, 2.0f * scale, STYLE_DIM_COLOR);
+        DrawTextEx(default_game_font, MODE_TEXT("Até 20 letras, números, espaço, - ou _. O nome não pode se repetir.", "É o nome que aparece no ranking. Até 20 letras, números, espaço, - ou _.", "É o nome da dupla no ranking (ex.: Ana e Beto). Até 20 letras, números, espaço, - ou _."), (Vector2){box.x, box.y + box.height + 14.0f * scale}, DEFAULT_TEXT_FONT_SIZE * 0.8f * scale, 2.0f * scale, STYLE_DIM_COLOR);
     }
 
     *create_button = (Rectangle){panel.x + panel.width - padding - button_width * 2.0f - 20.0f * scale, panel.y + panel.height - padding - button_height, button_width, button_height};
@@ -324,10 +330,10 @@ static void draw_delete_panel(Rectangle *cancel_button, Rectangle *delete_button
     char question[96];
 
     style_panel(panel);
-    DrawTextEx(default_game_font, is_player_mode() ? "APAGAR O JOGADOR?" : "APAGAR O SAVE?", (Vector2){panel.x + padding, panel.y + padding}, title_size, title_size * 0.06f, STYLE_WARNING_COLOR);
+    DrawTextEx(default_game_font, MODE_TEXT("APAGAR O SAVE?", "APAGAR O JOGADOR?", "APAGAR A DUPLA?"), (Vector2){panel.x + padding, panel.y + padding}, title_size, title_size * 0.06f, STYLE_WARNING_COLOR);
     snprintf(question, sizeof(question), "\"%s\"", save_delete_name);
     DrawTextEx(default_game_font, question, (Vector2){panel.x + padding, panel.y + padding + title_size + 14.0f * scale}, style_font_size(0.5f), 3.0f * scale, STYLE_TEXT_COLOR);
-    style_wrapped_text(is_player_mode() ? "O progresso e a posição desse jogador no ranking serão perdidos, e não dá para desfazer." : "Todo o progresso desse save será perdido e não dá para desfazer.", panel.x + padding, panel.y + padding + title_size + 14.0f * scale + style_font_size(0.5f) + 18.0f * scale, panel.width - padding * 2.0f,
+    style_wrapped_text(MODE_TEXT("Todo o progresso desse save será perdido e não dá para desfazer.", "O progresso e a posição desse jogador no ranking serão perdidos, e não dá para desfazer.", "O progresso e a posição dessa dupla no ranking serão perdidos, e não dá para desfazer."), panel.x + padding, panel.y + padding + title_size + 14.0f * scale + style_font_size(0.5f) + 18.0f * scale, panel.width - padding * 2.0f,
                        DEFAULT_TEXT_FONT_SIZE * scale, STYLE_DIM_COLOR);
 
     *cancel_button = (Rectangle){panel.x + panel.width - padding - button_width * 2.0f - 20.0f * scale, panel.y + panel.height - padding - button_height, button_width, button_height};
@@ -340,7 +346,7 @@ static void confirm_delete(void)
 {
     if (save_delete_choice == 1)
     {
-        if (save_select_delete_named(save_delete_name)) show_notice(is_player_mode() ? "Jogador apagado." : "Save apagado.");
+        if (save_select_delete_named(save_delete_name)) show_notice(MODE_TEXT("Save apagado.", "Jogador apagado.", "Dupla apagada."));
         else show_notice("Não consegui apagar o save.");
     }
     save_view = VIEW_LIST;
@@ -428,7 +434,7 @@ int render_save_select(void)
     // -------- desenho
     begin_game_drawing();
     style_backdrop();
-    style_title_centered(save_mode_title(save_select_mode), is_player_mode() ? "QUEM VAI JOGAR?" : "ESCOLHA O SAVE");
+    style_title_centered(save_mode_title(save_select_mode), save_select_mode == SAVE_MODE_DUO ? "QUAL DUPLA VAI JOGAR?" : is_player_mode() ? "QUEM VAI JOGAR?" : "ESCOLHA O SAVE");
 
     for (int row = save_first_visible; row < card_total && row < save_first_visible + visible; row++)
     {
@@ -436,7 +442,7 @@ int render_save_select(void)
         bool selected = (row == save_selected_row && save_view == VIEW_LIST);
         Rectangle card = {column_x, y, column_width, card_height};
         float padding = 26.0f * scale;
-        const char *label = row == 0 ? (is_player_mode() ? "+  NOVO JOGADOR" : "+  NOVO SAVE") : save_list[row - 1].name;
+        const char *label = row == 0 ? (MODE_TEXT("+  NOVO SAVE", "+  NOVO JOGADOR", "+  NOVA DUPLA")) : save_list[row - 1].name;
 
         row_areas[row] = card;
         style_card_frame(card, selected, row == 0);
@@ -444,7 +450,7 @@ int render_save_select(void)
 
         if (row == 0)
         {
-            DrawTextEx(default_game_font, is_player_mode() ? "Digite seu nome para entrar no ranking" : "Começar do zero com um nome novo", (Vector2){card.x + padding, card.y + 20.0f * scale + name_size}, detail_size, detail_size * 0.06f, STYLE_DIM_COLOR);
+            DrawTextEx(default_game_font, MODE_TEXT("Começar do zero com um nome novo", "Digite seu nome para entrar no ranking", "Digite o nome da dupla para entrar no ranking"), (Vector2){card.x + padding, card.y + 20.0f * scale + name_size}, detail_size, detail_size * 0.06f, STYLE_DIM_COLOR);
         }
         else
         {
