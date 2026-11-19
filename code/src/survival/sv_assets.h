@@ -56,4 +56,9 @@ void sv_load_player(int character);
 void sv_unload_player(void);
 void sv_draw_player(int direction, int frame, Vector2 center, float scale, Color tint);
 
+// Dupla: as três funções acima valem para o conjunto escolhido aqui (0 = jogador 1, 1 = jogador 2).
+// O padrão é 0, então o solo não precisa chamar nada.
+void sv_use_player_slot(int slot);
+void sv_unload_all_players(void);   // Descarrega os dois conjuntos e volta para o 0
+
 #endif // SV_ASSETS_H

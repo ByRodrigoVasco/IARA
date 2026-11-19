@@ -1,6 +1,7 @@
 #include <math.h>
 #include "raylib.h"
 #include "sv_light.h"
+#include "sv_duo.h"
 #include "sv_game.h"
 #include "sv_map.h"
 #include "sv_assets.h"
@@ -263,7 +264,17 @@ void sv_light_draw(Camera2D camera)
     if (sv_run.boss.active) draw_light(sv_run.boss.pos, 150.0f, (Color){220, 60, 70, 255}, 0.75f + 0.25f * sinf(t * 3.0f));
 
     // A luz do jogador não oscila com a energia: é a lanterna do celular
-    draw_light(sv_run.player.pos, sv_light_vision_radius(), (Color){235, 228, 215, 255}, 1.15f);
+    if (!sv_run.duo) draw_light(sv_run.player.pos, sv_light_vision_radius(), (Color){235, 228, 215, 255}, 1.15f);
+    else
+    {
+        // Dupla: cada um tem a sua lanterna. Quem caiu fica com a luz fraca, para o parceiro achar no escuro
+        for (int k = 0; k < sv_duo_count(); k++)
+        {
+            const SvPlayer *p = sv_duo_player(k);
+
+            draw_light(p->pos, p->down ? VISION_BASE * 0.45f : VISION_BASE * p->vision_mult, (Color){235, 228, 215, 255}, p->down ? 0.8f : 1.15f);
+        }
+    }
 
     EndBlendMode();
     EndMode2D();
