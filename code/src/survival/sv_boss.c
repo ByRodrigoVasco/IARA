@@ -471,7 +471,11 @@ void sv_boss_update(float dt)
     }
 
     // Toque no jogador
-    if (distance < b->radius + 8.0f) sv_hurt_player(sv_boss_hit_damage(10.0f), EFF_NONE, 0.0f);
+    // Encostar no chefe machuca (na dupla, vale para os dois)
+    for (int k = 0; k < sv_target_count(); k++)
+    {
+        if (sv_target_alive(k) && Vector2Distance(sv_target_pos(k), b->pos) < b->radius + 8.0f) sv_hurt_target(k, sv_boss_hit_damage(10.0f), EFF_NONE, 0.0f);
+    }
 
     // Ação marcada
     if (b->scheduled > 0.0f)
@@ -535,10 +539,74 @@ static float distance_to_segment(Vector2 point, Vector2 origin, float angle_degr
     return Vector2Distance(point, closest);
 }
 
+// Quem está de pé e mais perto do ponto (no solo, sempre o jogador)
+static int nearest_target_index(Vector2 pos)
+{
+    int best = 0;
+    float best_distance = -1.0f;
+
+    for (int k = 0; k < sv_target_count(); k++)
+    {
+        float d;
+
+        if (!sv_target_alive(k)) continue;
+        d = Vector2Distance(pos, sv_target_pos(k));
+        if (best_distance < 0.0f || d < best_distance)
+        {
+            best = k;
+            best_distance = d;
+        }
+    }
+    return best;
+}
+
+// Um perigo que acerta uma vez (ou a cada tick) fere todos que estão dentro dele naquela hora
+static bool any_target_in_circle(Vector2 pos, float radius)
+{
+    for (int k = 0; k < sv_target_count(); k++)
+    {
+        if (sv_target_alive(k) && Vector2Distance(sv_target_pos(k), pos) < radius) return true;
+    }
+    return false;
+}
+
+static void hurt_targets_in_circle(Vector2 pos, float radius, float damage, int effect, float effect_time)
+{
+    for (int k = 0; k < sv_target_count(); k++)
+    {
+        if (sv_target_alive(k) && Vector2Distance(sv_target_pos(k), pos) < radius) sv_hurt_target(k, damage, effect, effect_time);
+    }
+}
+
+static void status_targets_in_circle(Vector2 pos, float radius, int effect, float effect_time)
+{
+    for (int k = 0; k < sv_target_count(); k++)
+    {
+        if (sv_target_alive(k) && Vector2Distance(sv_target_pos(k), pos) < radius) sv_apply_status_to(k, effect, effect_time);
+    }
+}
+
+static float distance_to_segment(Vector2 point, Vector2 origin, float angle_degrees, float length);
+
+static bool any_target_in_beam(const SvHazard *h)
+{
+    for (int k = 0; k < sv_target_count(); k++)
+    {
+        if (sv_target_alive(k) && distance_to_segment(sv_target_pos(k), h->pos, h->angle, h->length) < h->radius + 6.0f) return true;
+    }
+    return false;
+}
+
+static void hurt_targets_in_beam(const SvHazard *h)
+{
+    for (int k = 0; k < sv_target_count(); k++)
+    {
+        if (sv_target_alive(k) && distance_to_segment(sv_target_pos(k), h->pos, h->angle, h->length) < h->radius + 6.0f) sv_hurt_target(k, h->damage, EFF_NONE, 0.0f);
+    }
+}
+
 void sv_hazards_update(float dt)
 {
-    Vector2 player = sv_player_pos();
-
     for (int i = 0; i < SV_MAX_HAZARDS; i++)
     {
         SvHazard *h = &sv_run.hazards[i];
@@ -547,9 +615,11 @@ void sv_hazards_update(float dt)
 
         if (h->kind == HZ_PROJ)
         {
+            int hit = -1;
+
             if (h->homing)
             {
-                Vector2 desired = Vector2Scale(unit_toward(h->pos, player), Vector2Length(h->vel));
+                Vector2 desired = Vector2Scale(unit_toward(h->pos, sv_target_pos(nearest_target_index(h->pos))), Vector2Length(h->vel));
 
                 h->vel = Vector2Lerp(h->vel, desired, 1.5f * dt);
             }
@@ -557,9 +627,14 @@ void sv_hazards_update(float dt)
             h->angle = atan2f(h->vel.y, h->vel.x) * RAD2DEG;
             h->life -= dt;
 
-            if (Vector2Distance(h->pos, player) < h->radius + 8.0f)
+            for (int k = 0; k < sv_target_count() && hit < 0; k++)
             {
-                sv_hurt_player(h->damage, h->effect, h->effect_time);
+                if (sv_target_alive(k) && Vector2Distance(h->pos, sv_target_pos(k)) < h->radius + 8.0f) hit = k;
+            }
+
+            if (hit >= 0)
+            {
+                sv_hurt_target(hit, h->damage, h->effect, h->effect_time);
                 h->alive = false;
             }
             else if (h->life <= 0.0f || sv_map_point_blocked(h->pos, h->radius * 0.5f) || h->pos.x < -50 || h->pos.y < -50 || h->pos.x > SV_WORLD_W + 50 || h->pos.y > SV_WORLD_H + 50)
@@ -586,7 +661,8 @@ void sv_hazards_update(float dt)
 
         if (h->kind == HZ_CIRCLE)
         {
-            bool inside = Vector2Distance(player, h->pos) < h->radius + 6.0f;
+            float reach = h->radius + 6.0f;
+            bool inside = any_target_in_circle(h->pos, reach);
 
             if (inside)
             {
@@ -596,7 +672,7 @@ void sv_hazards_update(float dt)
                     if (h->tick_timer <= 0.0f)
                     {
                         h->tick_timer = h->tick;
-                        sv_hurt_player(h->damage, h->effect, h->effect_time);
+                        hurt_targets_in_circle(h->pos, reach, h->damage, h->effect, h->effect_time);
                     }
                 }
                 else if (h->damage > 0.0f)
@@ -604,18 +680,18 @@ void sv_hazards_update(float dt)
                     if (!h->applied)
                     {
                         h->applied = true;
-                        sv_hurt_player(h->damage, h->effect, h->effect_time);
+                        hurt_targets_in_circle(h->pos, reach, h->damage, h->effect, h->effect_time);
                     }
                 }
                 else if (h->effect != EFF_NONE)
                 {
-                    sv_apply_status(h->effect, h->effect_time);
+                    status_targets_in_circle(h->pos, reach, h->effect, h->effect_time);
                 }
             }
         }
         else if (h->kind == HZ_BEAM && h->damage > 0.0f)
         {
-            bool inside = distance_to_segment(player, h->pos, h->angle, h->length) < h->radius + 6.0f;
+            bool inside = any_target_in_beam(h);
 
             if (inside)
             {
@@ -625,13 +701,13 @@ void sv_hazards_update(float dt)
                     if (h->tick_timer <= 0.0f)
                     {
                         h->tick_timer = h->tick;
-                        sv_hurt_player(h->damage, EFF_NONE, 0.0f);
+                        hurt_targets_in_beam(h);
                     }
                 }
                 else if (!h->applied)
                 {
                     h->applied = true;
-                    sv_hurt_player(h->damage, EFF_NONE, 0.0f);
+                    hurt_targets_in_beam(h);
                 }
             }
         }

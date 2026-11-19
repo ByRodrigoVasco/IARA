@@ -162,7 +162,7 @@ $suite = @(
             "code/src/ui/fonts.c", "code/src/ui/animations.c", "code/src/ui/button.c",
             "code/src/ui/accessibility.c", "code/src/game/hints.c", "code/src/screens/settings.c",
             "code/src/core/preferences.c", "code/src/ui/cheat_sheet.c", "code/src/ui/computer_art.c", "code/src/ui/logic_text.c", "code/src/game/logic.c", "code/src/game/calendar.c",
-            "code/src/survival/sv_game.c", "code/src/survival/sv_boss.c", "code/src/survival/sv_render.c", "code/src/survival/sv_light.c", "code/src/survival/sv_ranking.c", "code/src/survival/sv_debug.c",
+            "code/src/survival/sv_game.c", "code/src/survival/sv_boss.c", "code/src/survival/sv_render.c", "code/src/survival/sv_light.c", "code/src/survival/sv_ranking.c", "code/src/survival/sv_duo.c", "code/src/survival/sv_debug.c",
             "code/src/survival/sv_audio.c", "code/src/survival/sv_map.c", "code/src/survival/sv_assets.c", "code/src/survival/sv_meta.c", "code/src/survival/sv_rules.c",
             "code/src/core/audio.c",
             "code/src/ui/notice.c", "code/src/ui/ui_widgets.c", "code/src/ui/confirm_dialog.c",
@@ -175,7 +175,7 @@ $suite = @(
         Fonte = @(
             "code/tests/test_survival.c",
             "code/src/survival/sv_rules.c", "code/src/survival/sv_meta.c", "code/src/survival/sv_game.c",
-            "code/src/survival/sv_boss.c", "code/src/survival/sv_audio.c", "code/src/survival/sv_map.c", "code/src/survival/sv_ranking.c"
+            "code/src/survival/sv_boss.c", "code/src/survival/sv_audio.c", "code/src/survival/sv_map.c", "code/src/survival/sv_ranking.c", "code/src/survival/sv_duo.c"
         )
     }
 )
