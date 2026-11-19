@@ -13,6 +13,7 @@
 #include "sv_map.h"
 #include "sv_rules.h"
 #include "sv_ranking.h"
+#include "sv_duo.h"
 
 #define TEST_META_PATH "test_iara.survival"
 
@@ -1046,6 +1047,332 @@ static void test_ranking(void)
     sv_ranking_set_path(NULL);
 }
 
+// -----------------------------------------------------------------------------
+// Modo dupla (sv_duo.c)
+// -----------------------------------------------------------------------------
+
+// Começa uma partida em dupla, sem inimigos nascendo, para testar uma regra de cada vez
+static void start_duo(unsigned seed)
+{
+    sv_meta_reset();
+    sv_meta.character2 = CH_ESTAGIARIO;
+    sv_duo_mode = true;
+    sv_game_start(seed);
+    sv_duo_mode = false;
+    sv_cheat_toggle(CHEAT_NO_SPAWN);
+}
+
+static void clear_enemies(void)
+{
+    for (int i = 0; i < SV_MAX_ENEMIES; i++) sv_run.enemies[i].alive = false;
+    sv_run.enemy_count = 0;
+}
+
+static void step_duo(int frames, Vector2 m1, Vector2 m2)
+{
+    for (int i = 0; i < frames && sv_run.phase == SV_PLAYING; i++) sv_game_update_duo(1.0f / 60.0f, m1, m2);
+}
+
+// Partida inteira com dois bots. O jogador 2 usa o mesmo bot, com ele em cena.
+static RunResult simulate_duo(unsigned seed, float max_seconds)
+{
+    RunResult result = {0};
+    float dt = 1.0f / 60.0f;
+
+    sv_meta_reset();
+    sv_duo_mode = true;
+    sv_game_start(seed);
+    sv_duo_mode = false;
+
+    while (sv_run.time < max_seconds && sv_run.phase != SV_DEAD && sv_run.phase != SV_WON)
+    {
+        Vector2 m1, m2;
+
+        if (sv_run.phase == SV_LEVELUP)
+        {
+            int pick = 0, best_score = -1;
+
+            for (int c = 0; c < sv_run.choice_count; c++)
+            {
+                int kind = sv_run.choices[c].kind;
+                int score = kind == 1 ? 5 : kind == 0 ? 4 : kind == 3 ? 3 : kind == 2 ? 2 : 1;
+
+                if (score > best_score) { best_score = score; pick = c; }
+            }
+            sv_game_choose(pick);
+            continue;
+        }
+
+        m1 = bot_move();
+        sv_duo_use(1);
+        m2 = bot_move();
+        sv_duo_use(0);
+        sv_game_update_duo(dt, m1, m2);
+
+        if (sv_run.enemy_count > result.peak_enemies) result.peak_enemies = sv_run.enemy_count;
+        for (int k = 0; k < SV_DUO_PLAYERS; k++)
+        {
+            SvPlayer *p = sv_duo_player(k);
+
+            assert(isfinite(p->pos.x) && isfinite(p->pos.y) && isfinite(p->hp));
+            assert(p->pos.x >= 0 && p->pos.x <= SV_WORLD_W && p->pos.y >= 0 && p->pos.y <= SV_WORLD_H);
+        }
+        assert(sv_run.enemy_count >= 0 && sv_run.enemy_count <= SV_MAX_ENEMIES);
+        assert(sv_run.phase == SV_LEVELUP || sv_run.active == 0);
+    }
+
+    result.seconds = sv_run.time;
+    result.level = sv_duo_player(0)->level;
+    result.kills = sv_run.kills;
+    result.bosses = sv_run.bosses_defeated;
+    result.phase = sv_run.phase;
+    return result;
+}
+
+static void test_duo(void)
+{
+    printf("\nModo dupla\n");
+
+    // Solo continua sem nada da dupla
+    sv_meta_reset();
+    sv_game_start(11);
+    check("SV-116", "a partida solo não liga a dupla e tem um jogador só", !sv_run.duo && sv_run.active == 0 && sv_duo_count() == 1 && sv_duo_player(0) == &sv_run.player && sv_run.seats[1].player.max_hp == 0.0f);
+
+    sv_meta_reset();
+    sv_meta.character = CH_ESTAGIARIO;
+    sv_meta.character2 = CH_LAURA;
+    sv_meta.runs = 99; sv_meta.wins = 9; sv_meta.best_seconds = 900; sv_meta.kills = 99999;   // Tudo liberado
+    sv_duo_mode = true;
+    sv_game_start(12);
+    sv_duo_mode = false;
+    check("SV-117", "a dupla começa com dois jogadores lado a lado, cada um com o seu personagem",
+          sv_run.duo && sv_duo_count() == 2 && sv_run.active == 0 && sv_duo_player(0)->character == CH_ESTAGIARIO && sv_duo_player(1)->character == CH_LAURA &&
+          fabsf(Vector2Distance(sv_duo_player(0)->pos, sv_duo_player(1)->pos) - SV_DUO_START_GAP) < 0.01f && sv_duo_player(1)->hp > 0.0f && sv_duo_player(1)->weapon_count == 1);
+
+    // Cada um anda com o seu controle
+    {
+        Vector2 a = sv_duo_player(0)->pos, b = sv_duo_player(1)->pos;
+
+        sv_cheat_toggle(CHEAT_NO_SPAWN);
+        clear_enemies();
+        step_duo(30, (Vector2){-1, 0}, (Vector2){1, 0});
+        check("SV-118", "o jogador 1 e o jogador 2 andam cada um com o seu controle", sv_duo_player(0)->pos.x < a.x - 5.0f && sv_duo_player(1)->pos.x > b.x + 5.0f);
+    }
+
+    // Os dois na mesma tela
+    start_duo(13);
+    clear_enemies();
+    sv_duo_player(0)->pos = (Vector2){1200.0f, 1300.0f};
+    sv_duo_player(1)->pos = (Vector2){1220.0f, 1300.0f};
+    for (int i = 0; i < 60 * 20; i++)
+    {
+        clear_enemies();
+        step_duo(1, (Vector2){-1, 0}, (Vector2){1, 0});
+    }
+    check("SV-119", "um não consegue se afastar demais do outro", fabsf(sv_duo_player(1)->pos.x - sv_duo_player(0)->pos.x) <= SV_DUO_LEASH_X + 1.0f);
+
+    // XP dividida e escolha de um de cada vez
+    start_duo(14);
+    clear_enemies();
+    sv_add_gem(sv_duo_player(0)->pos, 0, 1.0f);
+    step_duo(1, (Vector2){0, 0}, (Vector2){0, 0});
+    check("SV-120", "um chip de XP pego por um sobe a barra dos dois", sv_duo_player(0)->xp > 0.0f && fabsf(sv_duo_player(0)->xp - sv_duo_player(1)->xp) < 0.001f);
+
+    sv_duo_player(0)->xp = (float)sv_duo_player(0)->xp_needed;
+    sv_duo_player(1)->xp = (float)sv_duo_player(1)->xp_needed;
+    step_duo(1, (Vector2){0, 0}, (Vector2){0, 0});
+    {
+        bool first_is_p1 = sv_run.phase == SV_LEVELUP && sv_run.chooser == 0 && sv_run.active == 0;
+        int p1_before = sv_duo_player(0)->weapon_count + sv_duo_player(0)->passive_count;
+        int p2_before = sv_duo_player(1)->weapon_count + sv_duo_player(1)->passive_count;
+        bool second_is_p2, p1_got, p2_got;
+
+        sv_run.choices[0] = (SvChoice){2, P_CAFE};
+        sv_game_choose(0);
+        second_is_p2 = sv_run.phase == SV_LEVELUP && sv_run.chooser == 1 && sv_run.active == 1;
+        p1_got = sv_duo_player(0)->weapon_count + sv_duo_player(0)->passive_count == p1_before + 1;
+        sv_run.choices[0] = (SvChoice){2, P_FOCO};
+        sv_game_choose(0);
+        p2_got = sv_duo_player(1)->weapon_count + sv_duo_player(1)->passive_count == p2_before + 1;
+        check("SV-121", "os dois sobem de nível juntos e escolhem um de cada vez, primeiro o jogador 1",
+              first_is_p1 && second_is_p2 && p1_got && p2_got && sv_run.phase == SV_PLAYING && sv_duo_player(0)->level == 2 && sv_duo_player(1)->level == 2 &&
+              sv_duo_player(0)->passives[0].id == P_CAFE && sv_duo_player(1)->passives[0].id == P_FOCO);
+    }
+    step_duo(1, (Vector2){0, 0}, (Vector2){0, 0});
+    check("SV-122", "depois da escolha, o jogador 1 volta a ficar em cena", sv_run.active == 0);
+
+    // Cair e levantar
+    start_duo(15);
+    clear_enemies();
+    sv_duo_player(1)->revive_ready = false;
+    sv_duo_player(1)->hp = 0.0f;
+    step_duo(1, (Vector2){0, 0}, (Vector2){0, 0});
+    check("SV-123", "quem fica sem vida cai, e a partida continua com o outro", sv_duo_player(1)->down && !sv_duo_player(0)->down && sv_run.phase == SV_PLAYING);
+
+    {
+        Vector2 where = sv_duo_player(1)->pos;
+
+        step_duo(30, (Vector2){0, 0}, (Vector2){1, 0});
+        check("SV-124", "quem caiu fica parado no chão", Vector2Distance(where, sv_duo_player(1)->pos) < 0.01f);
+    }
+
+    // O parceiro chega perto e fica ao lado
+    sv_duo_player(0)->pos = Vector2Add(sv_duo_player(1)->pos, (Vector2){20.0f, 0.0f});
+    step_duo((int)(60 * SV_DUO_REVIVE_TIME * 0.5f), (Vector2){0, 0}, (Vector2){0, 0});
+    {
+        float half = sv_duo_revive_progress(1);
+
+        step_duo((int)(60 * SV_DUO_REVIVE_TIME * 0.5f) + 5, (Vector2){0, 0}, (Vector2){0, 0});
+        check("SV-125", "o parceiro levanta quem caiu ficando ao lado, e ele volta com metade da vida",
+              half > 0.4f && half < 0.6f && !sv_duo_player(1)->down && fabsf(sv_duo_player(1)->hp - sv_duo_player(1)->max_hp * SV_DUO_REVIVE_HP) < 1.0f);
+    }
+
+    // Ctrl+Z vale para cada um antes de cair
+    start_duo(16);
+    clear_enemies();
+    sv_duo_player(1)->revive_ready = true;
+    sv_duo_player(1)->hp = 0.0f;
+    step_duo(1, (Vector2){0, 0}, (Vector2){0, 0});
+    check("SV-126", "com Ctrl+Z, o jogador volta na hora em vez de cair", !sv_duo_player(1)->down && sv_duo_player(1)->hp > 0.0f && !sv_duo_player(1)->revive_ready);
+
+    // Os dois caem: fim
+    start_duo(17);
+    clear_enemies();
+    for (int k = 0; k < SV_DUO_PLAYERS; k++)
+    {
+        sv_duo_player(k)->revive_ready = false;
+        sv_duo_player(k)->hp = 0.0f;
+    }
+    step_duo(1, (Vector2){0, 0}, (Vector2){0, 0});
+    check("SV-127", "a partida acaba quando os dois caem", sv_run.phase == SV_DEAD && sv_run.active == 0);
+
+    // Os inimigos vão atrás de quem está de pé
+    start_duo(18);
+    clear_enemies();
+    sv_duo_player(0)->pos = (Vector2){1500.0f, 1300.0f};
+    sv_duo_player(1)->pos = (Vector2){1900.0f, 1300.0f};
+    sv_spawn_enemy_at(EN_CHAMADO, (Vector2){1700.0f, 1250.0f}, false);
+    {
+        float before = Vector2Distance(sv_run.enemies[0].pos, sv_duo_player(1)->pos);
+
+        sv_duo_player(0)->revive_ready = false;
+        sv_duo_player(0)->hp = 0.0f;
+        sv_duo_player(0)->weapon_count = 0;
+        sv_duo_player(1)->weapon_count = 0;
+        step_duo(60, (Vector2){0, 0}, (Vector2){0, 0});
+        check("SV-128", "o inimigo ignora quem caiu e vai atrás de quem está de pé", sv_duo_player(0)->down && Vector2Distance(sv_run.enemies[0].pos, sv_duo_player(1)->pos) < before - 20.0f);
+    }
+
+    // Os tiros de cada um usam os bônus de quem atirou
+    start_duo(19);
+    clear_enemies();
+    sv_duo_player(0)->weapon_count = 0;
+    sv_duo_player(1)->weapons[0] = (SvWeapon){W_GRAMPEADOR, 1, 0.0f, 0.0f};
+    sv_duo_player(1)->weapon_count = 1;
+    sv_duo_player(1)->dmg_mult = 50.0f;
+    sv_duo_player(1)->crit_chance = 0.0f;
+    sv_spawn_enemy_at(EN_ESVAZIADO, Vector2Add(sv_duo_player(1)->pos, (Vector2){60.0f, 0.0f}), false);
+    sv_run.enemies[0].max_hp = sv_run.enemies[0].hp = 400.0f;
+    step_duo(40, (Vector2){0, 0}, (Vector2){0, 0});
+    check("SV-129", "o tiro do jogador 2 usa o dano do jogador 2", !sv_run.enemies[0].alive && sv_run.kills == 1);
+
+    // Os perigos dos chefes acertam os dois
+    start_duo(20);
+    clear_enemies();
+    sv_duo_player(0)->weapon_count = 0;
+    sv_duo_player(1)->weapon_count = 0;
+    {
+        SvHazard *h = &sv_run.hazards[0];
+        float hp1 = sv_duo_player(0)->hp, hp2 = sv_duo_player(1)->hp;
+
+        memset(h, 0, sizeof(*h));
+        h->alive = true;
+        h->kind = HZ_CIRCLE;
+        h->pos = Vector2Scale(Vector2Add(sv_duo_player(0)->pos, sv_duo_player(1)->pos), 0.5f);
+        h->radius = 60.0f;
+        h->life = h->max_life = 1.0f;
+        h->damage = 10.0f;
+        step_duo(2, (Vector2){0, 0}, (Vector2){0, 0});
+        check("SV-130", "a área de perigo de um chefe acerta os dois jogadores que estão dentro", sv_duo_player(0)->hp < hp1 && sv_duo_player(1)->hp < hp2);
+    }
+
+    // Dificuldade
+    start_duo(21);
+    clear_enemies();
+    sv_spawn_enemy_at(EN_CHAMADO, (Vector2){100.0f, 100.0f}, false);
+    {
+        float duo_hp = sv_run.enemies[0].max_hp;
+        float duo_boss;
+
+        sv_run.time = sv_boss_spawn_time(0);
+        sv_run.next_boss = 0;
+        step_duo(1, (Vector2){0, 0}, (Vector2){0, 0});
+        duo_boss = sv_run.boss.max_hp;
+
+        sv_meta_reset();
+        sv_game_start(21);
+        sv_cheat_toggle(CHEAT_NO_SPAWN);
+        clear_enemies();
+        sv_spawn_enemy_at(EN_CHAMADO, (Vector2){100.0f, 100.0f}, false);
+        check("SV-131", "na dupla os inimigos têm mais vida", fabsf(duo_hp - sv_run.enemies[0].max_hp * SV_DUO_ENEMY_HP_MULT) < 0.01f);
+        sv_run.time = sv_boss_spawn_time(0);
+        sv_run.next_boss = 0;
+        sv_game_update(1.0f / 60.0f, (Vector2){0, 0});
+        check("SV-132", "na dupla os chefes têm mais vida", sv_run.boss.active && fabsf(duo_boss - sv_run.boss.max_hp * SV_DUO_BOSS_HP_MULT) < 0.5f);
+    }
+
+    // Partida inteira com dois bots
+    {
+        RunResult r = simulate_duo(77, 660.0f);
+
+        printf("      dupla: %.0f s, nível %d, %d abates, %d chefes, pico de %d inimigos\n", r.seconds, r.level, r.kills, r.bosses, r.peak_enemies);
+        check("SV-133", "uma partida inteira em dupla roda sem travar e sem ninguém sair do mapa", r.seconds > 60.0f && r.kills > 0);
+    }
+
+    // Save e ranking da dupla
+    sv_meta_reset();
+    sv_meta.character = CH_LAURA;
+    sv_meta.character2 = CH_JULIO;
+    sv_meta_save(TEST_META_PATH);
+    sv_meta_reset();
+    check("SV-134", "o save da dupla guarda o personagem de cada um", sv_meta_load(TEST_META_PATH) && sv_meta.character == CH_LAURA && sv_meta.character2 == CH_JULIO);
+    {
+        FILE *file;
+        char content[512] = {0};
+
+        sv_meta_reset();
+        sv_meta.character = CH_LAURA;
+        sv_meta_save(TEST_META_PATH);
+        file = fopen(TEST_META_PATH, "r");
+        if (file) { size_t got = fread(content, 1, sizeof(content) - 1, file); (void)got; fclose(file); }
+        check("SV-135", "o save solo continua sem a linha do jogador 2", strstr(content, "character=") != NULL && strstr(content, "character2") == NULL);
+    }
+    remove(TEST_META_PATH);
+    sv_meta_reset();
+
+    sv_ranking_set_path("teste.ranking");
+    remove("teste.ranking");
+    sv_ranking_clear();
+    sv_ranking_add("Solo", 100, 10, 2, 0, 0, false, NULL);
+    sv_ranking_set_path("teste_duplas.ranking");
+    remove("teste_duplas.ranking");
+    sv_ranking_load();
+    sv_ranking_add("Ana e Beto", 300, 50, 5, 1, 0, false, NULL);
+    sv_ranking_set_path("teste.ranking");
+    sv_ranking_load();
+    {
+        bool solo_ok = sv_ranking_count() == 1 && sv_ranking_find("Ana e Beto") == -1;
+
+        sv_ranking_set_path("teste_duplas.ranking");
+        sv_ranking_load();
+        check("SV-136", "o ranking das duplas é separado do solo", solo_ok && sv_ranking_count() == 1 && sv_ranking_find("Solo") == -1 && sv_ranking_find("Ana e Beto") == 0);
+    }
+    remove("teste.ranking");
+    remove("teste_duplas.ranking");
+    sv_ranking_set_path(NULL);
+    sv_ranking_clear();
+}
+
 int main(void)
 {
     printf("Testes do Modo Sobrevivencia\n");
@@ -1062,6 +1389,7 @@ int main(void)
     test_save_feedback();
     test_ajustes_do_teste_com_jogadores();
     test_ranking();
+    test_duo();
 
     printf("\n%d verificacoes, todas passaram.\n", checks);
     return 0;
