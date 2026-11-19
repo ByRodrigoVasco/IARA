@@ -20,6 +20,7 @@ typedef struct
     int best_seconds;           // Maior tempo de sobrevivência
     int kills;                  // Inimigos eliminados no total
     int character;              // Personagem escolhido (SvCharacterId)
+    int character2;             // Dupla: personagem do jogador 2 (o save da dupla é um só para os dois)
 } SvMeta;
 
 extern SvMeta sv_meta;

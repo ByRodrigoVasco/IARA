@@ -90,6 +90,7 @@ typedef struct
     float spin;            // Nota fiscal: ângulo atual do giro
     bool returning;        // Nota fiscal: já está voltando
     unsigned hit_ids[4];
+    int owner;             // Dupla: quem disparou (0 ou 1). No solo é sempre 0
     bool alive;
 } SvShot;
 
@@ -109,6 +110,7 @@ typedef struct
     unsigned target_id;    // Prompt da IARA: o inimigo que recebe o comando (0xB055 é o chefe)
     bool target_boss;
     int text;              // Prompt da IARA: qual comando é digitado
+    int owner;             // Dupla: quem criou a área (0 ou 1). No solo é sempre 0
     bool fired;
     bool alive;
 } SvZone;
@@ -211,11 +213,31 @@ typedef struct
     int kills_since_heal;
     int extra_colleagues;  // Vasco: colegas a mais quando ele tem o Colega de Plantão
     bool moving;           // Andando neste quadro
+    bool down;             // Dupla: caiu e espera o parceiro levantar (nunca acontece no solo)
+    float revive;          // Dupla: segundos que o parceiro já passou ao lado para levantar este jogador
     SvWeapon weapons[SV_MAX_WEAPONS];
     int weapon_count;
     SvPassive passives[SV_MAX_PASSIVES];
     int passive_count;
 } SvPlayer;
+
+// Dupla: o que é de cada jogador e fica guardado enquanto o outro está "em cena" (veja sv_duo.c)
+typedef struct
+{
+    SvPlayer player;
+    Vector2 trail[SV_TRAIL];
+    float trail_timer;
+    Vector2 colega_pos[SV_MAX_COLEGAS];
+    Vector2 colega_dir[SV_MAX_COLEGAS];
+    float colega_cd[SV_MAX_COLEGAS];
+    float colega_attack[SV_MAX_COLEGAS];
+    float colega_walk[SV_MAX_COLEGAS];
+    bool colega_moving[SV_MAX_COLEGAS];
+    float colega_heal;
+    float colega_heal_flash;
+} SvSeat;
+
+#define SV_DUO_PLAYERS 2
 
 typedef struct { int kind; int id; } SvChoice; // kind: 0 arma nova, 1 evolui arma, 2 passivo novo, 3 evolui passivo, 4 marmita, 5 banco de horas
 
@@ -259,6 +281,12 @@ typedef struct
     bool overtime;
     bool cheated;                // Alguma trapaça foi usada: a partida não conta para o progresso do save
     bool cheats[CHEAT_COUNT];    // Trapaças ligadas agora
+
+    // Modo dupla (sv_duo.c). No solo duo fica false, active fica 0 e seats não é usado.
+    bool duo;                    // A partida é em dupla
+    int active;                  // Jogador que está em player e nos campos colega_* e trail agora
+    int chooser;                 // Quem está escolhendo a carta do nível (SV_LEVELUP)
+    SvSeat seats[SV_DUO_PLAYERS]; // Guarda o jogador que não está ativo
 } SvRun;
 
 extern SvRun sv_run;
@@ -271,6 +299,9 @@ extern int sv_time_scale;
 // -----------------------------------------------------------------------------
 
 extern bool sv_debug_mode;   // Ligado pela tecla F1 (sv_debug.c). Libera as trapaças e todos os personagens.
+
+// Modo dupla: ligado antes de sv_game_start para a próxima partida ser em dupla (veja sv_duo.h).
+extern bool sv_duo_mode;
 
 bool sv_cheat_active(int cheat);
 void sv_cheat_toggle(int cheat);
@@ -303,6 +334,9 @@ void sv_game_start(unsigned seed);
 
 /** @brief Avança a partida. move é o movimento desejado, de -1 a 1 em cada eixo. */
 void sv_game_update(float dt, Vector2 move);
+
+/** @brief O mesmo, em dupla: move é o do jogador 1 e move2 o do jogador 2. No solo move2 é ignorado. */
+void sv_game_update_duo(float dt, Vector2 move, Vector2 move2);
 
 /** @brief Aplica a escolha do nível (0 a 2) e retoma a partida. */
 void sv_game_choose(int index);
@@ -340,6 +374,13 @@ float sv_rand_range(float lo, float hi);
 Vector2 sv_player_pos(void);
 void sv_hurt_player(float amount, int effect, float effect_time);
 void sv_apply_status(int effect, float effect_time);
+
+// Jogadores que os perigos dos chefes podem acertar: 1 no solo, 2 na dupla.
+int sv_target_count(void);
+bool sv_target_alive(int index);          // Está de pé (no solo, sempre)
+Vector2 sv_target_pos(int index);
+void sv_hurt_target(int index, float amount, int effect, float effect_time);
+void sv_apply_status_to(int index, int effect, float effect_time);
 SvSpriteId sv_enemy_sprite(int type);
 void sv_spawn_enemy_at(int type, Vector2 pos, bool fake);
 void sv_spawn_fx(int kind, Vector2 pos, float life, float scale);

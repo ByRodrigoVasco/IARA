@@ -7,6 +7,7 @@
 #include "sv_meta.h"
 #include "sv_audio.h"
 #include "sv_map.h"
+#include "sv_duo.h"
 
 SvRun sv_run;
 int sv_time_scale = 1;
@@ -416,6 +417,7 @@ void sv_spawn_enemy_at(int type, Vector2 pos, bool fake)
         if (type == EN_AUDITOR) e->max_hp *= 1.0f;
         e->fake = fake;
         if (fake) e->max_hp = 1.0f;
+        else if (sv_run.duo) e->max_hp *= SV_DUO_ENEMY_HP_MULT;
         e->hp = e->max_hp;
         e->id = ++sv_run.next_enemy_id;
         e->timer = sv_rand() * 4.0f;
@@ -427,12 +429,13 @@ void sv_spawn_enemy_at(int type, Vector2 pos, bool fake)
 static void spawn_ring_position(float distance, Vector2 *out)
 {
     float angle = sv_rand() * 2.0f * PI;
-    Vector2 p = Vector2Add(sv_run.player.pos, (Vector2){cosf(angle) * distance, sinf(angle) * distance});
+    Vector2 center = sv_duo_focus();
+    Vector2 p = Vector2Add(center, (Vector2){cosf(angle) * distance, sinf(angle) * distance});
 
     // Se o ponto cai fora do mapa, tenta o lado oposto
     if (p.x < 20 || p.y < 20 || p.x > SV_WORLD_W - 20 || p.y > SV_WORLD_H - 20)
     {
-        p = Vector2Add(sv_run.player.pos, (Vector2){-cosf(angle) * distance, -sinf(angle) * distance});
+        p = Vector2Add(center, (Vector2){-cosf(angle) * distance, -sinf(angle) * distance});
     }
     *out = clamp_to_world(p, 20.0f);
 }
@@ -473,7 +476,7 @@ static int spawn_event(void)
     else if (type == EN_DADO)
     {
         // Parede de dados que cruza o mapa na direção do jogador
-        Vector2 toward = direction_of(origin, sv_run.player.pos);
+        Vector2 toward = direction_of(origin, sv_duo_focus());
         Vector2 side = {-toward.y, toward.x};
         float angle = atan2f(toward.y, toward.x);
 
@@ -596,7 +599,7 @@ void sv_hurt_player(float amount, int effect, float effect_time)
     float damage;
 
     if (sv_run.cheats[CHEAT_GOD]) return;
-    if (p->invulnerable > 0.0f || sv_run.phase != SV_PLAYING) return;
+    if (p->invulnerable > 0.0f || sv_run.phase != SV_PLAYING || p->down) return;
 
     // Vera Fischer: o golpe é verdadeiro (V) e o dano é falso (F), então o resultado é falso: V -> F = F
     {
@@ -628,9 +631,43 @@ void sv_apply_status(int effect, float effect_time)
 {
     SvPlayer *p = &sv_run.player;
 
+    if (p->down) return;
     if (effect == EFF_SLOW && effect_time > p->slow) p->slow = effect_time;
     if (effect == EFF_ROOT && effect_time > p->root) p->root = effect_time;
     if (effect == EFF_INVERT && effect_time > p->invert) p->invert = effect_time;
+}
+
+int sv_target_count(void)
+{
+    return sv_duo_count();
+}
+
+bool sv_target_alive(int index)
+{
+    return sv_duo_standing(index);
+}
+
+Vector2 sv_target_pos(int index)
+{
+    return sv_duo_player(index)->pos;
+}
+
+void sv_hurt_target(int index, float amount, int effect, float effect_time)
+{
+    int was = sv_run.active;
+
+    sv_duo_use(index);
+    sv_hurt_player(amount, effect, effect_time);
+    sv_duo_use(was);
+}
+
+void sv_apply_status_to(int index, int effect, float effect_time)
+{
+    int was = sv_run.active;
+
+    sv_duo_use(index);
+    sv_apply_status(effect, effect_time);
+    sv_duo_use(was);
 }
 
 // -----------------------------------------------------------------------------
@@ -744,6 +781,7 @@ static SvShot *new_shot(void)
         {
             memset(&sv_run.shots[i], 0, sizeof(SvShot));
             sv_run.shots[i].alive = true;
+            sv_run.shots[i].owner = sv_run.active;
             return &sv_run.shots[i];
         }
     }
@@ -758,6 +796,7 @@ static SvZone *new_zone(void)
         {
             memset(&sv_run.zones[i], 0, sizeof(SvZone));
             sv_run.zones[i].alive = true;
+            sv_run.zones[i].owner = sv_run.active;
             return &sv_run.zones[i];
         }
     }
@@ -1434,6 +1473,7 @@ static void update_zones(float dt)
         SvZone *z = &sv_run.zones[i];
 
         if (!z->alive) continue;
+        sv_duo_use(z->owner);   // Dupla: a área usa os bônus de quem a criou
 
         // A janela do Prompt acompanha o alvo enquanto o comando é digitado
         if (z->kind == ZK_PROMPT && z->delay > 0.0f)
@@ -1514,6 +1554,7 @@ static void update_shots(float dt)
         SvShot *s = &sv_run.shots[i];
 
         if (!s->alive) continue;
+        sv_duo_use(s->owner);   // Dupla: o tiro usa os bônus de quem atirou, e a nota volta para ele
 
         if (s->kind == 2 && !update_nota_flight(s, dt)) continue;
 
@@ -1585,6 +1626,14 @@ static void update_enemies(float dt)
 
         if (!e->alive) continue;
         stats = &enemy_stats[e->type];
+
+        // Dupla: o inimigo vai atrás de quem está de pé e mais perto. p passa a ser esse jogador
+        if (sv_run.duo)
+        {
+            int target = sv_duo_nearest(e->pos);
+
+            if (target >= 0) sv_duo_use(target);
+        }
 
         e->anim += dt;
         e->timer += dt;
@@ -1724,6 +1773,24 @@ static void update_enemies(float dt)
                 damage_enemy(e, 8.0f * (float)passive_level(P_ESPINHOS), p->pos, 80.0f);
             }
         }
+
+        // Dupla: quem não é o alvo também se machuca se encostar
+        if (sv_run.duo && e->alive)
+        {
+            int other = 1 - sv_run.active;
+            SvPlayer *o = sv_duo_player(other);
+
+            if (!o->down && Vector2Distance(e->pos, o->pos) < stats->radius + 8.0f)
+            {
+                if (e->fake)
+                {
+                    sv_sfx(SND_alucinacaoSome);
+                    kill_enemy(e);
+                    continue;
+                }
+                sv_hurt_target(other, stats->damage * danger_scale, EFF_NONE, 0.0f);
+            }
+        }
     }
 
     // Separação: ninguém fica em cima do outro
@@ -1761,6 +1828,17 @@ static void update_enemies(float dt)
 // Itens
 // -----------------------------------------------------------------------------
 
+// Dupla: um chip de XP pego por um sobe a barra dos dois (cada um com o seu bônus de XP)
+static void share_with_partner(int kind, float value)
+{
+    SvPlayer *partner;
+
+    if (!sv_run.duo) return;
+    partner = sv_duo_player(1 - sv_run.active);
+    if (kind == 0) partner->xp += value * partner->xp_mult;
+    else if (kind == 3) partner->pending_levels++;
+}
+
 static void update_gems(float dt)
 {
     SvPlayer *p = &sv_run.player;
@@ -1771,6 +1849,15 @@ static void update_gems(float dt)
         float d;
 
         if (!g->alive) continue;
+
+        // Dupla: o item vai para quem está de pé e mais perto
+        if (sv_run.duo)
+        {
+            int nearest = sv_duo_nearest(g->pos);
+
+            if (nearest < 0) continue;
+            sv_duo_use(nearest);
+        }
         d = Vector2Distance(g->pos, p->pos);
 
         if (g->kind == 3 || g->kind == 2) { if (d < p->magnet_range * 0.5f) g->pulled = true; }
@@ -1785,6 +1872,7 @@ static void update_gems(float dt)
             {
             case 0:
                 p->xp += g->value * p->xp_mult;
+                share_with_partner(0, g->value);
                 sv_sfx(SND_coletaXp);
                 break;
             case 1:
@@ -1798,6 +1886,7 @@ static void update_gems(float dt)
                 break;
             case 3:
                 p->pending_levels++;
+                share_with_partner(3, 0.0f);
                 sv_sfx(SND_bau);
                 break;
             }
@@ -1810,6 +1899,8 @@ static void update_gems(float dt)
 // -----------------------------------------------------------------------------
 
 #define LANTERNA_WEIGHT 4          // Peso da Lanterna no sorteio das cartas (as outras pesam 1)
+
+static void check_level_up_duo(void);
 
 static int choice_weight(const SvChoice *c)
 {
@@ -2084,6 +2175,40 @@ int sv_choice_level(const SvChoice *c)
     }
 }
 
+// Dupla: os dois sobem de nível juntos (a XP é dividida) e escolhem um de cada vez, primeiro o jogador 1
+static void check_level_up_duo(void)
+{
+    for (int k = 0; k < SV_DUO_PLAYERS; k++)
+    {
+        SvPlayer *p = sv_duo_player(k);
+
+        while (p->xp >= (float)p->xp_needed)
+        {
+            p->xp -= (float)p->xp_needed;
+            p->level++;
+            p->xp_needed = sv_xp_to_next(p->level);
+            p->pending_levels++;
+        }
+    }
+
+    if (sv_run.phase != SV_PLAYING) return;
+
+    for (int k = 0; k < SV_DUO_PLAYERS; k++)
+    {
+        SvPlayer *p = sv_duo_player(k);
+
+        // Quem caiu guarda o nível para escolher quando levantar
+        if (p->pending_levels <= 0 || p->down) continue;
+        sv_duo_use(k);
+        sv_run.player.pending_levels--;
+        sv_run.chooser = k;
+        build_choices();
+        sv_run.phase = SV_LEVELUP;
+        sv_sfx(SND_subirNivel);
+        return;
+    }
+}
+
 void sv_game_choose(int index)
 {
     SvPlayer *p = &sv_run.player;
@@ -2132,11 +2257,20 @@ void sv_game_choose(int index)
     recompute_stats();
     sv_sfx(SND_confirma);
     sv_run.phase = SV_PLAYING;
+
+    // Dupla: se o parceiro também subiu de nível, a vez de escolher passa para ele agora
+    if (sv_run.duo) check_level_up_duo();
 }
 
 static void check_level_up(void)
 {
     SvPlayer *p = &sv_run.player;
+
+    if (sv_run.duo)
+    {
+        check_level_up_duo();
+        return;
+    }
 
     while (p->xp >= (float)p->xp_needed)
     {
@@ -2159,9 +2293,32 @@ static void check_level_up(void)
 // Partida
 // -----------------------------------------------------------------------------
 
+// Monta o jogador em cena no ponto de partida, com o personagem pedido
+static void setup_player(Vector2 pos, int character)
+{
+    SvPlayer *p = &sv_run.player;
+
+    memset(p, 0, sizeof(*p));
+    p->pos = pos;
+    p->facing_vector = (Vector2){0.0f, 1.0f};
+    p->direction = SOUTH;
+    p->level = 1;
+    p->xp_needed = sv_xp_to_next(1);
+
+    // Personagem ainda bloqueado volta para o Estagiário
+    p->character = (sv_debug_mode || sv_character_unlocked(character, sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills)) ? character : CH_ESTAGIARIO;
+    p->weapons[0] = (SvWeapon){sv_character(p->character)->start_weapon, 1, 0.5f, 0.0f};
+    p->weapon_count = 1;
+    p->hp = 0.0f;
+    p->max_hp = 0.0f;
+    recompute_stats();
+    p->hp = p->max_hp;
+    p->revive_ready = sv_meta.upgrades[UPG_RECOMECO] > 0 || sv_character(p->character)->free_revive;
+}
+
 void sv_game_start(unsigned seed)
 {
-    SvPlayer *p;
+    Vector2 start = {3.5f * SV_CELL_W, 2.5f * SV_CELL_H};
 
     sv_map_init();
     memset(&sv_run, 0, sizeof(sv_run));
@@ -2170,22 +2327,20 @@ void sv_game_start(unsigned seed)
     sv_run.phase = SV_PLAYING;
     sv_run.next_enemy_id = 0;
 
-    p = &sv_run.player;
-    p->pos = (Vector2){3.5f * SV_CELL_W, 2.5f * SV_CELL_H};
-    p->facing_vector = (Vector2){0.0f, 1.0f};
-    p->direction = SOUTH;
-    p->level = 1;
-    p->xp_needed = sv_xp_to_next(1);
-
-    // Personagem ainda bloqueado volta para o Estagiário
-    p->character = (sv_debug_mode || sv_character_unlocked(sv_meta.character, sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills)) ? sv_meta.character : CH_ESTAGIARIO;
-    p->weapons[0] = (SvWeapon){sv_character(p->character)->start_weapon, 1, 0.5f, 0.0f};
-    p->weapon_count = 1;
-    p->hp = 0.0f;
-    p->max_hp = 0.0f;
-    recompute_stats();
-    p->hp = p->max_hp;
-    p->revive_ready = sv_meta.upgrades[UPG_RECOMECO] > 0 || sv_character(p->character)->free_revive;
+    if (!sv_duo_mode)
+    {
+        setup_player(start, sv_meta.character);
+    }
+    else
+    {
+        // Dupla: o jogador 2 é montado primeiro e guardado; o jogador 1 fica em cena
+        sv_run.duo = true;
+        sv_run.active = 1;
+        setup_player((Vector2){start.x + SV_DUO_START_GAP / 2.0f, start.y}, sv_meta.character2);
+        sv_run.seats[1].player = sv_run.player;
+        sv_run.active = 0;
+        setup_player((Vector2){start.x - SV_DUO_START_GAP / 2.0f, start.y}, sv_meta.character);
+    }
 
     sv_run.act = 0;
     sv_banner("ATO I", 3.0f);
@@ -2194,8 +2349,9 @@ void sv_game_start(unsigned seed)
 
 static void update_music_and_ambient(void)
 {
-    int col = (int)(sv_run.player.pos.x / SV_CELL_W);
-    int row = (int)(sv_run.player.pos.y / SV_CELL_H);
+    Vector2 at = sv_duo_focus();
+    int col = (int)(at.x / SV_CELL_W);
+    int row = (int)(at.y / SV_CELL_H);
 
     if (col < 0) col = 0;
     if (col >= SV_COLS) col = SV_COLS - 1;
@@ -2285,11 +2441,10 @@ static void update_fx(float dt)
     }
 }
 
-static void check_death(void)
+// Ctrl+Z: o jogador em cena volta com metade da vida e empurra todo mundo para longe. Falso se não tinha.
+static bool use_ctrl_z(void)
 {
     SvPlayer *p = &sv_run.player;
-
-    if (p->hp > 0.0f) return;
 
     if (p->revive_ready)
     {
@@ -2307,15 +2462,46 @@ static void check_death(void)
         sv_spawn_fx(FX_EXPLOSION, p->pos, 0.5f, 3.0f);
         sv_sfx(SND_evolucao);
         sv_banner("CTRL+Z", 2.0f);
-        return;
+        return true;
     }
+    return false;
+}
 
+static void finish_dead(void)
+{
     sv_run.phase = SV_DEAD;
     sv_sfx(SND_morte);
     sv_music_play(MUS_GAMEOVER);
 }
 
+static void check_death(void)
+{
+    if (sv_run.duo)
+    {
+        // Dupla: quem fica sem vida usa o Ctrl+Z ou cai; a partida acaba quando os dois caem
+        for (int k = 0; k < SV_DUO_PLAYERS; k++)
+        {
+            SvPlayer *p = sv_duo_player(k);
+
+            if (p->down || p->hp > 0.0f) continue;
+            sv_duo_use(k);
+            if (!use_ctrl_z()) sv_duo_fall(k);
+        }
+        if (sv_duo_all_down()) finish_dead();
+        return;
+    }
+
+    if (sv_run.player.hp > 0.0f) return;
+    if (use_ctrl_z()) return;
+    finish_dead();
+}
+
 void sv_game_update(float dt, Vector2 move)
+{
+    sv_game_update_duo(dt, move, (Vector2){0.0f, 0.0f});
+}
+
+void sv_game_update_duo(float dt, Vector2 move, Vector2 move2)
 {
     int budget;
 
@@ -2342,6 +2528,11 @@ void sv_game_update(float dt, Vector2 move)
     if (sv_run.next_boss < BOSS_COUNT && !sv_run.boss.active && sv_run.time >= sv_boss_spawn_time(sv_run.next_boss))
     {
         sv_boss_spawn(sv_run.next_boss++);
+        if (sv_run.duo)
+        {
+            sv_run.boss.max_hp *= SV_DUO_BOSS_HP_MULT;
+            sv_run.boss.hp = sv_run.boss.max_hp;
+        }
     }
     if (sv_run.time >= SV_RUN_SECONDS && !sv_run.overtime)
     {
@@ -2349,10 +2540,21 @@ void sv_game_update(float dt, Vector2 move)
         sv_sfx(SND_horaExtra);
     }
 
-    update_player(dt, move);
+    if (!sv_run.duo) update_player(dt, move);
+    else
+    {
+        // Dupla: cada um anda com o seu controle; quem caiu fica parado no chão
+        for (int k = 0; k < SV_DUO_PLAYERS; k++)
+        {
+            if (!sv_duo_standing(k)) continue;
+            sv_duo_use(k);
+            update_player(dt, k == 0 ? move : move2);
+        }
+        sv_duo_update(dt);
+    }
 
     // Nascimentos
-    sv_run.spawn_accumulator += sv_spawn_rate(sv_run.time) * dt * (sv_run.boss.active ? 0.25f : 1.0f) * (sv_run.cheats[CHEAT_NO_SPAWN] ? 0.0f : 1.0f);
+    sv_run.spawn_accumulator += sv_spawn_rate(sv_run.time) * dt * (sv_run.boss.active ? 0.25f : 1.0f) * (sv_run.cheats[CHEAT_NO_SPAWN] ? 0.0f : 1.0f) * (sv_run.duo ? SV_DUO_SPAWN_MULT : 1.0f);
     budget = 6;
     while (sv_run.spawn_accumulator >= 1.0f && budget-- > 0 && sv_run.enemy_count < SV_MAX_ENEMIES - 20)
     {
@@ -2360,10 +2562,27 @@ void sv_game_update(float dt, Vector2 move)
     }
     if (sv_run.spawn_accumulator > 8.0f) sv_run.spawn_accumulator = 8.0f;
 
-    update_weapons(dt);
+    if (!sv_run.duo) update_weapons(dt);
+    else
+    {
+        for (int k = 0; k < SV_DUO_PLAYERS; k++)
+        {
+            if (!sv_duo_standing(k)) continue;
+            sv_duo_use(k);
+            update_weapons(dt);
+        }
+    }
     update_shots(dt);
     update_zones(dt);
     update_enemies(dt);
+
+    // Dupla: o chefe mira em quem está de pé e mais perto dele
+    if (sv_run.duo && sv_run.boss.active)
+    {
+        int target = sv_duo_nearest(sv_run.boss.pos);
+
+        if (target >= 0) sv_duo_use(target);
+    }
     sv_boss_update(dt);
     sv_hazards_update(dt);
     update_gems(dt);
@@ -2372,6 +2591,9 @@ void sv_game_update(float dt, Vector2 move)
 
     check_level_up();
     check_death();
+
+    // Dupla: fora da escolha de nível, quem fica em cena entre um quadro e outro é o jogador 1
+    if (sv_run.duo && sv_run.phase != SV_LEVELUP) sv_duo_use(0);
 }
 
 int sv_game_finish(void)
@@ -2380,6 +2602,7 @@ int sv_game_finish(void)
 
     if (finished_flag) return 0;
     finished_flag = true;
+    sv_duo_use(0);
     if (sv_run.cheated) return 0;   // Partida com trapaça não conta para o progresso do save
 
     earned = sv_run.coins + (int)(sv_run.time / 10.0f) + sv_run.bosses_defeated * 30 + (sv_run.phase == SV_WON ? 300 : 0);
