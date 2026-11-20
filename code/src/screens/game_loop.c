@@ -66,7 +66,7 @@
 #define FLASH_DIM_ALPHA 190                    // Escurecimento da imagem atrás da frase do flash
 
 // Sintoma visual do avanço da campanha: o escritório escurece aos poucos (GDD 6.1).
-#define OFFICE_MAX_DARKENING 90.0f
+#define OFFICE_MAX_DARKENING 150.0f
 
 // ============================================================================
 // DIMENSÕES E OFFSETS DA HITBOX (CAIXA DE COLISÃO DO JOGADOR)
@@ -1017,6 +1017,17 @@ void handle_player_input(void)
     update_collision_rec();
 }
 
+// Luz do escritório no último quadro desenhado: os personagens usam a mesma luz do cenário,
+// senão brilham sobre o escritório escurecido.
+static Color office_scene_ambient = {255, 255, 255, 255};
+static Rectangle office_scene_rect = {0, 0, 0, 0};
+static float office_scene_progress = 0.0f;
+
+static Color character_light(Vector2 foot)
+{
+    return office_symptoms_light_at(office_scene_ambient, office_scene_rect, foot, office_scene_progress, GetTime());
+}
+
 /**
  * @brief Desenha o sprite do jogador na tela utilizando as dimensões e rotação adequadas.
  */
@@ -1040,8 +1051,11 @@ void render_player(void)
                       current_estagiario_position.y,
                       size, size};
 
-    // Desenha a textura na tela com suporte a tint de opacidade (color_to_fade)
-    DrawTexturePro(texture, source, dest, (Vector2){0, 0}, 0.0f, color_to_fade);
+    // Desenha a textura com a luz do ponto onde o jogador pisa (inclui a opacidade do fade)
+    Color light = character_light((Vector2){dest.x + (size * 0.5f), dest.y + (size * 0.9f)});
+    light.a = color_to_fade.a;
+
+    DrawTexturePro(texture, source, dest, (Vector2){0, 0}, 0.0f, light);
 }
 
 /**
@@ -1091,6 +1105,11 @@ void render_game_loop_escritorio(void)
 
     DrawTexturePro(in_game_office, source, dest, (Vector2){0, 0}, 0.0f, office_tint);
 
+    office_scene_ambient = office_tint;
+    office_scene_rect = dest;
+    office_scene_progress = campaign_progress;
+
+    draw_office_broken_lamps(dest, campaign_progress, color_to_fade.a, now);
     draw_office_symptoms(&symptoms, dest, color_to_fade.a, now);
 }
 
@@ -1203,9 +1222,9 @@ static void render_computer_backdrop(void)
 static void render_office_scene(void)
 {
     render_game_loop_escritorio();
-    draw_npcs(get_scale(), color_to_fade, current_estagiario_position.y, true);
+    draw_npcs_lit(get_scale(), character_light, current_estagiario_position.y, true);
     render_player();
-    draw_npcs(get_scale(), color_to_fade, current_estagiario_position.y, false);
+    draw_npcs_lit(get_scale(), character_light, current_estagiario_position.y, false);
 }
 
 static void render_office_with_glass(void)
