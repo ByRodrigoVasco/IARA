@@ -94,12 +94,12 @@ static int campaign_loading_jobs(loading_job *jobs)
 
 static int active_save_loading_jobs(loading_job *jobs)
 {
-    return active_save_mode() == SAVE_MODE_SURVIVAL ? survival_loading_jobs(jobs) : campaign_loading_jobs(jobs);
+    return save_mode_is_survival(active_save_mode()) ? survival_loading_jobs(jobs) : campaign_loading_jobs(jobs);
 }
 
 static int active_save_screen(void)
 {
-    return active_save_mode() == SAVE_MODE_SURVIVAL ? SURVIVAL_SCREEN : PLAYING_SCREEN;
+    return save_mode_is_survival(active_save_mode()) ? SURVIVAL_SCREEN : PLAYING_SCREEN;
 }
 
 int begin_loading_active_save(void)
@@ -269,13 +269,14 @@ void handle_state_machine(void)
         if (render_survival())
         {
             bool switch_player = survival_wants_player_switch();
+            save_mode mode = active_save_mode();   // Solo ou dupla: a troca volta para a lista do mesmo modo
 
             unload_survival();
             active_save_clear();
             if (switch_player)
             {
-                // TROCAR JOGADOR: cada jogador é um save, então volta para a lista de saves do modo
-                initialize_save_select(SAVE_MODE_SURVIVAL);
+                // TROCAR JOGADOR: cada jogador (ou dupla) é um save, então volta para a lista de saves do modo
+                initialize_save_select(mode);
                 current_game_state_variables.current_screen = SAVE_SELECT_SCREEN;
             }
             else

@@ -12,6 +12,7 @@
 #include "sv_meta.h"
 #include "sv_map.h"
 #include "sv_debug.h"
+#include "sv_duo.h"
 
 static const SvSpriteId boss_sprites[BOSS_COUNT] = {SPR_bo_impressora, SPR_bo_modelo, SPR_bo_diego, SPR_bo_rene, SPR_bo_iara};
 
@@ -372,11 +373,51 @@ static void draw_enemy(SvEnemy *e)
     }
 }
 
+// Dupla: cor de cada jogador (marcador sobre a cabeça e no HUD)
+static const Color duo_colors[SV_DUO_PLAYERS] = {{255, 90, 100, 255}, {90, 170, 255, 255}};
+
+// Dupla: quem caiu fica deitado e cinza, com o anel de quanto falta para levantar
+static void draw_fallen_player(SvPlayer *p, int index)
+{
+    float progress = sv_duo_revive_progress(index);
+    char label[8];
+
+    draw_shadow(p->pos, 12.0f);
+    sv_draw_player(p->direction, 0, p->pos, 1.0f, (Color){110, 105, 120, 220});
+    DrawCircleLinesV(p->pos, 20.0f, (Color){duo_colors[index].r, duo_colors[index].g, duo_colors[index].b, 120});
+    if (progress > 0.0f) DrawRing(p->pos, 18.0f, 22.0f, -90.0f, -90.0f + 360.0f * progress, 32, (Color){120, 230, 160, 255});
+    snprintf(label, sizeof(label), "J%d", index + 1);
+    sv_text_centered(label, p->pos.x, p->pos.y - 40.0f, 12.0f, duo_colors[index]);
+    sv_text_centered(progress > 0.0f ? "LEVANTANDO" : "FIQUE AO LADO", p->pos.x, p->pos.y + 18.0f, 9.0f, (Color){230, 230, 235, 230});
+}
+
+// Dupla: marcador J1 / J2 sobre a cabeça, para cada um achar o seu personagem
+static void draw_duo_marker(SvPlayer *p, int index)
+{
+    Vector2 tip = {p->pos.x, p->pos.y - 24.0f};
+    char label[8];
+
+    DrawTriangle((Vector2){tip.x - 4.0f, tip.y - 6.0f}, tip, (Vector2){tip.x + 4.0f, tip.y - 6.0f}, duo_colors[index]);
+    snprintf(label, sizeof(label), "J%d", index + 1);
+    sv_text_centered(label, tip.x, tip.y - 20.0f, 11.0f, duo_colors[index]);
+}
+
 static void draw_player(void)
 {
     SvPlayer *p = &sv_run.player;
     Color tint = WHITE;
     int frame = p->walk_time > 0.0f ? get_walk_frame(p->walk_time) : 0;
+
+    if (sv_run.duo)
+    {
+        sv_use_player_slot(sv_run.active);
+        if (p->down)
+        {
+            draw_fallen_player(p, sv_run.active);
+            sv_use_player_slot(0);
+            return;
+        }
+    }
 
     if (p->hurt_flash > 0.0f) tint = (Color){255, 120, 120, 255};
     else if (p->invulnerable > 0.0f && ((int)(sv_run.time * 20.0f) % 2)) tint = (Color){255, 255, 255, 120};
@@ -421,6 +462,12 @@ static void draw_player(void)
 
             sv_draw(SPR_fx_postits, anim_frame(sv_run.time, 6.0f) % 4, p->pos, radius / 22.0f, w->angle * RAD2DEG, false, WHITE);
         }
+    }
+
+    if (sv_run.duo)
+    {
+        draw_duo_marker(p, sv_run.active);
+        sv_use_player_slot(0);
     }
 }
 
@@ -498,6 +545,7 @@ static void draw_world_objects(Camera2D camera)
     float half_w = GetScreenWidth() / 2.0f / camera.zoom + 120.0f;
     float half_h = GetScreenHeight() / 2.0f / camera.zoom + 120.0f;
     SvPlayer *player = &sv_run.player;
+    int was = sv_run.active;
 
     for (int i = 0; i < sv_map_prop_count() && count < 1100; i++)
     {
@@ -514,17 +562,25 @@ static void draw_world_objects(Camera2D camera)
     }
 
     if (sv_run.boss.active) list[count++] = (Drawable){sv_run.boss.pos.y + 18.0f, DR_BOSS, 0};
-    list[count++] = (Drawable){player->pos.y + 10.0f, DR_PLAYER, 0};
 
-    for (int i = 0; i < player->weapon_count; i++)
+    // Na dupla, cada jogador entra na lista com os seus colegas (index = jogador * SV_MAX_COLEGAS + colega)
+    for (int k = 0; k < sv_duo_count(); k++)
     {
-        if (player->weapons[i].id == W_COLEGA)
-        {
-            int n = sv_colega_count();
+        sv_duo_use(k);
+        list[count++] = (Drawable){player->pos.y + 10.0f, DR_PLAYER, k};
 
-            for (int c = 0; c < n; c++) list[count++] = (Drawable){sv_run.colega_pos[c].y + 8.0f, DR_COLEGA, c};
+        if (player->down) continue;
+        for (int i = 0; i < player->weapon_count; i++)
+        {
+            if (player->weapons[i].id == W_COLEGA)
+            {
+                int n = sv_colega_count();
+
+                for (int c = 0; c < n; c++) list[count++] = (Drawable){sv_run.colega_pos[c].y + 8.0f, DR_COLEGA, k * SV_MAX_COLEGAS + c};
+            }
         }
     }
+    sv_duo_use(was);
 
     qsort(list, (size_t)count, sizeof(Drawable), compare_drawables);
 
@@ -535,10 +591,11 @@ static void draw_world_objects(Camera2D camera)
         case DR_PROP: draw_prop(sv_map_prop(list[i].index)); break;
         case DR_ENEMY: draw_enemy(&sv_run.enemies[list[i].index]); break;
         case DR_BOSS: draw_boss(); break;
-        case DR_PLAYER: draw_player(); break;
-        default: draw_colega(list[i].index); break;
+        case DR_PLAYER: sv_duo_use(list[i].index); draw_player(); break;
+        default: sv_duo_use(list[i].index / SV_MAX_COLEGAS); draw_colega(list[i].index % SV_MAX_COLEGAS); break;
         }
     }
+    sv_duo_use(was);
 }
 
 // Depois da escuridão: os olhos e o sangue dos monstros voltam com a cor cheia, como se brilhassem
@@ -800,6 +857,64 @@ Rectangle sv_speed_button_rect(void)
     return (Rectangle){(float)GetScreenWidth() - pad - width, (float)GetScreenHeight() - pad - height, width, height};
 }
 
+// Dupla: vida, XP, nível e poderes de um jogador, no lado esquerdo (jogador 1) ou direito (jogador 2)
+static void draw_duo_panel(int index)
+{
+    SvPlayer *p = sv_duo_player(index);
+    bool right = index == 1;
+    float ui = sv_ui();
+    float w = (float)GetScreenWidth(), h = (float)GetScreenHeight();
+    float pad = 18.0f * ui;
+    float bar_w = 300.0f * ui;
+    float x = right ? w - pad - bar_w : pad;
+    float icon = 24.0f * 2.0f * ui;
+    char text[96];
+
+    snprintf(text, sizeof(text), "J%d", index + 1);
+    sv_text(text, right ? x - 46.0f * ui : x + bar_w + 12.0f * ui, pad - 6.0f * ui, 34.0f * ui, duo_colors[index]);
+
+    draw_bar(x, pad, bar_w, 20.0f * ui, p->down ? 0.0f : p->hp / p->max_hp, COLOR_HP);
+    if (p->down) snprintf(text, sizeof(text), "CAIU");
+    else snprintf(text, sizeof(text), "%d / %d", (int)ceilf(p->hp > 0 ? p->hp : 0), (int)p->max_hp);
+    sv_text(text, x + 8.0f * ui, pad - 2.0f * ui, 22.0f * ui, WHITE);
+
+    draw_bar(x, pad + 30.0f * ui, bar_w, 12.0f * ui, p->xp / (float)p->xp_needed, COLOR_XP);
+    snprintf(text, sizeof(text), "NÍVEL %d", p->level);
+    sv_text(text, right ? x + bar_w - sv_text_width(text, 24.0f * ui) : x, pad + 46.0f * ui, 24.0f * ui, COLOR_XP);
+
+    // Poderes embaixo: o jogador 1 a partir da esquerda, o jogador 2 a partir da direita, acima do botão de tempo
+    {
+        float y = h - pad - icon - (right ? 54.0f * ui : 0.0f);
+        float step = icon + 8.0f * ui;
+        float small = icon * 0.75f;
+
+        x = right ? w - pad - icon : pad;
+        for (int i = 0; i < p->weapon_count; i++)
+        {
+            SvWeapon *wp = &p->weapons[i];
+
+            DrawRectangle((int)x - 2, (int)y - 2, (int)icon + 4, (int)icon + 4, (Color){0, 0, 0, 180});
+            sv_draw(sv_weapon_icon(wp->id), anim_frame(sv_run.time, 4.0f) % 4, (Vector2){x + icon / 2.0f, y + icon / 2.0f}, 2.0f * ui, 0.0f, false, WHITE);
+            snprintf(text, sizeof(text), "%d", wp->level);
+            sv_text(text, x + icon - 14.0f * ui, y + icon - 20.0f * ui, 20.0f * ui, (Color){255, 220, 120, 255});
+            x += right ? -step : step;
+        }
+
+        x = right ? w - pad - small : pad;
+        y -= icon + 10.0f * ui;
+        for (int i = 0; i < p->passive_count; i++)
+        {
+            SvPassive *ps = &p->passives[i];
+
+            DrawRectangle((int)x - 2, (int)y - 2, (int)small + 4, (int)small + 4, (Color){0, 0, 0, 180});
+            sv_draw(sv_passive_icon(ps->id), 0, (Vector2){x + small / 2.0f, y + small / 2.0f}, 1.5f * ui, 0.0f, false, WHITE);
+            snprintf(text, sizeof(text), "%d", ps->level);
+            sv_text(text, x + small - 12.0f * ui, y + small - 18.0f * ui, 18.0f * ui, (Color){170, 230, 255, 255});
+            x += right ? -(small + 8.0f * ui) : small + 8.0f * ui;
+        }
+    }
+}
+
 static void draw_hud(Camera2D camera)
 {
     SvPlayer *p = &sv_run.player;
@@ -810,7 +925,13 @@ static void draw_hud(Camera2D camera)
     int seconds = (int)sv_run.time;
     char text[96];
 
-    // Vida e XP
+    // Vida e XP (na dupla, um painel para cada jogador)
+    if (sv_run.duo)
+    {
+        draw_duo_panel(0);
+        draw_duo_panel(1);
+    }
+    else
     {
         float bar_w = 300.0f * ui;
 
@@ -846,13 +967,22 @@ static void draw_hud(Camera2D camera)
         sv_text_centered(text, button.x + button.width / 2.0f, button.y + (button.height - SPEED_BUTTON_TEXT_SIZE * ui) / 2.0f - 2.0f * ui, SPEED_BUTTON_TEXT_SIZE * ui, WHITE);
     }
 
-    // Banco de Horas e abates
-    snprintf(text, sizeof(text), "BANCO DE HORAS %d", sv_run.coins);
-    sv_text(text, w - pad - sv_text_width(text, font), pad - 2.0f * ui, font, (Color){255, 214, 80, 255});
-    snprintf(text, sizeof(text), "ABATES %d", sv_run.kills);
-    sv_text(text, w - pad - sv_text_width(text, font * 0.8f), pad + 32.0f * ui, font * 0.8f, (Color){220, 220, 220, 255});
+    // Banco de Horas e abates (na dupla o alto à direita é do jogador 2, então eles descem para o centro, embaixo)
+    if (sv_run.duo)
+    {
+        snprintf(text, sizeof(text), "BANCO DE HORAS %d    ABATES %d", sv_run.coins, sv_run.kills);
+        sv_text_centered(text, w / 2.0f, h - pad - font, font * 0.8f, (Color){255, 214, 80, 255});
+    }
+    else
+    {
+        snprintf(text, sizeof(text), "BANCO DE HORAS %d", sv_run.coins);
+        sv_text(text, w - pad - sv_text_width(text, font), pad - 2.0f * ui, font, (Color){255, 214, 80, 255});
+        snprintf(text, sizeof(text), "ABATES %d", sv_run.kills);
+        sv_text(text, w - pad - sv_text_width(text, font * 0.8f), pad + 32.0f * ui, font * 0.8f, (Color){220, 220, 220, 255});
+    }
 
     // Poderes e passivos
+    if (!sv_run.duo)
     {
         float icon = 24.0f * 2.0f * ui;
         float x = pad;
@@ -908,11 +1038,41 @@ static void draw_hud(Camera2D camera)
     }
 
     // Efeitos de estado
-    if (p->invert > 0.0f) sv_text_centered("CONTROLES INVERTIDOS", w / 2.0f, h * 0.2f, 34.0f * ui, (Color){255, 120, 255, 255});
-    if (p->root > 0.0f) sv_text_centered("PRESO", w / 2.0f, h * 0.2f + 40.0f * ui, 34.0f * ui, (Color){150, 170, 255, 255});
+    if (sv_run.duo)
+    {
+        for (int k = 0; k < SV_DUO_PLAYERS; k++)
+        {
+            SvPlayer *q = sv_duo_player(k);
 
-    // Pouca vida: a borda da tela fica vermelha
-    if (p->hp < p->max_hp * 0.3f)
+            if (q->invert > 0.0f) sv_text_centered(k == 0 ? "J1: CONTROLES INVERTIDOS" : "J2: CONTROLES INVERTIDOS", w / 2.0f, h * 0.2f + (float)k * 80.0f * ui, 34.0f * ui, (Color){255, 120, 255, 255});
+            if (q->root > 0.0f) sv_text_centered(k == 0 ? "J1: PRESO" : "J2: PRESO", w / 2.0f, h * 0.2f + 40.0f * ui + (float)k * 80.0f * ui, 34.0f * ui, (Color){150, 170, 255, 255});
+        }
+    }
+    else
+    {
+        if (p->invert > 0.0f) sv_text_centered("CONTROLES INVERTIDOS", w / 2.0f, h * 0.2f, 34.0f * ui, (Color){255, 120, 255, 255});
+        if (p->root > 0.0f) sv_text_centered("PRESO", w / 2.0f, h * 0.2f + 40.0f * ui, 34.0f * ui, (Color){150, 170, 255, 255});
+    }
+
+    // Pouca vida: a borda da tela fica vermelha (na dupla, se alguém de pé estiver mal ou tiver caído)
+    if (sv_run.duo)
+    {
+        bool danger = false;
+
+        for (int k = 0; k < SV_DUO_PLAYERS; k++)
+        {
+            SvPlayer *q = sv_duo_player(k);
+
+            if (q->down || q->hp < q->max_hp * 0.3f) danger = true;
+        }
+        if (danger)
+        {
+            unsigned char alpha = (unsigned char)(40 + 30 * sinf(sv_run.time * 6.0f));
+
+            DrawRectangleLinesEx((Rectangle){0, 0, w, h}, 18.0f * ui, (Color){200, 0, 20, alpha});
+        }
+    }
+    else if (p->hp < p->max_hp * 0.3f)
     {
         unsigned char alpha = (unsigned char)(40 + 30 * sinf(sv_run.time * 6.0f));
 
@@ -929,7 +1089,11 @@ void sv_render_game(void)
     camera.zoom = GetScreenHeight() / 720.0f;
     if (camera.zoom < 0.75f) camera.zoom = 0.75f;
     camera.offset = (Vector2){GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f};
-    camera.target = (Vector2){sv_run.player.pos.x + sinf(sv_run.time * 90.0f) * shake, sv_run.player.pos.y + cosf(sv_run.time * 80.0f) * shake};
+    {
+        Vector2 focus = sv_duo_focus();   // No solo, a posição do jogador; na dupla, o meio entre os dois
+
+        camera.target = (Vector2){focus.x + sinf(sv_run.time * 90.0f) * shake, focus.y + cosf(sv_run.time * 80.0f) * shake};
+    }
 
     // A câmera não mostra o vazio fora do mapa
     {
@@ -1059,7 +1223,8 @@ void sv_render_levelup(int selected)
     float w = (float)GetScreenWidth();
 
     DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), (Color){4, 0, 8, 200});
-    sv_text_centered("NOVO NÍVEL", w / 2.0f, GetScreenHeight() / 2.0f - 340.0f * ui, 70.0f * ui, (Color){230, 40, 50, 255});
+    if (sv_run.duo) sv_text_centered(sv_run.chooser == 0 ? "NOVO NÍVEL: JOGADOR 1 ESCOLHE" : "NOVO NÍVEL: JOGADOR 2 ESCOLHE", w / 2.0f, GetScreenHeight() / 2.0f - 340.0f * ui, 70.0f * ui, duo_colors[sv_run.chooser]);
+    else sv_text_centered("NOVO NÍVEL", w / 2.0f, GetScreenHeight() / 2.0f - 340.0f * ui, 70.0f * ui, (Color){230, 40, 50, 255});
     sv_text_centered("Escolha um poder. Setas ou 1, 2, 3 e Enter.", w / 2.0f, GetScreenHeight() / 2.0f - 260.0f * ui, 28.0f * ui, (Color){210, 200, 210, 255});
 
     for (int i = 0; i < sv_run.choice_count; i++)
