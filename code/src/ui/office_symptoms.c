@@ -13,6 +13,8 @@
 #define FLICKER_DIM 0.78f             // Brilho durante a falha (1 = sem falha)
 
 // Monitores das mesas: o primeiro grupo (superior esquerdo) e os deslocamentos para os outros três.
+// O desenho do office.png mostra o VERSO dos monitores (carcaça e pé). A tela fica na borda de cima
+// de cada retângulo, virada para a cadeira de quem senta: é dali que sai a luz, e não do verso.
 static const Rectangle monitor_screens[] = {
     {287.0f, 242.0f, 39.0f, 21.0f},  // monitor da esquerda
     {385.0f, 242.0f, 39.0f, 21.0f},  // monitor da direita
@@ -22,6 +24,25 @@ static const Vector2 desk_group_offsets[] = {
 };
 static const Rectangle server_racks = {919.0f, 20.0f, 130.0f, 80.0f};
 #define MONITOR_GLOW_COLOR_RGB 90, 200, 255
+#define MONITOR_SPILL_REACH 24.0f     // Até onde a luz da tela chega para o lado da cadeira (pixels do mapa)
+
+// ------------------------------------------------------------ lâmpadas do teto
+#define BROKEN_LAMP_PERIOD 5.3f       // Segundos entre uma falha da lâmpada quebrada e a próxima
+#define LAMP_LIGHT_RGB 255, 236, 190
+#define LAMP_MAX_ALPHA 105.0f
+
+typedef struct {
+    Vector2 center;
+    float radius;
+    bool broken; // A lâmpada quebrada pisca; as outras ficam acesas
+} CeilingLamp;
+
+// Poças de luz no escuro: a do corredor central é a lâmpada quebrada.
+static const CeilingLamp ceiling_lamps[] = {
+    {{525.0f, 330.0f}, 140.0f, true},
+    {{525.0f, 610.0f}, 120.0f, false},
+    {{205.0f, 420.0f}, 100.0f, false},
+};
 
 // ---------------------------------------------------------------- percepção
 static const Rectangle board_check_people = {509.0f, 66.0f, 13.0f, 12.0f}; // ✓ do "PESSOAS"
@@ -150,13 +171,19 @@ static void draw_automation(const SceneSymptoms *symptoms, Rectangle office, uns
             map.x += desk_group_offsets[group].x;
             map.y += desk_group_offsets[group].y;
 
-            Rectangle screen = to_screen(office, map);
+            Rectangle body = to_screen(office, map);
             float glow = base * (0.75f + (0.25f * pulse(time, 1.6f, (float)(group * 2 + i))));
-            Rectangle halo = {screen.x - (4.0f * scale), screen.y - (4.0f * scale),
-                              screen.width + (8.0f * scale), screen.height + (8.0f * scale)};
+            float reach = MONITOR_SPILL_REACH * scale;
+            float side = 4.0f * scale;
 
-            DrawRectangleRec(halo, (Color){MONITOR_GLOW_COLOR_RGB, faded(glow * 0.25f, alpha)});
-            DrawRectangleRec(screen, (Color){MONITOR_GLOW_COLOR_RGB, faded(glow, alpha)});
+            // A luz espalha da tela para a cadeira (para cima, no mapa): forte na borda do monitor
+            // e sumindo na direção de quem senta.
+            DrawRectangleGradientV((int)(body.x - side), (int)(body.y - reach), (int)(body.width + (2.0f * side)), (int)reach,
+                                   (Color){MONITOR_GLOW_COLOR_RGB, 0}, (Color){MONITOR_GLOW_COLOR_RGB, faded(glow * 0.9f, alpha)});
+
+            // A borda da tela, vista de cima: um fio de luz no lado que aponta para a cadeira.
+            DrawRectangleRec((Rectangle){body.x, body.y - (1.5f * scale), body.width, 2.5f * scale},
+                             (Color){MONITOR_GLOW_COLOR_RGB, faded(glow * 2.0f, alpha)});
         }
     }
 
@@ -281,6 +308,80 @@ static void draw_performance(const SceneSymptoms *symptoms, Rectangle office, un
         // Pintada por cima, não somada: somar ao azul da tela deixaria a luz rosa
         DrawRectangleRec(to_screen(office, printer_screen), (Color){220, 30, 30, faded(200.0f, alpha)});
     }
+}
+
+// 0 a 1: a lâmpada quebrada falha em rajadas curtas e fica acesa o resto do tempo.
+// No máximo duas quedas em 0,4 s e uma rajada a cada 5,3 s, abaixo do limite de 3 flashes por segundo.
+static float broken_lamp_level(double time)
+{
+    float t = fmodf((float)time, BROKEN_LAMP_PERIOD);
+
+    if (t < 0.10f) return 0.0f;
+    if (t < 0.18f) return 1.0f;
+    if (t < 0.30f) return 0.04f;
+    if (t < 0.36f) return 0.85f;
+    if (t > 4.60f && t < 4.72f) return 0.12f;
+
+    return 1.0f;
+}
+
+void draw_office_broken_lamps(Rectangle office, float campaign_progress, unsigned char alpha, double time)
+{
+    if (campaign_progress <= 0.0f) return;
+
+    float scale = office.width / OFFICE_MAP_WIDTH;
+    float strength = LAMP_MAX_ALPHA * (0.35f + (0.65f * campaign_progress));
+
+    BeginBlendMode(BLEND_ADDITIVE);
+
+    for (int i = 0; i < ARRAY_COUNT(ceiling_lamps); i++)
+    {
+        float level = ceiling_lamps[i].broken ? broken_lamp_level(time) : 1.0f;
+        Vector2 center = point_to_screen(office, ceiling_lamps[i].center);
+
+        if (level <= 0.0f) continue;
+
+        DrawCircleGradient(center, ceiling_lamps[i].radius * scale,
+                           (Color){LAMP_LIGHT_RGB, faded(strength * level, alpha)}, (Color){LAMP_LIGHT_RGB, 0});
+    }
+
+    EndBlendMode();
+}
+
+Color office_symptoms_light_at(Color ambient, Rectangle office, Vector2 point, float campaign_progress, double time)
+{
+    if (office.width <= 0.0f || campaign_progress <= 0.0f) return ambient;
+
+    float scale = office.width / OFFICE_MAP_WIDTH;
+    float strength = (LAMP_MAX_ALPHA * (0.35f + (0.65f * campaign_progress))) / 255.0f;
+    float lift = 0.0f;
+
+    // Mesma poça de luz que draw_office_broken_lamps() desenha no chão: quem está dentro dela
+    // também é iluminado, e quem está no escuro fica escuro como o cenário.
+    for (int i = 0; i < ARRAY_COUNT(ceiling_lamps); i++)
+    {
+        Vector2 center = point_to_screen(office, ceiling_lamps[i].center);
+        float radius = ceiling_lamps[i].radius * scale;
+        float dx = point.x - center.x;
+        float dy = point.y - center.y;
+        float distance = sqrtf((dx * dx) + (dy * dy));
+        float level = ceiling_lamps[i].broken ? broken_lamp_level(time) : 1.0f;
+
+        if (distance >= radius) continue;
+
+        lift += (1.0f - (distance / radius)) * strength * level;
+    }
+
+    if (lift > 0.6f) lift = 0.6f;
+
+    Color lit = {LAMP_LIGHT_RGB, 255};
+
+    return (Color){
+        (unsigned char)fminf(255.0f, ambient.r + (lit.r * lift)),
+        (unsigned char)fminf(255.0f, ambient.g + (lit.g * lift)),
+        (unsigned char)fminf(255.0f, ambient.b + (lit.b * lift)),
+        ambient.a
+    };
 }
 
 void draw_office_symptoms(const SceneSymptoms *symptoms, Rectangle office, unsigned char alpha, double time)

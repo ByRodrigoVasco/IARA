@@ -724,8 +724,10 @@ static int diferenca_por_estatisticas = -1;
 static void ct101_sem_hud(void)
 {
     cabecalho("CT-101", "US10 / PI2-236: nenhum numero de status na tela",
-              "Dia 27, escritorio a vista");
-    bool no_escritorio = comecar_no_dia(27);
+              "Dia 3, escritorio a vista");
+    /* O Dia 3 vem antes de o escritorio comecar a escurecer: sem a luz das lampadas, que
+     * pisca com o tempo, as duas fotos so diferem se um numero for desenhado. */
+    bool no_escritorio = comecar_no_dia(3);
 
     /* Os dois estados tem numeros diferentes, mas ficam na mesma faixa de sintomas
      * (abaixo de todos os limiares de symptoms.h): o cenario e o mesmo, entao qualquer

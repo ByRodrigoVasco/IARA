@@ -5,7 +5,10 @@
 O jogador nunca vê os campos de `hidden_statistic`. Cada campo, ao passar de um limiar,
 muda a iluminação, acende algo no fundo ou põe um elemento no mapa do escritório.
 Isso se soma ao sintoma que já existia, o do avanço da campanha: o escritório escurece
-aos poucos conforme o **dia** (GDD 6.1). Os limiares abaixo fazem o cenário reagir também às
+aos poucos conforme o **dia** (GDD 6.1): começa no Dia 12 e chega a cerca de 60% de escuro no Dia 100.
+Com o escuro, as lâmpadas do teto desenham poças de luz no chão, e **uma delas é quebrada e pisca**
+(uma rajada de duas falhas curtas a cada 5,3 s). Os personagens usam a mesma luz do cenário: ficam
+escuros como ele e clareiam ao passar por uma poça de luz. Os limiares abaixo fazem o cenário reagir também às
 **escolhas** do jogador.
 
 ## Regra dos limiares
@@ -19,7 +22,7 @@ aos poucos conforme o **dia** (GDD 6.1). Os limiares abaixo fazem o cenário rea
 
 | Campo | Leve | Forte | O que muda no cenário |
 |---|---|---|---|
-| `current_automation_points` (Automação) | 3 | 5 (final Pamonha) | **Leve:** um monitor de cada grupo de mesas acende sozinho, em azul: a IARA trabalhando nas mesas vazias. **Forte:** todos os monitores, a sala de servidores pulsando e a luz falhando de vez em quando. A luz do escritório esfria (menos vermelho) aos poucos, desde o primeiro ponto. |
+| `current_automation_points` (Automação) | 3 | 5 (final Pamonha) | **Leve:** um monitor de cada grupo de mesas acende sozinho, em azul: a IARA trabalhando nas mesas vazias. A luz sai do lado da tela, o que aponta para a cadeira de quem senta (o desenho do mapa mostra o verso do monitor). **Forte:** todos os monitores, a sala de servidores pulsando e a luz falhando de vez em quando. A luz do escritório esfria (menos vermelho) aos poucos, desde o primeiro ponto. |
 | `current_perception_points` (Percepção) | 2 | 4 | **Leve:** um X vermelho sobre o ✓ de "PESSOAS" no quadro de valores. **Forte:** também sobre o "DADOS", os bilhetes do mural ligados por linha vermelha e uma luz vermelha por baixo da porta do corredor. |
 | `current_human_bond_points` (Vínculo) | 1 | 2 | **Leve:** luz quente na área do sofá. **Forte:** também na copa e no bebedouro. A luz fica mais forte aos poucos, conforme o vínculo cresce. |
 | `current_overall_points` (Desempenho) | média abaixo de 10 por dia jogável | média abaixo de 5 por dia jogável | **Leve:** 3 papéis de pendência no chão, perto da mesa do jogador. **Forte:** 7 papéis e a tela da impressora piscando em vermelho. |

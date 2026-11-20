@@ -73,6 +73,9 @@ void resize_npcs(float old_scale, float new_scale, Vector2 old_center, Vector2 n
 void update_npcs(float delta_time, float scale, Vector2 map_center, Rectangle map_bounds,
                  const Rectangle *obstacles, int obstacle_count, Rectangle player_hitbox);
 void draw_npcs(float scale, Color tint, float player_y, bool behind_player);
+/* Igual ao draw_npcs, mas a cor de cada NPC vem da luz do ponto onde ele pisa (cenário escurecido). */
+typedef Color (*NpcLightFn)(Vector2 foot);
+void draw_npcs_lit(float scale, NpcLightFn light, float player_y, bool behind_player);
 void draw_npc_portrait(int npc_id, Rectangle destination);
 /* Posição do NPC em pixels da tela: serve para ancorar o balão e os indicadores. */
 Vector2 npc_get_position(int npc_id);
