@@ -11,7 +11,7 @@ Os blocos abaixo repetem o conteúdo de cada um, para consulta sem sair do repos
 
 ## Status
 
-Atualizar a coluna Status conforme as issues forem corrigidas e fechadas. Conferido em 17/11/2026: do BUG-01 ao BUG-16 e do BUG-19 ao BUG-32 as correções estão na `develop` (o Modo Sobrevivência entrou pelo PR #76) e as issues foram fechadas, inclusive as dos BUG-30 a BUG-32 (PR #82). Os BUG-17 e BUG-18 seguem abertos, com gravidade baixa: são quadros lentos medidos no teste real, sem efeito na jogabilidade. O BUG-17 não voltou a acontecer, e o BUG-18 pede carregar a música e o ambiente da primeira fase na tela de carregamento.
+Atualizar a coluna Status conforme as issues forem corrigidas e fechadas. Conferido em 17/11/2026: do BUG-01 ao BUG-16 e do BUG-19 ao BUG-32 as correções estão na `develop` (o Modo Sobrevivência entrou pelo PR #76) e as issues foram fechadas, inclusive as dos BUG-30 a BUG-32 (PR #82). Conferido de novo em 20/11/2026, na Sprint 03: os testes CT-94 a CT-105 abriram os BUG-39 a BUG-43 (#101 a #105), e todas as issues de bug ganharam o label da sprint, um responsável e a rastreabilidade (história do Jira, teste e PR da correção). Os BUG-33 a BUG-38 (#94 a #99) e o BUG-44 (#110) foram abertos em 20/11 por Rodrigo. Os BUG-17 e BUG-18 seguem abertos, com gravidade baixa: são quadros lentos medidos no teste real, sem efeito na jogabilidade. O BUG-17 não voltou a acontecer, e o BUG-18 pede carregar a música e o ambiente da primeira fase na tela de carregamento.
 
 | ID | Problema | Gravidade | Issue | Status |
 |---|---|---|---|---|
@@ -53,6 +53,12 @@ Atualizar a coluna Status conforme as issues forem corrigidas e fechadas. Confer
 | BUG-36 | Commit leva 16 imagens de evidência regravadas pela suíte | Baixa | [#97](https://github.com/ByRodrigoVasco/IARA/issues/97) | Aberto (`feature/cutscenes-comportamento-npcs`) |
 | BUG-37 | Cheats do debug valem só para o jogador 1 na dupla | Baixa | [#98](https://github.com/ByRodrigoVasco/IARA/issues/98) | Aberto (`feature/sv-modo-dupla`) |
 | BUG-38 | Análise estática aponta risco de estouro de vetor no quiz de triagem | Baixa | [#99](https://github.com/ByRodrigoVasco/IARA/issues/99) | Aberto (`develop`) |
+| BUG-39 | Sair pela porta não toca o som de porta | Baixa | [#101](https://github.com/ByRodrigoVasco/IARA/issues/101) | Aberto |
+| BUG-40 | Tela do quiz sem som de teclado | Baixa | [#102](https://github.com/ByRodrigoVasco/IARA/issues/102) | Aberto |
+| BUG-41 | NPC começa a falar sem o som de fala (voice blip) | Baixa | [#103](https://github.com/ByRodrigoVasco/IARA/issues/103) | Aberto |
+| BUG-42 | Flash do dia, salto puro e os 4 finais sem arte própria | Média | [#104](https://github.com/ByRodrigoVasco/IARA/issues/104) | Aberto |
+| BUG-43 | Escritório não reage às escolhas do jogador, só ao dia | Média | [#105](https://github.com/ByRodrigoVasco/IARA/issues/105) | Correção na `feature/sintomas-visuais`, aguardando a suíte e o PR |
+| BUG-44 | Sintomas visuais duplicados e conflito entre o PR #107 e `feature/cutscenes-comportamento-npcs` | Média | [#110](https://github.com/ByRodrigoVasco/IARA/issues/110) | Aberto (integração das branches) |
 
 **Sobre o BUG-02:** os dois vazamentos descritos abaixo já não existem. Restava uma carga duplicada do menu ao abrir o jogo, removida. O CT-24 oscilava porque media sem desenhar quadros, e o driver de vídeo só devolve uma textura apagada depois de um quadro. Com quadros, 400 voltas ao menu cresceram 19 MB (cerca de 0,05 MB por volta, contra os 7 MB originais).
 
@@ -657,7 +663,7 @@ Revisando os textos do Modo Sobrevivência e a janela do jogo, saíram estes pro
 
 ---
 
-## BUG-33 a BUG-38 — Teste de campo e auditoria das branches ativas (20/11/2026)
+## BUG-33 a BUG-38 e BUG-44 — Teste de campo e auditoria das branches ativas (20/11/2026)
 
 **Labels:** `bug`
 
@@ -671,6 +677,33 @@ O BUG-33 veio de um usuário, num teste de campo. Os BUG-34 a BUG-38 saíram de 
 | BUG-36 | A `feature/cutscenes-comportamento-npcs` leva 16 PNGs de `docs/fds/testes/evidencias/` no commit; um passou de 388 KB para 1,3 MB | A suíte regrava as imagens e elas entraram no commit, contra o CONTRIBUTING | [#97](https://github.com/ByRodrigoVasco/IARA/issues/97) |
 | BUG-37 | Na dupla, curar, subir de nível, Ctrl+Z e dar poder pelo F2 só valem para o jogador 1 | Os cheats usam `sv_run.player`, o jogador ativo; pode ser limite aceito do debug | [#98](https://github.com/ByRodrigoVasco/IARA/issues/98) |
 | BUG-38 | O `-fanalyzer` acusa escrita fora dos vetores de triagem em `computer_loop.c` (linhas 1380 e 1509); hoje são 4 cartas para 6 vagas, então não estoura | O número de cartas vem de um campo de dados sem limite no código; pode ser alarme falso | [#99](https://github.com/ByRodrigoVasco/IARA/issues/99) |
+| BUG-44 | O PR #107 (`feature/sintomas-visuais`) e a `feature/cutscenes-comportamento-npcs` conflitam em `game_loop.c` e na imagem `escritorio-em-jogo.png`, e as duas desenham sintomas das estatísticas ocultas de jeitos diferentes: se as duas entrarem, o escritório ganha os dois conjuntos de sinais | As duas partiram da mesma história (US10/RF11, BUG-43) sem dividir o trabalho; pode ser que a branch de cutscenes use os sintomas só nas falas, o que não foi verificado | [#110](https://github.com/ByRodrigoVasco/IARA/issues/110) |
 
 **Onde:** `code/src/survival/sv_game.c`, `code/src/survival/survival.c`, `tools/tests/run_tests.ps1`, `code/src/screens/game_loop.c`, `code/src/screens/computer_loop.c`
 **Coberto por:** nenhum teste ainda; os BUG-33 e BUG-37 foram reproduzidos com programas de teste descartáveis, sem janela
+
+---
+
+## BUG-39 a BUG-43 — Testes de sistema da Sprint 03 (20/11/2026)
+
+**Labels:** `bug`, `sprint-03`
+
+Achados pelo bloco 4 da suíte (`code/tests/test_sprint03.c`), executado na `develop` (`2386a1c`). O passo a passo de cada caso e o screencast estão no [report da Sprint 03](../sprint-03/README.md).
+
+<a id="bug-39"></a>
+<a id="bug-40"></a>
+<a id="bug-41"></a>
+<a id="bug-42"></a>
+<a id="bug-43"></a>
+
+| ID | Issue | História | Esperado | Obtido | Onde | Coberto por |
+|---|---|---|---|---|---|---|
+| BUG-39 | [#101](https://github.com/ByRodrigoVasco/IARA/issues/101) | PI2-263 (US16) | Som de porta ao sair pela porta de vidro | Nenhum som; `PORTA ABRINDO.mp3` existe mas não é carregado | `code/src/core/audio.c`, `finish_day()` em `game_loop.c` | CT-95 |
+| BUG-40 | [#102](https://github.com/ByRodrigoVasco/IARA/issues/102) | PI2-264 (US16) | Som de teclado ao interagir com o computador | Nenhum som; `SOM DE TECLADO.ogg` existe mas não é carregado | `code/src/core/audio.c`, `computer_loop.c` | CT-97 |
+| BUG-41 | [#103](https://github.com/ByRodrigoVasco/IARA/issues/103) | PI2-265 (US16) | Voice blip quando o NPC começa a falar | O blip só toca para a IARA no computador; o diálogo dos NPCs não chama o áudio | `handle_map_interactables()` e `render_npc_dialogue()` em `game_loop.c` | CT-98 |
+| BUG-42 | [#104](https://github.com/ByRodrigoVasco/IARA/issues/104) | PI2-267 e PI2-268 (US17) | Arte própria para o Flash ou o salto e para os 4 finais | Flash reaproveita o escritório; salto e finais são só texto | `handle_day_transition()` e `ending_cards` em `game_loop.c` | CT-100 |
+| BUG-43 | [#105](https://github.com/ByRodrigoVasco/IARA/issues/105) | PI2-237 (US10) | O escritório muda com as estatísticas ocultas | Telas idênticas para estatísticas opostas no mesmo dia; o cenário só muda com o dia | `render_game_loop_escritorio()` em `game_loop.c` (há trabalho em `feature/sintomas-visuais`) | CT-102 |
+
+**Correção do BUG-43 (`feature/sintomas-visuais`):** o escritório passa a mudar quando cada campo de `hidden_statistic` alcança um limiar (luz, monitores, quadro de valores, mural, luzes quentes, papéis no chão). Os limiares e o que muda estão em [Sintomas visuais](../sintomas-visuais.md).
+
+**Ajuste no CT-101:** o teste comparava as estatísticas zeradas com 999 pontos e 9 em cada eixo e exigia 0 pixels diferentes. Com os sintomas, esse par cai em faixas opostas e o escritório muda, como o CT-102 pede. Assim, os dois testes não podiam passar juntos. O CT-101 agora compara dois estados com números diferentes na mesma faixa (500 pontos contra 999 e 1 ponto de Percepção, abaixo de todos os limiares), no Dia 3, antes de o escritório escurecer: depois disso a lâmpada quebrada pisca com o tempo e duas fotos nunca seriam idênticas. Qualquer pixel diferente só pode vir de um número desenhado na tela.
