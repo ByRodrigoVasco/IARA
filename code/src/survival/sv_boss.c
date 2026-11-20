@@ -21,7 +21,7 @@ static const BossStats boss_stats[BOSS_COUNT] = {
     {170.0f, 34.0f, 26.0f},
     {210.0f, 38.0f, 28.0f},
     {110.0f, 58.0f, 22.0f},
-    {0.0f, 0.0f, 24.0f},
+    {0.0f, 0.0f, 30.0f},   // Renê não sai da cadeira; raio do tamanho do sprite de 80 px
     {230.0f, 42.0f, 38.0f},
 };
 
