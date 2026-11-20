@@ -18,7 +18,7 @@
     X(bo_impressora, "bo_impressora", 64, 64, 24) \
     X(bo_modelo, "bo_modelo", 64, 64, 24) \
     X(bo_diego, "bo_diego", 64, 64, 24) \
-    X(bo_rene, "bo_rene", 64, 64, 24) \
+    X(bo_rene, "bo_rene", 80, 80, 24) \
     X(bo_iara, "bo_iara", 96, 96, 24) \
     X(fx_grampeador, "fx_grampeador", 28, 12, 4) \
     X(fx_ponteiro, "fx_ponteiro", 66, 13, 4) \
