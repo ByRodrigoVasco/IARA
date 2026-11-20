@@ -58,6 +58,10 @@ SvSpriteId sv_enemy_sprite(int type)
 #define PROMPT_RANGE 340.0f
 #define PROMPT_TYPING SV_PROMPT_TYPING
 #define PROMPT_SPLASH 0.5f
+// Mapa de Calor (Prof. Baudel): onde procurar aglomeração, de quanto em quanto tempo queima e o tempo de aparecer/sumir
+#define CALOR_RANGE 300.0f
+#define CALOR_TICK 0.5f
+#define CALOR_FADE 0.35f
 #define PROMPT_TEXTS 8
 
 // Deploy em Produção: alcance de mira
@@ -81,7 +85,7 @@ static const SpawnWeight act_spawns[SV_ACT_COUNT][8] = {
     {{EN_ECO, 20}, {EN_AUDITOR, 7}, {EN_AFOGADO, 20}, {EN_CRACHA, 15}, {EN_AUTORESPOSTA, 15}, {EN_ALUCINACAO, 12}, {EN_DADO, 10}, {-1, 0}},
 };
 
-static const char *weapon_names[W_COUNT] = {"Grampeador", "Ponteiro", "Caneca Arremessada", "Post-its Orbitais", "Não Perturbe", "Deploy em Produção", "Nota Fiscal", "Modus Ponens", "Tabela-Verdade", "Colega de Plantão", "Nova Conversa", "Prompt da IARA", "Vera Fischer", "Fibra Óptica"};
+static const char *weapon_names[W_COUNT] = {"Grampeador", "Ponteiro", "Caneca Arremessada", "Post-its Orbitais", "Não Perturbe", "Deploy em Produção", "Nota Fiscal", "Modus Ponens", "Tabela-Verdade", "Colega de Plantão", "Nova Conversa", "Prompt da IARA", "Vera Fischer", "Fibra Óptica", "Mapa de Calor"};
 static const char *weapon_descriptions[W_COUNT] = {
     "Tiros retos no inimigo mais próximo.",
     "Golpe em linha, para os dois lados, na direção do inimigo mais próximo.",
@@ -96,8 +100,9 @@ static const char *weapon_descriptions[W_COUNT] = {
     "Empurra tudo e apaga tiros, com recarga longa.",
     "Digita um comando na janela de terminal da IARA sobre o inimigo mais forte e o executa: dano alto nele e metade em quem está em volta.",
     "Se um golpe te acerta (V), o dano é falso (F): ele é anulado e solta uma onda. Também dispara sozinha quando alguém chega perto.",
-    "Feixe de luz muito forte em linha reta, que atravessa todos os inimigos no caminho."};
-static const SvSpriteId weapon_icons[W_COUNT] = {SPR_ic_grampeador, SPR_ic_ponteiro, SPR_ic_caneca, SPR_ic_postits, SPR_ic_naoperturbe, SPR_ic_deploy, SPR_ic_nota, SPR_ic_modus, SPR_ic_tabela, SPR_ic_colega, SPR_ic_novaconversa, SPR_ic_prompt, SPR_ps_cracha, SPR_ic_fibra};
+    "Feixe de luz muito forte em linha reta, que atravessa todos os inimigos no caminho.",
+    "Como num teste de usabilidade: marca onde os inimigos mais se juntam com um mapa de calor que queima quem fica dentro."};
+static const SvSpriteId weapon_icons[W_COUNT] = {SPR_ic_grampeador, SPR_ic_ponteiro, SPR_ic_caneca, SPR_ic_postits, SPR_ic_naoperturbe, SPR_ic_deploy, SPR_ic_nota, SPR_ic_modus, SPR_ic_tabela, SPR_ic_colega, SPR_ic_novaconversa, SPR_ic_prompt, SPR_ps_cracha, SPR_ic_fibra, SPR_ic_calor};
 
 static const char *passive_names[P_COUNT] = {"Café", "Manual", "Colinha", "Ergonomia", "Crachá", "Plano de Saúde", "Network", "Hora Extra", "Marmita Térmica", "Sorte de Principiante", "Espinhos Corporativos", "Foco", "Lanterna do Celular"};
 static const char *passive_descriptions[P_COUNT] = {
@@ -140,6 +145,8 @@ static const WeaponDef weapon_defs[W_COUNT] = {
     [W_PROMPT]       = {{60, 60, 80, 80, 115}, {3.0f, 2.7f, 2.7f, 2.4f, 2.0f}, {1, 1, 1, 2, 2}, {72, 78, 78, 88, 98}, {0, 0, 0, 0, 0}},
     [W_FIBRA]        = {{34, 34, 48, 48, 70}, {2.9f, 2.6f, 2.6f, 2.3f, 2.0f}, {0, 0, 0, 0, 0}, {300, 320, 320, 350, 380}, {14, 16, 16, 18, 22}},
     [W_VERA]         = {{22, 22, 30, 30, 50}, {2.6f, 2.4f, 2.4f, 2.1f, 1.9f}, {1, 1, 2, 2, 2}, {84, 90, 90, 98, 108}, {0.6f, 0.7f, 0.9f, 1.1f, 1.3f}},
+    // Mapa de Calor: dano por queimadura (a cada CALOR_TICK s), recarga, quantos mapas, raio e quanto tempo o mapa fica
+    [W_CALOR]        = {{6, 6, 8, 8, 12}, {3.4f, 3.1f, 3.1f, 2.8f, 2.4f}, {1, 1, 2, 2, 3}, {58, 64, 64, 72, 82}, {3.0f, 3.4f, 3.4f, 4.0f, 4.6f}},
 };
 
 static const WeaponInfo weapon_infos[W_COUNT] = {
@@ -157,6 +164,7 @@ static const WeaponInfo weapon_infos[W_COUNT] = {
     [W_PROMPT]       = {"Recarga", "Comandos", "Raio da onda", NULL, false, true, false},
     [W_FIBRA]        = {"Recarga", NULL, "Comprimento", "Largura", false, true, true},
     [W_VERA]         = {"Recarga", "Ondas", "Raio", "Imunidade", true, true, false},
+    [W_CALOR]        = {"Recarga", "Mapas", "Raio", "Duração", true, true, false},
 };
 
 float sv_weapon_stat(int weapon, int stat, int level)
@@ -762,6 +770,50 @@ static Target strongest_target(Vector2 from, float max_distance, const unsigned 
     return best;
 }
 
+// Mapa de Calor: o ponto com mais inimigos em volta (dentro do raio), longe dos mapas já escolhidos.
+// O chefe conta como cinco inimigos, para o mapa preferir ficar em cima dele.
+static bool densest_spot(Vector2 from, float range, float radius, const Vector2 *avoid, int avoid_count, Vector2 *out)
+{
+    float best_score = 0.0f;
+
+    for (int i = -1; i < SV_MAX_ENEMIES; i++)
+    {
+        Vector2 center;
+        float score = 0.0f;
+        bool taken = false;
+
+        if (i < 0)
+        {
+            if (!sv_run.boss.active) continue;
+            center = sv_run.boss.pos;
+        }
+        else
+        {
+            if (!sv_run.enemies[i].alive || sv_run.enemies[i].fake) continue;
+            center = sv_run.enemies[i].pos;
+        }
+        if (Vector2Distance(from, center) > range) continue;
+        for (int k = 0; k < avoid_count; k++)
+        {
+            if (Vector2Distance(center, avoid[k]) < radius * 1.5f) taken = true;
+        }
+        if (taken) continue;
+
+        for (int j = 0; j < SV_MAX_ENEMIES; j++)
+        {
+            if (sv_run.enemies[j].alive && !sv_run.enemies[j].fake && Vector2Distance(center, sv_run.enemies[j].pos) < radius) score += 1.0f;
+        }
+        if (sv_run.boss.active && Vector2Distance(center, sv_run.boss.pos) < radius + sv_run.boss.radius) score += 5.0f;
+
+        if (score > best_score)
+        {
+            best_score = score;
+            *out = center;
+        }
+    }
+    return best_score > 0.0f;
+}
+
 static void damage_target(const Target *target, float damage, Vector2 from, float knockback)
 {
     if (!target->found) return;
@@ -1071,6 +1123,35 @@ static void fire_weapon(SvWeapon *w)
         }
         if (chosen_count == 0) base_cd = 0.25f; // Ninguém por perto: tenta de novo logo, sem gastar a recarga
         else sv_sfx(SND_escolha);
+        break;
+    }
+    case W_CALOR:
+    {
+        // Prof. Baudel: um mapa de calor em cima de cada aglomeração, que queima quem fica dentro
+        int count = (int)WS(W_CALOR, WSTAT_COUNT, level);
+        float radius = WS(W_CALOR, WSTAT_AREA, level) * p->area_mult;
+        Vector2 spots[3];
+        int spot_count = 0;
+
+        base_cd = WS(W_CALOR, WSTAT_COOLDOWN, level);
+        for (int i = 0; i < count && i < 3; i++)
+        {
+            SvZone *z;
+
+            if (!densest_spot(p->pos, CALOR_RANGE, radius, spots, spot_count, &spots[spot_count])) break;
+            z = new_zone();
+            if (!z) break;
+            z->shape = ZONE_CIRCLE;
+            z->kind = ZK_CALOR;
+            z->pos = spots[spot_count++];
+            z->radius = radius;
+            z->damage = WS(W_CALOR, WSTAT_DAMAGE, level);
+            z->life = z->max_life = WS(W_CALOR, WSTAT_EXTRA, level) * p->duration_mult;
+            z->tick = CALOR_FADE;   // A primeira queimadura vem quando o mapa termina de aparecer
+            z->fired = true;
+        }
+        if (spot_count == 0) base_cd = 0.25f; // Ninguém por perto: tenta de novo logo, sem gastar a recarga
+        else sv_sfx(SND_tabela);
         break;
     }
     case W_FIBRA:
@@ -1443,7 +1524,7 @@ static void apply_zone(SvZone *z)
 
         if (!inside) continue;
         if (z->confuse > 0.0f) e->confused = z->confuse;
-        damage_enemy(e, z->kind == ZK_PROMPT && e->id != z->target_id ? z->damage * PROMPT_SPLASH : z->damage, z->pos, z->kind == ZK_VERA ? 130.0f : z->kind == ZK_CANECA ? 70.0f : z->kind == ZK_PROMPT ? 50.0f : 30.0f);
+        damage_enemy(e, z->kind == ZK_PROMPT && e->id != z->target_id ? z->damage * PROMPT_SPLASH : z->damage, z->pos, z->kind == ZK_VERA ? 130.0f : z->kind == ZK_CANECA ? 70.0f : z->kind == ZK_PROMPT ? 50.0f : z->kind == ZK_CALOR ? 0.0f : 30.0f);
     }
 
     if (sv_run.boss.active)
@@ -1500,6 +1581,17 @@ static void update_zones(float dt)
             z->delay -= dt;
             z->life -= dt;
             if (z->delay > 0.0f) continue;
+        }
+
+        // Mapa de Calor: queima de tempos em tempos enquanto existir
+        if (z->kind == ZK_CALOR)
+        {
+            z->tick -= dt;
+            if (z->tick <= 0.0f && z->life > CALOR_FADE)
+            {
+                z->tick += CALOR_TICK;
+                apply_zone(z);
+            }
         }
 
         if (!z->fired)

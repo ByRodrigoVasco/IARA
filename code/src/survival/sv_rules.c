@@ -69,8 +69,9 @@ float sv_boss_hit_damage(float percent_of_base_hp)
     return fraction * SV_BASE_HP;
 }
 
-// Ordem dos poderes iniciais (11 Prompt, do Prof. Lucas): 0 Grampeador, 1 Ponteiro, 2 Caneca, 3 Post-its, 4 Não Perturbe, 5 Deploy, 6 Nota Fiscal, 7 Modus, 12 Vera Fischer
+// Ordem dos poderes iniciais (11 Prompt, do Prof. Lucas; 14 Mapa de Calor, do Prof. Baudel): 0 Grampeador, 1 Ponteiro, 2 Caneca, 3 Post-its, 4 Não Perturbe, 5 Deploy, 6 Nota Fiscal, 7 Modus, 12 Vera Fischer
 #define W_VERA_ID 12
+#define W_CALOR_ID 14
 static const SvCharacter characters[CH_COUNT] = {
     [CH_ESTAGIARIO] = {"Estagiarios", "Estagiário", "Aprendiz do departamento", "Aprendiz",
                        "Aprende rápido: ganha 10% a mais de XP.",
@@ -108,6 +109,10 @@ static const SvCharacter characters[CH_COUNT] = {
                   "Poderes recarregam 10% mais rápido e ganha 10% a mais de XP. Vida máxima -10.",
                   "Sobreviva 8:30 em uma partida.",
                   11, -10.0f, 0.0f, 1.0f, 0.90f, 1.0f, 1.0f, 1.10f, 1.0f, 0.0f, 1.0f, 0, false},
+    [CH_BAUDEL] = {"Baudel", "Prof. Baudel", "Interface Humano-Computador", "Feedback Imediato",
+                   "Enquanto anda, os poderes recarregam 12% mais rápido.",
+                   "Sobreviva 10:00 em uma partida.",
+                   W_CALOR_ID, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0, false, 0.12f},
 };
 
 const SvCharacter *sv_character(int id)
@@ -129,6 +134,7 @@ bool sv_character_unlocked(int id, int runs, int wins, int best_seconds, int kil
     case CH_ZITO: return runs >= 15;
     case CH_JV: return wins >= 1;
     case CH_LUCAS: return best_seconds >= 510;
+    case CH_BAUDEL: return best_seconds >= 600;
     default: return false;
     }
 }

@@ -266,6 +266,51 @@ static void draw_lightning(void)
     }
 }
 
+
+// Mapa de Calor (Prof. Baudel): quadradinhos coloridos como num teste de usabilidade,
+// azul na borda e vermelho no centro, tremendo de leve; aparece e some suavemente
+static Color heat_color(float heat)
+{
+    static const Color ramp[5] = {{40, 70, 220, 255}, {40, 200, 230, 255}, {70, 210, 90, 255}, {245, 220, 60, 255}, {235, 45, 40, 255}};
+    float x = heat * 4.0f;
+    int k = (int)x;
+
+    if (k >= 4) return ramp[4];
+    if (k < 0) return ramp[0];
+    float t = x - (float)k;
+    return (Color){(unsigned char)(ramp[k].r + (ramp[k + 1].r - ramp[k].r) * t), (unsigned char)(ramp[k].g + (ramp[k + 1].g - ramp[k].g) * t),
+                   (unsigned char)(ramp[k].b + (ramp[k + 1].b - ramp[k].b) * t), 255};
+}
+
+static void draw_heatmap(const SvZone *z, float strength)
+{
+    const float cell = 6.0f, fade = 0.35f;
+    float age = z->max_life - z->life;
+    float alpha = fminf(1.0f, fminf(age / fade, z->life / fade));
+    float t = sv_run.time;
+    float x0 = floorf((z->pos.x - z->radius) / cell) * cell, y0 = floorf((z->pos.y - z->radius) / cell) * cell;
+
+    if (alpha <= 0.0f) return;
+    for (float y = y0; y <= z->pos.y + z->radius; y += cell)
+    {
+        for (float x = x0; x <= z->pos.x + z->radius; x += cell)
+        {
+            float d = Vector2Distance((Vector2){x + cell / 2.0f, y + cell / 2.0f}, z->pos) / z->radius;
+            float wobble, heat;
+            Color c;
+
+            if (d > 1.0f) continue;
+            wobble = 0.14f * sinf(x * 0.11f + t * 2.3f) * cosf(y * 0.09f - t * 1.7f);
+            heat = 1.0f - d * 0.95f + wobble + 0.06f * sinf(t * 5.0f);
+            if (heat < 0.0f) heat = 0.0f;
+            if (heat > 1.0f) heat = 1.0f;
+            c = heat_color(heat);
+            c.a = (unsigned char)(130.0f * strength * alpha * fminf(1.0f, (1.0f - d) * 5.0f));
+            DrawRectangle((int)x, (int)y, (int)cell, (int)cell, c);
+        }
+    }
+}
+
 static void draw_zones(void)
 {
     for (int i = 0; i < SV_MAX_ZONES; i++)
@@ -284,6 +329,12 @@ static void draw_zones(void)
             progress = 1.0f - z->life / z->max_life;
             if (z->kind == ZK_FIBRA) sv_draw_stretched(SPR_fx_fibra, (int)(progress * 4.0f), center, length, z->radius * 2.0f + 10.0f, z->angle, WHITE);
             else sv_draw_stretched(SPR_fx_ponteiro, (int)(progress * 4.0f), center, length, 13.0f, z->angle, WHITE);
+            continue;
+        }
+
+        if (z->kind == ZK_CALOR)
+        {
+            draw_heatmap(z, 1.0f);
             continue;
         }
 
@@ -604,6 +655,11 @@ static void draw_glows(Camera2D camera)
     float half_w = GetScreenWidth() / 2.0f / camera.zoom + 40.0f, half_h = GetScreenHeight() / 2.0f / camera.zoom + 40.0f;
 
     BeginMode2D(camera);
+    // O Mapa de Calor é um dado na tela do teste de usabilidade: brilha também no escuro, mais fraco
+    for (int i = 0; i < SV_MAX_ZONES; i++)
+    {
+        if (sv_run.zones[i].alive && sv_run.zones[i].kind == ZK_CALOR) draw_heatmap(&sv_run.zones[i], 0.5f);
+    }
     for (int i = 0; i < SV_MAX_ENEMIES; i++)
     {
         SvEnemy *e = &sv_run.enemies[i];
