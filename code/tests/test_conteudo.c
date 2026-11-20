@@ -38,6 +38,7 @@ unsigned int middle_screen_y = 0;
 #define CICLOS_DE_AQUECIMENTO 25   /* Voltas antes de comecar a medir */
 #define FOLGA_DE_MEMORIA_MB 16     /* Crescimento aceitavel em um trecho */
 
+#ifdef _WIN32
 /* Declaracoes minimas do Windows para medir a memoria do processo. Nao incluimos
  * windows.h porque ele define Rectangle, CloseWindow e LoadImage, que colidem
  * com os nomes da Raylib. K32GetProcessMemoryInfo vive na kernel32. */
@@ -69,6 +70,26 @@ static size_t memoria_em_uso_mb(void)
     /* Memoria privada: o working set varia com o que o Windows decide manter na RAM. */
     return contadores.PagefileUsage / (1024 * 1024);
 }
+#else
+/* Fora do Windows (Linux, usado para gravar o screencast em tela virtual), a
+ * memoria privada equivalente e o VmData de /proc/self/status. */
+static size_t memoria_em_uso_mb(void)
+{
+    FILE *arquivo = fopen("/proc/self/status", "r");
+    char linha[256];
+    size_t kb = 0;
+
+    if (arquivo == NULL) return 0;
+
+    while (fgets(linha, sizeof(linha), arquivo) != NULL)
+    {
+        if (sscanf(linha, "VmData: %zu kB", &kb) == 1) break;
+    }
+
+    fclose(arquivo);
+    return kb / 1024;
+}
+#endif
 
 static int total_casos = 0;
 static int casos_ok = 0;

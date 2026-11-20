@@ -700,8 +700,8 @@ static void draw_hazard(SvHazard *h)
         }
         else if (h->sprite == -3)
         {
-            DrawCircleLinesV(h->pos, 9.0f, (Color){255, 80, 70, 255});
-            DrawCircleLinesV(h->pos, 6.0f, WHITE);
+            // Canto da IARA: o olho de sonar com anéis ciano se abrindo
+            sv_draw(SPR_bp_nota, anim_frame(sv_run.time, 8.0f) % 4, h->pos, 1.0f, 0.0f, false, WHITE);
         }
         else if (h->sprite == SPR_bp_onda)
         {
@@ -730,8 +730,18 @@ static void draw_hazard(SvHazard *h)
             SvSprite *sprite = &sv_sprites[h->sprite];
             float scale = h->radius * 2.0f / (float)(sprite->frame_width > sprite->frame_height ? sprite->frame_width : sprite->frame_height);
 
+            int frame = anim_frame(sv_run.time, 10.0f) % sprite->frames;
+
+            if (h->sprite == SPR_bp_falsa)
+            {
+                // Resposta Confiante: parece segura até machucar pela primeira vez (1 s), depois mostra a mentira
+                float age = h->max_life - h->life;
+
+                if (age < 1.0f) frame = anim_frame(sv_run.time, 3.0f) % 2;
+                else frame = age < 1.25f ? 2 : 2 + anim_frame(sv_run.time, 3.0f) % 2;
+            }
             if (h->tick > 0.0f || h->damage == 0.0f) DrawCircleV(h->pos, h->radius, (Color){60, 220, 120, 40});
-            sv_draw((SvSpriteId)h->sprite, anim_frame(sv_run.time, 10.0f) % sprite->frames, h->pos, scale < 1.0f ? 1.0f : scale, 0.0f, false, WHITE);
+            sv_draw((SvSpriteId)h->sprite, frame, h->pos, scale < 1.0f ? 1.0f : scale, 0.0f, false, WHITE);
         }
         return;
     }

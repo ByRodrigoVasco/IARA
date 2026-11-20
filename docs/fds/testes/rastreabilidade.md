@@ -21,7 +21,7 @@ A coluna de issue traz só o que foi confirmado no Jira; as demais ficam para a 
 | RF08 | Lógica ensinada pela narrativa | `screens/computer_loop.c`, `game/logic.c` | [Auditoria](../../lmc/mapeamento-puzzles.md), CT-61, CT-62 | PI2-214, PI2-215 | 🟡 | Vale só para o único puzzle existente |
 | RF09 | Revisão de correção lógica | [Mapeamento](../../lmc/mapeamento-puzzles.md) | | PI2-217, PI2-218 | 🟡 | Revisão com o material de LMC (PI2-218) |
 | RF10 | Teste automatizado por tarefa | `code/tests/` | Log da suíte, CT-66, CT-71 | | 🟡 | Cobre os 9 dias; os gabaritos são checados, não a regra em Haskell |
-| RF11 | Sintomas visuais no lugar de HUD | Nenhum HUD numérico; o escritório escurece e alaga em `screens/game_loop.c` | Inspeção | | 🟡 | O cenário muda com o dia, ainda não com a pontuação (US10). Faltam olheiras e tremor na animação |
+| RF11 | Sintomas visuais no lugar de HUD | Nenhum HUD numérico; o escritório escurece com o dia em `screens/game_loop.c`; limiares das estatísticas ocultas em `game/symptoms.c` e desenho em `ui/office_symptoms.c` ([limiares](../sintomas-visuais.md)) | `test_symptoms`, inspeção | | 🟡 | O cenário muda com o dia e com as estatísticas ocultas (US10). Limiares leves são proposta. Faltam olheiras e tremor na animação |
 | RF12 | Pontuação por método | `resolve_day_tasks()` em `core/game_state.c` | CT-47 a CT-49, CT-51, CT-58, CT-63 | | 🟡 | Pontos por chamado: 10 sozinho ou conferindo, +5 por erro da IARA pego, 0 sem conferir, +5 por investigar. Adapta o GDD 7.3, que pontua por tarefa, e a equipe ainda decide o conflito com a US11. Acumula entre os dias |
 | RF13 | Múltiplos finais | `get_game_ending()` em `core/game_state.c` | CT-70, CT-72 | | 🟡 | Os 4 finais seguem o GDD 6.5. O limiar do Vínculo é proposta, e a US12 descreve finais diferentes: a equipe precisa decidir |
 | RF14 | Tensão progressiva | Cartões e flashes em `game/calendar.c`, roteiros em `screens/computer_days.h` | CT-71 | | 🟡 | Textos propostos, a validar com a equipe |
@@ -56,5 +56,5 @@ O repositório ainda não tem as regras formalizadas por LMC. A verificação us
 
 ## Inconsistências encontradas
 
-- **Nome da empresa:** a arte do escritório mostra "NEXO LABS", e o GDD e o quiz usam "CISSA".
+- **Nome da empresa:** é CISSA em todo o jogo: a placa da parede e o capacho do escritório (`office.png`), o GDD e o quiz.
 - **Camada em Haskell:** as regras puras previstas no GDD não existem no repositório.
