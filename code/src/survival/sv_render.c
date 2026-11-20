@@ -136,12 +136,9 @@ static void draw_prompt_windows(void)
             text[shown] = 0;
 
             for (int k = 0; k < 3; k++) DrawRectangle((int)z->pos.x - 1, (int)(wy + wh + 3.0f + (float)k * 8.0f), 2, 4, (Color){56, 240, 228, 150});
+            // Moldura da janela (fx_terminal, gerada por tools/sprites/gerar_prompt.py) com sombra embaixo
             DrawRectangle((int)wx + 2, (int)wy + 2, (int)ww, (int)wh, (Color){0, 0, 0, 90});
-            DrawRectangle((int)wx, (int)wy, (int)ww, (int)wh, (Color){8, 22, 30, 240});
-            DrawRectangle((int)wx, (int)wy, (int)ww, 9, (Color){18, 124, 128, 255});
-            for (int k = 0; k < 3; k++) DrawRectangle((int)wx + 4 + k * 6, (int)wy + 3, 3, 3, k == 0 ? (Color){200, 12, 20, 255} : (Color){232, 194, 74, 255});
-            sv_text("IARA", wx + ww - 30.0f, wy - 1.0f, 8.0f, (Color){224, 255, 248, 210});
-            DrawRectangleLines((int)wx, (int)wy, (int)ww, (int)wh, (Color){56, 240, 228, 255});
+            sv_draw(SPR_fx_terminal, 0, (Vector2){wx + ww / 2.0f, wy + wh / 2.0f}, 1.0f, 0.0f, false, WHITE);
             sv_text(text, wx + 6.0f, wy + 15.0f, 11.0f, (Color){120, 255, 240, 255});
             if (blink) DrawRectangle((int)(wx + 7.0f + sv_text_width(text, 11.0f)), (int)wy + 16, 5, 9, (Color){224, 255, 248, 255});
         }
@@ -156,9 +153,8 @@ static void draw_prompt_windows(void)
                 // A janela fica um instante com o comando completo, pisca em branco e some
                 unsigned char alpha = (unsigned char)(255.0f * (1.0f - q / 0.6f));
 
-                DrawRectangle((int)wx, (int)wy, (int)ww, (int)wh, (Color){8, 22, 30, alpha});
-                DrawRectangle((int)wx, (int)wy, (int)ww, 9, (Color){18, 124, 128, alpha});
-                DrawRectangleLines((int)wx, (int)wy, (int)ww, (int)wh, (Color){180, 255, 248, alpha});
+                // No Enter a moldura acende (quadro 1) e depois some junto com o comando
+                sv_draw(SPR_fx_terminal, q < 0.15f ? 1 : 0, (Vector2){wx + ww / 2.0f, wy + wh / 2.0f}, 1.0f, 0.0f, false, (Color){255, 255, 255, alpha});
                 sv_text(full, wx + 6.0f, wy + 15.0f, 11.0f, (Color){120, 255, 240, alpha});
                 if (q < 0.15f) DrawRectangle((int)wx, (int)wy, (int)ww, (int)wh, (Color){255, 255, 255, (unsigned char)(170.0f * (1.0f - q / 0.15f))});
             }
