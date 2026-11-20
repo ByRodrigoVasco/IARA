@@ -278,7 +278,7 @@ Os dois painéis inferiores e a porta de entrada permitem caminhar atrás do vid
 A personagem também entra parcialmente atrás dos trechos opacos da fachada,
 respeitando a mesma profundidade máxima dos vidros. O limite físico inferior
 coincide com a linha de baixo da porta (y=808 no asset, referência y=369,5), em toda
-a largura do mapa. Não é permitido afundar no rodapé ou na placa NEXO. As plantas
+a largura do mapa. Não é permitido afundar no rodapé ou na placa CISSA. As plantas
 e jardineiras têm bloqueio em toda a área visível, incluindo vasos e folhagem;
 as jardineiras inferiores ocupam também a parte inferior dos vasos, antes ausente.
 As salas da direita e os móveis mantêm seus bloqueios. A porta oferece passagem visual, sem transição para outro mapa.
