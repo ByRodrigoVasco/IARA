@@ -18,6 +18,7 @@ simulando o uso real de um jogador.
 | **Atualização de 17/11/2026 (trilha)** | Branch `feat/trilha-por-momento`, com o CT-92 e o CT-93 incluídos (US15: PI2-231, PI2-259 e PI2-260). Bloco 2 com 37 de 37 aprovados |
 | **Atualização de 17/11/2026** | Branch `fix/textos-sobrepostos-e-modos-de-janela`, com UX-23 a UX-26 no bloco 3 (textos das cartas e do HUD do Sobrevivência, modos da janela). BUG-30 a BUG-32. Bloco 3 com 56 de 56 aprovados |
 | **Atualização de 16/11/2026** | Branch `feature/volume-trilha-efeitos`, com o CT-80 e o CT-81 incluídos (US20: PI2-279 e PI2-281). CT-43 passa a conferir os dois volumes. Bloco 2 com 35 de 35 e bloco 3 com 37 de 37 aprovados |
+| **Sprint 03 (20/11/2026)** | `develop` (`2386a1c`), com o bloco 4 (`test_sprint03`, CT-94 a CT-105) para as histórias da Sprint 03 que ainda não tinham caso de teste: **7 de 12 aprovados**, 5 falhas registradas como BUG-39 a BUG-43 (#101 a #105). Blocos 1 a 3, unidade e Sobrevivência: todos aprovados. [Report da Sprint 03](../sprint-03/README.md), com pré-condição, passos, esperado, obtido e o screencast de cada caso |
 
 ## Como executar
 
@@ -25,12 +26,14 @@ simulando o uso real de um jogador.
 powershell -ExecutionPolicy Bypass -File tools/tests/run_tests.ps1
 ```
 
-O script compila e roda os sete conjuntos de teste e devolve um resumo. O código
+O script compila e roda os conjuntos de teste (unidade, os blocos 1 a 4 de sistema e o Sobrevivência) e devolve um resumo. O código
 de saída é `0` quando tudo passa e `1` quando há falha, o que permite ligar a
 suíte a um CI mais adiante.
 
 O parâmetro `-Pausado` espera uma tecla entre um conjunto e o outro, para dar tempo
 de narrar durante a gravação do screencast.
+
+O bloco 4 também roda um caso só, para gravar o screencast dele: `build/tests/test_sprint03 CT-95`.
 
 ## O que foi testado
 
@@ -130,6 +133,18 @@ INICIAR, cartão do dia, caminhada pelo escritório, tutorial, os cinco chamados
 | CT-81 | Volume da trilha e dos efeitos são independentes, ficam entre 0 e 1, e um `iara.ini` antigo, com um volume só, continua valendo para os dois (US20, PI2-279) | OK |
 | CT-92 | A trilha tem uma mistura por momento: menu sozinho, escritório calmo ou tenso (a soma das duas faixas não muda com a tensão), faixa própria no quiz e trilha abafada no flash e no salto puro (US15, PI2-231 e PI2-259) | OK |
 | CT-93 | A troca de faixa é gradual nos dois sentidos, dura o tempo do fade (0,8 s) sem pulo nem passar do alvo, e o contexto da trilha é guardado (US15, PI2-260) | OK |
+| CT-94 | Passos tocam enquanto o jogador anda e param quando ele para (US16, PI2-262) | OK |
+| CT-95 | Sair pela porta de vidro toca o som de porta (US16, PI2-263) | FALHA ([BUG-39](bugs.md#bug-39)) |
+| CT-96 | O ambiente do escritório toca sem parar, inclusive por baixo da tela do quiz (US16, PI2-264) | OK |
+| CT-97 | Interagir com o computador na tela do quiz toca o som de teclado (US16, PI2-264) | FALHA ([BUG-40](bugs.md#bug-40)) |
+| CT-98 | Quando um NPC começa a falar toca um som curto de fala (US16, PI2-265) | FALHA ([BUG-41](bugs.md#bug-41)) |
+| CT-99 | Os sprites dos 7 NPCs seguem a pasta e os nomes de `load_walk_frames` e carregam no jogo (US17, PI2-269) | OK |
+| CT-100 | Flash do dia, salto puro e os 4 finais têm arte própria (US17, PI2-267 e PI2-268) | FALHA ([BUG-42](bugs.md#bug-42)) |
+| CT-101 | Nenhuma estatística oculta aparece como número na tela do escritório (US10, PI2-236) | OK |
+| CT-102 | O escritório reage às escolhas do jogador, não só ao dia (US10, PI2-237) | FALHA ([BUG-43](bugs.md#bug-43)) |
+| CT-103 | A tensão da trilha e o cenário sobem dia a dia, começando calmos, sem som de susto (US13) | OK |
+| CT-104 | Em todo dia jogável um NPC (nunca a IARA) dá a dica, e conversar não muda nenhum ponto (US04, PI2-202) | OK |
+| CT-105 | Manual com dica vale mais que manual sem dica, que vale mais que a IARA; os pontos acumulam e um dia isolado não muda o final (US11, PI2-168) | OK |
 
 ## Evidência da US14: ignorar os NPCs
 
