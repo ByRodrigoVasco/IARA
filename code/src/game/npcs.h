@@ -44,8 +44,11 @@ const NpcDefinition *npc_get_definition(int npc_id);
 /* Dia jogável (0 a 8) ou -1 se o dia não é jogável. */
 int npc_get_playable_day_index(int day);
 /* Quem dá a dica do dia (um só por dia jogável) ou -1. */
+void npc_set_story_absences(unsigned int absences);
+bool npc_is_present(int npc_id);
 int npc_get_daily_hint_owner(int day);
 bool npc_has_hint(int npc_id, int day);
+struct hidden_statistic;
 
 /*
  * A conversa de um NPC: na primeira vez do dia ele cumprimenta (no Dia 1, dá as boas-vindas),
@@ -56,6 +59,8 @@ int npc_get_dialogue_line_count(int npc_id, int day, bool first_today);
 const char *npc_get_dialogue_line(int npc_id, int day, bool first_today, int line_index);
 const char *npc_get_greeting(int npc_id, int day);
 const char *npc_get_day_line(int npc_id, int day, int line_index);
+/* Variante da primeira fala do dia, selecionada pela faixa consolidada. */
+const char *npc_get_statistic_day_line(int npc_id, int day, const struct hidden_statistic *statistics);
 const char *npc_get_hint_line(int day, int line_index);
 
 /* Qual "assento" (índice de NPC_DEFINITIONS) cada NPC ocupa no dia. Os lugares mudam a cada dia jogável. */
@@ -68,6 +73,19 @@ Rectangle npc_get_hitbox(int npc_id, float scale);
 Rectangle npc_get_interaction_zone(int npc_id, float scale);
 int npc_get_nearby(Rectangle player_hitbox, float scale);
 
+/* Marcas autorais antes de revelar o dia; orientação usa poses existentes. */
+void npc_stage_day_one(float scale, Vector2 center);
+void npc_end_reception(void);
+void npc_seed_routines(unsigned int seed);
+void npc_set_routine_statistics(const struct hidden_statistic *statistics);
+void npc_begin_approach(int npc_id);
+bool npc_approach_player(int npc_id, int other_npc, float dt, float scale, Vector2 center, Rectangle bounds,
+                         const Rectangle *obstacles, int count, Rectangle player, Vector2 player_feet);
+void npc_finish_approach(int npc_id);
+void npc_face_player(int npc_id, float scale, Rectangle player);
+void npc_face_scene(int npc_id, Vector2 target);
+void npc_step_scene(int npc_id, Vector2 delta, float scale, Rectangle bounds,
+                    const Rectangle *obstacles, int count, Rectangle player);
 bool initialize_npcs(float scale, Vector2 map_center);
 void resize_npcs(float old_scale, float new_scale, Vector2 old_center, Vector2 new_center);
 void update_npcs(float delta_time, float scale, Vector2 map_center, Rectangle map_bounds,

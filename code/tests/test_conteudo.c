@@ -1031,7 +1031,7 @@ static void testar_dias_seguintes(void)
         current_hidden_statistic.current_automation_points = HIDDEN_STATISTIC_START + (automacao ? AUTOMATION_HIGH_TOTAL : AUTOMATION_HIGH_TOTAL - 1);
         current_hidden_statistic.current_perception_points = HIDDEN_STATISTIC_START + (percepcao ? PERCEPTION_HIGH_TOTAL : PERCEPTION_HIGH_TOTAL - 1);
         current_hidden_statistic.current_human_bond_points = HIDDEN_STATISTIC_START + (vinculo ? HUMAN_BOND_HIGH_TOTAL : HUMAN_BOND_HIGH_TOTAL - 1);
-        current_game_state_variables.found_mariana = mariana;
+        current_game_state_variables.found_nicollas_trace = mariana;
         current_game_state_variables.proof_succeeded = prova;
 
         casos_de_final++;
@@ -1062,6 +1062,9 @@ static void testar_dias_seguintes(void)
             continue_after_answer();
         }
 
+        if (day_scripts[s].day == 3 && current_step_index == REPORT_STEP - 1 &&
+            dialog_sequence[current_step_index].type == STEP_CHOICE)
+            choose_day_option(&dialog_sequence[current_step_index], 1);
         if (current_step_index != REPORT_STEP || !computer_failsafe_triggered ||
             !current_game_state_variables.is_resolved || current_game_state_variables.mode_type != MODE_AUTOMATIC ||
             ticket_results[0].outcome != TASK_TAKEN_OVER_BY_IARA || current_game_state_variables.proof_succeeded ||

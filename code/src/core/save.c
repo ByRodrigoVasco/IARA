@@ -26,7 +26,14 @@ enum
     FIELD_PERCEPTION_POINTS  = 1 << 7,
     FIELD_HUMAN_BOND_POINTS  = 1 << 8,
     FIELD_RESOLVED_PUZZLES   = 1 << 9,
-    ALL_FIELDS               = (1 << 10) - 1
+    ALL_LEGACY_FIELDS        = (1 << 10) - 1,
+    FIELD_LATER_SCENES       = 1 << 10,
+    FIELD_ABSENCES           = 1 << 11,
+    FIELD_PRESENCE_DAY       = 1 << 12,
+    FIELD_MURAL41            = 1 << 13,
+    FIELD_NICOLLAS           = 1 << 14,
+    FIELD_LEGACY_DISCOVERY   = 1 << 15,
+    ALL_FIELDS               = (1 << 16) - 1
 };
 
 // ---------------------------------------------------------------------------
@@ -109,7 +116,7 @@ static bool parse_ranged(const char *text, long min, long max, long *out)
 static bool apply_save_line(const char *key, const char *value,
                             struct game_state_variables *state,
                             struct hidden_statistic *stats,
-                            unsigned int *fields_read)
+                            unsigned int *fields_read, int version)
 {
     long number = 0;
 
@@ -140,6 +147,22 @@ static bool apply_save_line(const char *key, const char *value,
         if (!parse_bool(value, &state->is_resolved)) return false;
         *fields_read |= FIELD_IS_RESOLVED;
     }
+    else if (strcmp(key, "story_scenes") == 0)
+    {
+        if (!parse_ranged(value, 0, 127, &number)) return false;
+        state->story_scenes = (unsigned int)number;
+    }
+    else if (strcmp(key, "story_report_closed") == 0)
+    {
+        if (!parse_bool(value, &state->story_report_closed)) return false;
+    }
+    else if (strcmp(key, "computer_checkpoint") == 0)
+    {
+        if (strlen(value) >= sizeof(state->computer_checkpoint)) return false;
+        for (const char *c = value; *c; c++)
+            if ((*c < '0' || *c > '9') && *c != ',' && *c != '-') return false;
+        snprintf(state->computer_checkpoint, sizeof(state->computer_checkpoint), "%s", value);
+    }
     else if (strcmp(key, "has_cheat_sheet") == 0)
     {
         // Não entra em ALL_FIELDS: saves anteriores à colinha continuam válidos, sem ela.
@@ -151,9 +174,42 @@ static bool apply_save_line(const char *key, const char *value,
         if (!parse_ranged(value, 0, 1000000, &number)) return false;
         state->evidence_mask = (unsigned int)number;
     }
-    else if (strcmp(key, "found_mariana") == 0)
+    else if (strcmp(key, "story_later_scenes") == 0 && version == 3)
     {
-        if (!parse_bool(value, &state->found_mariana)) return false;
+        if (!parse_ranged(value, 0, STORY_LATER_SCENES_MAX, &number)) return false;
+        state->story_later_scenes = (unsigned int)number;
+        *fields_read |= FIELD_LATER_SCENES;
+    }
+    else if (strcmp(key, "story_absences") == 0 && version == 3)
+    {
+        if (!parse_ranged(value, 0, STORY_ABSENT_JULIO | STORY_ABSENT_ANDERSON, &number)) return false;
+        state->story_absences = (unsigned int)number;
+        *fields_read |= FIELD_ABSENCES;
+    }
+    else if (strcmp(key, "story_presence_day") == 0 && version == 3)
+    {
+        if (!parse_ranged(value, 0, TOTAL_GAME_DAYS, &number)) return false;
+        state->story_presence_day = (int)number;
+        *fields_read |= FIELD_PRESENCE_DAY;
+    }
+    else if (strcmp(key, "d41_mural_lido") == 0 && version == 3)
+    {
+        if (!parse_bool(value, &state->d41_mural_lido)) return false;
+        *fields_read |= FIELD_MURAL41;
+    }
+    else if (strcmp(key, "found_nicollas_trace") == 0 && version == 3)
+    {
+        if (!parse_bool(value, &state->found_nicollas_trace)) return false;
+        *fields_read |= FIELD_NICOLLAS;
+    }
+    else if (strcmp(key, "legacy_mariana_discovery") == 0 && version == 3)
+    {
+        if (!parse_bool(value, &state->legacy_mariana_discovery)) return false;
+        *fields_read |= FIELD_LEGACY_DISCOVERY;
+    }
+    else if (strcmp(key, "found_mariana") == 0 && version < 3)
+    {
+        if (!parse_bool(value, &state->legacy_mariana_discovery)) return false;
     }
     else if (strcmp(key, "proof_succeeded") == 0)
     {
@@ -234,6 +290,9 @@ static int build_save_body(char *buffer, size_t size)
 
     int written = snprintf(buffer, size,
                            SAVE_FILE_HEADER "\n"
+                           "story_scenes=%u\n"
+                           "story_report_closed=%d\n"
+                           "computer_checkpoint=%s\n"
                            "current_day=%d\n"
                            "day_type=%d\n"
                            "mode_type=%d\n"
@@ -241,13 +300,21 @@ static int build_save_body(char *buffer, size_t size)
                            "is_resolved=%d\n"
                            "has_cheat_sheet=%d\n"
                            "evidence_mask=%u\n"
-                           "found_mariana=%d\n"
+                           "story_later_scenes=%u\n"
+                           "story_absences=%u\n"
+                           "story_presence_day=%d\n"
+                           "d41_mural_lido=%d\n"
+                           "found_nicollas_trace=%d\n"
+                           "legacy_mariana_discovery=%d\n"
                            "proof_succeeded=%d\n"
                            "overall_points=%d\n"
                            "automation_points=%u\n"
                            "perception_points=%u\n"
                            "human_bond_points=%u\n"
                            "resolved_puzzles=%s\n",
+                           state->story_scenes,
+                           state->story_report_closed,
+                           state->computer_checkpoint,
                            state->current_day,
                            state->day_type,
                            state->mode_type ? 1 : 0,
@@ -255,7 +322,12 @@ static int build_save_body(char *buffer, size_t size)
                            state->is_resolved ? 1 : 0,
                            state->has_cheat_sheet ? 1 : 0,
                            state->evidence_mask,
-                           state->found_mariana ? 1 : 0,
+                           state->story_later_scenes,
+                           state->story_absences,
+                           state->story_presence_day,
+                           state->d41_mural_lido,
+                           state->found_nicollas_trace,
+                           state->legacy_mariana_discovery,
                            state->proof_succeeded ? 1 : 0,
                            stats->current_overall_points,
                            stats->current_automation_points,
@@ -377,10 +449,11 @@ save_result load_game_state(const char *path)
 
     // 1. Cabeçalho com formato e versão.
     size_t header_length = strlen(SAVE_FILE_HEADER);
-    if (strncmp(content, SAVE_FILE_HEADER, header_length) != 0 || content[header_length] != '\n')
-    {
-        return SAVE_CORRUPTED;
-    }
+    int version = 0;
+    if (strncmp(content, "IARA_SAVE v1\n", header_length + 1) == 0) version = 1;
+    if (strncmp(content, "IARA_SAVE v2\n", header_length + 1) == 0) version = 2;
+    if (strncmp(content, SAVE_FILE_HEADER, header_length) == 0 && content[header_length] == '\n') version = 3;
+    if (!version) return SAVE_CORRUPTED;
 
     // 2. Checksum: última linha, cobrindo tudo o que vem antes dela.
     char *checksum_line = strstr(content, "\n" CHECKSUM_KEY);
@@ -404,8 +477,11 @@ save_result load_game_state(const char *path)
 
     // 3. Campos. Tudo é lido em cópias; o estado do jogo só muda no final,
     // se o save inteiro for válido.
-    struct game_state_variables loaded_state = current_game_state_variables;
+    struct game_state_variables loaded_state = {0};
     struct hidden_statistic loaded_stats = current_hidden_statistic;
+    loaded_state.story_scenes = 0;
+    loaded_state.story_report_closed = false;
+    loaded_state.computer_checkpoint[0] = '\0';
     unsigned int fields_read = 0;
 
     content[body_length] = '\0';
@@ -431,7 +507,7 @@ save_result load_game_state(const char *path)
             }
 
             *separator = '\0';
-            if (!apply_save_line(line, separator + 1, &loaded_state, &loaded_stats, &fields_read))
+            if (!apply_save_line(line, separator + 1, &loaded_state, &loaded_stats, &fields_read, version))
             {
                 return SAVE_CORRUPTED;
             }
@@ -444,11 +520,29 @@ save_result load_game_state(const char *path)
         line = next_line;
     }
 
-    if (fields_read != ALL_FIELDS)
+    if (fields_read != (version == 3 ? ALL_FIELDS : ALL_LEGACY_FIELDS) ||
+        loaded_state.story_presence_day > loaded_state.current_day)
     {
         return SAVE_CORRUPTED;
     }
 
+    if (version == 1 && loaded_state.current_day == 1 && loaded_state.is_resolved)
+    {
+        loaded_state.story_scenes = 7;
+        loaded_state.story_report_closed = true;
+    }
+    if (version < 3 && loaded_state.current_day >= 12)
+    {
+        loaded_state.story_presence_day = loaded_state.current_day;
+        if (loaded_state.is_resolved)
+        {
+            // O relatório antigo não tem desfecho encenado nem fatos suficientes para reconstituí-lo.
+            loaded_state.story_report_closed = true;
+            loaded_state.story_later_scenes |= story_scene_bit(loaded_state.current_day, STORY_ARRIVAL) |
+                story_scene_bit(loaded_state.current_day, STORY_MIDDLE) |
+                story_scene_bit(loaded_state.current_day, STORY_FINISH);
+        }
+    }
     // current_screen não vem do save: o jogo sempre abre pelo pré-menu.
     loaded_state.current_screen = current_game_state_variables.current_screen;
 

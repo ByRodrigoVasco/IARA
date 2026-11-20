@@ -7,6 +7,7 @@
 #include "pre_menu.h"
 #include "menu.h"
 #include "game_loop.h"
+#include "computer_loop.h"
 #include "credits.h"
 #include "settings.h"
 #include "survival.h"
@@ -243,6 +244,12 @@ void handle_state_machine(void)
 
     case PLAYING_SCREEN:
         render_game_loop();
+        if (computer_checkpoint_dirty)
+        {
+            computer_checkpoint_dirty = false;
+            if (!save_active_campaign_progress() && campaign_state_ready)
+                notice_show("Não foi possível salvar o progresso.", NOTICE_ERROR);
+        }
 
         if (is_game_loop_quit_requested())
         {

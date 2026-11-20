@@ -34,7 +34,7 @@
 #define SAVE_FILE_PATH "iara.save"
 
 // Primeira linha do arquivo. Mudar a versão quando o formato mudar.
-#define SAVE_FILE_HEADER "IARA_SAVE v1"
+#define SAVE_FILE_HEADER "IARA_SAVE v3"
 
 typedef enum
 {

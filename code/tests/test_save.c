@@ -55,7 +55,7 @@ int main(void)
     current_game_state_variables.is_resolved = true;
     current_game_state_variables.has_cheat_sheet = true;
     current_game_state_variables.evidence_mask = EVIDENCE_NO_HUMAN_ORDER;
-    current_game_state_variables.found_mariana = true;
+    current_game_state_variables.found_nicollas_trace = true;
     current_game_state_variables.proof_succeeded = true;
     current_game_state_variables.resolved_puzzles[1] = true;
     current_game_state_variables.resolved_puzzles[3] = true;
@@ -78,7 +78,7 @@ int main(void)
     assert(current_game_state_variables.is_resolved == true);
     assert(current_game_state_variables.has_cheat_sheet == true);
     assert(current_game_state_variables.evidence_mask == EVIDENCE_NO_HUMAN_ORDER);
-    assert(current_game_state_variables.found_mariana == true);
+    assert(current_game_state_variables.found_nicollas_trace == true);
     assert(current_game_state_variables.proof_succeeded == true);
     assert(current_game_state_variables.resolved_puzzles[1] == true);
     assert(current_game_state_variables.resolved_puzzles[2] == false);
@@ -153,6 +153,49 @@ int main(void)
     remove(TEST_SAVE_PATH);
     remove(TEST_SAVE_PATH ".bak");
 
+    // Migração v1: um dia resolvido não repete suas cenas nem os pontos.
+    reset_state();
+    current_game_state_variables.is_resolved = true;
+    assert(save_game_state(TEST_SAVE_PATH) == SAVE_OK);
+    read_raw(content, sizeof(content));
+    content[strlen("IARA_SAVE v")] = '1';
+    char *check = strstr(content, "checksum=");
+    assert(check);
+    unsigned int hash = 2166136261u;
+    for (char *c = content; c < check; c++) { hash ^= (unsigned char)*c; hash *= 16777619u; }
+    snprintf(check, sizeof(content) - (size_t)(check-content), "checksum=%08x\n", hash);
+    write_raw(content);
+    reset_state();
+    assert(load_game_state(TEST_SAVE_PATH) == SAVE_OK);
+    assert(current_game_state_variables.is_resolved && current_game_state_variables.story_scenes == 7);
+    assert(current_game_state_variables.story_report_closed);
+    remove(TEST_SAVE_PATH);
+    // V2 com descoberta antiga: o final é preservado e a nova pista ainda precisa ser lida.
+    reset_state();
+    start_game_day(100);
+    current_game_state_variables.is_resolved = true;
+    current_game_state_variables.proof_succeeded = true;
+    current_hidden_statistic.current_perception_points = 5;
+    current_hidden_statistic.current_human_bond_points = 3;
+    assert(save_game_state(TEST_SAVE_PATH) == SAVE_OK);
+    read_raw(content, sizeof(content));
+    content[strlen("IARA_SAVE v")] = '2';
+    check = strstr(content, "checksum=");
+    assert(check);
+    strcpy(check, "found_mariana=1\n");
+    check += strlen(check);
+    hash = 2166136261u;
+    for (char *c = content; c < check; c++) { hash ^= (unsigned char)*c; hash *= 16777619u; }
+    snprintf(check, sizeof(content) - (size_t)(check-content), "checksum=%08x\n", hash);
+    write_raw(content);
+    assert(load_game_state(TEST_SAVE_PATH) == SAVE_OK);
+    assert(!current_game_state_variables.found_nicollas_trace && current_game_state_variables.legacy_mariana_discovery);
+    assert(current_game_state_variables.story_report_closed && current_game_state_variables.story_presence_day == 100);
+    assert(get_game_ending() == ENDING_RUPTURE);
+    assert(save_game_state(TEST_SAVE_PATH) == SAVE_OK);
+    reset_state();
+    assert(load_game_state(TEST_SAVE_PATH) == SAVE_OK && get_game_ending() == ENDING_RUPTURE);
+    remove(TEST_SAVE_PATH);
     printf("Todos os testes passaram\n");
     return 0;
 }

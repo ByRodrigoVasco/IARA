@@ -1,6 +1,8 @@
 #ifndef COMPUTER_LOOP_H
 #define COMPUTER_LOOP_H
 
+#include "game_state.h"
+
 #include <stdbool.h>
 
 // true quando o jogador terminou todos os passos do quiz do computador.
@@ -42,5 +44,25 @@ void handle_computer_loop(void);
  * @brief Libera as texturas carregadas por initialize_computer_loop().
  */
 void unload_computer_loop(void);
+
+/* Checkpoint alterado: a máquina principal o grava no slot ativo. */
+extern bool computer_checkpoint_dirty;
+void computer_suspend_input(void);
+
+/* Dia 1: resultados para o coordenador e checkpoint sem dependência de desenho. */
+int computer_first_outcome(void);
+bool computer_mostly_unchecked(void);
+void computer_store_checkpoint(void);
+bool computer_restore_checkpoint(void);
+bool computer_checkpoint_finished(void);
+bool computer_day_three_first_retry(void);
+int computer_story_day_choice(void);
+bool computer_story_middle_pending(void);
+TaskOutcome computer_story_middle_reaction(void);
+void computer_complete_story_middle(void);
+bool computer_day_three_lunch_accepted(void);
+bool computer_day_three_choice_recorded(void);
+bool computer_first_answer_correct(void);
+bool computer_first_exposed_personal_data(void);
 
 #endif // COMPUTER_LOOP_H
