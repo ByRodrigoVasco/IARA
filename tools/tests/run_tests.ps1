@@ -14,6 +14,7 @@
 
 param(
     # Espera uma tecla entre os conjuntos, para narrar com calma na gravacao.
+    [string[]]$Somente = @(),
     [switch]$Pausado
 )
 
@@ -121,6 +122,21 @@ $suite = @(
         )
     },
     @{
+        Nome  = "test_story"
+        Nota  = "Cutscenes: variantes, retomada e failsafe"
+        Fonte = @(
+            "code/tests/test_story.c",
+            "code/src/game/collisions.c", "code/src/game/characters.c", "code/src/game/npcs.c",
+            "code/src/ui/fonts.c", "code/src/ui/animations.c", "code/src/ui/button.c",
+            "code/src/core/helper.c", "code/src/core/game_state.c",
+            "code/src/ui/accessibility.c", "code/src/game/hints.c",
+            "code/src/core/save.c", "code/src/ui/cheat_sheet.c", "code/src/ui/computer_art.c", "code/src/ui/logic_text.c", "code/src/game/logic.c", "code/src/game/calendar.c",
+            "code/src/core/audio.c",
+            "code/src/ui/notice.c", "code/src/ui/ui_widgets.c", "code/src/ui/confirm_dialog.c",
+            "code/src/screens/help.c", "code/src/ui/pause_menu.c"
+        )
+    },
+    @{
         Nome  = "test_sistema"
         Nota  = "Sistema bloco 1: partida, movimento e colisoes"
         Fonte = @(
@@ -189,6 +205,8 @@ Write-Host "====================================================================
 # ---------------------------------------------------------------- compilacao
 Write-Host ""
 Write-Host "Compilando..."
+if ($Somente.Count -gt 0) { $suite = @($suite | Where-Object { $_.Nome -in $Somente }) }
+if ($suite.Count -eq 0) { throw "Nenhum conjunto selecionado" }
 
 foreach ($teste in $suite) {
     $exe = Join-Path $saida ($teste.Nome + ".exe")

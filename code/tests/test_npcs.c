@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "npcs.h"
+#include "game_state.h"
 #include "calendar.h"
 #include "characters.h"
 #include "macros.h"
@@ -75,6 +76,64 @@ static void test_every_npc_has_a_different_line_for_each_playable_day(void)
     assert(npc_get_day_line(NPC_ANDERSON, 2, 0) == NULL);   // O Dia 2 é um flash, ninguém conversa
     assert(npc_get_day_line(NPC_ANDERSON, 0, 0) == NULL);
     assert(npc_get_playable_day_index(2) == -1);
+}
+
+static void test_statistic_dialogue_variants_follow_thresholds(void)
+{
+    struct hidden_statistic stats = {
+        .current_automation_points = HIDDEN_STATISTIC_START,
+        .current_perception_points = HIDDEN_STATISTIC_START,
+        .current_human_bond_points = HIDDEN_STATISTIC_START};
+    const int days[] = {1, 3, 12, 27, 41, 58, 74, 89, 100};
+
+    for (int day_index = 0; day_index < NPC_PLAYABLE_DAY_COUNT; day_index++)
+    {
+        for (int npc_id = 0; npc_id < NPC_COUNT; npc_id++)
+        {
+            const char *variant = npc_get_statistic_day_line(npc_id, days[day_index], &stats);
+            assert(variant == NULL);
+        }
+    }
+
+    stats.current_automation_points = HIDDEN_STATISTIC_START + 5;
+    stats.current_perception_points = HIDDEN_STATISTIC_START + 4;
+    stats.current_human_bond_points = HIDDEN_STATISTIC_START + 2;
+    for (int day_index = 0; day_index < NPC_PLAYABLE_DAY_COUNT; day_index++)
+    {
+        for (int npc_id = 0; npc_id < NPC_COUNT; npc_id++)
+        {
+            const char *variant = npc_get_statistic_day_line(npc_id, days[day_index], &stats);
+            assert(variant != NULL && strlen(variant) > 10);
+        }
+    }
+
+    stats.current_automation_points = HIDDEN_STATISTIC_START;
+    stats.current_perception_points = HIDDEN_STATISTIC_START;
+    stats.current_human_bond_points = HIDDEN_STATISTIC_START;
+    assert(npc_get_statistic_day_line(NPC_ANDERSON, 1, &stats) == NULL);
+    stats.current_perception_points = HIDDEN_STATISTIC_START + 1;
+    assert(npc_get_statistic_day_line(NPC_ANDERSON, 1, &stats) != NULL);
+    stats.current_automation_points = HIDDEN_STATISTIC_START + 1;
+    assert(npc_get_statistic_day_line(NPC_JULIO, 1, &stats) != NULL);
+
+    stats.current_automation_points = HIDDEN_STATISTIC_START + 2;
+    assert(npc_get_statistic_day_line(NPC_JULIO, 12, &stats) == NULL);
+    stats.current_automation_points = HIDDEN_STATISTIC_START + 3;
+    assert(npc_get_statistic_day_line(NPC_JULIO, 12, &stats) != NULL);
+
+    stats.current_perception_points = HIDDEN_STATISTIC_START + 1;
+    assert(npc_get_statistic_day_line(NPC_ANDERSON, 12, &stats) == NULL);
+    stats.current_perception_points = HIDDEN_STATISTIC_START + 2;
+    assert(npc_get_statistic_day_line(NPC_ANDERSON, 12, &stats) != NULL);
+
+    stats.current_human_bond_points = HIDDEN_STATISTIC_START + 1;
+    assert(npc_get_statistic_day_line(NPC_LAURA, 12, &stats) == NULL);
+    stats.current_human_bond_points = HIDDEN_STATISTIC_START + 2;
+    assert(npc_get_statistic_day_line(NPC_LAURA, 12, &stats) != NULL);
+
+    assert(npc_get_statistic_day_line(NPC_ANDERSON, 2, &stats) == NULL);
+    assert(npc_get_statistic_day_line(-1, 1, &stats) == NULL);
+    assert(npc_get_statistic_day_line(NPC_ANDERSON, 1, NULL) == NULL);
 }
 
 static void test_exactly_one_npc_offers_a_hint_each_playable_day(void)
@@ -238,6 +297,7 @@ int main(void)
 {
     test_each_npc_has_its_own_dialogue();
     test_every_npc_has_a_different_line_for_each_playable_day();
+    test_statistic_dialogue_variants_follow_thresholds();
     test_conversation_starts_with_a_greeting_only_the_first_time_of_the_day();
     test_seats_change_every_playable_day_and_never_repeat();
     test_exactly_one_npc_offers_a_hint_each_playable_day();

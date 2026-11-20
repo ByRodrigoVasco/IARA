@@ -66,8 +66,7 @@ A confiança declarada sobe conforme ela piora, porque IA não avisa quando perd
 | Baixa (0 a 2) | Responde errado e inventa normas | A sugestão erra, com a confiança mais alta do dia |
 
 O botão **Nova conversa** recupera tudo, mas o chamado precisa ser colado de novo e os dados pessoais voltam a passar pela
-tarja; o que já foi enviado sem tarja não volta atrás. Com pouca memória ela cita a Mariana, personagem do GDD que o
-jogador ainda não conheceu: é uma proposta de pista para a narrativa, a validar com a equipe.
+tarja. O que já foi enviado sem tarja não volta atrás. Com pouca memória, ela atribui pedidos ao sistema e pode inventar justificativas.
 
 ## Puzzles dos dias
 
@@ -101,7 +100,7 @@ No Dia 100 há 3 provas aceitas: `D` com `¬D`, `H` com `¬H`, ou `D`, `D → C`
 - **Dias:** os 9 jogáveis são os do GDD. A escolha de quais outros dias são flash é proposta: 2, 7, 16, 22, 33, 38, 47, 52, 63, 68, 79, 84, 93 e 97. O resto é salto puro.
 - **Vínculo Humano:** cresce nas mensagens opcionais dos dias 3, 27 e 58.
 - **Finais:** seguem a seção 6.5. Automação alta é 5 ou mais, Percepção alta é 4 ou mais. O GDD não dá o limiar do Vínculo, então a proposta é 2 das 3 conversas.
-- **Mariana:** o jogador a encontra ao examinar o mural no Dia 89, que leva a O Fundo.
+- **Pista de Nicollas:** abrir o mural do Dia 89 registra o mapa assinado. A pista é uma condição narrativa de Ruptura. Os três registros da tabela sustentam as provas lógicas. Saves antigos preservam a elegibilidade pela descoberta registrada no formato anterior.
 - **Memória da IARA:** cada dia abre uma conversa nova, mas cada dia delegado tira 1 da memória inicial, até o limite de 3.
 
 ## Auditoria de telas de teoria
