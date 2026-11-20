@@ -48,6 +48,7 @@
     X(bp_onda, "bp_onda", 96, 48, 4) \
     X(bp_maos, "bp_maos", 48, 44, 4) \
     X(bp_falsa, "bp_falsa", 72, 44, 4) \
+    X(bp_nota, "bp_nota", 24, 24, 4) \
     X(ic_grampeador, "ic_grampeador", 24, 24, 4) \
     X(ic_ponteiro, "ic_ponteiro", 24, 24, 4) \
     X(ic_caneca, "ic_caneca", 24, 24, 4) \
