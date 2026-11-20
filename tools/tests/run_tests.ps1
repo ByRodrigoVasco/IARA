@@ -193,7 +193,8 @@ $suite = @(
             "code/src/survival/sv_game.c", "code/src/survival/sv_boss.c", "code/src/survival/sv_render.c", "code/src/survival/sv_light.c", "code/src/survival/sv_ranking.c", "code/src/survival/sv_debug.c",
             "code/src/survival/sv_audio.c", "code/src/survival/sv_map.c", "code/src/survival/sv_assets.c", "code/src/survival/sv_meta.c", "code/src/survival/sv_rules.c",
             "code/src/ui/notice.c", "code/src/ui/ui_widgets.c", "code/src/ui/confirm_dialog.c",
-            "code/src/screens/help.c", "code/src/ui/pause_menu.c"
+            "code/src/screens/help.c", "code/src/ui/pause_menu.c",
+            "code/src/game/symptoms.c", "code/src/ui/office_symptoms.c"
         )
     },
     @{
