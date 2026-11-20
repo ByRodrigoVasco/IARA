@@ -56,5 +56,5 @@ O repositório ainda não tem as regras formalizadas por LMC. A verificação us
 
 ## Inconsistências encontradas
 
-- **Nome da empresa:** a arte do escritório mostra "NEXO LABS", e o GDD e o quiz usam "CISSA".
+- **Nome da empresa:** é CISSA. A placa da parede e o capacho do escritório (`office.png`) diziam "NEXO LABS" e foram refeitos com "CISSA", como o GDD e o quiz.
 - **Camada em Haskell:** as regras puras previstas no GDD não existem no repositório.
