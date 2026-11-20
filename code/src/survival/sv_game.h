@@ -42,7 +42,7 @@ typedef enum { CHEAT_GOD, CHEAT_NO_SPAWN, CHEAT_ONE_HIT, CHEAT_FREEZE, CHEAT_COU
 typedef enum
 {
     W_GRAMPEADOR, W_PONTEIRO, W_CANECA, W_POSTITS, W_NAOPERTURBE, W_DEPLOY, W_NOTA, W_MODUS,
-    W_TABELA, W_COLEGA, W_NOVACONVERSA, W_PROMPT, W_VERA, W_FIBRA, W_COUNT
+    W_TABELA, W_COLEGA, W_NOVACONVERSA, W_PROMPT, W_VERA, W_FIBRA, W_CALOR, W_COUNT
 } SvWeaponId;
 
 typedef enum
@@ -95,7 +95,7 @@ typedef struct
 } SvShot;
 
 typedef enum { ZONE_CIRCLE, ZONE_RECT } SvZoneShape;
-typedef enum { ZK_CANECA, ZK_DEPLOY, ZK_PONTEIRO, ZK_PROMPT, ZK_VERA, ZK_FIBRA } SvZoneKind;
+typedef enum { ZK_CANECA, ZK_DEPLOY, ZK_PONTEIRO, ZK_PROMPT, ZK_VERA, ZK_FIBRA, ZK_CALOR } SvZoneKind;
 
 typedef struct
 {
@@ -111,6 +111,7 @@ typedef struct
     bool target_boss;
     int text;              // Prompt da IARA: qual comando é digitado
     int owner;             // Dupla: quem criou a área (0 ou 1). No solo é sempre 0
+    float tick;            // Mapa de Calor: tempo até a próxima queimadura
     bool fired;
     bool alive;
 } SvZone;
