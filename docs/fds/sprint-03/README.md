@@ -44,6 +44,25 @@ Cada caso foi gravado sozinho: o terminal à esquerda mostra a pré-condição, 
 
 A gravação foi feita em Linux (gcc, raylib, tela virtual Xvfb), com os mesmos arquivos e a mesma lista de fontes do `run_tests.ps1`. Na tela virtual não há placa de som: o áudio roda num dispositivo nulo, então o vídeo não tem som, e os casos da US16 mostram no terminal quais sons o jogo mandou tocar.
 
+## Prints do Jira
+
+O professor não tem acesso ao board, então as evidências do Jira ficam aqui, como nas sprints anteriores.
+
+**Sprint 03 (Week 15e16 - Prep Apresentação, 07/11 a 20/11/2026).** Backlog do Jira com os 25 tickets da sprint e o status de cada um, conferido em 20/11/2026:
+
+![Backlog do Jira da Week 15e16, com as histórias da Sprint 03 e o status de cada uma](backlog-sprint-03.png)
+
+**Screencast ligado a cada história.** Cada card de história testada nesta sprint tem um comentário com o resultado do caso de teste e o link do screencast:
+
+| História | Casos | Print do card |
+|---|---|---|
+| PI2-253 · US16 Efeitos sonoros | CT-94 a CT-98 | ![Card PI2-253 no Jira com o comentário dos CT-94 a CT-98](jira/PI2-253.png) |
+| PI2-254 · US17 Novos sprites | CT-99 e CT-100 | ![Card PI2-254 no Jira com o comentário dos CT-99 e CT-100](jira/PI2-254.png) |
+| PI2-197 · US10 Sintomas visuais | CT-101 e CT-102 | ![Card PI2-197 no Jira com o comentário dos CT-101 e CT-102](jira/PI2-197.png) |
+| PI2-200 · US13 Tensão progressiva | CT-103 | ![Card PI2-200 no Jira com o comentário do CT-103](jira/PI2-200.png) |
+| PI2-186 · US04 Dica sem resposta pronta | CT-104 | ![Card PI2-186 no Jira com o comentário do CT-104](jira/PI2-186.png) |
+| PI2-168 · Pontuação varia por método | CT-105 | ![Card PI2-168 no Jira com o comentário do CT-105](jira/PI2-168.png) |
+
 ## Bug tracker (PI2-300 e PI2-301)
 
 Conferido em **20/11/2026**: [Issues do GitHub](https://github.com/ByRodrigoVasco/IARA/issues?q=is%3Aissue+label%3Abug).

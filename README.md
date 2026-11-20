@@ -135,7 +135,7 @@ A suíte automatizada (`tools/tests/run_tests.ps1`) monta o jogo de verdade e o 
 
 ### Evidências da Sprint 03
 
-Testes de sistema das histórias que ainda não tinham caso de teste, executados em 20/11/2026 na `develop` (`2386a1c`): **7 de 12 aprovados**, 5 falhas registradas no bug tracker. Pré-condição, passos, esperado e obtido de cada caso estão no [report da Sprint 03](docs/fds/sprint-03/README.md).
+Testes de sistema das histórias que ainda não tinham caso de teste, executados em 20/11/2026 na `develop` (`2386a1c`): **7 de 12 aprovados**, 5 falhas registradas no bug tracker. Pré-condição, passos, esperado e obtido de cada caso estão no [report da Sprint 03](docs/fds/sprint-03/README.md), junto com os [prints do Jira](docs/fds/sprint-03/README.md#prints-do-jira): o backlog da sprint e cada card de história com o link do seu screencast.
 
 | Caso | História | Resultado | Screencast |
 |---|---|---|---|
