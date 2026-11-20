@@ -129,6 +129,35 @@ O primeiro comando gera `build/IARA-windows.zip`, com o executável, as DLLs e o
 | **IHC**<br>[Interação Humano-Computador](docs/ihc/README.md) | • Personas<br>• Protótipo lo-fi e screencast<br>• Avaliação heurística (Nielsen)<br>• Critérios de usabilidade e acessibilidade |
 | **LMC**<br>[Lógica para Computação](docs/lmc/README.md) | • Especificação lógica das regras do jogo<br>• Puzzles de lógica clássica |
 
+## Qualidade e testes
+
+A suíte automatizada (`tools/tests/run_tests.ps1`) monta o jogo de verdade e o conduz como um jogador. O relatório completo está em [docs/fds/testes](docs/fds/testes/README.md), e as evidências de cada sprint nos reports de [FDS](docs/fds/README.md).
+
+### Evidências da Sprint 03
+
+Testes de sistema das histórias que ainda não tinham caso de teste, executados em 20/11/2026 na `develop` (`2386a1c`): **7 de 12 aprovados**, 5 falhas registradas no bug tracker. Pré-condição, passos, esperado e obtido de cada caso estão no [report da Sprint 03](docs/fds/sprint-03/README.md), junto com os [prints do Jira](docs/fds/sprint-03/README.md#prints-do-jira): o backlog da sprint e cada card de história com o link do seu screencast.
+
+| Caso | História | Resultado | Screencast |
+|---|---|---|---|
+| CT-94 | US16: som de passos | ✅ | [CT-94_US-16.mp4](docs/fds/sprint-03/screencasts/CT-94_US-16.mp4) |
+| CT-95 | US16: som de porta | ❌ [#101](https://github.com/ByRodrigoVasco/IARA/issues/101) | [CT-95_US-16.mp4](docs/fds/sprint-03/screencasts/CT-95_US-16.mp4) |
+| CT-96 | US16: ambiente contínuo | ✅ | [CT-96_US-16.mp4](docs/fds/sprint-03/screencasts/CT-96_US-16.mp4) |
+| CT-97 | US16: som de teclado no quiz | ❌ [#102](https://github.com/ByRodrigoVasco/IARA/issues/102) | [CT-97_US-16.mp4](docs/fds/sprint-03/screencasts/CT-97_US-16.mp4) |
+| CT-98 | US16: voz dos NPCs | ❌ [#103](https://github.com/ByRodrigoVasco/IARA/issues/103) | [CT-98_US-16.mp4](docs/fds/sprint-03/screencasts/CT-98_US-16.mp4) |
+| CT-99 | US17: sprites dos NPCs | ✅ | [CT-99_US-17.mp4](docs/fds/sprint-03/screencasts/CT-99_US-17.mp4) |
+| CT-100 | US17: arte do flash, salto e finais | ❌ [#104](https://github.com/ByRodrigoVasco/IARA/issues/104) | [CT-100_US-17.mp4](docs/fds/sprint-03/screencasts/CT-100_US-17.mp4) |
+| CT-101 | US10: sem HUD numérico | ✅ | [CT-101_US-10.mp4](docs/fds/sprint-03/screencasts/CT-101_US-10.mp4) |
+| CT-102 | US10: cenário reage ao jogador | ❌ [#105](https://github.com/ByRodrigoVasco/IARA/issues/105) | [CT-102_US-10.mp4](docs/fds/sprint-03/screencasts/CT-102_US-10.mp4) |
+| CT-103 | US13: tensão progressiva | ✅ | [CT-103_US-13.mp4](docs/fds/sprint-03/screencasts/CT-103_US-13.mp4) |
+| CT-104 | US04: dica pelo NPC | ✅ | [CT-104_US-04.mp4](docs/fds/sprint-03/screencasts/CT-104_US-04.mp4) |
+| CT-105 | US11: pontuação por método | ✅ | [CT-105_US-11.mp4](docs/fds/sprint-03/screencasts/CT-105_US-11.mp4) |
+
+### Bug Tracker
+
+Print de **20/11/2026** das [Issues do GitHub](https://github.com/ByRodrigoVasco/IARA/issues?q=is%3Aissue+label%3Abug), com as abertas e as fechadas. Cada issue tem o label da sprint, um responsável e aponta para a história do Jira, o teste e o PR da correção. O status de cada bug também fica em [bugs.md](docs/fds/testes/bugs.md).
+
+![Bug tracker do GitHub em 20/11/2026](docs/fds/sprint-03/bug-tracker-2026-11-20.png)
+
 ## Créditos de arte
 
 Os móveis do Modo Sobrevivência (mesas, cadeiras, arquivos, estantes, cofre, caixas, lixeira, planta e longarina) foram recortados do pacote gratuito [Post Apoc Office](https://0-mem0ry.itch.io/), de **0_mem0ry**. A licença permite usar e modificar os assets em projetos comerciais e não comerciais, mas não permite revender ou redistribuir o pacote original; por isso o repositório guarda só os recortes usados no jogo.

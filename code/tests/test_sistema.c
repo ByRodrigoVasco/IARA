@@ -698,6 +698,14 @@ static void testar_vidro(void)
     {
         SetWindowSize(resolutions[r][0], resolutions[r][1]);
         PollInputEvents();
+        // Em X11 (a tela virtual usada no screencast) o framebuffer da janela so
+        // assume o tamanho novo depois de uma troca de quadro: desenha dois quadros
+        // vazios antes de medir. No Windows isso nao muda nada.
+        for (int espera = 0; espera < 2; espera++)
+        {
+            BeginDrawing();
+            EndDrawing();
+        }
         update_obstacle_recs();
         float scale = get_scale();
         for (int i = 0; i < GLASS_COUNT; i++)
