@@ -177,6 +177,26 @@ $suite = @(
         )
     },
     @{
+        Nome  = "test_sprint03"
+        Nota  = "Sistema bloco 4: historias restantes da Sprint 03"
+        # Inclui o test_fluxo.c e o audio.c direto, para trocar o teclado e registrar os
+        # sons tocados; por isso o audio.c nao entra na lista.
+        Fonte = @(
+            "code/tests/test_sprint03.c",
+            "code/src/core/state_machine.c", "code/src/core/game_state.c", "code/src/core/save.c", "code/src/core/save_slots.c",
+            "code/src/screens/mode_select.c", "code/src/screens/save_select.c", "code/src/screens/loading.c", "code/src/ui/screen_style.c",
+            "code/src/core/helper.c", "code/src/screens/pre_menu.c",
+            "code/src/game/collisions.c", "code/src/game/characters.c", "code/src/game/npcs.c",
+            "code/src/ui/fonts.c", "code/src/ui/animations.c", "code/src/ui/button.c",
+            "code/src/ui/accessibility.c", "code/src/game/hints.c", "code/src/screens/settings.c",
+            "code/src/core/preferences.c", "code/src/ui/cheat_sheet.c", "code/src/ui/computer_art.c", "code/src/ui/logic_text.c", "code/src/game/logic.c", "code/src/game/calendar.c",
+            "code/src/survival/sv_game.c", "code/src/survival/sv_boss.c", "code/src/survival/sv_render.c", "code/src/survival/sv_light.c", "code/src/survival/sv_ranking.c", "code/src/survival/sv_debug.c",
+            "code/src/survival/sv_audio.c", "code/src/survival/sv_map.c", "code/src/survival/sv_assets.c", "code/src/survival/sv_meta.c", "code/src/survival/sv_rules.c",
+            "code/src/ui/notice.c", "code/src/ui/ui_widgets.c", "code/src/ui/confirm_dialog.c",
+            "code/src/screens/help.c", "code/src/ui/pause_menu.c"
+        )
+    },
+    @{
         Nome  = "test_survival"
         Nota  = "Modo Sobrevivencia: regras, progresso e uma partida simulada"
         Fonte = @(

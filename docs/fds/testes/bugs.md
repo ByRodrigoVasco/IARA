@@ -11,7 +11,7 @@ Os blocos abaixo repetem o conteúdo de cada um, para consulta sem sair do repos
 
 ## Status
 
-Atualizar a coluna Status conforme as issues forem corrigidas e fechadas. Conferido em 17/11/2026: do BUG-01 ao BUG-16 e do BUG-19 ao BUG-32 as correções estão na `develop` (o Modo Sobrevivência entrou pelo PR #76) e as issues foram fechadas, inclusive as dos BUG-30 a BUG-32 (PR #82). Os BUG-17 e BUG-18 seguem abertos, com gravidade baixa: são quadros lentos medidos no teste real, sem efeito na jogabilidade. O BUG-17 não voltou a acontecer, e o BUG-18 pede carregar a música e o ambiente da primeira fase na tela de carregamento.
+Atualizar a coluna Status conforme as issues forem corrigidas e fechadas. Conferido em 17/11/2026: do BUG-01 ao BUG-16 e do BUG-19 ao BUG-32 as correções estão na `develop` (o Modo Sobrevivência entrou pelo PR #76) e as issues foram fechadas, inclusive as dos BUG-30 a BUG-32 (PR #82). Conferido de novo em 20/11/2026, na Sprint 03: os testes CT-94 a CT-105 abriram os BUG-39 a BUG-43 (#101 a #105), e todas as issues de bug ganharam o label da sprint, um responsável e a rastreabilidade (história do Jira, teste e PR da correção). Os BUG-33 a BUG-38 (#94 a #99) foram abertos em 20/11 por Rodrigo. Os BUG-17 e BUG-18 seguem abertos, com gravidade baixa: são quadros lentos medidos no teste real, sem efeito na jogabilidade. O BUG-17 não voltou a acontecer, e o BUG-18 pede carregar a música e o ambiente da primeira fase na tela de carregamento.
 
 | ID | Problema | Gravidade | Issue | Status |
 |---|---|---|---|---|
@@ -47,6 +47,11 @@ Atualizar a coluna Status conforme as issues forem corrigidas e fechadas. Confer
 | BUG-30 | Descrição das cartas de escolha passa por cima das linhas de mudança | Média | [#77](https://github.com/ByRodrigoVasco/IARA/issues/77) | Corrigido na `develop` (PR #82), issue fechada |
 | BUG-31 | Botão de velocidade (2x) no centro cobre o nome do chefe e o texto vaza do botão | Média | [#78](https://github.com/ByRodrigoVasco/IARA/issues/78) | Corrigido na `develop` (PR #82), issue fechada |
 | BUG-32 | Janela sem opção de maximizar e com tamanho solto | Média | [#79](https://github.com/ByRodrigoVasco/IARA/issues/79) | Corrigido na `develop` (PR #82), issue fechada |
+| BUG-39 | Sair pela porta não toca o som de porta | Baixa | [#101](https://github.com/ByRodrigoVasco/IARA/issues/101) | Aberto |
+| BUG-40 | Tela do quiz sem som de teclado | Baixa | [#102](https://github.com/ByRodrigoVasco/IARA/issues/102) | Aberto |
+| BUG-41 | NPC começa a falar sem o som de fala (voice blip) | Baixa | [#103](https://github.com/ByRodrigoVasco/IARA/issues/103) | Aberto |
+| BUG-42 | Flash do dia, salto puro e os 4 finais sem arte própria | Média | [#104](https://github.com/ByRodrigoVasco/IARA/issues/104) | Aberto |
+| BUG-43 | Escritório não reage às escolhas do jogador, só ao dia | Média | [#105](https://github.com/ByRodrigoVasco/IARA/issues/105) | Aberto (PI2-237 em andamento) |
 
 **Sobre o BUG-02:** os dois vazamentos descritos abaixo já não existem. Restava uma carga duplicada do menu ao abrir o jogo, removida. O CT-24 oscilava porque media sem desenhar quadros, e o driver de vídeo só devolve uma textura apagada depois de um quadro. Com quadros, 400 voltas ao menu cresceram 19 MB (cerca de 0,05 MB por volta, contra os 7 MB originais).
 
@@ -648,3 +653,25 @@ Revisando os textos do Modo Sobrevivência e a janela do jogo, saíram estes pro
 
 **Onde:** `code/src/survival/sv_render.c`, `code/src/core/helper.c`, `code/src/core/preferences.c`, `code/src/screens/settings.c`, `code/src/main.c`
 **Coberto por:** UX-23 (todas as cartas de escolha), UX-24 (botão de velocidade em 5 tamanhos de janela), UX-25 e UX-26 (modos da janela e `iara.ini`)
+
+---
+
+## BUG-39 a BUG-43 — Testes de sistema da Sprint 03 (20/11/2026)
+
+**Labels:** `bug`, `sprint-03`
+
+Achados pelo bloco 4 da suíte (`code/tests/test_sprint03.c`), executado na `develop` (`2386a1c`). O passo a passo de cada caso e o screencast estão no [report da Sprint 03](../sprint-03/README.md).
+
+<a id="bug-39"></a>
+<a id="bug-40"></a>
+<a id="bug-41"></a>
+<a id="bug-42"></a>
+<a id="bug-43"></a>
+
+| ID | Issue | História | Esperado | Obtido | Onde | Coberto por |
+|---|---|---|---|---|---|---|
+| BUG-39 | [#101](https://github.com/ByRodrigoVasco/IARA/issues/101) | PI2-263 (US16) | Som de porta ao sair pela porta de vidro | Nenhum som; `PORTA ABRINDO.mp3` existe mas não é carregado | `code/src/core/audio.c`, `finish_day()` em `game_loop.c` | CT-95 |
+| BUG-40 | [#102](https://github.com/ByRodrigoVasco/IARA/issues/102) | PI2-264 (US16) | Som de teclado ao interagir com o computador | Nenhum som; `SOM DE TECLADO.ogg` existe mas não é carregado | `code/src/core/audio.c`, `computer_loop.c` | CT-97 |
+| BUG-41 | [#103](https://github.com/ByRodrigoVasco/IARA/issues/103) | PI2-265 (US16) | Voice blip quando o NPC começa a falar | O blip só toca para a IARA no computador; o diálogo dos NPCs não chama o áudio | `handle_map_interactables()` e `render_npc_dialogue()` em `game_loop.c` | CT-98 |
+| BUG-42 | [#104](https://github.com/ByRodrigoVasco/IARA/issues/104) | PI2-267 e PI2-268 (US17) | Arte própria para o Flash ou o salto e para os 4 finais | Flash reaproveita o escritório; salto e finais são só texto | `handle_day_transition()` e `ending_cards` em `game_loop.c` | CT-100 |
+| BUG-43 | [#105](https://github.com/ByRodrigoVasco/IARA/issues/105) | PI2-237 (US10) | O escritório muda com as estatísticas ocultas | Telas idênticas para estatísticas opostas no mesmo dia; o cenário só muda com o dia | `render_game_loop_escritorio()` em `game_loop.c` (há trabalho em `feature/sintomas-visuais`) | CT-102 |
