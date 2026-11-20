@@ -4,7 +4,8 @@ sprites novos (bo_rene e bo_iara). Cada poder é uma faixa de 4 quadros, no tama
 espera (sv_sprite_table.h).
 
     Renê: bp_martelo (Decisão Final), bp_sombra (Premissa H), bp_corrente (D -> C), bp_contrato (D)
-    IARA: bp_onda (onda com rostos), bp_maos (Mãos d'Água), bp_nota (anéis do Canto)
+    IARA: bp_onda (onda com rostos), bp_maos (Mãos d'Água), bp_nota (anéis do Canto),
+          bp_falsa (Resposta Confiante: a poça "segura" que é mentira)
 
 Uso, a partir da raiz do repositório:
     python tools/sprites/gerar_poderes.py            grava em code/assets/sprites/sobrevivencia
@@ -296,8 +297,47 @@ def bp_nota():
     return faixa(quadros)
 
 
+def bp_falsa():
+    """72x44. Resposta Confiante: uma poça calma com um visto verde, parecendo lugar seguro (0, 1);
+    a mentira aparece (2, 3): a água fica vermelha, o visto vira um X e mãos de porcelana saem da borda."""
+    verde = [(40, 150, 90, 255), (90, 220, 130, 255), (190, 255, 210, 255)]
+    vermelho = [(40, 8, 14, 255), (84, 14, 24, 255), (140, 24, 34, 255)]
+    quadros = []
+    for f in range(4):
+        mentira = f >= 2
+        im = Image.new("RGBA", (72, 44), (0, 0, 0, 0))
+        d = ImageDraw.Draw(im)
+        fundo = vermelho if mentira else [AGUA[1], AGUA[2], AGUA[3]]
+        d.ellipse([1, 4, 70, 42], fill=fundo[0])
+        d.ellipse([4, 6, 67, 39], fill=fundo[1])
+        d.ellipse([10, 9, 61, 34], fill=fundo[2])
+        # Ondinhas que andam
+        for k in range(3):
+            r = 8 + ((k * 9 + f * 3) % 26)
+            cor = (200, 60, 70, 255) if mentira else AGUA[4]
+            d.arc([36 - r, 22 - r * 0.5, 36 + r, 22 + r * 0.5], 200, 340, fill=cor)
+        if not mentira:
+            # Visto verde brilhando, como "pode ficar aqui"
+            brilho = verde[2] if f == 1 else verde[1]
+            d.line([(26, 21), (32, 27), (46, 13)], fill=verde[0], width=5)
+            d.line([(26, 21), (32, 27), (46, 13)], fill=brilho, width=3)
+        else:
+            # O visto quebra num X vermelho que brilha no escuro
+            d.line([(27, 13), (45, 29)], fill=(110, 10, 20, 255), width=5)
+            d.line([(45, 13), (27, 29)], fill=(110, 10, 20, 255), width=5)
+            d.line([(27, 13), (45, 29)], fill=BRILHO, width=3)
+            d.line([(45, 13), (27, 29)], fill=BRILHO, width=3)
+            if f == 2:
+                d.point([(36, 9), (24, 30), (49, 32)], fill=(255, 200, 190, 255))   # Estilhaços do visto
+            # Mãos da IARA saindo da borda (as mesmas das Mãos d'Água)
+            for x in (11, 60):
+                mao(d, x, 33, 9 if f == 2 else 13, aberta=f == 2)
+        quadros.append(contornar(im))
+    return faixa(quadros)
+
+
 PODERES = {"bp_martelo": bp_martelo, "bp_sombra": bp_sombra, "bp_corrente": bp_corrente, "bp_contrato": bp_contrato,
-           "bp_onda": bp_onda, "bp_maos": bp_maos, "bp_nota": bp_nota}
+           "bp_onda": bp_onda, "bp_maos": bp_maos, "bp_nota": bp_nota, "bp_falsa": bp_falsa}
 
 
 def gerar(previa=False):
