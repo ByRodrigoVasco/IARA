@@ -5,7 +5,7 @@ Os BUG-01 a BUG-08 foram encontrados na execução dos testes de sistema de 22/1
 label `bug`. Os BUG-09 a BUG-12 foram encontrados na revisão de 03/11/2026
 (branch `test/campanha-100-dias`) e também têm issue. Os BUG-13 e BUG-14 foram encontrados em
 07/11/2026, ao cobrir a US03 (branch `test/us03-modo-automatico`), e têm as issues #80 e #81 (abertas depois, já fechadas).
-O BUG-15 foi relatado em 08/11/2026, durante o desenvolvimento do Modo Sobrevivência (branch `feature/modo-sobrevivencia`), e tem a issue #56. Os BUG-16 a BUG-18 saíram do teste à mão de 08/11/2026 e do retorno de um usuário final de 09/11/2026, na mesma branch, e têm as issues #57 a #59. Os BUG-30 a BUG-32 foram achados em 17/11/2026, ao revisar os textos e a janela do jogo, e têm as issues #77 a #79.
+O BUG-15 foi relatado em 08/11/2026, durante o desenvolvimento do Modo Sobrevivência (branch `feature/modo-sobrevivencia`), e tem a issue #56. Os BUG-16 a BUG-18 saíram do teste à mão de 08/11/2026 e do retorno de um usuário final de 09/11/2026, na mesma branch, e têm as issues #57 a #59. Os BUG-30 a BUG-32 foram achados em 17/11/2026, ao revisar os textos e a janela do jogo,  e têm as issues #77 a #79. O BUG-33 saiu de um teste de campo em 20/11/2026 (issue #94), e os BUG-34 a BUG-38 da auditoria das branches ativas feita no mesmo dia (issues #95 a #99).
 
 Os blocos abaixo repetem o conteúdo de cada um, para consulta sem sair do repositório.
 
@@ -47,6 +47,12 @@ Atualizar a coluna Status conforme as issues forem corrigidas e fechadas. Confer
 | BUG-30 | Descrição das cartas de escolha passa por cima das linhas de mudança | Média | [#77](https://github.com/ByRodrigoVasco/IARA/issues/77) | Corrigido na `develop` (PR #82), issue fechada |
 | BUG-31 | Botão de velocidade (2x) no centro cobre o nome do chefe e o texto vaza do botão | Média | [#78](https://github.com/ByRodrigoVasco/IARA/issues/78) | Corrigido na `develop` (PR #82), issue fechada |
 | BUG-32 | Janela sem opção de maximizar e com tamanho solto | Média | [#79](https://github.com/ByRodrigoVasco/IARA/issues/79) | Corrigido na `develop` (PR #82), issue fechada |
+| BUG-33 | Personagem bloqueado escolhido com cheat volta com a aparência dele e a habilidade do Estagiário | Média | [#94](https://github.com/ByRodrigoVasco/IARA/issues/94) | Aberto (`develop` e `feature/sv-modo-dupla`) |
+| BUG-34 | Suíte não compila: `test_sistema` sem `rooms.c` | Média | [#95](https://github.com/ByRodrigoVasco/IARA/issues/95) | Aberto (`feat/historia-comodos`) |
+| BUG-35 | `feat/historia-comodos` conflita com sintomas e cutscenes em `game_loop.c` | Média | [#96](https://github.com/ByRodrigoVasco/IARA/issues/96) | Aberto (integração das branches) |
+| BUG-36 | Commit leva 16 imagens de evidência regravadas pela suíte | Baixa | [#97](https://github.com/ByRodrigoVasco/IARA/issues/97) | Aberto (`feature/cutscenes-comportamento-npcs`) |
+| BUG-37 | Cheats do debug valem só para o jogador 1 na dupla | Baixa | [#98](https://github.com/ByRodrigoVasco/IARA/issues/98) | Aberto (`feature/sv-modo-dupla`) |
+| BUG-38 | Análise estática aponta risco de estouro de vetor no quiz de triagem | Baixa | [#99](https://github.com/ByRodrigoVasco/IARA/issues/99) | Aberto (`develop`) |
 
 **Sobre o BUG-02:** os dois vazamentos descritos abaixo já não existem. Restava uma carga duplicada do menu ao abrir o jogo, removida. O CT-24 oscilava porque media sem desenhar quadros, e o driver de vídeo só devolve uma textura apagada depois de um quadro. Com quadros, 400 voltas ao menu cresceram 19 MB (cerca de 0,05 MB por volta, contra os 7 MB originais).
 
@@ -648,3 +654,23 @@ Revisando os textos do Modo Sobrevivência e a janela do jogo, saíram estes pro
 
 **Onde:** `code/src/survival/sv_render.c`, `code/src/core/helper.c`, `code/src/core/preferences.c`, `code/src/screens/settings.c`, `code/src/main.c`
 **Coberto por:** UX-23 (todas as cartas de escolha), UX-24 (botão de velocidade em 5 tamanhos de janela), UX-25 e UX-26 (modos da janela e `iara.ini`)
+
+---
+
+## BUG-33 a BUG-38 — Teste de campo e auditoria das branches ativas (20/11/2026)
+
+**Labels:** `bug`
+
+O BUG-33 veio de um usuário, num teste de campo. Os BUG-34 a BUG-38 saíram de uma auditoria em cópias separadas da `develop` e de cada branch ativa: compilação com avisos e análise estática, leitura do código novo, simulações de partidas inteiras sem janela e a simulação de mesclas. Nada foi corrigido ainda. As causas abaixo são **possíveis**, ainda não confirmadas.
+
+| ID | O que acontece | Possível causa | Issue |
+|---|---|---|---|
+| BUG-33 | Com o cheat ligado, o jogador escolhe um personagem bloqueado. Ao desligar o cheat durante a partida e começar outra, a aparência é a do bloqueado e a habilidade é a do Estagiário (reproduzido sem janela, também na dupla) | A aparência vem de `sv_meta.character`, que guarda o bloqueado; a habilidade passa pela checagem de `sv_game.c:2181`, que devolve o Estagiário com o debug desligado | [#94](https://github.com/ByRodrigoVasco/IARA/issues/94) |
+| BUG-34 | Na `feat/historia-comodos`, o `test_sistema` não liga: `undefined reference to room_get` e `room_draw_animations` | O `rooms.c` entrou só na lista do `test_fluxo` em `run_tests.ps1`; o `test_sistema` inclui o `game_loop.c` direto | [#95](https://github.com/ByRodrigoVasco/IARA/issues/95) |
+| BUG-35 | Mesclar os cômodos com os sintomas ou com as cutscenes dá conflito em `game_loop.c`; resolver mal pode desenhar os sintomas em todos os cômodos | Duas branches mudaram a mesma região de `render_game_loop_escritorio`, e os cômodos a moveram para `draw_map_texture` | [#96](https://github.com/ByRodrigoVasco/IARA/issues/96) |
+| BUG-36 | A `feature/cutscenes-comportamento-npcs` leva 16 PNGs de `docs/fds/testes/evidencias/` no commit; um passou de 388 KB para 1,3 MB | A suíte regrava as imagens e elas entraram no commit, contra o CONTRIBUTING | [#97](https://github.com/ByRodrigoVasco/IARA/issues/97) |
+| BUG-37 | Na dupla, curar, subir de nível, Ctrl+Z e dar poder pelo F2 só valem para o jogador 1 | Os cheats usam `sv_run.player`, o jogador ativo; pode ser limite aceito do debug | [#98](https://github.com/ByRodrigoVasco/IARA/issues/98) |
+| BUG-38 | O `-fanalyzer` acusa escrita fora dos vetores de triagem em `computer_loop.c` (linhas 1380 e 1509); hoje são 4 cartas para 6 vagas, então não estoura | O número de cartas vem de um campo de dados sem limite no código; pode ser alarme falso | [#99](https://github.com/ByRodrigoVasco/IARA/issues/99) |
+
+**Onde:** `code/src/survival/sv_game.c`, `code/src/survival/survival.c`, `tools/tests/run_tests.ps1`, `code/src/screens/game_loop.c`, `code/src/screens/computer_loop.c`
+**Coberto por:** nenhum teste ainda; os BUG-33 e BUG-37 foram reproduzidos com programas de teste descartáveis, sem janela
