@@ -42,7 +42,7 @@ bool calendar_has_investigation(int day);
 const char *const *calendar_get_note_lines(int day);
 
 /**
- * @brief O quanto o escritório já está sob a água, de 0 a 1. É o sintoma visual da campanha (GDD 6.1).
+ * @brief Quanto da campanha já passou, de 0 a 1 (0 até o dia 45). O escritório escurece na mesma proporção (GDD 6.1). O nome ficou da versão em que a água subia.
  */
 float calendar_get_water_level(int day);
 

@@ -5,7 +5,7 @@
 O jogador nunca vê os campos de `hidden_statistic`. Cada campo, ao passar de um limiar,
 muda a iluminação, acende algo no fundo ou põe um elemento no mapa do escritório.
 Isso se soma ao sintoma que já existia, o do avanço da campanha: o escritório escurece
-e alaga conforme o **dia** (GDD 6.1). Os limiares abaixo fazem o cenário reagir também às
+aos poucos conforme o **dia** (GDD 6.1). Os limiares abaixo fazem o cenário reagir também às
 **escolhas** do jogador.
 
 ## Regra dos limiares
