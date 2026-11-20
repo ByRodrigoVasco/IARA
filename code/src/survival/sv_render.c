@@ -643,8 +643,8 @@ static void draw_hazard(SvHazard *h)
         }
         else if (h->sprite == -3)
         {
-            DrawCircleLinesV(h->pos, 9.0f, (Color){255, 80, 70, 255});
-            DrawCircleLinesV(h->pos, 6.0f, WHITE);
+            // Canto da IARA: o olho de sonar com anéis ciano se abrindo
+            sv_draw(SPR_bp_nota, anim_frame(sv_run.time, 8.0f) % 4, h->pos, 1.0f, 0.0f, false, WHITE);
         }
         else if (h->sprite == SPR_bp_onda)
         {
