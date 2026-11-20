@@ -275,10 +275,21 @@ void handle_state_machine(void)
     case SURVIVAL_SCREEN:
         if (render_survival())
         {
+            bool switch_player = survival_wants_player_switch();
+
             unload_survival();
             active_save_clear();
-            initialize_menu_variables();
-            current_game_state_variables.current_screen = MENU_SCREEN;
+            if (switch_player)
+            {
+                // TROCAR JOGADOR: cada jogador é um save, então volta para a lista de saves do modo
+                initialize_save_select(SAVE_MODE_SURVIVAL);
+                current_game_state_variables.current_screen = SAVE_SELECT_SCREEN;
+            }
+            else
+            {
+                initialize_menu_variables();
+                current_game_state_variables.current_screen = MENU_SCREEN;
+            }
         }
         break;
 
