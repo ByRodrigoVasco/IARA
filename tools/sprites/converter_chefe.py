@@ -10,7 +10,9 @@ Uso:
     python tools/sprites/converter_chefe.py normal.png ataque.png saida.png [tamanho=64] [cores=24] [retoques.json]
 
 retoques.json (opcional), como no converter_inimigo.py, com uma chave por pose:
-    {"normal": {"cortes": [x1, x2], "0": [[x, y, [r, g, b]], ...]}, "ataque": {...}}
+    {"normal": {"cortes": [x1, x2], "apagar": [[x0, y0, x1, y1], ...], "0": [[x, y, [r, g, b]], ...]}, "ataque": {...}}
+"apagar" tira, dentro de cada retângulo da imagem original, os pixels azul-claros/lilás (auréolas e anéis
+finos que viram sujeira na redução); o cabelo escuro e a água ciano não são afetados.
 
 Precisa de Python 3 com Pillow e NumPy.
 """
@@ -24,9 +26,14 @@ from PIL import Image
 OUTLINE = (22, 16, 20, 255)
 
 
-def separar(caminho, cortes):
+def separar(caminho, cortes, apagar=None):
     im = Image.open(caminho).convert('RGB')
     a = np.asarray(im).astype(int)
+    for x0, y0, x1, y1 in apagar or []:
+        r = a[y0:y1, x0:x1]
+        claro = (r[..., 2] > 190) & (r[..., 2] > r[..., 1] + 35) & (r[..., 2] > r[..., 0] + 25)
+        r[claro] = (255, 0, 255)
+    im = Image.fromarray(a.astype('uint8'))
     # Fundo: magenta e as bordas rosadas que a IA deixa em volta do desenho
     fg = ~((a[:, :, 0] > 120) & (a[:, :, 2] > 100) & (a[:, :, 1] < np.minimum(a[:, :, 0], a[:, :, 2]) - 50))
     colsum = fg.sum(0)
@@ -72,16 +79,74 @@ def grandes(mask):
     return np.isin(lab, [k for k, n in tamanhos.items() if n >= maior * 0.015])
 
 
+# Vermelho que brilha no escuro no jogo (sv_assets.c: r >= 170, g <= 95, b <= 95)
+BRILHO = (232, 36, 44)
+
+
+def vermelho_vivo(a):
+    return (a[..., 0] > 170) & (a[..., 1] < 110) & (a[..., 2] < 110)
+
+
+def centros_vermelhos(mask, minimo=6):
+    """Centro de cada mancha vermelha com pelo menos `minimo` pixels."""
+    visto = np.zeros_like(mask)
+    centros = []
+    for y0, x0 in zip(*np.nonzero(mask)):
+        if visto[y0, x0]:
+            continue
+        pilha, pts = [(y0, x0)], []
+        visto[y0, x0] = True
+        while pilha:
+            y, x = pilha.pop()
+            pts.append((y, x))
+            for ny, nx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+                if 0 <= ny < mask.shape[0] and 0 <= nx < mask.shape[1] and mask[ny, nx] and not visto[ny, nx]:
+                    visto[ny, nx] = True
+                    pilha.append((ny, nx))
+        if len(pts) >= minimo:
+            ys, xs = zip(*pts)
+            centros.append((sum(ys) / len(ys), sum(xs) / len(xs)))
+    return centros
+
+
 def reduzir(im, fg, caixa, escala):
     x0, y0, x1, y1 = caixa
     w, h = max(1, round((x1 - x0) * escala)), max(1, round((y1 - y0) * escala))
     arr = np.asarray(im.crop(caixa)).copy()
     arr[~fg[y0:y1, x0:x1]] = OUTLINE[:3]  # o fundo vira contorno, para a borda não puxar o magenta
     rgb = Image.fromarray(arr).resize((w, h), Image.BOX)
+    # Olhos e detalhes vermelhos são pequenos: a média com o escuro em volta apagaria o brilho.
+    # Onde pelo menos 1/6 do bloco era vermelho vivo, o pixel fica vermelho de brilho.
+    fr = Image.fromarray((vermelho_vivo(arr.astype(int)) * 255).astype('uint8')).resize((w, h), Image.BOX)
+    v = np.asarray(rgb).copy()
+    v[np.asarray(fr) >= 42] = BRILHO
+    # Cada pontinho vermelho (um olho, por exemplo) garante pelo menos um pixel de brilho no centro dele
+    for cy, cx in centros_vermelhos(vermelho_vivo(arr.astype(int)) & fg[y0:y1, x0:x1]):
+        v[min(h - 1, int(cy * h / (y1 - y0))), min(w - 1, int(cx * w / (x1 - x0)))] = BRILHO
+    rgb = Image.fromarray(v)
     m = Image.fromarray((fg[y0:y1, x0:x1] * 255).astype('uint8')).resize((w, h), Image.BOX)
     img = rgb.convert('RGBA')
     img.putalpha(m.point(lambda v: 255 if v > 110 else 0))
     return img
+
+
+def montar_paleta(pix, cores):
+    """Paleta em duas partes: as cores vivas (raras, mas são o que identifica o chefe: olhos, escudos,
+    gravata) ganham vagas reservadas; o resto da paleta vem das cores mais comuns."""
+    f = pix.astype(float) / 255.0
+    mx, mn = f.max(1), f.min(1)
+    vivas = (mx - mn > 0.28) & (mx > 0.3)
+    reservadas = min(8, cores // 3)
+    partes = [BRILHO]
+    if vivas.sum() > reservadas:
+        pv = Image.fromarray(pix[vivas].reshape(1, -1, 3)).quantize(reservadas, method=Image.Quantize.MEDIANCUT)
+        partes += [tuple(pv.getpalette()[3 * i:3 * i + 3]) for i in range(reservadas)]
+    resto = cores - len(partes)
+    pr = Image.fromarray(pix[~vivas].reshape(1, -1, 3) if (~vivas).sum() else pix.reshape(1, -1, 3)).quantize(resto, method=Image.Quantize.MEDIANCUT)
+    partes += [tuple(pr.getpalette()[3 * i:3 * i + 3]) for i in range(resto)]
+    paleta = Image.new('P', (1, 1))
+    paleta.putpalette([c for cor in partes for c in cor] + [0, 0, 0] * (256 - len(partes)))
+    return paleta
 
 
 def acabar(v, paleta, tam):
@@ -114,14 +179,14 @@ def main():
     poses = []
     for nome, caminho in (('normal', normal), ('ataque', ataque)):
         r = dict(ret.get(nome, {}))
-        poses.append((nome, *separar(caminho, r.pop('cortes', None)), r))
+        poses.append((nome, *separar(caminho, r.pop('cortes', None), r.pop('apagar', None)), r))
 
     # Uma escala só para as 6 vistas, deixando 1 px livre em cima (o corpo sobe) e 1 de cada lado (tremida)
     escala = min(min((tam - 4) / (c[2] - c[0]), (tam - 3) / (c[3] - c[1])) for _, _, _, cx, _ in poses for c in cx)
     reduzidas = [[reduzir(im, fg, c, escala) for c in cx] for _, im, fg, cx, _ in poses]
 
     pix = np.concatenate([np.asarray(v)[np.asarray(v)[:, :, 3] > 0][:, :3] for vs in reduzidas for v in vs]).astype('uint8')
-    paleta = Image.fromarray(pix.reshape(1, -1, 3)).quantize(cores, method=Image.Quantize.MEDIANCUT)
+    paleta = montar_paleta(pix, cores)
 
     faixa = Image.new('RGBA', (tam * 24, tam), (0, 0, 0, 0))
     for p, ((nome, _, _, _, retoque), vistas) in enumerate(zip(poses, reduzidas)):
