@@ -31,6 +31,7 @@
     X(fx_novaconversa, "fx_novaconversa", 72, 72, 4) \
     X(fx_fibra, "fx_fibra", 72, 26, 4) \
     X(fx_colega, "fx_colega", 32, 32, 4) \
+    X(fx_terminal, "fx_terminal", 120, 36, 2) \
     X(bp_leque, "bp_leque", 64, 48, 4) \
     X(bp_papelada, "bp_papelada", 64, 40, 4) \
     X(bp_justa, "bp_justa", 64, 64, 4) \
