@@ -65,10 +65,8 @@
 #define TRANSITION_TEXT_WIDTH_RATIO 0.88f      // Largura máxima da frase do flash (largura da janela)
 #define FLASH_DIM_ALPHA 190                    // Escurecimento da imagem atrás da frase do flash
 
-// Sintoma visual do avanço da campanha: o escritório escurece e a água sobe (GDD 6.1).
+// Sintoma visual do avanço da campanha: o escritório escurece aos poucos (GDD 6.1).
 #define OFFICE_MAX_DARKENING 90.0f
-#define WATER_COLOR_RGB 20, 80, 110
-#define WATER_ALPHA 85
 
 // ============================================================================
 // DIMENSÕES E OFFSETS DA HITBOX (CAIXA DE COLISÃO DO JOGADOR)
@@ -1083,25 +1081,16 @@ void render_game_loop_escritorio(void)
                       (GetScreenHeight() - office_height) / 2.0f,
                       office_width, office_height};
 
-    // Sem nenhum número na tela: quanto mais tarde na campanha, mais escuro e mais alagado,
+    // Sem nenhum número na tela: quanto mais tarde na campanha, mais escuro,
     // e as estatísticas ocultas mudam a luz e os elementos do mapa (US10, RF11)
     SceneSymptoms symptoms = symptoms_get_scene();
     double now = GetTime();
-    float water_level = calendar_get_water_level(current_game_state_variables.current_day);
-    unsigned char brightness = (unsigned char)(255.0f - (OFFICE_MAX_DARKENING * water_level));
+    float campaign_progress = calendar_get_water_level(current_game_state_variables.current_day);
+    unsigned char brightness = (unsigned char)(255.0f - (OFFICE_MAX_DARKENING * campaign_progress));
     Color office_tint = office_symptoms_light_tint(&symptoms, brightness, color_to_fade.a, now);
 
     DrawTexturePro(in_game_office, source, dest, (Vector2){0, 0}, 0.0f, office_tint);
 
-    if (water_level > 0.0f)
-    {
-        float water_height = dest.height * water_level;
-        unsigned char water_alpha = (unsigned char)((WATER_ALPHA * color_to_fade.a) / 255);
-
-        DrawRectangleRec((Rectangle){dest.x, dest.y + dest.height - water_height, dest.width, water_height}, (Color){WATER_COLOR_RGB, water_alpha});
-    }
-
-    // Depois da água, para os sinais continuarem legíveis no fim da campanha
     draw_office_symptoms(&symptoms, dest, color_to_fade.a, now);
 }
 
