@@ -724,28 +724,34 @@ static int diferenca_por_estatisticas = -1;
 static void ct101_sem_hud(void)
 {
     cabecalho("CT-101", "US10 / PI2-236: nenhum numero de status na tela",
-              "Dia 27, escritorio a vista");
-    bool no_escritorio = comecar_no_dia(27);
+              "Dia 3, escritorio a vista");
+    /* O Dia 3 vem antes de o escritorio comecar a escurecer: sem a luz das lampadas, que
+     * pisca com o tempo, as duas fotos so diferem se um numero for desenhado. */
+    bool no_escritorio = comecar_no_dia(3);
 
-    etapa("Passo 1: fotografa o escritorio com as estatisticas zeradas");
-    definir_estatisticas(HIDDEN_STATISTIC_START, HIDDEN_STATISTIC_START, HIDDEN_STATISTIC_START, HIDDEN_STATISTIC_START);
+    /* Os dois estados tem numeros diferentes, mas ficam na mesma faixa de sintomas
+     * (abaixo de todos os limiares de symptoms.h): o cenario e o mesmo, entao qualquer
+     * pixel diferente so pode vir de um numero de status desenhado na tela. Comparar
+     * estatisticas em faixas opostas confundiria um HUD com os sintomas do CT-102. */
+    etapa("Passo 1: fotografa o escritorio com 500 pontos e as demais estatisticas no inicio");
+    definir_estatisticas(500, HIDDEN_STATISTIC_START, HIDDEN_STATISTIC_START, HIDDEN_STATISTIC_START);
     quadros(30);
-    Image zeradas = foto_do_cenario();
+    Image antes = foto_do_cenario();
 
-    etapa("Passo 2: muda as estatisticas para 999 pontos, 9 de Automacao, 9 de Percepcao e 9 de Vinculo");
-    definir_estatisticas(999, 9, 9, 9);
+    etapa("Passo 2: muda para 999 pontos e 1 ponto de Percepcao, ainda abaixo de qualquer sintoma");
+    definir_estatisticas(999, HIDDEN_STATISTIC_START, HIDDEN_STATISTIC_START + 1, HIDDEN_STATISTIC_START);
     quadros(30);
-    Image altas = foto_do_cenario();
+    Image depois = foto_do_cenario();
 
-    diferenca_por_estatisticas = pixels_diferentes(zeradas, altas);
-    UnloadImage(zeradas);
-    UnloadImage(altas);
+    diferenca_por_estatisticas = pixels_diferentes(antes, depois);
+    UnloadImage(antes);
+    UnloadImage(depois);
 
     char obtido[256];
     snprintf(obtido, sizeof(obtido), "%d pixel(s) diferentes entre as duas fotos: nenhuma estatistica aparece como numero",
              diferenca_por_estatisticas);
     registrar("CT-101", "Nenhuma estatistica oculta aparece como numero na tela do escritorio (US10, PI2-236)",
-              "mudar as estatisticas nao faz aparecer nenhum numero de status (so o contador de dias)",
+              "mudar os numeros sem mudar a faixa de sintomas nao altera nenhum pixel (so o contador de dias)",
               obtido, no_escritorio && diferenca_por_estatisticas == 0);
 }
 
