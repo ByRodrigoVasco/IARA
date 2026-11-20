@@ -18,6 +18,8 @@
 #include "calendar.h"
 #include "audio.h"
 #include "pause_menu.h"
+#include "symptoms.h"
+#include "office_symptoms.h"
 
 // Valor de sentinela para indicar que o temporizador do cartão de introdução ainda não começou a contar
 #define DID_NOT_START -30
@@ -1081,10 +1083,13 @@ void render_game_loop_escritorio(void)
                       (GetScreenHeight() - office_height) / 2.0f,
                       office_width, office_height};
 
-    // Sem nenhum número na tela: quanto mais tarde na campanha, mais escuro e mais alagado
+    // Sem nenhum número na tela: quanto mais tarde na campanha, mais escuro e mais alagado,
+    // e as estatísticas ocultas mudam a luz e os elementos do mapa (US10, RF11)
+    SceneSymptoms symptoms = symptoms_get_scene();
+    double now = GetTime();
     float water_level = calendar_get_water_level(current_game_state_variables.current_day);
     unsigned char brightness = (unsigned char)(255.0f - (OFFICE_MAX_DARKENING * water_level));
-    Color office_tint = {brightness, brightness, brightness, color_to_fade.a};
+    Color office_tint = office_symptoms_light_tint(&symptoms, brightness, color_to_fade.a, now);
 
     DrawTexturePro(in_game_office, source, dest, (Vector2){0, 0}, 0.0f, office_tint);
 
@@ -1095,6 +1100,9 @@ void render_game_loop_escritorio(void)
 
         DrawRectangleRec((Rectangle){dest.x, dest.y + dest.height - water_height, dest.width, water_height}, (Color){WATER_COLOR_RGB, water_alpha});
     }
+
+    // Depois da água, para os sinais continuarem legíveis no fim da campanha
+    draw_office_symptoms(&symptoms, dest, color_to_fade.a, now);
 }
 
 /**

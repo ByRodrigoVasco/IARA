@@ -103,6 +103,11 @@ $suite = @(
         )
     },
     @{
+        Nome  = "test_symptoms"
+        Nota  = "Unidade: limiares dos sintomas visuais (US10)"
+        Fonte = @("code/tests/test_symptoms.c", "code/src/game/symptoms.c", "code/src/core/game_state.c", "code/src/game/calendar.c")
+    },
+    @{
         Nome  = "test_save"
         Nota  = "Unidade: save e carregamento da partida"
         Fonte = @("code/tests/test_save.c", "code/src/core/save.c", "code/src/core/game_state.c", "code/src/game/calendar.c")
@@ -132,7 +137,8 @@ $suite = @(
             "code/src/screens/computer_loop.c", "code/src/ui/cheat_sheet.c", "code/src/ui/computer_art.c", "code/src/ui/logic_text.c", "code/src/game/logic.c", "code/src/game/calendar.c",
             "code/src/core/audio.c",
             "code/src/ui/notice.c", "code/src/ui/ui_widgets.c", "code/src/ui/confirm_dialog.c",
-            "code/src/screens/help.c", "code/src/ui/pause_menu.c"
+            "code/src/screens/help.c", "code/src/ui/pause_menu.c",
+            "code/src/game/symptoms.c", "code/src/ui/office_symptoms.c"
         )
     },
     @{
@@ -166,7 +172,8 @@ $suite = @(
             "code/src/survival/sv_audio.c", "code/src/survival/sv_map.c", "code/src/survival/sv_assets.c", "code/src/survival/sv_meta.c", "code/src/survival/sv_rules.c",
             "code/src/core/audio.c",
             "code/src/ui/notice.c", "code/src/ui/ui_widgets.c", "code/src/ui/confirm_dialog.c",
-            "code/src/screens/help.c", "code/src/ui/pause_menu.c"
+            "code/src/screens/help.c", "code/src/ui/pause_menu.c",
+            "code/src/game/symptoms.c", "code/src/ui/office_symptoms.c"
         )
     },
     @{
