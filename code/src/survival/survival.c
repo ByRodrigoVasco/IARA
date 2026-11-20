@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include "raylib.h"
@@ -11,6 +12,7 @@
 #include "sv_audio.h"
 #include "sv_assets.h"
 #include "sv_debug.h"
+#include "sv_duo.h"
 #include "characters.h"
 #include "macros.h"
 #include "loading.h"
@@ -27,7 +29,9 @@ static bool loaded = false;
 static bool leave_to_menu = false;
 static bool leave_to_saves = false;    // TROCAR JOGADOR: volta para a lista de saves do modo
 static int hub_selected = 0;
+static bool duo = false;               // O save em uso é de uma dupla (saves/dupla): as partidas são em dupla
 static int char_cursor = 0;
+static int char_editing = 0;           // Dupla: de quem é o personagem que está sendo escolhido (0 ou 1)
 static Texture2D roster_icons[CH_COUNT];
 static float char_message_timer = 0.0f;
 static const char *char_message = "";
@@ -56,6 +60,7 @@ static const char *upgrade_descriptions[UPG_COUNT] = {
 
 #define HUB_OPTIONS 6
 static const char *hub_labels[HUB_OPTIONS] = {"JOGAR", "PERSONAGEM", "PLANO DE CARREIRA", "COMO JOGAR", "TROCAR JOGADOR", "VOLTAR"};
+static const char *hub_labels_duo[HUB_OPTIONS] = {"JOGAR EM DUPLA", "PERSONAGENS", "PLANO DE CARREIRA", "COMO JOGAR", "TROCAR DUPLA", "VOLTAR"};
 static bool hub_help_open = false;   // A ajuda está aberta por cima do início
 
 // O carregamento é dividido em trabalhos pequenos: a tela de carregamento roda um pedaço por quadro e mostra a porcentagem.
@@ -69,15 +74,21 @@ static float job_read_save(void)
 {
     char path[512];
 
-    sv_ranking_load();   // O ranking é um só para todos os saves (a feira inteira joga no mesmo computador)
+    // O ranking é um só para todos os saves do modo (a feira inteira joga no mesmo computador).
+    // A dupla tem o ranking dela, num arquivo separado: as duplas não entram no ranking solo.
+    duo = active_save_is_set() && active_save_mode() == SAVE_MODE_DUO;
+    sv_ranking_set_path(duo ? SV_RANKING_DUO_PATH : NULL);
+    sv_ranking_load();
 
     // Cada save tem o seu arquivo de progresso; sem save escolhido (testes), vale o arquivo antigo
-    if (active_save_is_set() && active_save_mode() == SAVE_MODE_SURVIVAL && active_save_path(path, sizeof(path))) sv_meta_set_path(path);
+    if (active_save_is_set() && save_mode_is_survival(active_save_mode()) && active_save_path(path, sizeof(path))) sv_meta_set_path(path);
     else sv_meta_set_path(NULL);
 
     sv_meta_load(sv_meta_path());
     if (sv_meta.character < 0 || sv_meta.character >= CH_COUNT || !sv_character_unlocked(sv_meta.character, sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills)) sv_meta.character = CH_ESTAGIARIO;
+    if (sv_meta.character2 < 0 || sv_meta.character2 >= CH_COUNT || !sv_character_unlocked(sv_meta.character2, sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills)) sv_meta.character2 = CH_ESTAGIARIO;
     char_cursor = sv_meta.character;
+    char_editing = 0;
     return 1.0f;
 }
 
@@ -89,6 +100,13 @@ static float job_sprites(void)
 static float job_characters(void)
 {
     sv_load_player(sv_meta.character);
+    if (duo)
+    {
+        // Dupla: o jogador 2 tem o seu conjunto de quadros
+        sv_use_player_slot(1);
+        sv_load_player(sv_meta.character2);
+        sv_use_player_slot(0);
+    }
     for (int i = 0; i < CH_COUNT; i++)
     {
         roster_icons[i] = LoadTexture(TextFormat("%s%s/walk/south-0.png", PERSONAGENS_PATH, sv_character(i)->folder));
@@ -150,10 +168,12 @@ void unload_survival(void)
         roster_icons[i] = (Texture2D){0};
     }
     sv_audio_close();
-    sv_unload_player();
+    sv_unload_all_players();
     sv_unload_sprites();
     sv_light_unload();
     SetMouseCursor(MOUSE_CURSOR_ARROW);
+    sv_ranking_set_path(NULL);
+    duo = false;
     loaded = false;
 }
 
@@ -176,6 +196,47 @@ static Vector2 read_movement(void)
     if (IsKeyDown(KEY_UP) || IsKeyDown(KEY_W)) move.y -= 1.0f;
     if (IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S)) move.y += 1.0f;
     return move;
+}
+
+// Dupla: o analógico esquerdo do controle soma ao teclado (zona morta pequena para o boneco não andar sozinho)
+static Vector2 add_gamepad(Vector2 move, int gamepad)
+{
+    if (IsGamepadAvailable(gamepad))
+    {
+        float x = GetGamepadAxisMovement(gamepad, GAMEPAD_AXIS_LEFT_X);
+        float y = GetGamepadAxisMovement(gamepad, GAMEPAD_AXIS_LEFT_Y);
+
+        if (fabsf(x) > 0.25f) move.x += x;
+        if (fabsf(y) > 0.25f) move.y += y;
+        if (IsGamepadButtonDown(gamepad, GAMEPAD_BUTTON_LEFT_FACE_LEFT)) move.x -= 1.0f;
+        if (IsGamepadButtonDown(gamepad, GAMEPAD_BUTTON_LEFT_FACE_RIGHT)) move.x += 1.0f;
+        if (IsGamepadButtonDown(gamepad, GAMEPAD_BUTTON_LEFT_FACE_UP)) move.y -= 1.0f;
+        if (IsGamepadButtonDown(gamepad, GAMEPAD_BUTTON_LEFT_FACE_DOWN)) move.y += 1.0f;
+    }
+    return move;
+}
+
+// Dupla: jogador 1 no WASD (ou no controle 1), jogador 2 nas setas (ou no controle 2)
+static Vector2 read_movement_p1(void)
+{
+    Vector2 move = {0.0f, 0.0f};
+
+    if (IsKeyDown(KEY_A)) move.x -= 1.0f;
+    if (IsKeyDown(KEY_D)) move.x += 1.0f;
+    if (IsKeyDown(KEY_W)) move.y -= 1.0f;
+    if (IsKeyDown(KEY_S)) move.y += 1.0f;
+    return add_gamepad(move, 0);
+}
+
+static Vector2 read_movement_p2(void)
+{
+    Vector2 move = {0.0f, 0.0f};
+
+    if (IsKeyDown(KEY_LEFT)) move.x -= 1.0f;
+    if (IsKeyDown(KEY_RIGHT)) move.x += 1.0f;
+    if (IsKeyDown(KEY_UP)) move.y -= 1.0f;
+    if (IsKeyDown(KEY_DOWN)) move.y += 1.0f;
+    return add_gamepad(move, 1);
 }
 
 // Retângulo de uma linha de menu centrada
@@ -230,6 +291,7 @@ static void start_run(void)
     last_run_record = false;
     last_rank_position = 0;
     last_rank_order = 0;
+    sv_duo_mode = duo;
     sv_game_start((unsigned)(GetTime() * 1000.0) | 1u);
     sv_time_scale = 1;
     screen = SCREEN_RUN;
@@ -333,7 +395,7 @@ static void render_hub(void)
         {
             sv_sfx(SND_confirma);
             if (hub_selected == 0) start_run();
-            else if (hub_selected == 1) { screen = SCREEN_CHARS; char_cursor = sv_meta.character; char_message_timer = 0.0f; }
+            else if (hub_selected == 1) { screen = SCREEN_CHARS; char_editing = 0; char_cursor = sv_meta.character; char_message_timer = 0.0f; }
             else if (hub_selected == 2) { screen = SCREEN_SHOP; shop_selected = 0; sv_music_play(MUS_LOJA); }
             else if (hub_selected == 3) { help_select_page(1); hub_help_open = true; }
             else if (hub_selected == 4) leave_to_saves = true;
@@ -346,15 +408,24 @@ static void render_hub(void)
     begin_game_drawing();
     draw_backdrop();
 
-    sv_text_centered("SOBREVIVÊNCIA", w / 2.0f, 90.0f * ui, 120.0f * ui, (Color){230, 40, 50, 255});
-    sv_text_centered("Dez minutos de expediente. Sobreviva às cinco áreas e desligue a IARA.", w / 2.0f, 235.0f * ui, 30.0f * ui, (Color){220, 205, 215, 255});
+    if (duo)
+    {
+        sv_text_centered("SOBREVIVÊNCIA EM DUPLA", w / 2.0f, 100.0f * ui, 96.0f * ui, (Color){230, 40, 50, 255});
+        sv_text_centered("Dez minutos de expediente, dois funcionários. Se um cair, o outro levanta.", w / 2.0f, 235.0f * ui, 30.0f * ui, (Color){220, 205, 215, 255});
+    }
+    else
+    {
+        sv_text_centered("SOBREVIVÊNCIA", w / 2.0f, 90.0f * ui, 120.0f * ui, (Color){230, 40, 50, 255});
+        sv_text_centered("Dez minutos de expediente. Sobreviva às cinco áreas e desligue a IARA.", w / 2.0f, 235.0f * ui, 30.0f * ui, (Color){220, 205, 215, 255});
+    }
 
     snprintf(text, sizeof(text), "%s   BANCO DE HORAS  %d", player_name(), sv_meta.coins);
     sv_text_centered(text, w / 2.0f, 310.0f * ui, 44.0f * ui, (Color){255, 214, 80, 255});
     snprintf(text, sizeof(text), "Partidas %d   Vitórias %d   Melhor tempo %d:%02d   Abates %d", sv_meta.runs, sv_meta.wins, sv_meta.best_seconds / 60, sv_meta.best_seconds % 60, sv_meta.kills);
     sv_text_centered(text, w / 2.0f, 370.0f * ui, 26.0f * ui, (Color){180, 170, 185, 255});
 
-    sv_text_centered("Mover: WASD ou setas. Os poderes atacam sozinhos. ESC pausa.", w / 2.0f, 440.0f * ui, 26.0f * ui, (Color){180, 170, 185, 255});
+    if (duo) sv_text_centered("Jogador 1: WASD (ou controle 1).  Jogador 2: setas (ou controle 2).  Fique ao lado de quem caiu para levantar.", w / 2.0f, 440.0f * ui, 26.0f * ui, (Color){180, 170, 185, 255});
+    else sv_text_centered("Mover: WASD ou setas. Os poderes atacam sozinhos. ESC pausa.", w / 2.0f, 440.0f * ui, 26.0f * ui, (Color){180, 170, 185, 255});
 
     for (int i = 0; i < HUB_OPTIONS; i++)
     {
@@ -362,10 +433,10 @@ static void render_hub(void)
         bool selected = i == hub_selected;
 
         if (selected) DrawRectangleRec(row, (Color){70, 14, 26, 220});
-        sv_text_centered(hub_labels[i], w / 2.0f, row.y + 8.0f * ui, 52.0f * ui, selected ? (Color){255, 70, 80, 255} : (Color){225, 215, 225, 255});
+        sv_text_centered(duo ? hub_labels_duo[i] : hub_labels[i], w / 2.0f, row.y + 8.0f * ui, 52.0f * ui, selected ? (Color){255, 70, 80, 255} : (Color){225, 215, 225, 255});
     }
 
-    sv_text_centered("RANKING", w - 300.0f * ui, 470.0f * ui, 52.0f * ui, (Color){255, 214, 80, 255});
+    sv_text_centered(duo ? "RANKING DAS DUPLAS" : "RANKING", w - 300.0f * ui, 470.0f * ui, (duo ? 40.0f : 52.0f) * ui, (Color){255, 214, 80, 255});
     draw_ranking(w - 560.0f * ui, 530.0f * ui, 520.0f * ui, 10, 30.0f * ui);
 
     if (hub_help_open)
@@ -403,11 +474,35 @@ static Rectangle roster_cell(int index)
     return (Rectangle){(GetScreenWidth() - total) / 2.0f + cell_w * (float)index, 790.0f * ui, cell_w - 10.0f * ui, 190.0f * ui};
 }
 
+// Personagem salvo de quem está escolhendo (na dupla, o do jogador 1 ou o do jogador 2)
+static int saved_character(void)
+{
+    return char_editing == 1 ? sv_meta.character2 : sv_meta.character;
+}
+
+// Carrega a prévia no conjunto de quadros de quem está escolhendo (no solo, sempre o 0)
+static void load_preview(int id)
+{
+    sv_use_player_slot(char_editing);
+    sv_load_player(id);
+    sv_use_player_slot(0);
+}
+
 static void choose_character(int id)
 {
     if (id == char_cursor) return;
     char_cursor = id;
-    sv_load_player(id);
+    load_preview(id);
+    sv_sfx(SND_escolha);
+}
+
+// Dupla: TAB passa a escolha para o outro jogador (quem saiu sem confirmar volta ao personagem salvo)
+static void switch_character_editor(void)
+{
+    if (char_cursor != saved_character()) load_preview(saved_character());
+    char_editing = 1 - char_editing;
+    char_cursor = saved_character();
+    char_message_timer = 0.0f;
     sv_sfx(SND_escolha);
 }
 
@@ -421,6 +516,7 @@ static void render_characters(void)
     bool confirm = pressed_confirm();
     int frame = get_walk_frame((float)GetTime());
 
+    if (duo && IsKeyPressed(KEY_TAB)) switch_character_editor();
     if (pressed_right()) choose_character((char_cursor + 1) % CH_COUNT);
     if (pressed_left()) choose_character((char_cursor + CH_COUNT - 1) % CH_COUNT);
 
@@ -444,7 +540,8 @@ static void render_characters(void)
         }
         else
         {
-            sv_meta.character = char_cursor;
+            if (char_editing == 1) sv_meta.character2 = char_cursor;
+            else sv_meta.character = char_cursor;
             sv_meta_save(sv_meta_path()); warn_if_save_failed();
             char_message = "Personagem escolhido.";
             sv_sfx(SND_confirma);
@@ -455,7 +552,8 @@ static void render_characters(void)
     if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_BACKSPACE))
     {
         // Quem sai sem escolher volta ao personagem salvo
-        if (char_cursor != sv_meta.character) sv_load_player(sv_meta.character);
+        if (char_cursor != saved_character()) load_preview(saved_character());
+        char_editing = 0;
         screen = SCREEN_HUB;
         sv_sfx(SND_confirma);
     }
@@ -465,11 +563,21 @@ static void render_characters(void)
     begin_game_drawing();
     draw_backdrop();
 
-    sv_text_centered("PERSONAGEM", w / 2.0f, 40.0f * ui, 80.0f * ui, (Color){230, 40, 50, 255});
+    if (duo)
+    {
+        // Dupla: de quem é a vez de escolher, na cor do marcador da partida
+        static const Color colors[2] = {{255, 90, 100, 255}, {90, 170, 255, 255}};
+
+        sv_text_centered(char_editing == 0 ? "PERSONAGEM DO JOGADOR 1" : "PERSONAGEM DO JOGADOR 2", w / 2.0f, 40.0f * ui, 64.0f * ui, colors[char_editing]);
+        sv_text_centered("TAB troca de jogador", w / 2.0f, 112.0f * ui, 24.0f * ui, (Color){190, 180, 195, 255});
+    }
+    else sv_text_centered("PERSONAGEM", w / 2.0f, 40.0f * ui, 80.0f * ui, (Color){230, 40, 50, 255});
 
     // Retrato grande. Bloqueado aparece como silhueta.
     DrawRectangleRounded((Rectangle){w / 2.0f - 170.0f * ui, 150.0f * ui, 340.0f * ui, 300.0f * ui}, 0.08f, 8, (Color){18, 8, 22, 220});
+    sv_use_player_slot(char_editing);
     sv_draw_player(SOUTH, unlocked ? frame : 0, (Vector2){w / 2.0f, 300.0f * ui}, 8.0f * ui, unlocked ? WHITE : (Color){12, 8, 18, 255});
+    sv_use_player_slot(0);
 
     sv_text_centered(unlocked ? c->name : "???", w / 2.0f, 465.0f * ui, 64.0f * ui, WHITE);
     sv_text_centered(c->title, w / 2.0f, 535.0f * ui, 30.0f * ui, (Color){180, 170, 185, 255});
@@ -477,7 +585,7 @@ static void render_characters(void)
     sv_text_centered(c->ability_name, w / 2.0f, 600.0f * ui, 38.0f * ui, (Color){255, 214, 80, 255});
     sv_text_centered(c->ability_text, w / 2.0f, 650.0f * ui, 26.0f * ui, (Color){225, 215, 225, 255});
 
-    if (unlocked) sv_text_centered(char_cursor == sv_meta.character ? "EM USO" : "ENTER para escolher", w / 2.0f, 715.0f * ui, 30.0f * ui, char_cursor == sv_meta.character ? (Color){120, 230, 140, 255} : (Color){190, 180, 195, 255});
+    if (unlocked) sv_text_centered(char_cursor == saved_character() ? "EM USO" : "ENTER para escolher", w / 2.0f, 715.0f * ui, 30.0f * ui, char_cursor == saved_character() ? (Color){120, 230, 140, 255} : (Color){190, 180, 195, 255});
     else
     {
         char text[160];
@@ -494,7 +602,13 @@ static void render_characters(void)
 
         DrawRectangleRec(cell, selected ? (Color){70, 14, 26, 230} : (Color){18, 8, 22, 200});
         if (selected) DrawRectangleLinesEx(cell, 3.0f * ui, (Color){240, 50, 60, 255});
-        if (i == sv_meta.character) DrawRectangleLinesEx(cell, 3.0f * ui, (Color){120, 230, 140, 255});
+        if (duo)
+        {
+            // Dupla: contorno vermelho no personagem do jogador 1 e azul no do jogador 2
+            if (i == sv_meta.character) DrawRectangleLinesEx(cell, 3.0f * ui, (Color){255, 90, 100, 255});
+            if (i == sv_meta.character2) DrawRectangleLinesEx((Rectangle){cell.x + 5.0f * ui, cell.y + 5.0f * ui, cell.width - 10.0f * ui, cell.height - 10.0f * ui}, 3.0f * ui, (Color){90, 170, 255, 255});
+        }
+        else if (i == sv_meta.character) DrawRectangleLinesEx(cell, 3.0f * ui, (Color){120, 230, 140, 255});
 
         if (roster_icons[i].id)
         {
@@ -505,7 +619,7 @@ static void render_characters(void)
         sv_text_centered(open ? sv_character(i)->name : "Bloqueado", cell.x + cell.width / 2.0f, cell.y + 145.0f * ui, 28.0f * ui, open ? WHITE : (Color){120, 100, 125, 255});
     }
 
-    sv_text_centered("Setas ou A/D trocam. Enter escolhe. ESC volta.", w / 2.0f, GetScreenHeight() - 60.0f * ui, 26.0f * ui, (Color){190, 180, 195, 255});
+    sv_text_centered(duo ? "Setas ou A/D trocam. Enter escolhe. TAB troca de jogador. ESC volta." : "Setas ou A/D trocam. Enter escolhe. ESC volta.", w / 2.0f, GetScreenHeight() - 60.0f * ui, 26.0f * ui, (Color){190, 180, 195, 255});
     if (char_message_timer > 0.0f) sv_text_centered(char_message, w / 2.0f, GetScreenHeight() - 105.0f * ui, 30.0f * ui, (Color){255, 214, 80, 255});
 
     end_game_drawing();
@@ -654,7 +768,11 @@ static void render_run(void)
                 sv_sfx(SND_escolha);
             }
 
-            for (int step = 0; step < sv_time_scale && sv_run.phase == SV_PLAYING; step++) sv_game_update(dt, read_movement());
+            for (int step = 0; step < sv_time_scale && sv_run.phase == SV_PLAYING; step++)
+            {
+                if (duo) sv_game_update_duo(dt, read_movement_p1(), read_movement_p2());
+                else sv_game_update(dt, read_movement());
+            }
         }
     }
 
@@ -771,9 +889,10 @@ static void render_over(void)
     begin_game_drawing();
     draw_backdrop();
 
-    sv_text_centered(won ? "A IARA FOI DESLIGADA" : "VOCÊ FOI DEMITIDO", w / 2.0f, 110.0f * ui, 110.0f * ui, won ? (Color){120, 230, 160, 255} : (Color){230, 40, 50, 255});
+    sv_text_centered(won ? "A IARA FOI DESLIGADA" : (duo ? "VOCÊS FORAM DEMITIDOS" : "VOCÊ FOI DEMITIDO"), w / 2.0f, 110.0f * ui, 110.0f * ui, won ? (Color){120, 230, 160, 255} : (Color){230, 40, 50, 255});
 
     snprintf(text, sizeof(text), "Tempo %d:%02d   Nível %d   Abates %d   Chefes %d", (int)sv_run.time / 60, (int)sv_run.time % 60, sv_run.player.level, sv_run.kills, sv_run.bosses_defeated);
+    if (duo && sv_run.duo) snprintf(text, sizeof(text), "Tempo %d:%02d   Nível J1 %d · J2 %d   Abates %d   Chefes %d", (int)sv_run.time / 60, (int)sv_run.time % 60, sv_duo_player(0)->level, sv_duo_player(1)->level, sv_run.kills, sv_run.bosses_defeated);
     sv_text_centered(text, w / 2.0f, 290.0f * ui, 34.0f * ui, (Color){220, 205, 215, 255});
 
     snprintf(text, sizeof(text), "+%d BANCO DE HORAS", earned_coins);
