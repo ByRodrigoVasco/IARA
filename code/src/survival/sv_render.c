@@ -338,6 +338,29 @@ static void draw_zones(void)
             continue;
         }
 
+        if (z->kind == ZK_NEGACAO)
+        {
+            // Negação: o ¬ cai (com o círculo de aviso no chão) e, no impacto, carimba o chão e solta um anel
+            if (z->delay > 0.0f)
+            {
+                float t = z->delay / 0.5f;
+
+                DrawCircleV(z->pos, z->radius, (Color){170, 120, 255, 22});
+                DrawCircleLinesV(z->pos, z->radius, (Color){190, 150, 255, 150});
+                sv_draw(SPR_fx_negacao, 0, (Vector2){z->pos.x, z->pos.y - t * 110.0f}, 1.5f, 0.0f, false, WHITE);
+            }
+            else
+            {
+                float t = 1.0f - z->life / 0.45f;
+                unsigned char fade = (unsigned char)(255.0f * (1.0f - t));
+
+                DrawCircleV(z->pos, z->radius * (0.4f + 0.6f * t), (Color){170, 120, 255, (unsigned char)(fade / 4)});
+                DrawCircleLinesV(z->pos, z->radius * (0.4f + 0.6f * t), (Color){220, 200, 255, fade});
+                sv_draw(SPR_fx_negacao, 1, z->pos, 1.5f + 0.4f * t, 0.0f, false, (Color){255, 255, 255, fade});
+            }
+            continue;
+        }
+
         if (z->kind == ZK_CANECA)
         {
             if (z->delay > 0.0f)
@@ -421,6 +444,17 @@ static void draw_enemy(SvEnemy *e)
         draw_shadow(e->pos, 9.0f);
         if (e->type == EN_CRACHA) tint.a = 190; // atravessa objetos
         sv_draw(sv_enemy_sprite(e->type), frame, e->pos, 1.0f, 0.0f, e->facing == 1 && e->flip, tint);
+
+        // Negado (confuso): um ¬ pequeno em cima da cabeça
+        if (e->confused > 0.0f)
+        {
+            int x = (int)e->pos.x - 4, y = (int)e->pos.y - 24 + (int)(sinf(e->timer * 6.0f) * 1.5f);
+
+            DrawRectangle(x - 1, y - 1, 10, 4, (Color){20, 10, 30, 220});
+            DrawRectangle(x + 6, y - 1, 3, 6, (Color){20, 10, 30, 220});
+            DrawRectangle(x, y, 8, 2, (Color){210, 180, 255, 255});
+            DrawRectangle(x + 6, y, 2, 4, (Color){210, 180, 255, 255});
+        }
     }
 }
 

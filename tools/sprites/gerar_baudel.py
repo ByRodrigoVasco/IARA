@@ -65,7 +65,7 @@ def ic_calor():
     print("ic_calor.png gerado")
 
 
-def personagem(caminho, cortes=None):
+def personagem(caminho, cortes=None, pasta=PASTA):
     im = Image.open(caminho).convert("RGB")
     a = np.asarray(im).astype(int)
     fundo = (a[:, :, 0] > 120) & (a[:, :, 2] > 100) & (a[:, :, 1] < np.minimum(a[:, :, 0], a[:, :, 2]) - 50)
@@ -88,13 +88,24 @@ def personagem(caminho, cortes=None):
     # (e não a média), para as bordas, os óculos e a gravata continuarem nítidos.
     altura = max(c[3] - c[1] for c in caixas)
     escala = 30.0 / altura
-    pix = a[fg].reshape(1, -1, 3).astype("uint8")
-    paleta = Image.fromarray(pix).quantize(24, method=Image.Quantize.MEDIANCUT)
+    # Paleta com vagas reservadas para as cores vivas (cordão, calça, pele), que são poucas mas
+    # identificam o personagem; o resto vem das cores mais comuns (o preto da roupa e do contorno)
+    pix = a[fg].reshape(-1, 3).astype("uint8")
+    f = pix.astype(float) / 255.0
+    vivas = (f.max(1) - f.min(1) > 0.25) & (f.max(1) > 0.3)
+    partes = []
+    if vivas.sum() > 12:
+        pv = Image.fromarray(pix[vivas].reshape(1, -1, 3)).quantize(12, method=Image.Quantize.MEDIANCUT)
+        partes += [tuple(pv.getpalette()[3 * i:3 * i + 3]) for i in range(12)]
+    pr = Image.fromarray(pix[~vivas].reshape(1, -1, 3)).quantize(32 - len(partes), method=Image.Quantize.MEDIANCUT)
+    partes += [tuple(pr.getpalette()[3 * i:3 * i + 3]) for i in range(32 - len(partes))]
+    paleta = Image.new("P", (1, 1))
+    paleta.putpalette([c for cor in partes for c in cor] + [0, 0, 0] * (256 - len(partes)))
     idx_img = np.asarray(Image.fromarray(a.astype("uint8")).quantize(palette=paleta, dither=Image.Dither.NONE))
-    cores = np.array(paleta.getpalette()[:72]).reshape(-1, 3)
+    cores = np.array(paleta.getpalette()[:768]).reshape(-1, 3)
     nomes = ["south", "south-east", "east", "north-east", "north"]
-    (PASTA / "rotations").mkdir(parents=True, exist_ok=True)
-    (PASTA / "walk").mkdir(parents=True, exist_ok=True)
+    (pasta / "rotations").mkdir(parents=True, exist_ok=True)
+    (pasta / "walk").mkdir(parents=True, exist_ok=True)
     vistas = {}
     for nome, (x0, y0, x1, y1) in zip(nomes, caixas):
         larg, alt = max(1, round((x1 - x0) * escala)), max(1, round((y1 - y0) * escala))
@@ -106,7 +117,7 @@ def personagem(caminho, cortes=None):
                 bloco = fg[sy0:sy1, sx0:sx1]
                 if bloco.mean() < 0.5:
                     continue
-                k = np.bincount(idx_img[sy0:sy1, sx0:sx1][bloco], minlength=24).argmax()
+                k = np.bincount(idx_img[sy0:sy1, sx0:sx1][bloco], minlength=256).argmax()
                 arr[ty, tx] = (*cores[k], 255)
         # Sobras rosadas do fundo magenta na borda viram contorno
         r, g, bl = arr[:, :, 0].astype(int), arr[:, :, 1].astype(int), arr[:, :, 2].astype(int)
@@ -119,8 +130,8 @@ def personagem(caminho, cortes=None):
     vistas["north-west"] = vistas["north-east"].transpose(Image.FLIP_LEFT_RIGHT)
     vistas["west"] = vistas["east"].transpose(Image.FLIP_LEFT_RIGHT)
     for nome, v in vistas.items():
-        v.save(PASTA / "rotations" / f"{nome}.png")
-    print("rotations do Baudel gerados; cortes usados:", cortes)
+        v.save(pasta / "rotations" / f"{nome}.png")
+    print(f"rotations de {pasta.name} gerados; cortes usados:", cortes)
 
 
 if __name__ == "__main__":
