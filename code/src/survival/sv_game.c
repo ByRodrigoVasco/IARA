@@ -62,6 +62,8 @@ SvSpriteId sv_enemy_sprite(int type)
 #define CALOR_RANGE 300.0f
 #define CALOR_TICK 0.5f
 #define CALOR_FADE 0.35f
+// Negação (Prof. Guilherme): quanto tempo o ¬ leva para cair
+#define NEGACAO_DELAY 0.5f
 #define PROMPT_TEXTS 8
 
 // Deploy em Produção: alcance de mira
@@ -85,7 +87,7 @@ static const SpawnWeight act_spawns[SV_ACT_COUNT][8] = {
     {{EN_ECO, 20}, {EN_AUDITOR, 7}, {EN_AFOGADO, 20}, {EN_CRACHA, 15}, {EN_AUTORESPOSTA, 15}, {EN_ALUCINACAO, 12}, {EN_DADO, 10}, {-1, 0}},
 };
 
-static const char *weapon_names[W_COUNT] = {"Grampeador", "Ponteiro", "Caneca Arremessada", "Post-its Orbitais", "Não Perturbe", "Deploy em Produção", "Nota Fiscal", "Modus Ponens", "Tabela-Verdade", "Colega de Plantão", "Nova Conversa", "Prompt da IARA", "Vera Fischer", "Fibra Óptica", "Mapa de Calor"};
+static const char *weapon_names[W_COUNT] = {"Grampeador", "Ponteiro", "Caneca Arremessada", "Post-its Orbitais", "Não Perturbe", "Deploy em Produção", "Nota Fiscal", "Modus Ponens", "Tabela-Verdade", "Colega de Plantão", "Nova Conversa", "Prompt da IARA", "Vera Fischer", "Fibra Óptica", "Mapa de Calor", "Negação"};
 static const char *weapon_descriptions[W_COUNT] = {
     "Tiros retos no inimigo mais próximo.",
     "Golpe em linha, para os dois lados, na direção do inimigo mais próximo.",
@@ -101,8 +103,9 @@ static const char *weapon_descriptions[W_COUNT] = {
     "Digita um comando na janela de terminal da IARA sobre o inimigo mais forte e o executa: dano alto nele e metade em quem está em volta.",
     "Se um golpe te acerta (V), o dano é falso (F): ele é anulado e solta uma onda. Também dispara sozinha quando alguém chega perto.",
     "Feixe de luz muito forte em linha reta, que atravessa todos os inimigos no caminho.",
-    "Como num teste de usabilidade: marca onde os inimigos mais se juntam com um mapa de calor que queima quem fica dentro."};
-static const SvSpriteId weapon_icons[W_COUNT] = {SPR_ic_grampeador, SPR_ic_ponteiro, SPR_ic_caneca, SPR_ic_postits, SPR_ic_naoperturbe, SPR_ic_deploy, SPR_ic_nota, SPR_ic_modus, SPR_ic_tabela, SPR_ic_colega, SPR_ic_novaconversa, SPR_ic_prompt, SPR_ps_cracha, SPR_ic_fibra, SPR_ic_calor};
+    "Como num teste de usabilidade: marca onde os inimigos mais se juntam com um mapa de calor que queima quem fica dentro.",
+    "Um ¬ gigante cai sobre o maior grupo de inimigos: eles levam dano e ficam negados, andando para longe de você."};
+static const SvSpriteId weapon_icons[W_COUNT] = {SPR_ic_grampeador, SPR_ic_ponteiro, SPR_ic_caneca, SPR_ic_postits, SPR_ic_naoperturbe, SPR_ic_deploy, SPR_ic_nota, SPR_ic_modus, SPR_ic_tabela, SPR_ic_colega, SPR_ic_novaconversa, SPR_ic_prompt, SPR_ps_cracha, SPR_ic_fibra, SPR_ic_calor, SPR_ic_negacao};
 
 static const char *passive_names[P_COUNT] = {"Café", "Manual", "Colinha", "Ergonomia", "Crachá", "Plano de Saúde", "Network", "Hora Extra", "Marmita Térmica", "Sorte de Principiante", "Espinhos Corporativos", "Foco", "Lanterna do Celular"};
 static const char *passive_descriptions[P_COUNT] = {
@@ -147,6 +150,8 @@ static const WeaponDef weapon_defs[W_COUNT] = {
     [W_VERA]         = {{22, 22, 30, 30, 50}, {2.6f, 2.4f, 2.4f, 2.1f, 1.9f}, {1, 1, 2, 2, 2}, {84, 90, 90, 98, 108}, {0.6f, 0.7f, 0.9f, 1.1f, 1.3f}},
     // Mapa de Calor: dano por queimadura (a cada CALOR_TICK s), recarga, quantos mapas, raio e quanto tempo o mapa fica
     [W_CALOR]        = {{6, 6, 8, 8, 12}, {3.4f, 3.1f, 3.1f, 2.8f, 2.4f}, {1, 1, 2, 2, 3}, {58, 64, 64, 72, 82}, {3.0f, 3.4f, 3.4f, 4.0f, 4.6f}},
+    // Negação: dano no impacto, recarga, quantos ¬ caem, raio e quantos segundos os inimigos ficam negados (confusos)
+    [W_NEGACAO]      = {{14, 14, 18, 18, 26}, {3.0f, 2.8f, 2.8f, 2.5f, 2.2f}, {1, 1, 1, 2, 2}, {58, 64, 64, 72, 82}, {1.6f, 1.9f, 1.9f, 2.3f, 2.8f}},
 };
 
 static const WeaponInfo weapon_infos[W_COUNT] = {
@@ -165,6 +170,7 @@ static const WeaponInfo weapon_infos[W_COUNT] = {
     [W_FIBRA]        = {"Recarga", NULL, "Comprimento", "Largura", false, true, true},
     [W_VERA]         = {"Recarga", "Ondas", "Raio", "Imunidade", true, true, false},
     [W_CALOR]        = {"Recarga", "Mapas", "Raio", "Duração", true, true, false},
+    [W_NEGACAO]      = {"Recarga", "Negações", "Raio", "Confusão", true, true, false},
 };
 
 float sv_weapon_stat(int weapon, int stat, int level)
@@ -1154,6 +1160,34 @@ static void fire_weapon(SvWeapon *w)
         else sv_sfx(SND_tabela);
         break;
     }
+    case W_NEGACAO:
+    {
+        // Prof. Guilherme: um ¬ cai sobre cada aglomeração e nega quem está embaixo (dano e confusão)
+        int count = (int)WS(W_NEGACAO, WSTAT_COUNT, level);
+        float radius = WS(W_NEGACAO, WSTAT_AREA, level) * p->area_mult;
+        Vector2 spots[2];
+        int spot_count = 0;
+
+        base_cd = WS(W_NEGACAO, WSTAT_COOLDOWN, level);
+        for (int i = 0; i < count && i < 2; i++)
+        {
+            SvZone *z;
+
+            if (!densest_spot(p->pos, CALOR_RANGE, radius, spots, spot_count, &spots[spot_count])) break;
+            z = new_zone();
+            if (!z) break;
+            z->shape = ZONE_CIRCLE;
+            z->kind = ZK_NEGACAO;
+            z->pos = spots[spot_count++];
+            z->radius = radius;
+            z->damage = WS(W_NEGACAO, WSTAT_DAMAGE, level);
+            z->confuse = WS(W_NEGACAO, WSTAT_EXTRA, level) * p->duration_mult;
+            z->delay = NEGACAO_DELAY;
+            z->life = z->max_life = NEGACAO_DELAY + 0.45f;
+        }
+        if (spot_count == 0) base_cd = 0.25f; // Ninguém por perto: tenta de novo logo, sem gastar a recarga
+        break;
+    }
     case W_FIBRA:
     {
         Vector2 aim = aim_vector(420.0f);
@@ -1524,7 +1558,7 @@ static void apply_zone(SvZone *z)
 
         if (!inside) continue;
         if (z->confuse > 0.0f) e->confused = z->confuse;
-        damage_enemy(e, z->kind == ZK_PROMPT && e->id != z->target_id ? z->damage * PROMPT_SPLASH : z->damage, z->pos, z->kind == ZK_VERA ? 130.0f : z->kind == ZK_CANECA ? 70.0f : z->kind == ZK_PROMPT ? 50.0f : z->kind == ZK_CALOR ? 0.0f : 30.0f);
+        damage_enemy(e, z->kind == ZK_PROMPT && e->id != z->target_id ? z->damage * PROMPT_SPLASH : z->damage, z->pos, z->kind == ZK_VERA ? 130.0f : z->kind == ZK_CANECA ? 70.0f : z->kind == ZK_PROMPT ? 50.0f : z->kind == ZK_CALOR ? 0.0f : z->kind == ZK_NEGACAO ? 40.0f : 30.0f);
     }
 
     if (sv_run.boss.active)
@@ -1601,6 +1635,10 @@ static void update_zones(float dt)
             if (z->kind == ZK_DEPLOY)
             {
                 sv_sfx(SND_deploy);
+            }
+            else if (z->kind == ZK_NEGACAO)
+            {
+                sv_sfx(SND_modus);
             }
         }
 
