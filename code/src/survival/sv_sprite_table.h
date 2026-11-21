@@ -63,6 +63,8 @@
     X(ic_novaconversa, "ic_novaconversa", 24, 24, 4) \
     X(ic_prompt, "ic_prompt", 24, 24, 4) \
     X(ic_calor, "ic_calor", 24, 24, 4) \
+    X(ic_negacao, "ic_negacao", 24, 24, 4) \
+    X(fx_negacao, "fx_negacao", 40, 28, 2) \
     X(ic_fibra, "ic_fibra", 24, 24, 4) \
     X(ps_cafe, "ps_cafe", 24, 24, 4) \
     X(ps_manual, "ps_manual", 24, 24, 4) \
