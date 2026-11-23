@@ -5,8 +5,11 @@
 
 SvSprite sv_sprites[SPR_COUNT];
 
-static Texture2D player_frames[DIRECTION_COUNT][WALK_FRAME_COUNT];
-static bool player_loaded = false;
+// Dois conjuntos de quadros: o do jogador 1 e o do jogador 2 (só a dupla usa o segundo)
+#define PLAYER_SLOTS 2
+static Texture2D player_slot_frames[PLAYER_SLOTS][DIRECTION_COUNT][WALK_FRAME_COUNT];
+static bool player_slot_loaded[PLAYER_SLOTS];
+static int player_slot = 0;
 static bool sprites_loaded = false;
 
 typedef struct
@@ -140,6 +143,21 @@ void sv_draw_stretched(SvSpriteId id, int frame, Vector2 center, float width, fl
     DrawTexturePro(sprite->texture, source, dest, (Vector2){width / 2.0f, height / 2.0f}, rotation, tint);
 }
 
+void sv_use_player_slot(int slot)
+{
+    if (slot >= 0 && slot < PLAYER_SLOTS) player_slot = slot;
+}
+
+void sv_unload_all_players(void)
+{
+    for (int i = 0; i < PLAYER_SLOTS; i++)
+    {
+        sv_use_player_slot(i);
+        sv_unload_player();
+    }
+    sv_use_player_slot(0);
+}
+
 void sv_load_player(int character)
 {
     const char *folder = sv_character(character)->folder;
@@ -148,34 +166,34 @@ void sv_load_player(int character)
 
     for (int d = 0; d < DIRECTION_COUNT; d++)
     {
-        if (!load_walk_frames(folder, d, player_frames[d]))
+        if (!load_walk_frames(folder, d, player_slot_frames[player_slot][d]))
         {
-            for (int f = 0; f < WALK_FRAME_COUNT; f++) player_frames[d][f] = (Texture2D){0};
+            for (int f = 0; f < WALK_FRAME_COUNT; f++) player_slot_frames[player_slot][d][f] = (Texture2D){0};
         }
         for (int f = 0; f < WALK_FRAME_COUNT; f++)
         {
-            if (player_frames[d][f].id) SetTextureFilter(player_frames[d][f], TEXTURE_FILTER_POINT);
+            if (player_slot_frames[player_slot][d][f].id) SetTextureFilter(player_slot_frames[player_slot][d][f], TEXTURE_FILTER_POINT);
         }
     }
-    player_loaded = true;
+    player_slot_loaded[player_slot] = true;
 }
 
 void sv_unload_player(void)
 {
-    if (!player_loaded) return;
+    if (!player_slot_loaded[player_slot]) return;
     for (int d = 0; d < DIRECTION_COUNT; d++)
     {
         for (int f = 0; f < WALK_FRAME_COUNT; f++)
         {
-            if (player_frames[d][f].id) UnloadTexture(player_frames[d][f]);
+            if (player_slot_frames[player_slot][d][f].id) UnloadTexture(player_slot_frames[player_slot][d][f]);
         }
     }
-    player_loaded = false;
+    player_slot_loaded[player_slot] = false;
 }
 
 void sv_draw_player(int direction, int frame, Vector2 center, float scale, Color tint)
 {
-    Texture2D texture = player_frames[direction][frame % WALK_FRAME_COUNT];
+    Texture2D texture = player_slot_frames[player_slot][direction][frame % WALK_FRAME_COUNT];
     float w, h;
 
     if (!texture.id) return;

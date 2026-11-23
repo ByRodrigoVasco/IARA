@@ -53,7 +53,7 @@ float sv_boss_hit_damage(float percent_of_base_hp);
 // Personagens jogáveis. O primeiro está sempre liberado; os outros abrem com o progresso permanente.
 typedef enum
 {
-    CH_ESTAGIARIO, CH_LAURA, CH_ANDERSON, CH_JULIO, CH_NICOLLAS, CH_VASCO, CH_ZITO, CH_JV, CH_LUCAS, CH_COUNT
+    CH_ESTAGIARIO, CH_LAURA, CH_ANDERSON, CH_JULIO, CH_NICOLLAS, CH_VASCO, CH_ZITO, CH_JV, CH_LUCAS, CH_BAUDEL, CH_GUILHERME, CH_COUNT
 } SvCharacterId;
 
 typedef struct

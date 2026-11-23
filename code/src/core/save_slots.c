@@ -38,17 +38,24 @@ const char *save_slots_root(void)
 
 const char *save_mode_folder(save_mode mode)
 {
+    if (mode == SAVE_MODE_DUO) return "dupla";
     return mode == SAVE_MODE_SURVIVAL ? "sobrevivencia" : "normal";
 }
 
 const char *save_mode_title(save_mode mode)
 {
+    if (mode == SAVE_MODE_DUO) return "SOBREVIVÊNCIA EM DUPLA";
     return mode == SAVE_MODE_SURVIVAL ? "MODO SOBREVIVÊNCIA" : "MODO NORMAL";
+}
+
+bool save_mode_is_survival(save_mode mode)
+{
+    return mode == SAVE_MODE_SURVIVAL || mode == SAVE_MODE_DUO;
 }
 
 static const char *progress_file_name(save_mode mode)
 {
-    return mode == SAVE_MODE_SURVIVAL ? "progresso.survival" : "progresso.save";
+    return save_mode_is_survival(mode) ? "progresso.survival" : "progresso.save";
 }
 
 static bool equal_ignoring_case(const char *a, const char *b)

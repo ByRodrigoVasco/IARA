@@ -16,6 +16,7 @@
  */
 
 #define SV_RANKING_PATH "iara.ranking"
+#define SV_RANKING_DUO_PATH "iara_duplas.ranking"   // Ranking da Sobrevivência em dupla: separado do solo
 #define SV_RANKING_MAX 200          // Quantas partidas o arquivo guarda
 #define SV_NAME_MAX_CHARS 20        // Letras do nome: o mesmo limite do nome do save (SAVE_NAME_MAX)
 #define SV_NAME_BYTES 64            // Espaço do nome em UTF-8

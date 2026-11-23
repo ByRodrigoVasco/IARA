@@ -12,6 +12,8 @@
  *       <nome do save>/progresso.save
  *     sobrevivencia/
  *       <nome do save>/progresso.survival
+ *     dupla/
+ *       <nome da dupla>/progresso.survival
  *
  * Os dois modos têm saves separados, e cada modo pode ter vários. Dentro de um
  * modo, o nome de um save não pode se repetir (sem diferenciar maiúsculas de
@@ -31,6 +33,7 @@ typedef enum
 {
     SAVE_MODE_NORMAL = 0,
     SAVE_MODE_SURVIVAL,
+    SAVE_MODE_DUO,           // Sobrevivência em dupla: cada save é uma dupla
     SAVE_MODE_COUNT
 } save_mode;
 
@@ -56,13 +59,16 @@ void save_slots_set_root(const char *root);
 /** @brief Pasta raiz dos saves. */
 const char *save_slots_root(void);
 
-/** @brief Nome da pasta do modo ("normal" ou "sobrevivencia"). */
+/** @brief Nome da pasta do modo ("normal", "sobrevivencia" ou "dupla"). */
 const char *save_mode_folder(save_mode mode);
+
+/** @brief O modo é de sobrevivência (solo ou dupla): abre a tela do Sobrevivência e cada save é um jogador ou uma dupla. */
+bool save_mode_is_survival(save_mode mode);
 
 /** @brief Nome do modo para mostrar na tela ("MODO NORMAL" ou "MODO SOBREVIVÊNCIA"). */
 const char *save_mode_title(save_mode mode);
 
-/** @brief Cria saves/normal e saves/sobrevivencia se ainda não existirem. */
+/** @brief Cria saves/normal, saves/sobrevivencia e saves/dupla se ainda não existirem. */
 bool save_slots_ensure_folders(void);
 
 /** @brief Lista os saves do modo, do mais recente para o mais antigo. Devolve quantos achou (até max). */
