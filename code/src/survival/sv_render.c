@@ -12,6 +12,7 @@
 #include "sv_meta.h"
 #include "sv_map.h"
 #include "sv_debug.h"
+#include "sv_duo.h"
 
 static const SvSpriteId boss_sprites[BOSS_COUNT] = {SPR_bo_impressora, SPR_bo_modelo, SPR_bo_diego, SPR_bo_rene, SPR_bo_iara};
 
@@ -265,6 +266,51 @@ static void draw_lightning(void)
     }
 }
 
+
+// Mapa de Calor (Prof. Baudel): quadradinhos coloridos como num teste de usabilidade,
+// azul na borda e vermelho no centro, tremendo de leve; aparece e some suavemente
+static Color heat_color(float heat)
+{
+    static const Color ramp[5] = {{40, 70, 220, 255}, {40, 200, 230, 255}, {70, 210, 90, 255}, {245, 220, 60, 255}, {235, 45, 40, 255}};
+    float x = heat * 4.0f;
+    int k = (int)x;
+
+    if (k >= 4) return ramp[4];
+    if (k < 0) return ramp[0];
+    float t = x - (float)k;
+    return (Color){(unsigned char)(ramp[k].r + (ramp[k + 1].r - ramp[k].r) * t), (unsigned char)(ramp[k].g + (ramp[k + 1].g - ramp[k].g) * t),
+                   (unsigned char)(ramp[k].b + (ramp[k + 1].b - ramp[k].b) * t), 255};
+}
+
+static void draw_heatmap(const SvZone *z, float strength)
+{
+    const float cell = 6.0f, fade = 0.35f;
+    float age = z->max_life - z->life;
+    float alpha = fminf(1.0f, fminf(age / fade, z->life / fade));
+    float t = sv_run.time;
+    float x0 = floorf((z->pos.x - z->radius) / cell) * cell, y0 = floorf((z->pos.y - z->radius) / cell) * cell;
+
+    if (alpha <= 0.0f) return;
+    for (float y = y0; y <= z->pos.y + z->radius; y += cell)
+    {
+        for (float x = x0; x <= z->pos.x + z->radius; x += cell)
+        {
+            float d = Vector2Distance((Vector2){x + cell / 2.0f, y + cell / 2.0f}, z->pos) / z->radius;
+            float wobble, heat;
+            Color c;
+
+            if (d > 1.0f) continue;
+            wobble = 0.14f * sinf(x * 0.11f + t * 2.3f) * cosf(y * 0.09f - t * 1.7f);
+            heat = 1.0f - d * 0.95f + wobble + 0.06f * sinf(t * 5.0f);
+            if (heat < 0.0f) heat = 0.0f;
+            if (heat > 1.0f) heat = 1.0f;
+            c = heat_color(heat);
+            c.a = (unsigned char)(130.0f * strength * alpha * fminf(1.0f, (1.0f - d) * 5.0f));
+            DrawRectangle((int)x, (int)y, (int)cell, (int)cell, c);
+        }
+    }
+}
+
 static void draw_zones(void)
 {
     for (int i = 0; i < SV_MAX_ZONES; i++)
@@ -283,6 +329,35 @@ static void draw_zones(void)
             progress = 1.0f - z->life / z->max_life;
             if (z->kind == ZK_FIBRA) sv_draw_stretched(SPR_fx_fibra, (int)(progress * 4.0f), center, length, z->radius * 2.0f + 10.0f, z->angle, WHITE);
             else sv_draw_stretched(SPR_fx_ponteiro, (int)(progress * 4.0f), center, length, 13.0f, z->angle, WHITE);
+            continue;
+        }
+
+        if (z->kind == ZK_CALOR)
+        {
+            draw_heatmap(z, 1.0f);
+            continue;
+        }
+
+        if (z->kind == ZK_NEGACAO)
+        {
+            // Negação: o ¬ cai (com o círculo de aviso no chão) e, no impacto, carimba o chão e solta um anel
+            if (z->delay > 0.0f)
+            {
+                float t = z->delay / 0.5f;
+
+                DrawCircleV(z->pos, z->radius, (Color){170, 120, 255, 22});
+                DrawCircleLinesV(z->pos, z->radius, (Color){190, 150, 255, 150});
+                sv_draw(SPR_fx_negacao, 0, (Vector2){z->pos.x, z->pos.y - t * 110.0f}, 1.5f, 0.0f, false, WHITE);
+            }
+            else
+            {
+                float t = 1.0f - z->life / 0.45f;
+                unsigned char fade = (unsigned char)(255.0f * (1.0f - t));
+
+                DrawCircleV(z->pos, z->radius * (0.4f + 0.6f * t), (Color){170, 120, 255, (unsigned char)(fade / 4)});
+                DrawCircleLinesV(z->pos, z->radius * (0.4f + 0.6f * t), (Color){220, 200, 255, fade});
+                sv_draw(SPR_fx_negacao, 1, z->pos, 1.5f + 0.4f * t, 0.0f, false, (Color){255, 255, 255, fade});
+            }
             continue;
         }
 
@@ -369,7 +444,47 @@ static void draw_enemy(SvEnemy *e)
         draw_shadow(e->pos, 9.0f);
         if (e->type == EN_CRACHA) tint.a = 190; // atravessa objetos
         sv_draw(sv_enemy_sprite(e->type), frame, e->pos, 1.0f, 0.0f, e->facing == 1 && e->flip, tint);
+
+        // Negado (confuso): um ¬ pequeno em cima da cabeça
+        if (e->confused > 0.0f)
+        {
+            int x = (int)e->pos.x - 4, y = (int)e->pos.y - 24 + (int)(sinf(e->timer * 6.0f) * 1.5f);
+
+            DrawRectangle(x - 1, y - 1, 10, 4, (Color){20, 10, 30, 220});
+            DrawRectangle(x + 6, y - 1, 3, 6, (Color){20, 10, 30, 220});
+            DrawRectangle(x, y, 8, 2, (Color){210, 180, 255, 255});
+            DrawRectangle(x + 6, y, 2, 4, (Color){210, 180, 255, 255});
+        }
     }
+}
+
+// Dupla: cor de cada jogador (marcador sobre a cabeça e no HUD)
+static const Color duo_colors[SV_DUO_PLAYERS] = {{255, 90, 100, 255}, {90, 170, 255, 255}};
+
+// Dupla: quem caiu fica deitado e cinza, com o anel de quanto falta para levantar
+static void draw_fallen_player(SvPlayer *p, int index)
+{
+    float progress = sv_duo_revive_progress(index);
+    char label[8];
+
+    draw_shadow(p->pos, 12.0f);
+    sv_draw_player(p->direction, 0, p->pos, 1.0f, (Color){110, 105, 120, 220});
+    DrawCircleLinesV(p->pos, 20.0f, (Color){duo_colors[index].r, duo_colors[index].g, duo_colors[index].b, 120});
+    if (progress > 0.0f) DrawRing(p->pos, 18.0f, 22.0f, -90.0f, -90.0f + 360.0f * progress, 32, (Color){120, 230, 160, 255});
+    snprintf(label, sizeof(label), "J%d", index + 1);
+    sv_text_centered(label, p->pos.x, p->pos.y - 40.0f, 12.0f, duo_colors[index]);
+    sv_text_centered(progress > 0.0f ? "LEVANTANDO" : "FIQUE AO LADO", p->pos.x, p->pos.y + 18.0f, 9.0f, (Color){230, 230, 235, 230});
+}
+
+// Dupla: marcador J1 / J2 sobre a cabeça, para cada um achar o seu personagem
+static void draw_duo_marker(SvPlayer *p, int index)
+{
+    Vector2 tip = {p->pos.x, p->pos.y - 24.0f};
+    char label[8];
+
+    DrawTriangle((Vector2){tip.x - 4.0f, tip.y - 6.0f}, tip, (Vector2){tip.x + 4.0f, tip.y - 6.0f}, duo_colors[index]);
+    snprintf(label, sizeof(label), "J%d", index + 1);
+    sv_text_centered(label, tip.x, tip.y - 20.0f, 11.0f, duo_colors[index]);
 }
 
 static void draw_player(void)
@@ -377,6 +492,17 @@ static void draw_player(void)
     SvPlayer *p = &sv_run.player;
     Color tint = WHITE;
     int frame = p->walk_time > 0.0f ? get_walk_frame(p->walk_time) : 0;
+
+    if (sv_run.duo)
+    {
+        sv_use_player_slot(sv_run.active);
+        if (p->down)
+        {
+            draw_fallen_player(p, sv_run.active);
+            sv_use_player_slot(0);
+            return;
+        }
+    }
 
     if (p->hurt_flash > 0.0f) tint = (Color){255, 120, 120, 255};
     else if (p->invulnerable > 0.0f && ((int)(sv_run.time * 20.0f) % 2)) tint = (Color){255, 255, 255, 120};
@@ -421,6 +547,12 @@ static void draw_player(void)
 
             sv_draw(SPR_fx_postits, anim_frame(sv_run.time, 6.0f) % 4, p->pos, radius / 22.0f, w->angle * RAD2DEG, false, WHITE);
         }
+    }
+
+    if (sv_run.duo)
+    {
+        draw_duo_marker(p, sv_run.active);
+        sv_use_player_slot(0);
     }
 }
 
@@ -498,6 +630,7 @@ static void draw_world_objects(Camera2D camera)
     float half_w = GetScreenWidth() / 2.0f / camera.zoom + 120.0f;
     float half_h = GetScreenHeight() / 2.0f / camera.zoom + 120.0f;
     SvPlayer *player = &sv_run.player;
+    int was = sv_run.active;
 
     for (int i = 0; i < sv_map_prop_count() && count < 1100; i++)
     {
@@ -514,17 +647,25 @@ static void draw_world_objects(Camera2D camera)
     }
 
     if (sv_run.boss.active) list[count++] = (Drawable){sv_run.boss.pos.y + 18.0f, DR_BOSS, 0};
-    list[count++] = (Drawable){player->pos.y + 10.0f, DR_PLAYER, 0};
 
-    for (int i = 0; i < player->weapon_count; i++)
+    // Na dupla, cada jogador entra na lista com os seus colegas (index = jogador * SV_MAX_COLEGAS + colega)
+    for (int k = 0; k < sv_duo_count(); k++)
     {
-        if (player->weapons[i].id == W_COLEGA)
-        {
-            int n = sv_colega_count();
+        sv_duo_use(k);
+        list[count++] = (Drawable){player->pos.y + 10.0f, DR_PLAYER, k};
 
-            for (int c = 0; c < n; c++) list[count++] = (Drawable){sv_run.colega_pos[c].y + 8.0f, DR_COLEGA, c};
+        if (player->down) continue;
+        for (int i = 0; i < player->weapon_count; i++)
+        {
+            if (player->weapons[i].id == W_COLEGA)
+            {
+                int n = sv_colega_count();
+
+                for (int c = 0; c < n; c++) list[count++] = (Drawable){sv_run.colega_pos[c].y + 8.0f, DR_COLEGA, k * SV_MAX_COLEGAS + c};
+            }
         }
     }
+    sv_duo_use(was);
 
     qsort(list, (size_t)count, sizeof(Drawable), compare_drawables);
 
@@ -535,10 +676,11 @@ static void draw_world_objects(Camera2D camera)
         case DR_PROP: draw_prop(sv_map_prop(list[i].index)); break;
         case DR_ENEMY: draw_enemy(&sv_run.enemies[list[i].index]); break;
         case DR_BOSS: draw_boss(); break;
-        case DR_PLAYER: draw_player(); break;
-        default: draw_colega(list[i].index); break;
+        case DR_PLAYER: sv_duo_use(list[i].index); draw_player(); break;
+        default: sv_duo_use(list[i].index / SV_MAX_COLEGAS); draw_colega(list[i].index % SV_MAX_COLEGAS); break;
         }
     }
+    sv_duo_use(was);
 }
 
 // Depois da escuridão: os olhos e o sangue dos monstros voltam com a cor cheia, como se brilhassem
@@ -547,6 +689,11 @@ static void draw_glows(Camera2D camera)
     float half_w = GetScreenWidth() / 2.0f / camera.zoom + 40.0f, half_h = GetScreenHeight() / 2.0f / camera.zoom + 40.0f;
 
     BeginMode2D(camera);
+    // O Mapa de Calor é um dado na tela do teste de usabilidade: brilha também no escuro, mais fraco
+    for (int i = 0; i < SV_MAX_ZONES; i++)
+    {
+        if (sv_run.zones[i].alive && sv_run.zones[i].kind == ZK_CALOR) draw_heatmap(&sv_run.zones[i], 0.5f);
+    }
     for (int i = 0; i < SV_MAX_ENEMIES; i++)
     {
         SvEnemy *e = &sv_run.enemies[i];
@@ -643,8 +790,8 @@ static void draw_hazard(SvHazard *h)
         }
         else if (h->sprite == -3)
         {
-            DrawCircleLinesV(h->pos, 9.0f, (Color){255, 80, 70, 255});
-            DrawCircleLinesV(h->pos, 6.0f, WHITE);
+            // Canto da IARA: o olho de sonar com anéis ciano se abrindo
+            sv_draw(SPR_bp_nota, anim_frame(sv_run.time, 8.0f) % 4, h->pos, 1.0f, 0.0f, false, WHITE);
         }
         else if (h->sprite == SPR_bp_onda)
         {
@@ -673,8 +820,18 @@ static void draw_hazard(SvHazard *h)
             SvSprite *sprite = &sv_sprites[h->sprite];
             float scale = h->radius * 2.0f / (float)(sprite->frame_width > sprite->frame_height ? sprite->frame_width : sprite->frame_height);
 
+            int frame = anim_frame(sv_run.time, 10.0f) % sprite->frames;
+
+            if (h->sprite == SPR_bp_falsa)
+            {
+                // Resposta Confiante: parece segura até machucar pela primeira vez (1 s), depois mostra a mentira
+                float age = h->max_life - h->life;
+
+                if (age < 1.0f) frame = anim_frame(sv_run.time, 3.0f) % 2;
+                else frame = age < 1.25f ? 2 : 2 + anim_frame(sv_run.time, 3.0f) % 2;
+            }
             if (h->tick > 0.0f || h->damage == 0.0f) DrawCircleV(h->pos, h->radius, (Color){60, 220, 120, 40});
-            sv_draw((SvSpriteId)h->sprite, anim_frame(sv_run.time, 10.0f) % sprite->frames, h->pos, scale < 1.0f ? 1.0f : scale, 0.0f, false, WHITE);
+            sv_draw((SvSpriteId)h->sprite, frame, h->pos, scale < 1.0f ? 1.0f : scale, 0.0f, false, WHITE);
         }
         return;
     }
@@ -790,6 +947,64 @@ Rectangle sv_speed_button_rect(void)
     return (Rectangle){(float)GetScreenWidth() - pad - width, (float)GetScreenHeight() - pad - height, width, height};
 }
 
+// Dupla: vida, XP, nível e poderes de um jogador, no lado esquerdo (jogador 1) ou direito (jogador 2)
+static void draw_duo_panel(int index)
+{
+    SvPlayer *p = sv_duo_player(index);
+    bool right = index == 1;
+    float ui = sv_ui();
+    float w = (float)GetScreenWidth(), h = (float)GetScreenHeight();
+    float pad = 18.0f * ui;
+    float bar_w = 300.0f * ui;
+    float x = right ? w - pad - bar_w : pad;
+    float icon = 24.0f * 2.0f * ui;
+    char text[96];
+
+    snprintf(text, sizeof(text), "J%d", index + 1);
+    sv_text(text, right ? x - 46.0f * ui : x + bar_w + 12.0f * ui, pad - 6.0f * ui, 34.0f * ui, duo_colors[index]);
+
+    draw_bar(x, pad, bar_w, 20.0f * ui, p->down ? 0.0f : p->hp / p->max_hp, COLOR_HP);
+    if (p->down) snprintf(text, sizeof(text), "CAIU");
+    else snprintf(text, sizeof(text), "%d / %d", (int)ceilf(p->hp > 0 ? p->hp : 0), (int)p->max_hp);
+    sv_text(text, x + 8.0f * ui, pad - 2.0f * ui, 22.0f * ui, WHITE);
+
+    draw_bar(x, pad + 30.0f * ui, bar_w, 12.0f * ui, p->xp / (float)p->xp_needed, COLOR_XP);
+    snprintf(text, sizeof(text), "NÍVEL %d", p->level);
+    sv_text(text, right ? x + bar_w - sv_text_width(text, 24.0f * ui) : x, pad + 46.0f * ui, 24.0f * ui, COLOR_XP);
+
+    // Poderes embaixo: o jogador 1 a partir da esquerda, o jogador 2 a partir da direita, acima do botão de tempo
+    {
+        float y = h - pad - icon - (right ? 54.0f * ui : 0.0f);
+        float step = icon + 8.0f * ui;
+        float small = icon * 0.75f;
+
+        x = right ? w - pad - icon : pad;
+        for (int i = 0; i < p->weapon_count; i++)
+        {
+            SvWeapon *wp = &p->weapons[i];
+
+            DrawRectangle((int)x - 2, (int)y - 2, (int)icon + 4, (int)icon + 4, (Color){0, 0, 0, 180});
+            sv_draw(sv_weapon_icon(wp->id), anim_frame(sv_run.time, 4.0f) % 4, (Vector2){x + icon / 2.0f, y + icon / 2.0f}, 2.0f * ui, 0.0f, false, WHITE);
+            snprintf(text, sizeof(text), "%d", wp->level);
+            sv_text(text, x + icon - 14.0f * ui, y + icon - 20.0f * ui, 20.0f * ui, (Color){255, 220, 120, 255});
+            x += right ? -step : step;
+        }
+
+        x = right ? w - pad - small : pad;
+        y -= icon + 10.0f * ui;
+        for (int i = 0; i < p->passive_count; i++)
+        {
+            SvPassive *ps = &p->passives[i];
+
+            DrawRectangle((int)x - 2, (int)y - 2, (int)small + 4, (int)small + 4, (Color){0, 0, 0, 180});
+            sv_draw(sv_passive_icon(ps->id), 0, (Vector2){x + small / 2.0f, y + small / 2.0f}, 1.5f * ui, 0.0f, false, WHITE);
+            snprintf(text, sizeof(text), "%d", ps->level);
+            sv_text(text, x + small - 12.0f * ui, y + small - 18.0f * ui, 18.0f * ui, (Color){170, 230, 255, 255});
+            x += right ? -(small + 8.0f * ui) : small + 8.0f * ui;
+        }
+    }
+}
+
 static void draw_hud(Camera2D camera)
 {
     SvPlayer *p = &sv_run.player;
@@ -800,7 +1015,13 @@ static void draw_hud(Camera2D camera)
     int seconds = (int)sv_run.time;
     char text[96];
 
-    // Vida e XP
+    // Vida e XP (na dupla, um painel para cada jogador)
+    if (sv_run.duo)
+    {
+        draw_duo_panel(0);
+        draw_duo_panel(1);
+    }
+    else
     {
         float bar_w = 300.0f * ui;
 
@@ -836,13 +1057,22 @@ static void draw_hud(Camera2D camera)
         sv_text_centered(text, button.x + button.width / 2.0f, button.y + (button.height - SPEED_BUTTON_TEXT_SIZE * ui) / 2.0f - 2.0f * ui, SPEED_BUTTON_TEXT_SIZE * ui, WHITE);
     }
 
-    // Banco de Horas e abates
-    snprintf(text, sizeof(text), "BANCO DE HORAS %d", sv_run.coins);
-    sv_text(text, w - pad - sv_text_width(text, font), pad - 2.0f * ui, font, (Color){255, 214, 80, 255});
-    snprintf(text, sizeof(text), "ABATES %d", sv_run.kills);
-    sv_text(text, w - pad - sv_text_width(text, font * 0.8f), pad + 32.0f * ui, font * 0.8f, (Color){220, 220, 220, 255});
+    // Banco de Horas e abates (na dupla o alto à direita é do jogador 2, então eles descem para o centro, embaixo)
+    if (sv_run.duo)
+    {
+        snprintf(text, sizeof(text), "BANCO DE HORAS %d    ABATES %d", sv_run.coins, sv_run.kills);
+        sv_text_centered(text, w / 2.0f, h - pad - font, font * 0.8f, (Color){255, 214, 80, 255});
+    }
+    else
+    {
+        snprintf(text, sizeof(text), "BANCO DE HORAS %d", sv_run.coins);
+        sv_text(text, w - pad - sv_text_width(text, font), pad - 2.0f * ui, font, (Color){255, 214, 80, 255});
+        snprintf(text, sizeof(text), "ABATES %d", sv_run.kills);
+        sv_text(text, w - pad - sv_text_width(text, font * 0.8f), pad + 32.0f * ui, font * 0.8f, (Color){220, 220, 220, 255});
+    }
 
     // Poderes e passivos
+    if (!sv_run.duo)
     {
         float icon = 24.0f * 2.0f * ui;
         float x = pad;
@@ -898,11 +1128,41 @@ static void draw_hud(Camera2D camera)
     }
 
     // Efeitos de estado
-    if (p->invert > 0.0f) sv_text_centered("CONTROLES INVERTIDOS", w / 2.0f, h * 0.2f, 34.0f * ui, (Color){255, 120, 255, 255});
-    if (p->root > 0.0f) sv_text_centered("PRESO", w / 2.0f, h * 0.2f + 40.0f * ui, 34.0f * ui, (Color){150, 170, 255, 255});
+    if (sv_run.duo)
+    {
+        for (int k = 0; k < SV_DUO_PLAYERS; k++)
+        {
+            SvPlayer *q = sv_duo_player(k);
 
-    // Pouca vida: a borda da tela fica vermelha
-    if (p->hp < p->max_hp * 0.3f)
+            if (q->invert > 0.0f) sv_text_centered(k == 0 ? "J1: CONTROLES INVERTIDOS" : "J2: CONTROLES INVERTIDOS", w / 2.0f, h * 0.2f + (float)k * 80.0f * ui, 34.0f * ui, (Color){255, 120, 255, 255});
+            if (q->root > 0.0f) sv_text_centered(k == 0 ? "J1: PRESO" : "J2: PRESO", w / 2.0f, h * 0.2f + 40.0f * ui + (float)k * 80.0f * ui, 34.0f * ui, (Color){150, 170, 255, 255});
+        }
+    }
+    else
+    {
+        if (p->invert > 0.0f) sv_text_centered("CONTROLES INVERTIDOS", w / 2.0f, h * 0.2f, 34.0f * ui, (Color){255, 120, 255, 255});
+        if (p->root > 0.0f) sv_text_centered("PRESO", w / 2.0f, h * 0.2f + 40.0f * ui, 34.0f * ui, (Color){150, 170, 255, 255});
+    }
+
+    // Pouca vida: a borda da tela fica vermelha (na dupla, se alguém de pé estiver mal ou tiver caído)
+    if (sv_run.duo)
+    {
+        bool danger = false;
+
+        for (int k = 0; k < SV_DUO_PLAYERS; k++)
+        {
+            SvPlayer *q = sv_duo_player(k);
+
+            if (q->down || q->hp < q->max_hp * 0.3f) danger = true;
+        }
+        if (danger)
+        {
+            unsigned char alpha = (unsigned char)(40 + 30 * sinf(sv_run.time * 6.0f));
+
+            DrawRectangleLinesEx((Rectangle){0, 0, w, h}, 18.0f * ui, (Color){200, 0, 20, alpha});
+        }
+    }
+    else if (p->hp < p->max_hp * 0.3f)
     {
         unsigned char alpha = (unsigned char)(40 + 30 * sinf(sv_run.time * 6.0f));
 
@@ -919,7 +1179,11 @@ void sv_render_game(void)
     camera.zoom = GetScreenHeight() / 720.0f;
     if (camera.zoom < 0.75f) camera.zoom = 0.75f;
     camera.offset = (Vector2){GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f};
-    camera.target = (Vector2){sv_run.player.pos.x + sinf(sv_run.time * 90.0f) * shake, sv_run.player.pos.y + cosf(sv_run.time * 80.0f) * shake};
+    {
+        Vector2 focus = sv_duo_focus();   // No solo, a posição do jogador; na dupla, o meio entre os dois
+
+        camera.target = (Vector2){focus.x + sinf(sv_run.time * 90.0f) * shake, focus.y + cosf(sv_run.time * 80.0f) * shake};
+    }
 
     // A câmera não mostra o vazio fora do mapa
     {
@@ -1049,7 +1313,8 @@ void sv_render_levelup(int selected)
     float w = (float)GetScreenWidth();
 
     DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), (Color){4, 0, 8, 200});
-    sv_text_centered("NOVO NÍVEL", w / 2.0f, GetScreenHeight() / 2.0f - 340.0f * ui, 70.0f * ui, (Color){230, 40, 50, 255});
+    if (sv_run.duo) sv_text_centered(sv_run.chooser == 0 ? "NOVO NÍVEL: JOGADOR 1 ESCOLHE" : "NOVO NÍVEL: JOGADOR 2 ESCOLHE", w / 2.0f, GetScreenHeight() / 2.0f - 340.0f * ui, 70.0f * ui, duo_colors[sv_run.chooser]);
+    else sv_text_centered("NOVO NÍVEL", w / 2.0f, GetScreenHeight() / 2.0f - 340.0f * ui, 70.0f * ui, (Color){230, 40, 50, 255});
     sv_text_centered("Escolha um poder. Setas ou 1, 2, 3 e Enter.", w / 2.0f, GetScreenHeight() / 2.0f - 260.0f * ui, 28.0f * ui, (Color){210, 200, 210, 255});
 
     for (int i = 0; i < sv_run.choice_count; i++)

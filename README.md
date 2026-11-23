@@ -81,7 +81,7 @@ O jogo abre em janela. Ele tem três modos de tela, sempre um só: **janela** de
 
 ### Modos e saves
 
-`INICIAR` abre a escolha do **modo**: `MODO NORMAL` (a campanha) ou `MODO SOBREVIVÊNCIA`. Depois do modo vem a escolha do **save**: a lista dos saves daquele modo, `NOVO SAVE` para criar um com outro nome e **Del** (ou o botão `DEL: APAGAR`) para apagar o save escolhido, sempre com uma confirmação. Um nome de save não pode repetir outro do mesmo modo (sem diferenciar maiúsculas de minúsculas), e cada modo pode ter quantos saves quiser.
+`INICIAR` abre a escolha do **modo**: `MODO NORMAL` (a campanha), `MODO SOBREVIVÊNCIA` ou `SOBREVIVÊNCIA EM DUPLA`. Depois do modo vem a escolha do **save**: a lista dos saves daquele modo, `NOVO SAVE` para criar um com outro nome e **Del** (ou o botão `DEL: APAGAR`) para apagar o save escolhido, sempre com uma confirmação. Um nome de save não pode repetir outro do mesmo modo (sem diferenciar maiúsculas de minúsculas), e cada modo pode ter quantos saves quiser.
 
 Os saves ficam numa pasta própria, ao lado do executável, um por pasta:
 
@@ -89,6 +89,7 @@ Os saves ficam numa pasta própria, ao lado do executável, um por pasta:
 saves/
   normal/<nome do save>/progresso.save
   sobrevivencia/<nome do save>/progresso.survival
+  dupla/<nome da dupla>/progresso.survival
 ```
 
 Quem já jogava antes disso não perde nada: o `iara.save` e o `iara.survival` antigos viram o save `Principal` de cada modo na primeira abertura. A campanha grava o progresso do save ao voltar ao menu e ao fechar o jogo, e o Modo Sobrevivência grava a cada compra e ao fim de cada partida.
@@ -98,6 +99,12 @@ Quem já jogava antes disso não perde nada: o `iara.save` e o `iara.survival` a
 O `MODO SOBREVIVÊNCIA`, na escolha do modo depois de `INICIAR`, é separado da campanha: dez minutos de expediente em um mapa grande de 15 áreas do escritório, com cinco atos e cinco chefes, do Impressora de Rescisões à própria IARA. Mova a Estagiária com **WASD** ou as setas. Os poderes atacam sozinhos, e cada nível dá a escolha de um poder novo ou de um upgrade. **ESC** pausa.
 
 O Banco de Horas coletado na partida, mesmo que você perca, compra upgrades permanentes no `PLANO DE CARREIRA`. O progresso fica no save escolhido (`saves/sobrevivencia/<nome do save>/progresso.survival`). Sprites e sons vêm de `code/assets/sprites/sobrevivencia` e `code/assets/audio`, e o áudio segue as regras de mistura em `code/src/survival/sv_audio.h`.
+
+#### Sobrevivência em dupla
+
+`SOBREVIVÊNCIA EM DUPLA` é o mesmo modo para duas pessoas no mesmo computador, na mesma tela. O **jogador 1** anda com **WASD** (ou o controle 1) e o **jogador 2** com as **setas** (ou o controle 2). Cada um tem a sua vida, os seus poderes e o seu personagem (em `PERSONAGENS`, **TAB** troca de jogador). A XP é dividida: um chip pego por qualquer um sobe a barra dos dois, e cada um escolhe a sua carta, primeiro o jogador 1. Quem fica sem vida **cai**; o parceiro o levanta ficando parado ao lado dele por 3 segundos, e a partida só acaba quando os dois caem. Os dois ficam sempre na mesma tela, e há mais inimigos e chefes mais fortes que no solo.
+
+Cada save da dupla é uma dupla (o nome aparece no ranking, por exemplo `Ana e Beto`), com Banco de Horas e Plano de Carreira próprios. As duplas têm um ranking separado (`iara_duplas.ranking`) e não entram no ranking solo. As regras e os números ficam em `code/src/survival/sv_duo.h`.
 
 #### Modo debug (para testar à mão)
 
@@ -128,6 +135,35 @@ O primeiro comando gera `build/IARA-windows.zip`, com o executável, as DLLs e o
 | **PIF**<br>[Programação Imperativa e Funcional](docs/pif/README.md) | • Núcleo do jogo em C (menu, game loop, quiz jogável)<br>• Regras puras em Haskell |
 | **IHC**<br>[Interação Humano-Computador](docs/ihc/README.md) | • Personas<br>• Protótipo lo-fi e screencast<br>• Avaliação heurística (Nielsen)<br>• Critérios de usabilidade e acessibilidade |
 | **LMC**<br>[Lógica para Computação](docs/lmc/README.md) | • Especificação lógica das regras do jogo<br>• Puzzles de lógica clássica |
+
+## Qualidade e testes
+
+A suíte automatizada (`tools/tests/run_tests.ps1`) monta o jogo de verdade e o conduz como um jogador. O relatório completo está em [docs/fds/testes](docs/fds/testes/README.md), e as evidências de cada sprint nos reports de [FDS](docs/fds/README.md).
+
+### Evidências da Sprint 03
+
+Testes de sistema das histórias que ainda não tinham caso de teste, executados em 20/11/2026 na `develop` (`2386a1c`): **7 de 12 aprovados**, 5 falhas registradas no bug tracker. Pré-condição, passos, esperado e obtido de cada caso estão no [report da Sprint 03](docs/fds/sprint-03/README.md), junto com os [prints do Jira](docs/fds/sprint-03/README.md#prints-do-jira): o backlog da sprint e cada card de história com o link do seu screencast.
+
+| Caso | História | Resultado | Screencast |
+|---|---|---|---|
+| CT-94 | US16: som de passos | ✅ | [CT-94_US-16.mp4](docs/fds/sprint-03/screencasts/CT-94_US-16.mp4) |
+| CT-95 | US16: som de porta | ❌ [#101](https://github.com/ByRodrigoVasco/IARA/issues/101) | [CT-95_US-16.mp4](docs/fds/sprint-03/screencasts/CT-95_US-16.mp4) |
+| CT-96 | US16: ambiente contínuo | ✅ | [CT-96_US-16.mp4](docs/fds/sprint-03/screencasts/CT-96_US-16.mp4) |
+| CT-97 | US16: som de teclado no quiz | ❌ [#102](https://github.com/ByRodrigoVasco/IARA/issues/102) | [CT-97_US-16.mp4](docs/fds/sprint-03/screencasts/CT-97_US-16.mp4) |
+| CT-98 | US16: voz dos NPCs | ❌ [#103](https://github.com/ByRodrigoVasco/IARA/issues/103) | [CT-98_US-16.mp4](docs/fds/sprint-03/screencasts/CT-98_US-16.mp4) |
+| CT-99 | US17: sprites dos NPCs | ✅ | [CT-99_US-17.mp4](docs/fds/sprint-03/screencasts/CT-99_US-17.mp4) |
+| CT-100 | US17: arte do flash, salto e finais | ❌ [#104](https://github.com/ByRodrigoVasco/IARA/issues/104) | [CT-100_US-17.mp4](docs/fds/sprint-03/screencasts/CT-100_US-17.mp4) |
+| CT-101 | US10: sem HUD numérico | ✅ | [CT-101_US-10.mp4](docs/fds/sprint-03/screencasts/CT-101_US-10.mp4) |
+| CT-102 | US10: cenário reage ao jogador | ❌ [#105](https://github.com/ByRodrigoVasco/IARA/issues/105) | [CT-102_US-10.mp4](docs/fds/sprint-03/screencasts/CT-102_US-10.mp4) |
+| CT-103 | US13: tensão progressiva | ✅ | [CT-103_US-13.mp4](docs/fds/sprint-03/screencasts/CT-103_US-13.mp4) |
+| CT-104 | US04: dica pelo NPC | ✅ | [CT-104_US-04.mp4](docs/fds/sprint-03/screencasts/CT-104_US-04.mp4) |
+| CT-105 | US11: pontuação por método | ✅ | [CT-105_US-11.mp4](docs/fds/sprint-03/screencasts/CT-105_US-11.mp4) |
+
+### Bug Tracker
+
+Print de **20/11/2026** das [Issues do GitHub](https://github.com/ByRodrigoVasco/IARA/issues?q=is%3Aissue+label%3Abug), com as abertas e as fechadas. Cada issue tem o label da sprint, um responsável e aponta para a história do Jira, o teste e o PR da correção. O status de cada bug também fica em [bugs.md](docs/fds/testes/bugs.md).
+
+![Bug tracker do GitHub em 20/11/2026](docs/fds/sprint-03/bug-tracker-2026-11-20.png)
 
 ## Créditos de arte
 

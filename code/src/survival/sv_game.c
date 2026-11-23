@@ -7,6 +7,7 @@
 #include "sv_meta.h"
 #include "sv_audio.h"
 #include "sv_map.h"
+#include "sv_duo.h"
 
 SvRun sv_run;
 int sv_time_scale = 1;
@@ -57,6 +58,12 @@ SvSpriteId sv_enemy_sprite(int type)
 #define PROMPT_RANGE 340.0f
 #define PROMPT_TYPING SV_PROMPT_TYPING
 #define PROMPT_SPLASH 0.5f
+// Mapa de Calor (Prof. Baudel): onde procurar aglomeração, de quanto em quanto tempo queima e o tempo de aparecer/sumir
+#define CALOR_RANGE 300.0f
+#define CALOR_TICK 0.5f
+#define CALOR_FADE 0.35f
+// Negação (Prof. Guilherme): quanto tempo o ¬ leva para cair
+#define NEGACAO_DELAY 0.5f
 #define PROMPT_TEXTS 8
 
 // Deploy em Produção: alcance de mira
@@ -80,7 +87,7 @@ static const SpawnWeight act_spawns[SV_ACT_COUNT][8] = {
     {{EN_ECO, 20}, {EN_AUDITOR, 7}, {EN_AFOGADO, 20}, {EN_CRACHA, 15}, {EN_AUTORESPOSTA, 15}, {EN_ALUCINACAO, 12}, {EN_DADO, 10}, {-1, 0}},
 };
 
-static const char *weapon_names[W_COUNT] = {"Grampeador", "Ponteiro", "Caneca Arremessada", "Post-its Orbitais", "Não Perturbe", "Deploy em Produção", "Nota Fiscal", "Modus Ponens", "Tabela-Verdade", "Colega de Plantão", "Nova Conversa", "Prompt da IARA", "Vera Fischer", "Fibra Óptica"};
+static const char *weapon_names[W_COUNT] = {"Grampeador", "Ponteiro", "Caneca Arremessada", "Post-its Orbitais", "Não Perturbe", "Deploy em Produção", "Nota Fiscal", "Modus Ponens", "Tabela-Verdade", "Colega de Plantão", "Nova Conversa", "Prompt da IARA", "Vera Fischer", "Fibra Óptica", "Mapa de Calor", "Negação"};
 static const char *weapon_descriptions[W_COUNT] = {
     "Tiros retos no inimigo mais próximo.",
     "Golpe em linha, para os dois lados, na direção do inimigo mais próximo.",
@@ -95,8 +102,10 @@ static const char *weapon_descriptions[W_COUNT] = {
     "Empurra tudo e apaga tiros, com recarga longa.",
     "Digita um comando na janela de terminal da IARA sobre o inimigo mais forte e o executa: dano alto nele e metade em quem está em volta.",
     "Se um golpe te acerta (V), o dano é falso (F): ele é anulado e solta uma onda. Também dispara sozinha quando alguém chega perto.",
-    "Feixe de luz muito forte em linha reta, que atravessa todos os inimigos no caminho."};
-static const SvSpriteId weapon_icons[W_COUNT] = {SPR_ic_grampeador, SPR_ic_ponteiro, SPR_ic_caneca, SPR_ic_postits, SPR_ic_naoperturbe, SPR_ic_deploy, SPR_ic_nota, SPR_ic_modus, SPR_ic_tabela, SPR_ic_colega, SPR_ic_novaconversa, SPR_ic_prompt, SPR_ps_cracha, SPR_ic_fibra};
+    "Feixe de luz muito forte em linha reta, que atravessa todos os inimigos no caminho.",
+    "Como num teste de usabilidade: marca onde os inimigos mais se juntam com um mapa de calor que queima quem fica dentro.",
+    "Um ¬ gigante cai sobre o maior grupo de inimigos: eles levam dano e ficam negados, andando para longe de você."};
+static const SvSpriteId weapon_icons[W_COUNT] = {SPR_ic_grampeador, SPR_ic_ponteiro, SPR_ic_caneca, SPR_ic_postits, SPR_ic_naoperturbe, SPR_ic_deploy, SPR_ic_nota, SPR_ic_modus, SPR_ic_tabela, SPR_ic_colega, SPR_ic_novaconversa, SPR_ic_prompt, SPR_ps_cracha, SPR_ic_fibra, SPR_ic_calor, SPR_ic_negacao};
 
 static const char *passive_names[P_COUNT] = {"Café", "Manual", "Colinha", "Ergonomia", "Crachá", "Plano de Saúde", "Network", "Hora Extra", "Marmita Térmica", "Sorte de Principiante", "Espinhos Corporativos", "Foco", "Lanterna do Celular"};
 static const char *passive_descriptions[P_COUNT] = {
@@ -139,6 +148,10 @@ static const WeaponDef weapon_defs[W_COUNT] = {
     [W_PROMPT]       = {{60, 60, 80, 80, 115}, {3.0f, 2.7f, 2.7f, 2.4f, 2.0f}, {1, 1, 1, 2, 2}, {72, 78, 78, 88, 98}, {0, 0, 0, 0, 0}},
     [W_FIBRA]        = {{34, 34, 48, 48, 70}, {2.9f, 2.6f, 2.6f, 2.3f, 2.0f}, {0, 0, 0, 0, 0}, {300, 320, 320, 350, 380}, {14, 16, 16, 18, 22}},
     [W_VERA]         = {{22, 22, 30, 30, 50}, {2.6f, 2.4f, 2.4f, 2.1f, 1.9f}, {1, 1, 2, 2, 2}, {84, 90, 90, 98, 108}, {0.6f, 0.7f, 0.9f, 1.1f, 1.3f}},
+    // Mapa de Calor: dano por queimadura (a cada CALOR_TICK s), recarga, quantos mapas, raio e quanto tempo o mapa fica
+    [W_CALOR]        = {{6, 6, 8, 8, 12}, {3.4f, 3.1f, 3.1f, 2.8f, 2.4f}, {1, 1, 2, 2, 3}, {58, 64, 64, 72, 82}, {3.0f, 3.4f, 3.4f, 4.0f, 4.6f}},
+    // Negação: dano no impacto, recarga, quantos ¬ caem, raio e quantos segundos os inimigos ficam negados (confusos)
+    [W_NEGACAO]      = {{14, 14, 18, 18, 26}, {3.0f, 2.8f, 2.8f, 2.5f, 2.2f}, {1, 1, 1, 2, 2}, {58, 64, 64, 72, 82}, {1.6f, 1.9f, 1.9f, 2.3f, 2.8f}},
 };
 
 static const WeaponInfo weapon_infos[W_COUNT] = {
@@ -156,6 +169,8 @@ static const WeaponInfo weapon_infos[W_COUNT] = {
     [W_PROMPT]       = {"Recarga", "Comandos", "Raio da onda", NULL, false, true, false},
     [W_FIBRA]        = {"Recarga", NULL, "Comprimento", "Largura", false, true, true},
     [W_VERA]         = {"Recarga", "Ondas", "Raio", "Imunidade", true, true, false},
+    [W_CALOR]        = {"Recarga", "Mapas", "Raio", "Duração", true, true, false},
+    [W_NEGACAO]      = {"Recarga", "Negações", "Raio", "Confusão", true, true, false},
 };
 
 float sv_weapon_stat(int weapon, int stat, int level)
@@ -416,6 +431,7 @@ void sv_spawn_enemy_at(int type, Vector2 pos, bool fake)
         if (type == EN_AUDITOR) e->max_hp *= 1.0f;
         e->fake = fake;
         if (fake) e->max_hp = 1.0f;
+        else if (sv_run.duo) e->max_hp *= SV_DUO_ENEMY_HP_MULT;
         e->hp = e->max_hp;
         e->id = ++sv_run.next_enemy_id;
         e->timer = sv_rand() * 4.0f;
@@ -427,12 +443,13 @@ void sv_spawn_enemy_at(int type, Vector2 pos, bool fake)
 static void spawn_ring_position(float distance, Vector2 *out)
 {
     float angle = sv_rand() * 2.0f * PI;
-    Vector2 p = Vector2Add(sv_run.player.pos, (Vector2){cosf(angle) * distance, sinf(angle) * distance});
+    Vector2 center = sv_duo_focus();
+    Vector2 p = Vector2Add(center, (Vector2){cosf(angle) * distance, sinf(angle) * distance});
 
     // Se o ponto cai fora do mapa, tenta o lado oposto
     if (p.x < 20 || p.y < 20 || p.x > SV_WORLD_W - 20 || p.y > SV_WORLD_H - 20)
     {
-        p = Vector2Add(sv_run.player.pos, (Vector2){-cosf(angle) * distance, -sinf(angle) * distance});
+        p = Vector2Add(center, (Vector2){-cosf(angle) * distance, -sinf(angle) * distance});
     }
     *out = clamp_to_world(p, 20.0f);
 }
@@ -473,7 +490,7 @@ static int spawn_event(void)
     else if (type == EN_DADO)
     {
         // Parede de dados que cruza o mapa na direção do jogador
-        Vector2 toward = direction_of(origin, sv_run.player.pos);
+        Vector2 toward = direction_of(origin, sv_duo_focus());
         Vector2 side = {-toward.y, toward.x};
         float angle = atan2f(toward.y, toward.x);
 
@@ -596,7 +613,7 @@ void sv_hurt_player(float amount, int effect, float effect_time)
     float damage;
 
     if (sv_run.cheats[CHEAT_GOD]) return;
-    if (p->invulnerable > 0.0f || sv_run.phase != SV_PLAYING) return;
+    if (p->invulnerable > 0.0f || sv_run.phase != SV_PLAYING || p->down) return;
 
     // Vera Fischer: o golpe é verdadeiro (V) e o dano é falso (F), então o resultado é falso: V -> F = F
     {
@@ -628,9 +645,43 @@ void sv_apply_status(int effect, float effect_time)
 {
     SvPlayer *p = &sv_run.player;
 
+    if (p->down) return;
     if (effect == EFF_SLOW && effect_time > p->slow) p->slow = effect_time;
     if (effect == EFF_ROOT && effect_time > p->root) p->root = effect_time;
     if (effect == EFF_INVERT && effect_time > p->invert) p->invert = effect_time;
+}
+
+int sv_target_count(void)
+{
+    return sv_duo_count();
+}
+
+bool sv_target_alive(int index)
+{
+    return sv_duo_standing(index);
+}
+
+Vector2 sv_target_pos(int index)
+{
+    return sv_duo_player(index)->pos;
+}
+
+void sv_hurt_target(int index, float amount, int effect, float effect_time)
+{
+    int was = sv_run.active;
+
+    sv_duo_use(index);
+    sv_hurt_player(amount, effect, effect_time);
+    sv_duo_use(was);
+}
+
+void sv_apply_status_to(int index, int effect, float effect_time)
+{
+    int was = sv_run.active;
+
+    sv_duo_use(index);
+    sv_apply_status(effect, effect_time);
+    sv_duo_use(was);
 }
 
 // -----------------------------------------------------------------------------
@@ -725,6 +776,50 @@ static Target strongest_target(Vector2 from, float max_distance, const unsigned 
     return best;
 }
 
+// Mapa de Calor: o ponto com mais inimigos em volta (dentro do raio), longe dos mapas já escolhidos.
+// O chefe conta como cinco inimigos, para o mapa preferir ficar em cima dele.
+static bool densest_spot(Vector2 from, float range, float radius, const Vector2 *avoid, int avoid_count, Vector2 *out)
+{
+    float best_score = 0.0f;
+
+    for (int i = -1; i < SV_MAX_ENEMIES; i++)
+    {
+        Vector2 center;
+        float score = 0.0f;
+        bool taken = false;
+
+        if (i < 0)
+        {
+            if (!sv_run.boss.active) continue;
+            center = sv_run.boss.pos;
+        }
+        else
+        {
+            if (!sv_run.enemies[i].alive || sv_run.enemies[i].fake) continue;
+            center = sv_run.enemies[i].pos;
+        }
+        if (Vector2Distance(from, center) > range) continue;
+        for (int k = 0; k < avoid_count; k++)
+        {
+            if (Vector2Distance(center, avoid[k]) < radius * 1.5f) taken = true;
+        }
+        if (taken) continue;
+
+        for (int j = 0; j < SV_MAX_ENEMIES; j++)
+        {
+            if (sv_run.enemies[j].alive && !sv_run.enemies[j].fake && Vector2Distance(center, sv_run.enemies[j].pos) < radius) score += 1.0f;
+        }
+        if (sv_run.boss.active && Vector2Distance(center, sv_run.boss.pos) < radius + sv_run.boss.radius) score += 5.0f;
+
+        if (score > best_score)
+        {
+            best_score = score;
+            *out = center;
+        }
+    }
+    return best_score > 0.0f;
+}
+
 static void damage_target(const Target *target, float damage, Vector2 from, float knockback)
 {
     if (!target->found) return;
@@ -744,6 +839,7 @@ static SvShot *new_shot(void)
         {
             memset(&sv_run.shots[i], 0, sizeof(SvShot));
             sv_run.shots[i].alive = true;
+            sv_run.shots[i].owner = sv_run.active;
             return &sv_run.shots[i];
         }
     }
@@ -758,6 +854,7 @@ static SvZone *new_zone(void)
         {
             memset(&sv_run.zones[i], 0, sizeof(SvZone));
             sv_run.zones[i].alive = true;
+            sv_run.zones[i].owner = sv_run.active;
             return &sv_run.zones[i];
         }
     }
@@ -1032,6 +1129,63 @@ static void fire_weapon(SvWeapon *w)
         }
         if (chosen_count == 0) base_cd = 0.25f; // Ninguém por perto: tenta de novo logo, sem gastar a recarga
         else sv_sfx(SND_escolha);
+        break;
+    }
+    case W_CALOR:
+    {
+        // Prof. Baudel: um mapa de calor em cima de cada aglomeração, que queima quem fica dentro
+        int count = (int)WS(W_CALOR, WSTAT_COUNT, level);
+        float radius = WS(W_CALOR, WSTAT_AREA, level) * p->area_mult;
+        Vector2 spots[3];
+        int spot_count = 0;
+
+        base_cd = WS(W_CALOR, WSTAT_COOLDOWN, level);
+        for (int i = 0; i < count && i < 3; i++)
+        {
+            SvZone *z;
+
+            if (!densest_spot(p->pos, CALOR_RANGE, radius, spots, spot_count, &spots[spot_count])) break;
+            z = new_zone();
+            if (!z) break;
+            z->shape = ZONE_CIRCLE;
+            z->kind = ZK_CALOR;
+            z->pos = spots[spot_count++];
+            z->radius = radius;
+            z->damage = WS(W_CALOR, WSTAT_DAMAGE, level);
+            z->life = z->max_life = WS(W_CALOR, WSTAT_EXTRA, level) * p->duration_mult;
+            z->tick = CALOR_FADE;   // A primeira queimadura vem quando o mapa termina de aparecer
+            z->fired = true;
+        }
+        if (spot_count == 0) base_cd = 0.25f; // Ninguém por perto: tenta de novo logo, sem gastar a recarga
+        else sv_sfx(SND_tabela);
+        break;
+    }
+    case W_NEGACAO:
+    {
+        // Prof. Guilherme: um ¬ cai sobre cada aglomeração e nega quem está embaixo (dano e confusão)
+        int count = (int)WS(W_NEGACAO, WSTAT_COUNT, level);
+        float radius = WS(W_NEGACAO, WSTAT_AREA, level) * p->area_mult;
+        Vector2 spots[2];
+        int spot_count = 0;
+
+        base_cd = WS(W_NEGACAO, WSTAT_COOLDOWN, level);
+        for (int i = 0; i < count && i < 2; i++)
+        {
+            SvZone *z;
+
+            if (!densest_spot(p->pos, CALOR_RANGE, radius, spots, spot_count, &spots[spot_count])) break;
+            z = new_zone();
+            if (!z) break;
+            z->shape = ZONE_CIRCLE;
+            z->kind = ZK_NEGACAO;
+            z->pos = spots[spot_count++];
+            z->radius = radius;
+            z->damage = WS(W_NEGACAO, WSTAT_DAMAGE, level);
+            z->confuse = WS(W_NEGACAO, WSTAT_EXTRA, level) * p->duration_mult;
+            z->delay = NEGACAO_DELAY;
+            z->life = z->max_life = NEGACAO_DELAY + 0.45f;
+        }
+        if (spot_count == 0) base_cd = 0.25f; // Ninguém por perto: tenta de novo logo, sem gastar a recarga
         break;
     }
     case W_FIBRA:
@@ -1404,7 +1558,7 @@ static void apply_zone(SvZone *z)
 
         if (!inside) continue;
         if (z->confuse > 0.0f) e->confused = z->confuse;
-        damage_enemy(e, z->kind == ZK_PROMPT && e->id != z->target_id ? z->damage * PROMPT_SPLASH : z->damage, z->pos, z->kind == ZK_VERA ? 130.0f : z->kind == ZK_CANECA ? 70.0f : z->kind == ZK_PROMPT ? 50.0f : 30.0f);
+        damage_enemy(e, z->kind == ZK_PROMPT && e->id != z->target_id ? z->damage * PROMPT_SPLASH : z->damage, z->pos, z->kind == ZK_VERA ? 130.0f : z->kind == ZK_CANECA ? 70.0f : z->kind == ZK_PROMPT ? 50.0f : z->kind == ZK_CALOR ? 0.0f : z->kind == ZK_NEGACAO ? 40.0f : 30.0f);
     }
 
     if (sv_run.boss.active)
@@ -1434,6 +1588,7 @@ static void update_zones(float dt)
         SvZone *z = &sv_run.zones[i];
 
         if (!z->alive) continue;
+        sv_duo_use(z->owner);   // Dupla: a área usa os bônus de quem a criou
 
         // A janela do Prompt acompanha o alvo enquanto o comando é digitado
         if (z->kind == ZK_PROMPT && z->delay > 0.0f)
@@ -1462,6 +1617,17 @@ static void update_zones(float dt)
             if (z->delay > 0.0f) continue;
         }
 
+        // Mapa de Calor: queima de tempos em tempos enquanto existir
+        if (z->kind == ZK_CALOR)
+        {
+            z->tick -= dt;
+            if (z->tick <= 0.0f && z->life > CALOR_FADE)
+            {
+                z->tick += CALOR_TICK;
+                apply_zone(z);
+            }
+        }
+
         if (!z->fired)
         {
             z->fired = true;
@@ -1469,6 +1635,10 @@ static void update_zones(float dt)
             if (z->kind == ZK_DEPLOY)
             {
                 sv_sfx(SND_deploy);
+            }
+            else if (z->kind == ZK_NEGACAO)
+            {
+                sv_sfx(SND_modus);
             }
         }
 
@@ -1514,6 +1684,7 @@ static void update_shots(float dt)
         SvShot *s = &sv_run.shots[i];
 
         if (!s->alive) continue;
+        sv_duo_use(s->owner);   // Dupla: o tiro usa os bônus de quem atirou, e a nota volta para ele
 
         if (s->kind == 2 && !update_nota_flight(s, dt)) continue;
 
@@ -1585,6 +1756,14 @@ static void update_enemies(float dt)
 
         if (!e->alive) continue;
         stats = &enemy_stats[e->type];
+
+        // Dupla: o inimigo vai atrás de quem está de pé e mais perto. p passa a ser esse jogador
+        if (sv_run.duo)
+        {
+            int target = sv_duo_nearest(e->pos);
+
+            if (target >= 0) sv_duo_use(target);
+        }
 
         e->anim += dt;
         e->timer += dt;
@@ -1724,6 +1903,24 @@ static void update_enemies(float dt)
                 damage_enemy(e, 8.0f * (float)passive_level(P_ESPINHOS), p->pos, 80.0f);
             }
         }
+
+        // Dupla: quem não é o alvo também se machuca se encostar
+        if (sv_run.duo && e->alive)
+        {
+            int other = 1 - sv_run.active;
+            SvPlayer *o = sv_duo_player(other);
+
+            if (!o->down && Vector2Distance(e->pos, o->pos) < stats->radius + 8.0f)
+            {
+                if (e->fake)
+                {
+                    sv_sfx(SND_alucinacaoSome);
+                    kill_enemy(e);
+                    continue;
+                }
+                sv_hurt_target(other, stats->damage * danger_scale, EFF_NONE, 0.0f);
+            }
+        }
     }
 
     // Separação: ninguém fica em cima do outro
@@ -1761,6 +1958,17 @@ static void update_enemies(float dt)
 // Itens
 // -----------------------------------------------------------------------------
 
+// Dupla: um chip de XP pego por um sobe a barra dos dois (cada um com o seu bônus de XP)
+static void share_with_partner(int kind, float value)
+{
+    SvPlayer *partner;
+
+    if (!sv_run.duo) return;
+    partner = sv_duo_player(1 - sv_run.active);
+    if (kind == 0) partner->xp += value * partner->xp_mult;
+    else if (kind == 3) partner->pending_levels++;
+}
+
 static void update_gems(float dt)
 {
     SvPlayer *p = &sv_run.player;
@@ -1771,6 +1979,15 @@ static void update_gems(float dt)
         float d;
 
         if (!g->alive) continue;
+
+        // Dupla: o item vai para quem está de pé e mais perto
+        if (sv_run.duo)
+        {
+            int nearest = sv_duo_nearest(g->pos);
+
+            if (nearest < 0) continue;
+            sv_duo_use(nearest);
+        }
         d = Vector2Distance(g->pos, p->pos);
 
         if (g->kind == 3 || g->kind == 2) { if (d < p->magnet_range * 0.5f) g->pulled = true; }
@@ -1785,6 +2002,7 @@ static void update_gems(float dt)
             {
             case 0:
                 p->xp += g->value * p->xp_mult;
+                share_with_partner(0, g->value);
                 sv_sfx(SND_coletaXp);
                 break;
             case 1:
@@ -1798,6 +2016,7 @@ static void update_gems(float dt)
                 break;
             case 3:
                 p->pending_levels++;
+                share_with_partner(3, 0.0f);
                 sv_sfx(SND_bau);
                 break;
             }
@@ -1810,6 +2029,8 @@ static void update_gems(float dt)
 // -----------------------------------------------------------------------------
 
 #define LANTERNA_WEIGHT 4          // Peso da Lanterna no sorteio das cartas (as outras pesam 1)
+
+static void check_level_up_duo(void);
 
 static int choice_weight(const SvChoice *c)
 {
@@ -2084,6 +2305,40 @@ int sv_choice_level(const SvChoice *c)
     }
 }
 
+// Dupla: os dois sobem de nível juntos (a XP é dividida) e escolhem um de cada vez, primeiro o jogador 1
+static void check_level_up_duo(void)
+{
+    for (int k = 0; k < SV_DUO_PLAYERS; k++)
+    {
+        SvPlayer *p = sv_duo_player(k);
+
+        while (p->xp >= (float)p->xp_needed)
+        {
+            p->xp -= (float)p->xp_needed;
+            p->level++;
+            p->xp_needed = sv_xp_to_next(p->level);
+            p->pending_levels++;
+        }
+    }
+
+    if (sv_run.phase != SV_PLAYING) return;
+
+    for (int k = 0; k < SV_DUO_PLAYERS; k++)
+    {
+        SvPlayer *p = sv_duo_player(k);
+
+        // Quem caiu guarda o nível para escolher quando levantar
+        if (p->pending_levels <= 0 || p->down) continue;
+        sv_duo_use(k);
+        sv_run.player.pending_levels--;
+        sv_run.chooser = k;
+        build_choices();
+        sv_run.phase = SV_LEVELUP;
+        sv_sfx(SND_subirNivel);
+        return;
+    }
+}
+
 void sv_game_choose(int index)
 {
     SvPlayer *p = &sv_run.player;
@@ -2132,11 +2387,20 @@ void sv_game_choose(int index)
     recompute_stats();
     sv_sfx(SND_confirma);
     sv_run.phase = SV_PLAYING;
+
+    // Dupla: se o parceiro também subiu de nível, a vez de escolher passa para ele agora
+    if (sv_run.duo) check_level_up_duo();
 }
 
 static void check_level_up(void)
 {
     SvPlayer *p = &sv_run.player;
+
+    if (sv_run.duo)
+    {
+        check_level_up_duo();
+        return;
+    }
 
     while (p->xp >= (float)p->xp_needed)
     {
@@ -2159,9 +2423,32 @@ static void check_level_up(void)
 // Partida
 // -----------------------------------------------------------------------------
 
+// Monta o jogador em cena no ponto de partida, com o personagem pedido
+static void setup_player(Vector2 pos, int character)
+{
+    SvPlayer *p = &sv_run.player;
+
+    memset(p, 0, sizeof(*p));
+    p->pos = pos;
+    p->facing_vector = (Vector2){0.0f, 1.0f};
+    p->direction = SOUTH;
+    p->level = 1;
+    p->xp_needed = sv_xp_to_next(1);
+
+    // Personagem ainda bloqueado volta para o Estagiário
+    p->character = (sv_debug_mode || sv_character_unlocked(character, sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills)) ? character : CH_ESTAGIARIO;
+    p->weapons[0] = (SvWeapon){sv_character(p->character)->start_weapon, 1, 0.5f, 0.0f};
+    p->weapon_count = 1;
+    p->hp = 0.0f;
+    p->max_hp = 0.0f;
+    recompute_stats();
+    p->hp = p->max_hp;
+    p->revive_ready = sv_meta.upgrades[UPG_RECOMECO] > 0 || sv_character(p->character)->free_revive;
+}
+
 void sv_game_start(unsigned seed)
 {
-    SvPlayer *p;
+    Vector2 start = {3.5f * SV_CELL_W, 2.5f * SV_CELL_H};
 
     sv_map_init();
     memset(&sv_run, 0, sizeof(sv_run));
@@ -2170,22 +2457,20 @@ void sv_game_start(unsigned seed)
     sv_run.phase = SV_PLAYING;
     sv_run.next_enemy_id = 0;
 
-    p = &sv_run.player;
-    p->pos = (Vector2){3.5f * SV_CELL_W, 2.5f * SV_CELL_H};
-    p->facing_vector = (Vector2){0.0f, 1.0f};
-    p->direction = SOUTH;
-    p->level = 1;
-    p->xp_needed = sv_xp_to_next(1);
-
-    // Personagem ainda bloqueado volta para o Estagiário
-    p->character = (sv_debug_mode || sv_character_unlocked(sv_meta.character, sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills)) ? sv_meta.character : CH_ESTAGIARIO;
-    p->weapons[0] = (SvWeapon){sv_character(p->character)->start_weapon, 1, 0.5f, 0.0f};
-    p->weapon_count = 1;
-    p->hp = 0.0f;
-    p->max_hp = 0.0f;
-    recompute_stats();
-    p->hp = p->max_hp;
-    p->revive_ready = sv_meta.upgrades[UPG_RECOMECO] > 0 || sv_character(p->character)->free_revive;
+    if (!sv_duo_mode)
+    {
+        setup_player(start, sv_meta.character);
+    }
+    else
+    {
+        // Dupla: o jogador 2 é montado primeiro e guardado; o jogador 1 fica em cena
+        sv_run.duo = true;
+        sv_run.active = 1;
+        setup_player((Vector2){start.x + SV_DUO_START_GAP / 2.0f, start.y}, sv_meta.character2);
+        sv_run.seats[1].player = sv_run.player;
+        sv_run.active = 0;
+        setup_player((Vector2){start.x - SV_DUO_START_GAP / 2.0f, start.y}, sv_meta.character);
+    }
 
     sv_run.act = 0;
     sv_banner("ATO I", 3.0f);
@@ -2194,8 +2479,9 @@ void sv_game_start(unsigned seed)
 
 static void update_music_and_ambient(void)
 {
-    int col = (int)(sv_run.player.pos.x / SV_CELL_W);
-    int row = (int)(sv_run.player.pos.y / SV_CELL_H);
+    Vector2 at = sv_duo_focus();
+    int col = (int)(at.x / SV_CELL_W);
+    int row = (int)(at.y / SV_CELL_H);
 
     if (col < 0) col = 0;
     if (col >= SV_COLS) col = SV_COLS - 1;
@@ -2285,11 +2571,10 @@ static void update_fx(float dt)
     }
 }
 
-static void check_death(void)
+// Ctrl+Z: o jogador em cena volta com metade da vida e empurra todo mundo para longe. Falso se não tinha.
+static bool use_ctrl_z(void)
 {
     SvPlayer *p = &sv_run.player;
-
-    if (p->hp > 0.0f) return;
 
     if (p->revive_ready)
     {
@@ -2307,15 +2592,46 @@ static void check_death(void)
         sv_spawn_fx(FX_EXPLOSION, p->pos, 0.5f, 3.0f);
         sv_sfx(SND_evolucao);
         sv_banner("CTRL+Z", 2.0f);
-        return;
+        return true;
     }
+    return false;
+}
 
+static void finish_dead(void)
+{
     sv_run.phase = SV_DEAD;
     sv_sfx(SND_morte);
     sv_music_play(MUS_GAMEOVER);
 }
 
+static void check_death(void)
+{
+    if (sv_run.duo)
+    {
+        // Dupla: quem fica sem vida usa o Ctrl+Z ou cai; a partida acaba quando os dois caem
+        for (int k = 0; k < SV_DUO_PLAYERS; k++)
+        {
+            SvPlayer *p = sv_duo_player(k);
+
+            if (p->down || p->hp > 0.0f) continue;
+            sv_duo_use(k);
+            if (!use_ctrl_z()) sv_duo_fall(k);
+        }
+        if (sv_duo_all_down()) finish_dead();
+        return;
+    }
+
+    if (sv_run.player.hp > 0.0f) return;
+    if (use_ctrl_z()) return;
+    finish_dead();
+}
+
 void sv_game_update(float dt, Vector2 move)
+{
+    sv_game_update_duo(dt, move, (Vector2){0.0f, 0.0f});
+}
+
+void sv_game_update_duo(float dt, Vector2 move, Vector2 move2)
 {
     int budget;
 
@@ -2342,6 +2658,11 @@ void sv_game_update(float dt, Vector2 move)
     if (sv_run.next_boss < BOSS_COUNT && !sv_run.boss.active && sv_run.time >= sv_boss_spawn_time(sv_run.next_boss))
     {
         sv_boss_spawn(sv_run.next_boss++);
+        if (sv_run.duo)
+        {
+            sv_run.boss.max_hp *= SV_DUO_BOSS_HP_MULT;
+            sv_run.boss.hp = sv_run.boss.max_hp;
+        }
     }
     if (sv_run.time >= SV_RUN_SECONDS && !sv_run.overtime)
     {
@@ -2349,10 +2670,21 @@ void sv_game_update(float dt, Vector2 move)
         sv_sfx(SND_horaExtra);
     }
 
-    update_player(dt, move);
+    if (!sv_run.duo) update_player(dt, move);
+    else
+    {
+        // Dupla: cada um anda com o seu controle; quem caiu fica parado no chão
+        for (int k = 0; k < SV_DUO_PLAYERS; k++)
+        {
+            if (!sv_duo_standing(k)) continue;
+            sv_duo_use(k);
+            update_player(dt, k == 0 ? move : move2);
+        }
+        sv_duo_update(dt);
+    }
 
     // Nascimentos
-    sv_run.spawn_accumulator += sv_spawn_rate(sv_run.time) * dt * (sv_run.boss.active ? 0.25f : 1.0f) * (sv_run.cheats[CHEAT_NO_SPAWN] ? 0.0f : 1.0f);
+    sv_run.spawn_accumulator += sv_spawn_rate(sv_run.time) * dt * (sv_run.boss.active ? 0.25f : 1.0f) * (sv_run.cheats[CHEAT_NO_SPAWN] ? 0.0f : 1.0f) * (sv_run.duo ? SV_DUO_SPAWN_MULT : 1.0f);
     budget = 6;
     while (sv_run.spawn_accumulator >= 1.0f && budget-- > 0 && sv_run.enemy_count < SV_MAX_ENEMIES - 20)
     {
@@ -2360,10 +2692,27 @@ void sv_game_update(float dt, Vector2 move)
     }
     if (sv_run.spawn_accumulator > 8.0f) sv_run.spawn_accumulator = 8.0f;
 
-    update_weapons(dt);
+    if (!sv_run.duo) update_weapons(dt);
+    else
+    {
+        for (int k = 0; k < SV_DUO_PLAYERS; k++)
+        {
+            if (!sv_duo_standing(k)) continue;
+            sv_duo_use(k);
+            update_weapons(dt);
+        }
+    }
     update_shots(dt);
     update_zones(dt);
     update_enemies(dt);
+
+    // Dupla: o chefe mira em quem está de pé e mais perto dele
+    if (sv_run.duo && sv_run.boss.active)
+    {
+        int target = sv_duo_nearest(sv_run.boss.pos);
+
+        if (target >= 0) sv_duo_use(target);
+    }
     sv_boss_update(dt);
     sv_hazards_update(dt);
     update_gems(dt);
@@ -2372,6 +2721,9 @@ void sv_game_update(float dt, Vector2 move)
 
     check_level_up();
     check_death();
+
+    // Dupla: fora da escolha de nível, quem fica em cena entre um quadro e outro é o jogador 1
+    if (sv_run.duo && sv_run.phase != SV_LEVELUP) sv_duo_use(0);
 }
 
 int sv_game_finish(void)
@@ -2380,6 +2732,7 @@ int sv_game_finish(void)
 
     if (finished_flag) return 0;
     finished_flag = true;
+    sv_duo_use(0);
     if (sv_run.cheated) return 0;   // Partida com trapaça não conta para o progresso do save
 
     earned = sv_run.coins + (int)(sv_run.time / 10.0f) + sv_run.bosses_defeated * 30 + (sv_run.phase == SV_WON ? 300 : 0);

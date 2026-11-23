@@ -5,7 +5,7 @@
 #include "macros.h"
 
 // A água aparece a partir do Ato III (GDD 2.6).
-#define WATER_FIRST_DAY 46
+#define DARKENING_FIRST_DAY 12
 
 typedef struct {
     int day;
@@ -172,7 +172,7 @@ const char *const *calendar_get_note_lines(int day)
 
 float calendar_get_water_level(int day)
 {
-    if (day < WATER_FIRST_DAY) return 0.0f;
+    if (day < DARKENING_FIRST_DAY) return 0.0f;
 
-    return (float)(day - WATER_FIRST_DAY + 1) / (float)(TOTAL_GAME_DAYS - WATER_FIRST_DAY + 1);
+    return (float)(day - DARKENING_FIRST_DAY + 1) / (float)(TOTAL_GAME_DAYS - DARKENING_FIRST_DAY + 1);
 }

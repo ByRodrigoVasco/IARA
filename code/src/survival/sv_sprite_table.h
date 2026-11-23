@@ -18,7 +18,7 @@
     X(bo_impressora, "bo_impressora", 64, 64, 24) \
     X(bo_modelo, "bo_modelo", 64, 64, 24) \
     X(bo_diego, "bo_diego", 64, 64, 24) \
-    X(bo_rene, "bo_rene", 64, 64, 24) \
+    X(bo_rene, "bo_rene", 80, 80, 24) \
     X(bo_iara, "bo_iara", 96, 96, 24) \
     X(fx_grampeador, "fx_grampeador", 28, 12, 4) \
     X(fx_ponteiro, "fx_ponteiro", 66, 13, 4) \
@@ -48,6 +48,7 @@
     X(bp_onda, "bp_onda", 96, 48, 4) \
     X(bp_maos, "bp_maos", 48, 44, 4) \
     X(bp_falsa, "bp_falsa", 72, 44, 4) \
+    X(bp_nota, "bp_nota", 24, 24, 4) \
     X(ic_grampeador, "ic_grampeador", 24, 24, 4) \
     X(ic_ponteiro, "ic_ponteiro", 24, 24, 4) \
     X(ic_caneca, "ic_caneca", 24, 24, 4) \
@@ -61,6 +62,9 @@
     X(ic_colega, "ic_colega", 24, 24, 4) \
     X(ic_novaconversa, "ic_novaconversa", 24, 24, 4) \
     X(ic_prompt, "ic_prompt", 24, 24, 4) \
+    X(ic_calor, "ic_calor", 24, 24, 4) \
+    X(ic_negacao, "ic_negacao", 24, 24, 4) \
+    X(fx_negacao, "fx_negacao", 40, 28, 2) \
     X(ic_fibra, "ic_fibra", 24, 24, 4) \
     X(ps_cafe, "ps_cafe", 24, 24, 4) \
     X(ps_manual, "ps_manual", 24, 24, 4) \

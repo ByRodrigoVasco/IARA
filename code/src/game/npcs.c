@@ -1444,6 +1444,22 @@ void draw_npcs(float scale, Color tint, float player_y, bool behind_player)
     }
 }
 
+void draw_npcs_lit(float scale, NpcLightFn light, float player_y, bool behind_player)
+{
+    if (!npcs_loaded) return;
+
+    float size = NPC_SIZE_AT_REFERENCE * scale;
+
+    for (int i = 0; i < NPC_COUNT; i++)
+    {
+        bool npc_is_behind = npc_states[i].position.y < player_y;
+        if (npc_is_behind != behind_player) continue;
+
+        Vector2 foot = {npc_states[i].position.x + (size * 0.5f), npc_states[i].position.y + (size * 0.9f)};
+        draw_npc(i, scale, light(foot));
+    }
+}
+
 void draw_npc_portrait(int npc_id, Rectangle destination)
 {
     if (!npcs_loaded || npc_id < 0 || npc_id >= NPC_COUNT) return;
