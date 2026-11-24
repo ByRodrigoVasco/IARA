@@ -301,6 +301,10 @@ extern int sv_time_scale;
 
 extern bool sv_debug_mode;   // Ligado pela tecla F1 (sv_debug.c). Libera as trapaças e todos os personagens.
 
+/** @brief Personagem que vale de verdade: o pedido, se estiver liberado (ou com o debug ligado), senão o Estagiário.
+ *  A aparência carregada, a habilidade da partida e o save usam todos este mesmo valor. */
+int sv_playable_character(int character);
+
 // Modo dupla: ligado antes de sv_game_start para a próxima partida ser em dupla (veja sv_duo.h).
 extern bool sv_duo_mode;
 
@@ -367,6 +371,7 @@ int sv_choice_level(const SvChoice *choice);
 const char *sv_boss_name(int boss);
 const char *sv_act_name(int act);
 int sv_area_ambient(int area);
+int sv_start_ambient(void);   // Ambiente da área onde a partida começa (para deixá-lo pronto no carregamento)
 int sv_area_room(int row, int col);
 
 // Auxiliares de simulação, usados também por sv_boss.c.
