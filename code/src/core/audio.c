@@ -5,6 +5,7 @@
 
 #include "audio.h"
 #include "macros.h"
+#include "assets_fs.h"
 
 static Music menu_music = {0};
 static Music game_music = {0};
@@ -55,10 +56,10 @@ bool initialize_audio(void)
         return false;
     }
 
-    menu_music = LoadMusicStream(MENU_MUSIC_PATH);
-    game_music = LoadMusicStream(GAME_MUSIC_PATH);
-    calm_music = LoadMusicStream(CALM_MUSIC_PATH);
-    quiz_music = LoadMusicStream(QUIZ_MUSIC_PATH);
+    menu_music = asset_load_music(MENU_MUSIC_PATH);
+    game_music = asset_load_music(GAME_MUSIC_PATH);
+    calm_music = asset_load_music(CALM_MUSIC_PATH);
+    quiz_music = asset_load_music(QUIZ_MUSIC_PATH);
     flash_stinger = LoadSound(FLASH_STINGER_PATH);
     jump_stinger = LoadSound(JUMP_STINGER_PATH);
     mouse_click_sound = LoadSound(MOUSE_CLICK_SOUND_PATH);

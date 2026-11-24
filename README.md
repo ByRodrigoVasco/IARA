@@ -125,7 +125,7 @@ powershell -ExecutionPolicy Bypass -File tools/pacote/empacotar.ps1
 powershell -ExecutionPolicy Bypass -File tools/pacote/testar_pacote.ps1
 ```
 
-O primeiro comando gera `build/IARA-windows.zip`, com o executável, as DLLs e os assets. Quem recebe só extrai e abre o `iara.exe`: não precisa de instalação, conta, internet nem administrador. O segundo testa o pacote fora do ambiente de desenvolvimento; o teste em máquina real segue o [roteiro de máquina limpa](docs/fds/testes/maquina-limpa.md).
+O primeiro comando gera `build/IARA-windows.zip`, com um `iara.exe` só: as imagens, os sons e as bibliotecas (raylib, GLFW) estão dentro dele, e o jogo roda sem pastas nem DLLs ao lado. Para gerar só o executável, use `tools/release/build_release.ps1` (saída em `build/release/iara.exe`). Quem recebe só abre o `iara.exe`: não precisa de instalação, conta, internet nem administrador. O segundo testa o pacote fora do ambiente de desenvolvimento; o teste em máquina real segue o [roteiro de máquina limpa](docs/fds/testes/maquina-limpa.md).
 
 ## Entregas por disciplina
 
