@@ -73,6 +73,7 @@ float sv_boss_hit_damage(float percent_of_base_hp)
 #define W_VERA_ID 12
 #define W_CALOR_ID 14
 #define W_NEGACAO_ID 15
+#define W_RECURSAO_ID 16
 static const SvCharacter characters[CH_COUNT] = {
     [CH_ESTAGIARIO] = {"Estagiarios", "Estagiário", "Aprendiz do departamento", "Aprendiz",
                        "Aprende rápido: ganha 10% a mais de XP.",
@@ -118,6 +119,11 @@ static const SvCharacter characters[CH_COUNT] = {
                       "Sempre verdadeiro: vida máxima +20 e armadura +1.",
                       "Jogue 10 partidas.",
                       W_NEGACAO_ID, 20.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0, false},
+    [CH_DANILO] = {"Danilo", "Prof. Danilo", "Programação Imperativa e Funcional", "Função Pura",
+                   "Sem efeitos colaterais: a cada 20 s, o próximo golpe que você levar é anulado.",
+                   "Elimine 1500 inimigos no total.",
+                   W_RECURSAO_ID, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0, false,
+                   0.0f, 0.0f, 0, 0, 20.0f},
 };
 
 const SvCharacter *sv_character(int id)
@@ -141,6 +147,7 @@ bool sv_character_unlocked(int id, int runs, int wins, int best_seconds, int kil
     case CH_LUCAS: return best_seconds >= 510;
     case CH_BAUDEL: return best_seconds >= 600;
     case CH_GUILHERME: return runs >= 10;
+    case CH_DANILO: return kills >= 1500;
     default: return false;
     }
 }

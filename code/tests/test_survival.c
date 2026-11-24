@@ -489,7 +489,7 @@ static void test_characters(void)
                 if (!strcmp(ca->folder, cb->folder) || !strcmp(ca->name, cb->name) || ca->start_weapon == cb->start_weapon) distinct = false;
             }
         }
-        check("SV-41", "os 11 personagens têm pasta, nome e poder inicial próprios", CH_COUNT == 11 && distinct && weapons_ok);
+        check("SV-41", "os 12 personagens têm pasta, nome e poder inicial próprios", CH_COUNT == 12 && distinct && weapons_ok);
     }
 
     check("SV-42", "só o Estagiário vem liberado; os outros abrem com o progresso",
