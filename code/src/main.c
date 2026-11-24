@@ -13,6 +13,7 @@
 #include "accessibility.h"
 #include "preferences.h"
 #include "assets_fs.h"
+#include "data_dir.h"
 
 unsigned int screen_width = 0;
 unsigned int screen_height = 0;
@@ -53,6 +54,28 @@ int main(void)
 
     /* No build de release os assets vêm de dentro do .exe (assets_fs.h); nos outros, do disco. */
     assets_fs_init();
+
+    /* No executável de release os dados do jogador (saves, iara.ini, rankings e o log de desempenho)
+     * ficam em Documentos\IARA, e não ao lado do .exe: assim ele pode estar em qualquer pasta (Área
+     * de Trabalho, Downloads, pendrive) sem espalhar arquivos. Todos esses caminhos são relativos,
+     * então basta trabalhar dentro dessa pasta. Na primeira vez, o que já existia ao lado do .exe é
+     * copiado para lá. Se Documentos não estiver disponível, fica tudo ao lado do .exe, como antes.
+     * O build de desenvolvimento continua na pasta do repositório, onde estão os assets. */
+    if (assets_fs_embedded())
+    {
+        char data_dir[512];
+
+        if (data_dir_prepare(data_dir, sizeof(data_dir)))
+        {
+            int copied = data_dir_migrate_from_exe_folder(data_dir);
+
+            if (ChangeDirectory(data_dir))
+            {
+                if (copied > 0) TraceLog(LOG_INFO, "DADOS: %d arquivo(s) de antes copiados para %s", copied, data_dir);
+            }
+            else TraceLog(LOG_WARNING, "DADOS: nao deu para usar %s; os dados ficam ao lado do executavel", data_dir);
+        }
+    }
 
     /* InitWindow(0, 0) faz a Raylib abrir em tela cheia, então iniciamos com um
      *  tamanho fixo (janela) e depois ajustamos ao tamanho do monitor.

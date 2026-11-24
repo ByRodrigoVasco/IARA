@@ -18,9 +18,13 @@ CONTROLES
 - As demais teclas aparecem na tela durante o jogo.
 
 PROGRESSO
-O progresso fica na pasta saves, ao lado do iara.exe: um save por jogador, em saves\normal e saves\sobrevivencia. Depois de INICIAR, o jogo pede o modo e o save.
-Para comecar do zero, apague esse arquivo. Se a pasta nao permitir gravacao
-(pasta do sistema, por exemplo), o jogo funciona, mas o progresso nao fica salvo.
+O progresso fica em Documentos\IARA, criada pelo proprio jogo: um save por
+jogador, em saves\normal, saves\sobrevivencia e saves\dupla. As preferencias
+(iara.ini), os rankings e o log de desempenho ficam na mesma pasta. Assim o
+iara.exe pode ficar em qualquer lugar sem espalhar arquivos.
+Depois de INICIAR, o jogo pede o modo e o save. Para comecar do zero, apague
+a pasta Documentos\IARA. Se ela nao puder ser criada, os dados ficam ao lado
+do iara.exe; se nem ali der para gravar, o jogo funciona, mas nao salva.
 
 SE ALGO DER ERRADO
 - O computador precisa de placa de video com suporte a OpenGL 3.3.
