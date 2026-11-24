@@ -453,7 +453,8 @@ static void render_hub(void)
         sv_text_centered("Dez minutos de expediente. Sobreviva às cinco áreas e desligue a IARA.", w / 2.0f, 235.0f * ui, 30.0f * ui, (Color){220, 205, 215, 255});
     }
 
-    snprintf(text, sizeof(text), "%s   BANCO DE HORAS  %d", player_name(), sv_meta.coins);
+    // O nome do save vem com rótulo: sozinho, um nome curto (ex.: "a") parecia um caractere solto na tela
+    snprintf(text, sizeof(text), "%s: %s     BANCO DE HORAS: %d", duo ? "DUPLA" : "JOGADOR", player_name(), sv_meta.coins);
     sv_text_centered(text, w / 2.0f, 310.0f * ui, 44.0f * ui, (Color){255, 214, 80, 255});
     snprintf(text, sizeof(text), "Partidas %d   Vitórias %d   Melhor tempo %d:%02d   Abates %d", sv_meta.runs, sv_meta.wins, sv_meta.best_seconds / 60, sv_meta.best_seconds % 60, sv_meta.kills);
     sv_text_centered(text, w / 2.0f, 370.0f * ui, 26.0f * ui, (Color){180, 170, 185, 255});
