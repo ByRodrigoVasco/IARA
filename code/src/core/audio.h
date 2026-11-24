@@ -118,6 +118,16 @@ void update_player_footstep_audio(bool is_walking);
 void update_iara_voice_typing(bool is_typing);
 
 /**
+ * @brief Reproduz o som da porta de vidro abrindo (saída do escritório).
+ */
+void play_door_sound(void);
+
+/**
+ * @brief Reproduz o som de teclado, quando o jogador responde algo na tela do computador.
+ */
+void play_keyboard_sound(void);
+
+/**
  * @brief Para as músicas, descarrega os recursos de áudio e fecha o dispositivo.
  */
 void unload_audio(void);
