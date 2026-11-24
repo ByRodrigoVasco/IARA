@@ -347,22 +347,35 @@ static void draw_backdrop(void)
 // Ranking
 // -----------------------------------------------------------------------------
 
-// Tabela do ranking: posição, nome, tempo e abates. A partida que acabou de terminar aparece destacada.
+// Tabela do ranking: posição, nome, pontos, tempo e abates. A partida que acabou de terminar aparece destacada.
+// As colunas de números ficam alinhadas à direita; o nome usa o espaço que sobra.
 static void draw_ranking(float x, float y, float width, int rows, float size)
 {
     float ui = sv_ui();
     float line = size * 1.25f;
     float pad = 16.0f * ui;
+    float gap = size * 0.5f;
     int count = sv_ranking_count();
     char text[96];
+    Color header = (Color){160, 150, 165, 255};
+    // Cada coluna tem a largura do maior entre o título e o maior número que cabe nela
+    float kills_w = fmaxf(sv_text_width("ABATES", size), sv_text_width("9999", size));
+    float time_w = fmaxf(sv_text_width("TEMPO", size), sv_text_width("10:00", size));
+    float points_w = fmaxf(sv_text_width("PONTOS", size), sv_text_width("99999", size));
+    float kills_right = x + width - pad;
+    float time_right = kills_right - kills_w - gap;
+    float points_right = time_right - time_w - gap;
+    float name_x = x + pad + size * 1.6f;
+    float name_room = (points_right - points_w - gap) - name_x;
 
     DrawRectangleRec((Rectangle){x, y, width, pad * 2.0f + line * (float)(rows + 1) + size * 0.4f}, (Color){10, 4, 16, 215});
     DrawRectangleLinesEx((Rectangle){x, y, width, pad * 2.0f + line * (float)(rows + 1) + size * 0.4f}, 2.0f * ui, (Color){120, 30, 44, 255});
 
-    sv_text("#", x + pad, y + pad, size, (Color){160, 150, 165, 255});
-    sv_text("NOME", x + pad + size * 1.6f, y + pad, size, (Color){160, 150, 165, 255});
-    sv_text("TEMPO", x + width - pad - size * 5.6f, y + pad, size, (Color){160, 150, 165, 255});
-    sv_text("ABATES", x + width - pad - sv_text_width("ABATES", size), y + pad, size, (Color){160, 150, 165, 255});
+    sv_text("#", x + pad, y + pad, size, header);
+    sv_text("NOME", name_x, y + pad, size, header);
+    sv_text("PONTOS", points_right - sv_text_width("PONTOS", size), y + pad, size, (Color){255, 214, 80, 255});
+    sv_text("TEMPO", time_right - sv_text_width("TEMPO", size), y + pad, size, header);
+    sv_text("ABATES", kills_right - sv_text_width("ABATES", size), y + pad, size, header);
 
     for (int i = 0; i < rows; i++)
     {
@@ -372,7 +385,7 @@ static void draw_ranking(float x, float y, float width, int rows, float size)
 
         if (!e)
         {
-            if (i == 0 && count == 0) sv_text("Ninguém jogou ainda. Seja o primeiro!", x + pad, ry, size * 0.85f, (Color){160, 150, 165, 255});
+            if (i == 0 && count == 0) sv_text("Ninguém jogou ainda. Seja o primeiro!", x + pad, ry, size * 0.85f, header);
             break;
         }
         if (last_rank_order != 0 && e->order == last_rank_order)
@@ -383,28 +396,31 @@ static void draw_ranking(float x, float y, float width, int rows, float size)
         snprintf(text, sizeof(text), "%d", i + 1);
         sv_text(text, x + pad, ry, size, color);
         {
-            // Nome comprido é cortado com ".." para não invadir a coluna do tempo
+            // Nome comprido é cortado com ".." para não invadir a coluna dos pontos
             char shown[SV_NAME_BYTES + 4];
-            float room = (x + width - pad - size * 5.6f) - (x + pad + size * 1.6f) - size * 0.4f;
+            float room = name_room - size * 0.2f;
             int len;
 
             snprintf(shown, sizeof(shown), "%s", e->name);
             len = (int)strlen(shown);
-            while (len > 0 && sv_text_width(shown, size) > room)
+            if (sv_text_width(shown, size) > room)
             {
-                len--;
-                while (len > 0 && ((unsigned char)shown[len] & 0xC0) == 0x80) len--;   // não corta no meio de um acento
-                shown[len] = '\0';
-                if (len > 0) snprintf(shown + len, sizeof(shown) - (size_t)len, "..");
-                if (sv_text_width(shown, size) <= room) break;
-                shown[len] = '\0';
+                // Tira uma letra de cada vez até o nome com ".." no fim caber
+                do
+                {
+                    len--;
+                    while (len > 0 && ((unsigned char)shown[len] & 0xC0) == 0x80) len--;   // não corta no meio de um acento
+                    snprintf(shown + len, sizeof(shown) - (size_t)len, "..");
+                } while (len > 0 && sv_text_width(shown, size) > room);
             }
-            sv_text(shown, x + pad + size * 1.6f, ry, size, color);
+            sv_text(shown, name_x, ry, size, color);
         }
+        snprintf(text, sizeof(text), "%d", sv_ranking_score(e));
+        sv_text(text, points_right - sv_text_width(text, size), ry, size, color);
         snprintf(text, sizeof(text), "%d:%02d", e->seconds / 60, e->seconds % 60);
-        sv_text(text, x + width - pad - size * 5.6f, ry, size, e->won ? (Color){120, 230, 160, 255} : color);
+        sv_text(text, time_right - sv_text_width(text, size), ry, size, e->won ? (Color){120, 230, 160, 255} : color);
         snprintf(text, sizeof(text), "%d", e->kills);
-        sv_text(text, x + width - pad - sv_text_width(text, size), ry, size, color);
+        sv_text(text, kills_right - sv_text_width(text, size), ry, size, color);
     }
 }
 
@@ -942,6 +958,18 @@ static void render_over(void)
     snprintf(text, sizeof(text), "Tempo %d:%02d   Nível %d   Abates %d   Chefes %d", (int)sv_run.time / 60, (int)sv_run.time % 60, sv_run.player.level, sv_run.kills, sv_run.bosses_defeated);
     if (duo && sv_run.duo) snprintf(text, sizeof(text), "Tempo %d:%02d   Nível J1 %d · J2 %d   Abates %d   Chefes %d", (int)sv_run.time / 60, (int)sv_run.time % 60, sv_duo_player(0)->level, sv_duo_player(1)->level, sv_run.kills, sv_run.bosses_defeated);
     sv_text_centered(text, w / 2.0f, 290.0f * ui, 34.0f * ui, (Color){220, 205, 215, 255});
+
+    {
+        // A mesma conta do ranking, para o jogador entender a posição dele
+        SvRankEntry run = {0};
+
+        run.seconds = (int)sv_run.time;
+        run.kills = sv_run.kills;
+        run.bosses = sv_run.bosses_defeated;
+        run.won = won;
+        snprintf(text, sizeof(text), "%d PONTOS   (abate %d · segundo %d · chefe %d · vitória %d)", sv_ranking_score(&run), SV_SCORE_PER_KILL, SV_SCORE_PER_SECOND, SV_SCORE_PER_BOSS, SV_SCORE_WIN_BONUS);
+        sv_text_centered(text, w / 2.0f, 335.0f * ui, 28.0f * ui, (Color){255, 214, 80, 255});
+    }
 
     snprintf(text, sizeof(text), "+%d BANCO DE HORAS", earned_coins);
     sv_text_centered(text, w / 2.0f, 380.0f * ui, 64.0f * ui, (Color){255, 214, 80, 255});
