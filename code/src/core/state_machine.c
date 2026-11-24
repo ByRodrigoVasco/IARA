@@ -254,14 +254,25 @@ void handle_state_machine(void)
 
         if (is_game_loop_finished())
         {
+            bool replay = is_game_loop_replay_requested();
+
             // Quem sai da campanha leva o progresso para o save dela
             save_progress_with_notice();
             campaign_state_ready = false;
-            active_save_clear();
-
             unload_game_loop();
-            initialize_menu_variables();
-            current_game_state_variables.current_screen = MENU_SCREEN;
+
+            if (replay)
+            {
+                // JOGAR NOVAMENTE depois do final: o mesmo save é carregado de novo e, como a
+                // campanha dele já chegou ao final, recomeça do Dia 1 (job_campaign_state)
+                current_game_state_variables.current_screen = begin_loading_active_save();
+            }
+            else
+            {
+                active_save_clear();
+                initialize_menu_variables();
+                current_game_state_variables.current_screen = MENU_SCREEN;
+            }
         }
         break;
 
