@@ -104,6 +104,8 @@ extern unsigned int middle_screen_y;
 #define MOUSE_CLICK_SOUND_PATH SOUNDS_PATH "CLICK MOUSE.mp3"
 #define IARA_VOICE_SOUND_PATH SOUNDS_PATH "ARI VOICE BLIP.mp3"
 #define PLAYER_FOOTSTEPS_SOUND_PATH SOUNDS_PATH "SOM DE PASSOS.mp3"
+#define DOOR_SOUND_PATH SOUNDS_PATH "PORTA ABRINDO.mp3"             // Saída pela porta de vidro
+#define KEYBOARD_SOUND_PATH SOUNDS_PATH "SOM DE TECLADO.ogg"         // Respostas na tela do computador
 
 // PATHS PARA O COMPUTADOR
 #define COMPUTER_ASSETS_PATH           "code/assets/sprites/computer/"

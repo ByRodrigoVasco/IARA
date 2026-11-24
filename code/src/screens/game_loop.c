@@ -857,6 +857,8 @@ void handle_map_interactables(void)
                 }
             }
         }
+        // Enquanto a fala aparece letra por letra, toca o som curto de fala (o mesmo blip da IARA)
+        update_iara_voice_typing(active_npc_id >= 0 && npc_typed_characters < line_length);
         return;
     }
 
@@ -1731,6 +1733,7 @@ void handle_game_loop_screens(void)
         if (leave_office)
         {
             leave_office = false;
+            play_door_sound();
             finish_day();
         }
         else if (enter_computer_screen)

@@ -78,6 +78,11 @@ SvMusic sv_music_current(void);
 // Troca o ambiente. -1 silencia.
 void sv_ambient_play(int ambient);
 
+/** @brief Abre do disco a trilha e o ambiente pedidos, sem tocar. Quando sv_music_play / sv_ambient_play
+ *  pedirem exatamente essas faixas, elas entram sem ler o disco naquele quadro (BUG-18).
+ *  Para a tela de carregamento e para a volta ao início, antes da próxima partida. */
+void sv_audio_prepare(SvMusic music, int ambient);
+
 // Chamar uma vez por quadro: alimenta os streams e aplica o abaixamento.
 void sv_audio_update(float dt);
 

@@ -2436,7 +2436,7 @@ static void setup_player(Vector2 pos, int character)
     p->xp_needed = sv_xp_to_next(1);
 
     // Personagem ainda bloqueado volta para o Estagiário
-    p->character = (sv_debug_mode || sv_character_unlocked(character, sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills)) ? character : CH_ESTAGIARIO;
+    p->character = sv_playable_character(character);
     p->weapons[0] = (SvWeapon){sv_character(p->character)->start_weapon, 1, 0.5f, 0.0f};
     p->weapon_count = 1;
     p->hp = 0.0f;
@@ -2446,9 +2446,18 @@ static void setup_player(Vector2 pos, int character)
     p->revive_ready = sv_meta.upgrades[UPG_RECOMECO] > 0 || sv_character(p->character)->free_revive;
 }
 
+// Onde a partida começa: no meio da célula (coluna 3, linha 2) do mapa
+#define SV_START_COL 3
+#define SV_START_ROW 2
+
+int sv_start_ambient(void)
+{
+    return area_ambient[area_grid[SV_START_ROW][SV_START_COL]];
+}
+
 void sv_game_start(unsigned seed)
 {
-    Vector2 start = {3.5f * SV_CELL_W, 2.5f * SV_CELL_H};
+    Vector2 start = {(SV_START_COL + 0.5f) * SV_CELL_W, (SV_START_ROW + 0.5f) * SV_CELL_H};
 
     sv_map_init();
     memset(&sv_run, 0, sizeof(sv_run));
@@ -2753,6 +2762,13 @@ int sv_game_finish(void)
 
 bool sv_debug_mode = false;
 
+int sv_playable_character(int character)
+{
+    if (character < 0 || character >= CH_COUNT) return CH_ESTAGIARIO;
+    if (sv_debug_mode || sv_character_unlocked(character, sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills)) return character;
+    return CH_ESTAGIARIO;
+}
+
 bool sv_cheat_active(int cheat)
 {
     return cheat >= 0 && cheat < CHEAT_COUNT && sv_run.cheats[cheat];
@@ -2782,7 +2798,9 @@ int sv_cheat_passive_level(int passive)
     return passive_level(passive);
 }
 
-bool sv_cheat_set_weapon(int weapon, int level)
+// Na dupla, as trapaças de jogador valem para os dois: cada um entra em cena, recebe e o ativo
+// volta no fim. No solo sv_duo_count() é 1 e sv_duo_use() não faz nada.
+static bool set_weapon_on_active(int weapon, int level)
 {
     SvPlayer *p = &sv_run.player;
     SvWeapon *owned = find_weapon(weapon);
@@ -2813,7 +2831,21 @@ bool sv_cheat_set_weapon(int weapon, int level)
     return true;
 }
 
-bool sv_cheat_set_passive(int passive, int level)
+bool sv_cheat_set_weapon(int weapon, int level)
+{
+    int active = sv_run.active;
+    bool changed = false;
+
+    for (int i = 0; i < sv_duo_count(); i++)
+    {
+        sv_duo_use(i);
+        if (set_weapon_on_active(weapon, level)) changed = true;
+    }
+    sv_duo_use(active);
+    return changed;
+}
+
+static bool set_passive_on_active(int passive, int level)
 {
     SvPlayer *p = &sv_run.player;
     SvPassive *owned = NULL;
@@ -2848,6 +2880,20 @@ bool sv_cheat_set_passive(int passive, int level)
     return true;
 }
 
+bool sv_cheat_set_passive(int passive, int level)
+{
+    int active = sv_run.active;
+    bool changed = false;
+
+    for (int i = 0; i < sv_duo_count(); i++)
+    {
+        sv_duo_use(i);
+        if (set_passive_on_active(passive, level)) changed = true;
+    }
+    sv_duo_use(active);
+    return changed;
+}
+
 void sv_cheat_spawn_boss(int boss)
 {
     if (boss < 0 || boss >= BOSS_COUNT) return;
@@ -2879,22 +2925,33 @@ void sv_cheat_spawn_enemies(int type, int count)
 
 void sv_cheat_level_up(void)
 {
-    SvPlayer *p = &sv_run.player;
-
     sv_run.cheated = true;
-    p->xp = (float)p->xp_needed;
+    for (int i = 0; i < sv_duo_count(); i++)
+    {
+        SvPlayer *p = sv_duo_player(i);
+
+        p->xp = (float)p->xp_needed;
+    }
 }
 
+// Na dupla, curar também levanta quem caiu
 void sv_cheat_heal(void)
 {
     sv_run.cheated = true;
-    sv_run.player.hp = sv_run.player.max_hp;
+    for (int i = 0; i < sv_duo_count(); i++)
+    {
+        SvPlayer *p = sv_duo_player(i);
+
+        p->down = false;
+        p->revive = 0.0f;
+        p->hp = p->max_hp;
+    }
 }
 
 void sv_cheat_revive(void)
 {
     sv_run.cheated = true;
-    sv_run.player.revive_ready = true;
+    for (int i = 0; i < sv_duo_count(); i++) sv_duo_player(i)->revive_ready = true;
 }
 
 void sv_cheat_jump_time(float seconds)

@@ -562,6 +562,15 @@ static DialogStep day_1_script[] = {
     },
 };
 
+// Quantas cartas da mesa de triagem valem. Os vetores das escolhas guardam MAX_TRIAGE_CARDS:
+// uma mesa com mais cartas que isso (dado mal preenchido) é cortada, em vez de escrever fora deles.
+static int triage_card_count(const DialogStep *step)
+{
+    if (step->card_count < 0) return 0;
+    if (step->card_count > MAX_TRIAGE_CARDS) return MAX_TRIAGE_CARDS;
+    return step->card_count;
+}
+
 #include "computer_days.h"
 
 // Roteiro de um dia jogável: telas de abertura, chamados, conversas opcionais e relatório.
@@ -1375,7 +1384,7 @@ static int count_violated_clauses(const DialogStep *step, const int *choices)
     bool values[LOGIC_MAX_VARIABLES] = {false};
     int violated = 0;
 
-    for (int card = 0; card < step->card_count; card++)
+    for (int card = 0; card < triage_card_count(step); card++)
     {
         values[card] = (choices[card] == 1);
     }
@@ -1393,7 +1402,7 @@ static int count_training_records(const DialogStep *step, const int *choices, un
 {
     int count = 0;
 
-    for (int card = 0; card < step->card_count; card++)
+    for (int card = 0; card < triage_card_count(step); card++)
     {
         unsigned int values = step->cards[card].values;
 
@@ -1438,7 +1447,7 @@ static bool refutation_holds(const DialogStep *step, const int *choices)
     int chosen_count = 0;
     bool has_evidence = false;
 
-    for (int card = 0; card < step->card_count; card++)
+    for (int card = 0; card < triage_card_count(step); card++)
     {
         if (choices[card] != 1) continue;
 
@@ -1482,7 +1491,7 @@ static int count_board_wrong(const DialogStep *step, const int *choices)
         return refutation_holds(step, choices) ? 0 : 1;
 
     default:
-        for (int card = 0; card < step->card_count; card++)
+        for (int card = 0; card < triage_card_count(step); card++)
         {
             if (choices[card] != get_triage_correct_choice(step, card)) wrong++;
         }
@@ -1504,7 +1513,7 @@ static bool iara_answer_is_correct(int step_index, IaraMemoryLevel level)
 
     if (step->type == STEP_QUIZ) return get_iara_suggestion(step_index, level).option == step->correct_option;
 
-    for (int card = 0; card < step->card_count; card++)
+    for (int card = 0; card < triage_card_count(step); card++)
     {
         choices[card] = get_triage_iara_choice(step, card, level);
     }
@@ -1550,6 +1559,7 @@ static void decide_personal_data(bool redact)
 // Imprudência: a sugestão vira a resposta. Sem aviso na hora: o resultado aparece no relatório.
 static void send_without_checking(void)
 {
+    play_keyboard_sound();
     record_ticket(TASK_SENT_UNCHECKED, iara_answer_is_correct(current_step_index, ticket_memory_level));
     spend_iara_memory(IARA_COST_UNCHECKED);
     unchecked_sends++;
@@ -1566,7 +1576,7 @@ static void start_checking(void)
 
     if (step->type == STEP_TRIAGE)
     {
-        for (int card = 0; card < step->card_count; card++)
+        for (int card = 0; card < triage_card_count(step); card++)
         {
             triage_choices[card] = get_triage_iara_choice(step, card, ticket_memory_level);
         }
@@ -1604,6 +1614,7 @@ static void finish_checking(void)
 // Envia a mesa. Diz quantas coisas estão erradas, nunca quais.
 static void submit_triage(void)
 {
+    play_keyboard_sound();
     DialogStep *step = &dialog_sequence[current_step_index];
 
     triage_wrong_cards = count_board_wrong(step, triage_choices);
@@ -1620,6 +1631,7 @@ static void submit_triage(void)
 // Guarda o efeito da opção escolhida e segue o roteiro.
 static void choose_day_option(const DialogStep *step, int option)
 {
+    play_keyboard_sound();
     day_choice_effects |= step->choice_effects[option];
     advance_step();
 }
@@ -1627,6 +1639,7 @@ static void choose_day_option(const DialogStep *step, int option)
 // Marca a alternativa escolhida e atualiza a contagem de erros seguidos.
 static void answer_current_question(int option)
 {
+    play_keyboard_sound();
     current_quiz_answered = true;
     current_quiz_selected = option;
     current_wrong_answers = (option == dialog_sequence[current_step_index].correct_option) ? 0 : current_wrong_answers + 1;
@@ -2065,7 +2078,7 @@ static void render_ticket_suggestion(DialogStep *step, float top)
         char chosen[MAX_LINE_LEN] = "";
         char left_out[MAX_LINE_LEN] = "";
 
-        for (int card = 0; card < step->card_count; card++)
+        for (int card = 0; card < triage_card_count(step); card++)
         {
             char *list = (get_triage_iara_choice(step, card, ticket_memory_level) == 1) ? chosen : left_out;
 
@@ -2269,7 +2282,7 @@ static const char *get_board_result_text(const DialogStep *step)
     case BOARD_REFUTATION:
         return TextFormat("A prova não fecha. %s", get_wrong_answer_hint());
     default:
-        return TextFormat("Errados: %d de %d. %s", triage_wrong_cards, step->card_count, get_wrong_answer_hint());
+        return TextFormat("Errados: %d de %d. %s", triage_wrong_cards, triage_card_count(step), get_wrong_answer_hint());
     }
 }
 
@@ -2277,7 +2290,7 @@ static const char *get_board_result_text(const DialogStep *step)
 static float get_board_row_height(const DialogStep *step, float first_row_y, bool shows_mini_ia)
 {
     float win_h = quiz_area_rect.height;
-    int slots = step->card_count + (shows_mini_ia ? 3 : 2);
+    int slots = triage_card_count(step) + (shows_mini_ia ? 3 : 2);
     float available = (quiz_area_rect.y + win_h) - first_row_y - (win_h * CONTINUE_BUTTON_GAP_RATIO);
     float row_height = (available / slots) - (win_h * OPTION_SPACING_RATIO);
 
@@ -2302,7 +2315,7 @@ static void render_ticket_triage(DialogStep *step, float top)
 
     float row_height = get_board_row_height(step, y, shows_mini_ia);
 
-    for (int card = 0; card < step->card_count; card++)
+    for (int card = 0; card < triage_card_count(step); card++)
     {
         const TriageCard *item = &step->cards[card];
         Rectangle text_band = {left, y, row_width - ((mark_width + spacing) * 2.0f), row_height};

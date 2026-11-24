@@ -24,17 +24,22 @@ unsigned int middle_screen_y = 0;
 #define FRAME_SPIKE_MS 60.0
 #define FRAME_SPIKE_MAX_LINES 200
 
-static void log_frame_spike(double frame_ms, int screen)
+// Além do total, cada linha diz quanto ficou dentro de handle_state_machine() (lógica, desenho e
+// EndDrawing) e quanto ficou fora dele, e se a janela estava sem foco ou foi mexida no quadro. Isso
+// separa uma carga do jogo de um evento do Windows (BUG-17, ainda não reproduzido).
+static void log_frame_spike(double frame_ms, double state_machine_ms, int screen, bool focused, bool window_changed)
 {
     static int lines = 0;
     FILE *file;
 
     if (frame_ms < FRAME_SPIKE_MS || lines >= FRAME_SPIKE_MAX_LINES) return;
 
-    TraceLog(LOG_WARNING, "DESEMPENHO: quadro de %.0f ms na tela %d", frame_ms, screen);
+    TraceLog(LOG_WARNING, "DESEMPENHO: quadro de %.0f ms na tela %d (%.0f ms na maquina de estados)", frame_ms, screen, state_machine_ms);
     file = fopen(FRAME_SPIKE_LOG_PATH, lines == 0 ? "w" : "a");
     if (file == NULL) return;
-    fprintf(file, "%.1f s  tela %d  quadro de %.0f ms\n", GetTime(), screen, frame_ms);
+    fprintf(file, "%.1f s  tela %d  quadro de %.0f ms  (maquina de estados %.0f ms, fora dela %.0f ms)  foco %s  janela mexida %s\n",
+            GetTime(), screen, frame_ms, state_machine_ms, frame_ms - state_machine_ms,
+            focused ? "sim" : "nao", window_changed ? "sim" : "nao");
     fclose(file);
     lines++;
 }
@@ -127,11 +132,16 @@ int main(void)
 
         update_screen_metrics();
 
+        /* Registra os quadros que travaram (mais de 60 ms), para dar para descobrir onde e quando. */
+        int screen_in_frame = current_game_state_variables.current_screen;
+        bool window_changed = IsWindowResized() || IsWindowMinimized();
+        double state_machine_start = GetTime();
+
         handle_state_machine();
 
-        /* Registra os quadros que travaram (mais de 60 ms), para dar para descobrir onde e quando. */
         double now = GetTime();
-        log_frame_spike((now - last_frame_time) * 1000.0, current_game_state_variables.current_screen);
+        log_frame_spike((now - last_frame_time) * 1000.0, (now - state_machine_start) * 1000.0, screen_in_frame,
+                        IsWindowFocused(), window_changed || IsWindowResized());
         last_frame_time = now;
     }
 
