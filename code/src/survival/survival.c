@@ -85,8 +85,8 @@ static float job_read_save(void)
     else sv_meta_set_path(NULL);
 
     sv_meta_load(sv_meta_path());
-    if (sv_meta.character < 0 || sv_meta.character >= CH_COUNT || !sv_character_unlocked(sv_meta.character, sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills)) sv_meta.character = CH_ESTAGIARIO;
-    if (sv_meta.character2 < 0 || sv_meta.character2 >= CH_COUNT || !sv_character_unlocked(sv_meta.character2, sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills)) sv_meta.character2 = CH_ESTAGIARIO;
+    sv_meta.character = sv_playable_character(sv_meta.character);
+    sv_meta.character2 = sv_playable_character(sv_meta.character2);
     char_cursor = sv_meta.character;
     char_editing = 0;
     return 1.0f;
@@ -117,7 +117,12 @@ static float job_characters(void)
 
 static float job_audio(void)
 {
-    return sv_audio_init_step();
+    float progress = sv_audio_init_step();
+
+    // Com os sons prontos, deixa aberta a trilha e o ambiente do começo da partida: assim o JOGAR
+    // não lê nada do disco (BUG-18)
+    if (progress >= 1.0f) sv_audio_prepare(MUS_ATO1, sv_start_ambient());
+    return progress;
 }
 
 static float job_ready(void)
@@ -285,8 +290,42 @@ static void finish_run(void)
     last_rank_order = last_rank_position > 0 ? sv_ranking_get(last_rank_position - 1)->order : 0;
 }
 
+// Um personagem escolhido com o debug ligado continua salvo depois que o debug é desligado. Antes de
+// cada partida ele é conferido de novo: se ainda estiver bloqueado, volta para o Estagiário por
+// inteiro (save e aparência), igual à habilidade que sv_game_start monta (BUG-33).
+static void revalidate_characters(void)
+{
+    int first = sv_playable_character(sv_meta.character);
+    int second = sv_playable_character(sv_meta.character2);
+    bool changed = false;
+
+    if (first != sv_meta.character)
+    {
+        sv_meta.character = first;
+        sv_load_player(first);
+        changed = true;
+    }
+    if (second != sv_meta.character2)
+    {
+        sv_meta.character2 = second;
+        if (duo)
+        {
+            sv_use_player_slot(1);
+            sv_load_player(second);
+            sv_use_player_slot(0);
+        }
+        changed = true;
+    }
+    if (changed)
+    {
+        char_cursor = sv_meta.character;
+        sv_meta_save(sv_meta_path()); warn_if_save_failed();
+    }
+}
+
 static void start_run(void)
 {
+    revalidate_characters();
     run_ranked = false;
     last_run_record = false;
     last_rank_position = 0;
@@ -395,7 +434,7 @@ static void render_hub(void)
         {
             sv_sfx(SND_confirma);
             if (hub_selected == 0) start_run();
-            else if (hub_selected == 1) { screen = SCREEN_CHARS; char_editing = 0; char_cursor = sv_meta.character; char_message_timer = 0.0f; }
+            else if (hub_selected == 1) { revalidate_characters(); screen = SCREEN_CHARS; char_editing = 0; char_cursor = sv_meta.character; char_message_timer = 0.0f; }
             else if (hub_selected == 2) { screen = SCREEN_SHOP; shop_selected = 0; sv_music_play(MUS_LOJA); }
             else if (hub_selected == 3) { help_select_page(1); hub_help_open = true; }
             else if (hub_selected == 4) leave_to_saves = true;
@@ -883,6 +922,7 @@ static void render_over(void)
         hub_selected = 0;
         sv_music_play(MUS_MENU);
         sv_ambient_play(-1);
+        sv_audio_prepare(MUS_ATO1, sv_start_ambient());   // Para a próxima partida começar sem ler o disco
         sv_sfx(SND_confirma);
     }
 

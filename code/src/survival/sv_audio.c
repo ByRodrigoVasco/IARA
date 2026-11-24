@@ -63,6 +63,12 @@ static bool ambient_loaded = false;
 static int ambient_id = -1;
 static float ambient_fade = 1.0f;
 
+// Faixas já abertas e paradas, à espera de sv_music_play / sv_ambient_play (sv_audio_prepare)
+static Music prepared_music;
+static SvMusic prepared_music_id = MUS_NONE;
+static Music prepared_ambient;
+static int prepared_ambient_id = -1;
+
 // Barramentos: ganho atual (linear) de cada um.
 static float bus_music = 1.0f, bus_ambient = 1.0f, bus_small = 1.0f;
 static float duck_hold = 0.0f;
@@ -152,8 +158,17 @@ void sv_audio_init(void)
     while (sv_audio_init_step() < 1.0f) { }
 }
 
+static void unload_prepared(void)
+{
+    if (prepared_music_id != MUS_NONE) UnloadMusicStream(prepared_music);
+    if (prepared_ambient_id >= 0) UnloadMusicStream(prepared_ambient);
+    prepared_music_id = MUS_NONE;
+    prepared_ambient_id = -1;
+}
+
 static void unload_streams(void)
 {
+    unload_prepared();
     if (music_loaded) { StopMusicStream(music_stream); UnloadMusicStream(music_stream); music_loaded = false; }
     if (ambient_loaded) { StopMusicStream(ambient_stream); UnloadMusicStream(ambient_stream); ambient_loaded = false; }
     music_id = MUS_NONE;
@@ -255,10 +270,16 @@ void sv_sfx(SvSound sound)
     }
 }
 
-static void start_stream(Music *stream, bool *loaded, const char *name, float volume)
+static Music open_stream(const char *name)
+{
+    return LoadMusicStream(TextFormat("%s%s.wav", SV_AUDIO_PATH, name));
+}
+
+// Toca a faixa: a preparada, se for ela (sem ler o disco), ou abre do disco na hora
+static void start_stream(Music *stream, bool *loaded, const char *name, float volume, Music *prepared, bool use_prepared)
 {
     if (*loaded) { StopMusicStream(*stream); UnloadMusicStream(*stream); *loaded = false; }
-    *stream = LoadMusicStream(TextFormat("%s%s.wav", SV_AUDIO_PATH, name));
+    *stream = use_prepared ? *prepared : open_stream(name);
     if (stream->frameCount == 0) return;
 
     stream->looping = true;
@@ -278,7 +299,12 @@ void sv_music_play(SvMusic music)
         if (music_loaded) { StopMusicStream(music_stream); UnloadMusicStream(music_stream); music_loaded = false; }
         return;
     }
-    start_stream(&music_stream, &music_loaded, music_names[music], 0.0f);
+    {
+        bool use_prepared = prepared_music_id == music;
+
+        start_stream(&music_stream, &music_loaded, music_names[music], 0.0f, &prepared_music, use_prepared);
+        if (use_prepared) prepared_music_id = MUS_NONE;   // Agora é a faixa tocando: quem descarrega é ela
+    }
 }
 
 SvMusic sv_music_current(void)
@@ -298,7 +324,38 @@ void sv_ambient_play(int ambient)
         if (ambient_loaded) { StopMusicStream(ambient_stream); UnloadMusicStream(ambient_stream); ambient_loaded = false; }
         return;
     }
-    start_stream(&ambient_stream, &ambient_loaded, ambient_names[ambient], 0.0f);
+    {
+        bool use_prepared = prepared_ambient_id == ambient;
+
+        start_stream(&ambient_stream, &ambient_loaded, ambient_names[ambient], 0.0f, &prepared_ambient, use_prepared);
+        if (use_prepared) prepared_ambient_id = -1;
+    }
+}
+
+void sv_audio_prepare(SvMusic music, int ambient)
+{
+    if (!audio_ready) return;
+
+    if (music != prepared_music_id)
+    {
+        if (prepared_music_id != MUS_NONE) UnloadMusicStream(prepared_music);
+        prepared_music_id = MUS_NONE;
+        if (music > MUS_NONE && music < MUS_COUNT)
+        {
+            prepared_music = open_stream(music_names[music]);
+            if (prepared_music.frameCount > 0) prepared_music_id = music;
+        }
+    }
+    if (ambient != prepared_ambient_id)
+    {
+        if (prepared_ambient_id >= 0) UnloadMusicStream(prepared_ambient);
+        prepared_ambient_id = -1;
+        if (ambient >= 0 && ambient < SV_AMBIENT_COUNT)
+        {
+            prepared_ambient = open_stream(ambient_names[ambient]);
+            if (prepared_ambient.frameCount > 0) prepared_ambient_id = ambient;
+        }
+    }
 }
 
 // Aproxima o ganho do alvo: desce rápido e volta devagar, para o susto passar sem pulsar.
