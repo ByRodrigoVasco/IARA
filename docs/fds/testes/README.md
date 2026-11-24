@@ -147,7 +147,7 @@ INICIAR, cartão do dia, caminhada pelo escritório, tutorial, os cinco chamados
 | CT-104 | Em todo dia jogável um NPC (nunca a IARA) dá a dica, e conversar não muda nenhum ponto (US04, PI2-202) | OK |
 | CT-105 | Manual com dica vale mais que manual sem dica, que vale mais que a IARA; os pontos acumulam e um dia isolado não muda o final (US11, PI2-168) | OK |
 | CT-106 | Depois do final da campanha, JOGAR NOVAMENTE recomeça do Dia 1 no mesmo save, sem herdar nada, e SAIR pede confirmação (PI2-318) | OK |
-| CT-107 | No fim de uma partida da Sobrevivência, JOGAR NOVAMENTE começa outra na hora, e as saídas levam ao início do modo e ao menu (PI2-318) | OK |
+| CT-107 | No fim de uma partida da Sobrevivência, MENU DA SOBREVIVÊNCIA volta ao início do modo, com JOGAR marcado, e SAIR PARA O MENU leva ao menu (PI2-318) | A executar |
 
 ## Evidência da US14: ignorar os NPCs
 

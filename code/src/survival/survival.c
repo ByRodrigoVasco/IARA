@@ -40,13 +40,12 @@ static int pause_selected = 0;
 static bool pause_help_open = false;   // O painel de ajuda está aberto por cima da pausa
 static int earned_coins = 0;
 
-// Escolha no fim da partida: jogar de novo direto, voltar ao início do modo ou sair para o menu principal
-#define OVER_OPTIONS 3
-#define OVER_PLAY_AGAIN 0
-#define OVER_SURVIVAL_MENU 1
-#define OVER_MAIN_MENU 2
+// Escolha no fim da partida: voltar ao início do modo (onde JOGAR já vem marcado) ou sair para o menu principal
+#define OVER_OPTIONS 2
+#define OVER_SURVIVAL_MENU 0
+#define OVER_MAIN_MENU 1
 #define OVER_INPUT_DELAY 0.6f          // Segundos sem ler teclas: quem estava apertando algo ao morrer não escolhe sem querer
-static int over_selected = OVER_PLAY_AGAIN;
+static int over_selected = OVER_SURVIVAL_MENU;
 static float over_wait = 0.0f;
 static float shop_message_timer = 0.0f;
 static const char *shop_message = "";
@@ -59,11 +58,11 @@ static long last_rank_order = 0;       // Para destacar a linha do jogador no ra
 
 static void finish_run(void);
 
-// Abre a tela de resultado com JOGAR NOVAMENTE marcado
+// Abre a tela de resultado com MENU DA SOBREVIVÊNCIA marcado
 static void enter_over_screen(void)
 {
     screen = SCREEN_OVER;
-    over_selected = OVER_PLAY_AGAIN;
+    over_selected = OVER_SURVIVAL_MENU;
     over_wait = 0.0f;
 }
 
@@ -949,13 +948,6 @@ static void choose_over_option(int option)
     sv_ambient_play(-1);
     SetMouseCursor(MOUSE_CURSOR_ARROW);
 
-    if (option == OVER_PLAY_AGAIN)
-    {
-        sv_audio_prepare(MUS_ATO1, sv_start_ambient());
-        start_run();   // Mesmo personagem (ou dupla) e os upgrades já comprados
-        return;
-    }
-
     screen = SCREEN_HUB;
     hub_selected = 0;
     sv_music_play(MUS_MENU);
@@ -966,7 +958,7 @@ static void choose_over_option(int option)
 
 static void render_over(void)
 {
-    static const char *labels[OVER_OPTIONS] = {"JOGAR NOVAMENTE", "MENU DA SOBREVIVÊNCIA", "SAIR PARA O MENU"};
+    static const char *labels[OVER_OPTIONS] = {"MENU DA SOBREVIVÊNCIA", "SAIR PARA O MENU"};
     float ui = sv_ui();
     float w = (float)GetScreenWidth();
     bool won = sv_run.phase == SV_WON;
@@ -995,7 +987,7 @@ static void render_over(void)
         else if (hovered >= 0 && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) { over_selected = hovered; choose_over_option(hovered); }
     }
 
-    // Jogar de novo já trocou de tela: este quadro só limpa o fundo (os números da partida nova estão zerados)
+    // A escolha já trocou de tela: este quadro só limpa o fundo
     if (screen != SCREEN_OVER)
     {
         begin_game_drawing();

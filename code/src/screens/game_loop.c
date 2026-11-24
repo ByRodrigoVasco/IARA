@@ -1692,11 +1692,20 @@ static void handle_ending_choice(void)
     float scale = get_ui_scale();
     float width = (float)GetScreenWidth();
     float height = (float)GetScreenHeight();
+    float label_size = ui_font_size(1.3f);   // O mesmo tamanho que ui_draw_button usa no rótulo
     float button_width = 520.0f * scale;
     float button_height = 70.0f * scale;
     float top = height * 0.46f;
     Rectangle buttons[ENDING_CHOICE_COUNT];
     int hovered = -1;
+
+    // Os botões ficam da largura do rótulo mais comprido, com folga dos dois lados, para o texto não encostar na borda
+    for (int i = 0; i < ENDING_CHOICE_COUNT; i++)
+    {
+        float needed = MeasureTextEx(default_game_font, labels[i], label_size, label_size * 0.06f).x + (80.0f * scale);
+
+        if (needed > button_width) button_width = needed;
+    }
 
     ending_choice_wait += GetFrameTime();
 
@@ -1730,7 +1739,8 @@ static void handle_ending_choice(void)
             if (delta.x != 0.0f || delta.y != 0.0f) ending_choice_selected = hovered;
         }
 
-        if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_KP_ENTER)) choose_ending_option(ending_choice_selected);
+        if (IsKeyPressed(KEY_ESCAPE)) choose_ending_option(ENDING_CHOICE_MENU);   // Como no fim da Sobrevivência: ESC volta ao menu
+        else if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_KP_ENTER)) choose_ending_option(ending_choice_selected);
         else if (hovered >= 0 && IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
         {
             ending_choice_selected = hovered;
@@ -1742,7 +1752,7 @@ static void handle_ending_choice(void)
 
     for (int i = 0; i < ENDING_CHOICE_COUNT; i++) ui_draw_button(buttons[i], labels[i], i == ending_choice_selected && !confirm_is_open(), i == ENDING_CHOICE_QUIT);
     if (confirm_is_open()) confirm_update_and_draw();   // Abriu neste quadro: a janela já aparece (a primeira leitura de teclas é pulada)
-    ui_draw_hint("SETAS: escolher    ENTER: confirmar");
+    ui_draw_hint("SETAS: escolher    ENTER: confirmar    ESC: sair para o menu");
 }
 
 /**

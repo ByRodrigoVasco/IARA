@@ -1758,7 +1758,7 @@ static void chegar_na_escolha_do_final(void)
 /* PI2-318: no fim da campanha e no fim de uma partida da Sobrevivencia, o jogador escolhe entre jogar de novo e sair. */
 static void testar_escolha_depois_do_final(void)
 {
-    titulo("Jogar novamente ou sair no fim da partida (CT-106 e CT-107)");
+    titulo("Escolha no fim da partida (CT-106 e CT-107)");
     etapa("depois do cartao do final, JOGAR NOVAMENTE recomeca do Dia 1 no mesmo save e SAIR pede confirmacao");
 
     chegar_na_escolha_do_final();
@@ -1788,7 +1788,7 @@ static void testar_escolha_depois_do_final(void)
            current_game_state_variables.evidence_mask == 0 &&
            current_hidden_statistic.current_perception_points == HIDDEN_STATISTIC_START);
 
-    etapa("no fim de uma partida da Sobrevivencia: JOGAR NOVAMENTE, MENU DA SOBREVIVENCIA e SAIR PARA O MENU");
+    etapa("no fim de uma partida da Sobrevivencia: MENU DA SOBREVIVENCIA e SAIR PARA O MENU");
 
     unload_game_loop();
     current_game_state_variables.current_screen = MENU_SCREEN;
@@ -1802,15 +1802,10 @@ static void testar_escolha_depois_do_final(void)
     start_run();
     sv_run.cheated = true;
     abandon_run();
-    bool tela_com_escolha = screen == SCREEN_OVER && over_selected == OVER_PLAY_AGAIN;
+    bool tela_com_escolha = screen == SCREEN_OVER && over_selected == OVER_SURVIVAL_MENU;
 
-    choose_over_option(OVER_PLAY_AGAIN);
-    bool jogou_de_novo = screen == SCREEN_RUN && sv_run.phase == SV_PLAYING && sv_run.time < 0.5f;
-
-    sv_run.cheated = true;
-    abandon_run();
     choose_over_option(OVER_SURVIVAL_MENU);
-    bool voltou_ao_inicio_do_modo = screen == SCREEN_HUB && !leave_to_menu;
+    bool voltou_ao_inicio_do_modo = screen == SCREEN_HUB && hub_selected == 0 && !leave_to_menu;
 
     start_run();
     sv_run.cheated = true;
@@ -1819,8 +1814,8 @@ static void testar_escolha_depois_do_final(void)
     handle_state_machine();
     bool saiu_para_o_menu = current_game_state_variables.current_screen == MENU_SCREEN;
 
-    checar("CT-107", "No fim da partida da Sobrevivencia, JOGAR NOVAMENTE comeca outra na hora e as duas saidas levam ao inicio do modo e ao menu",
-           tela_com_escolha && jogou_de_novo && voltou_ao_inicio_do_modo && saiu_para_o_menu);
+    checar("CT-107", "No fim da partida da Sobrevivencia, MENU DA SOBREVIVENCIA volta ao inicio do modo, com JOGAR marcado, e SAIR PARA O MENU leva ao menu",
+           tela_com_escolha && voltou_ao_inicio_do_modo && saiu_para_o_menu);
 
     rodar_por(0.5);
 }
