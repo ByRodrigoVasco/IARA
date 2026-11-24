@@ -1,0 +1,3 @@
+/* Ícone do iara.exe no Explorer e no atalho. Compilado pelo build_release.ps1 com windres.
+ * O iara.ico sai do tools/release/gerar_icone.py. */
+1 ICON "iara.ico"
