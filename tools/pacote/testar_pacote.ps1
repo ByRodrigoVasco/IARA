@@ -44,7 +44,9 @@ if (Test-Path $pasta) { Remove-Item -Recurse -Force $pasta }
 Expand-Archive -Path $zip -DestinationPath $pasta
 
 $exe = Join-Path $pasta "iara.exe"
-$saves = Join-Path $pasta "saves"
+# O executavel grava os dados em Documentos\IARA (code/src/core/data_dir.c), nao ao lado dele
+$dados = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "IARA"
+$saves = Join-Path $dados "saves"
 
 Write-Host ""
 Write-Host "Pasta do teste: $pasta"
@@ -73,7 +75,8 @@ if ($rodando) {
     Checar "PKG-04" "Fecha pelo X em ate 10s" (Fechar-Jogo $jogo)
 }
 
-Checar "PKG-05" "Pasta de saves criada ao lado do executavel, com os dois modos" ((Test-Path (Join-Path $saves "normal")) -and (Test-Path (Join-Path $saves "sobrevivencia")))
+Checar "PKG-05" "Pasta de saves criada em Documentos\IARA, com os dois modos" ((Test-Path (Join-Path $saves "normal")) -and (Test-Path (Join-Path $saves "sobrevivencia")))
+Checar "PKG-13" "Nada gravado ao lado do executavel (so o iara.exe e o LEIA-ME)" ((@(Get-ChildItem $pasta | ForEach-Object { $_.Name } | Sort-Object) -join ",") -eq "iara.exe,LEIA-ME.txt")
 Checar "PKG-06" "Saiu sem erro" ($jogo.HasExited -and $jogo.ExitCode -eq 0)
 
 # Opcao SAIR do menu: as teclas vao so para a janela do jogo, nunca para o resto do sistema
