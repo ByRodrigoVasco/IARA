@@ -1,6 +1,7 @@
 #include <math.h>
 #include "raylib.h"
 #include "sv_audio.h"
+#include "assets_fs.h"
 
 #define MAX_VOICES 3
 #define SMALL_SOUND_GAP 0.1       // No máximo 10 sons pequenos por segundo
@@ -272,7 +273,7 @@ void sv_sfx(SvSound sound)
 
 static Music open_stream(const char *name)
 {
-    return LoadMusicStream(TextFormat("%s%s.wav", SV_AUDIO_PATH, name));
+    return asset_load_music(TextFormat("%s%s.wav", SV_AUDIO_PATH, name));
 }
 
 // Toca a faixa: a preparada, se for ela (sem ler o disco), ou abre do disco na hora
