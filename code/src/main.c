@@ -53,7 +53,10 @@ int main(void)
     /* InitWindow(0, 0) faz a Raylib abrir em tela cheia, então iniciamos com um
      *  tamanho fixo (janela) e depois ajustamos ao tamanho do monitor.
      */
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    /* VSync: o quadro espera o monitor em vez de o processador ficar girando até dar 1/60 s.
+     * Gasta bem menos CPU e deixa o movimento mais liso. O SetTargetFPS(60) abaixo continua
+     * valendo como teto em monitores acima de 60 Hz e onde o driver ignora o VSync. */
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
     InitWindow(800, 450, IARA_TITLE);
     SetWindowMinSize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT);
 
