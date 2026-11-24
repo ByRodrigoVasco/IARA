@@ -32,7 +32,7 @@ Atualizar a coluna Status conforme as issues forem corrigidas e fechadas. Confer
 | BUG-15 | Carregamentos sem retorno visual e engasgos no menu | Média | [#56](https://github.com/ByRodrigoVasco/IARA/issues/56) | Corrigido na `develop` (PR #76), issue fechada |
 | BUG-16 | Telas de modo e de save em lista vertical, pouco organizadas | Baixa | [#57](https://github.com/ByRodrigoVasco/IARA/issues/57) | Corrigido na `develop` (PR #76), issue fechada |
 | BUG-17 | Quadro de 1,67 s no menu, sete segundos depois de abrir | Baixa | [#58](https://github.com/ByRodrigoVasco/IARA/issues/58) | Aberto, não reproduzido; o log de desempenho passou a separar o tempo por etapa (`fix/bugtracker-sprint-03`) |
-| BUG-18 | Troca de música e ambiente lê o arquivo na hora | Baixa | [#59](https://github.com/ByRodrigoVasco/IARA/issues/59) | Corrigido na branch `fix/bugtracker-sprint-03` (PR pendente) |
+| BUG-18 | Troca de música e ambiente lê o arquivo na hora | Baixa | [#59](https://github.com/ByRodrigoVasco/IARA/issues/59) | Corrigido na `develop` (branch `fix/bugtracker-sprint-03`, 24/11/2026); issue aberta até entrar na `main` |
 | BUG-19 | ESC fecha o jogo na hora e a campanha não tem pausa | Média | [#64](https://github.com/ByRodrigoVasco/IARA/issues/64) | Corrigido na `develop`, issue fechada |
 | BUG-20 | O jogo não tem ajuda | Baixa | [#65](https://github.com/ByRodrigoVasco/IARA/issues/65) | Corrigido na `develop`, issue fechada |
 | BUG-21 | Falha ao salvar o progresso não é avisada | Média | [#66](https://github.com/ByRodrigoVasco/IARA/issues/66) | Corrigido na `develop`, issue fechada |
@@ -47,15 +47,15 @@ Atualizar a coluna Status conforme as issues forem corrigidas e fechadas. Confer
 | BUG-30 | Descrição das cartas de escolha passa por cima das linhas de mudança | Média | [#77](https://github.com/ByRodrigoVasco/IARA/issues/77) | Corrigido na `develop` (PR #82), issue fechada |
 | BUG-31 | Botão de velocidade (2x) no centro cobre o nome do chefe e o texto vaza do botão | Média | [#78](https://github.com/ByRodrigoVasco/IARA/issues/78) | Corrigido na `develop` (PR #82), issue fechada |
 | BUG-32 | Janela sem opção de maximizar e com tamanho solto | Média | [#79](https://github.com/ByRodrigoVasco/IARA/issues/79) | Corrigido na `develop` (PR #82), issue fechada |
-| BUG-33 | Personagem bloqueado escolhido com cheat volta com a aparência dele e a habilidade do Estagiário | Média | [#94](https://github.com/ByRodrigoVasco/IARA/issues/94) | Corrigido na branch `fix/bugtracker-sprint-03` (PR pendente) |
+| BUG-33 | Personagem bloqueado escolhido com cheat volta com a aparência dele e a habilidade do Estagiário | Média | [#94](https://github.com/ByRodrigoVasco/IARA/issues/94) | Corrigido na `develop` (branch `fix/bugtracker-sprint-03`, 24/11/2026); issue aberta até entrar na `main` |
 | BUG-34 | Suíte não compila: `test_sistema` sem `rooms.c` | Média | [#95](https://github.com/ByRodrigoVasco/IARA/issues/95) | Aberto; o código dos cômodos (`rooms.c`, commit `7a93e36`) não está mais em nenhuma branch |
 | BUG-35 | `feat/historia-comodos` conflita com sintomas e cutscenes em `game_loop.c` | Média | [#96](https://github.com/ByRodrigoVasco/IARA/issues/96) | Aberto; depende de os cômodos voltarem (ver BUG-34) |
 | BUG-36 | Commit leva 16 imagens de evidência regravadas pela suíte | Baixa | [#97](https://github.com/ByRodrigoVasco/IARA/issues/97) | Aberto (`feature/cutscenes-comportamento-npcs`) |
-| BUG-37 | Cheats do debug valem só para o jogador 1 na dupla | Baixa | [#98](https://github.com/ByRodrigoVasco/IARA/issues/98) | Corrigido na branch `fix/bugtracker-sprint-03` (PR pendente) |
-| BUG-38 | Análise estática aponta risco de estouro de vetor no quiz de triagem | Baixa | [#99](https://github.com/ByRodrigoVasco/IARA/issues/99) | Corrigido na branch `fix/bugtracker-sprint-03` (PR pendente) |
-| BUG-39 | Sair pela porta não toca o som de porta | Baixa | [#101](https://github.com/ByRodrigoVasco/IARA/issues/101) | Corrigido na branch `fix/bugtracker-sprint-03` (PR pendente) |
-| BUG-40 | Tela do quiz sem som de teclado | Baixa | [#102](https://github.com/ByRodrigoVasco/IARA/issues/102) | Corrigido na branch `fix/bugtracker-sprint-03` (PR pendente) |
-| BUG-41 | NPC começa a falar sem o som de fala (voice blip) | Baixa | [#103](https://github.com/ByRodrigoVasco/IARA/issues/103) | Corrigido na branch `fix/bugtracker-sprint-03` (PR pendente) |
+| BUG-37 | Cheats do debug valem só para o jogador 1 na dupla | Baixa | [#98](https://github.com/ByRodrigoVasco/IARA/issues/98) | Corrigido na `develop` (branch `fix/bugtracker-sprint-03`, 24/11/2026); issue aberta até entrar na `main` |
+| BUG-38 | Análise estática aponta risco de estouro de vetor no quiz de triagem | Baixa | [#99](https://github.com/ByRodrigoVasco/IARA/issues/99) | Corrigido na `develop` (branch `fix/bugtracker-sprint-03`, 24/11/2026); issue aberta até entrar na `main` |
+| BUG-39 | Sair pela porta não toca o som de porta | Baixa | [#101](https://github.com/ByRodrigoVasco/IARA/issues/101) | Corrigido na `develop` (branch `fix/bugtracker-sprint-03`, 24/11/2026); issue aberta até entrar na `main` |
+| BUG-40 | Tela do quiz sem som de teclado | Baixa | [#102](https://github.com/ByRodrigoVasco/IARA/issues/102) | Corrigido na `develop` (branch `fix/bugtracker-sprint-03`, 24/11/2026); issue aberta até entrar na `main` |
+| BUG-41 | NPC começa a falar sem o som de fala (voice blip) | Baixa | [#103](https://github.com/ByRodrigoVasco/IARA/issues/103) | Corrigido na `develop` (branch `fix/bugtracker-sprint-03`, 24/11/2026); issue aberta até entrar na `main` |
 | BUG-42 | Flash do dia, salto puro e os 4 finais sem arte própria | Média | [#104](https://github.com/ByRodrigoVasco/IARA/issues/104) | Aberto |
 | BUG-43 | Escritório não reage às escolhas do jogador, só ao dia | Média | [#105](https://github.com/ByRodrigoVasco/IARA/issues/105) | Corrigido na `develop` (PR #107), issue fechada |
 | BUG-44 | Sintomas visuais duplicados e conflito entre o PR #107 e `feature/cutscenes-comportamento-npcs` | Média | [#110](https://github.com/ByRodrigoVasco/IARA/issues/110) | Aberto (integração das branches) |
@@ -725,6 +725,8 @@ Branch aberta a partir da `develop` (`a2b8e07`) para fechar as issues de bug que
 | BUG-39 | [#101](https://github.com/ByRodrigoVasco/IARA/issues/101) | `PORTA ABRINDO.mp3` é carregado com os outros efeitos e toca quando o jogador sai pela porta de vidro (`play_door_sound()`) | `audio.c`, `game_loop.c` | CT-95 |
 | BUG-40 | [#102](https://github.com/ByRodrigoVasco/IARA/issues/102) | `SOM DE TECLADO.ogg` é carregado e toca a cada resposta no computador: alternativa do chamado, envio da triagem, escolha da conversa e "enviar sem conferir" (`play_keyboard_sound()`) | `audio.c`, `computer_loop.c` | CT-97 |
 | BUG-41 | [#103](https://github.com/ByRodrigoVasco/IARA/issues/103) | Enquanto a fala do NPC aparece letra por letra, toca o blip de voz (o mesmo da IARA). Ele para quando a fala termina ou a conversa fecha | `game_loop.c` | CT-98 |
+
+**Travamento ao trocar de personagem (Sobrevivência):** sem issue própria. Cada movimento do cursor na tela de personagens lia do disco as 32 imagens do andar do personagem. Agora todos os personagens são carregados uma vez, na tela de carregamento (`sv_load_characters_step()` em `sv_assets.c`), e escolher, trocar (TAB) ou confirmar só aponta para os quadros já carregados.
 
 **BUG-17:** sem reprodução, não há o que corrigir. Para a próxima vez, cada linha do `iara-desempenho.log` passou a dizer quanto do quadro ficou dentro de `handle_state_machine()` (lógica, desenho e `EndDrawing`), quanto ficou fora, se a janela estava em foco e se foi redimensionada ou minimizada. Assim dá para separar uma carga do jogo de um evento do Windows.
 
