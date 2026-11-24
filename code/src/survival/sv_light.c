@@ -1,4 +1,5 @@
 #include <math.h>
+#include <stddef.h>
 #include "raylib.h"
 #include "sv_light.h"
 #include "sv_duo.h"
@@ -43,6 +44,11 @@ static Light lights[MAX_LIGHTS];
 static int light_count = 0;
 static RenderTexture2D layer = {0};
 static int layer_w = 0, layer_h = 0;
+
+// Uma luz pronta, em tons de cinza: os LIGHT_RINGS degraus já somados. Cada luz vira um sprite só,
+// pintado com a cor dela, em vez de LIGHT_RINGS círculos de 36 triângulos cada.
+#define GLOW_SIZE 512
+static Texture2D glow = {0};
 
 // -----------------------------------------------------------------------------
 // Sorteio determinístico (o mesmo mapa sempre tem as mesmas lâmpadas)
@@ -168,6 +174,40 @@ void sv_light_unload(void)
     if (layer.id) UnloadRenderTexture(layer);
     layer = (RenderTexture2D){0};
     layer_w = layer_h = 0;
+    if (glow.id) UnloadTexture(glow);
+    glow = (Texture2D){0};
+}
+
+// Gera a luz pronta: em cada pixel, quantos dos LIGHT_RINGS círculos (um dentro do outro) o cobrem.
+// É a mesma soma que os círculos faziam, com o centro mais forte e a borda em degraus.
+static void make_glow(void)
+{
+    Color *pixels = MemAlloc(GLOW_SIZE * GLOW_SIZE * sizeof(Color));
+    float half = GLOW_SIZE / 2.0f;
+
+    if (pixels == NULL) return;
+    for (int y = 0; y < GLOW_SIZE; y++)
+    {
+        for (int x = 0; x < GLOW_SIZE; x++)
+        {
+            float dx = (float)x + 0.5f - half, dy = (float)y + 0.5f - half;
+            float d = sqrtf(dx * dx + dy * dy) / half;
+            int rings = 0;
+
+            for (int r = 0; r < LIGHT_RINGS; r++)
+            {
+                if (d <= 1.0f - (float)r / (float)LIGHT_RINGS) rings++;
+            }
+            unsigned char v = (unsigned char)(255 * rings / LIGHT_RINGS);
+            pixels[y * GLOW_SIZE + x] = (Color){v, v, v, 255};
+        }
+    }
+
+    Image image = {pixels, GLOW_SIZE, GLOW_SIZE, 1, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8};
+
+    glow = LoadTextureFromImage(image);
+    UnloadImage(image);
+    if (glow.id) SetTextureFilter(glow, TEXTURE_FILTER_POINT);
 }
 
 // -----------------------------------------------------------------------------
@@ -191,18 +231,22 @@ static float light_intensity(const Light *l, float t)
     }
 }
 
-// Círculos um dentro do outro somados: o centro fica mais forte e a borda sai em degraus
+// A luz pronta (make_glow) pintada com a cor e a força: o centro fica mais forte e a borda sai em
+// degraus. A camada soma as luzes (blend aditivo); força acima de 1 vira uma segunda passada, para
+// somar o mesmo que os círculos somavam.
 static void draw_light(Vector2 pos, float radius, Color color, float intensity)
 {
-    float step = intensity / (float)LIGHT_RINGS;
+    Rectangle source = {0, 0, GLOW_SIZE, GLOW_SIZE};
+    Rectangle dest = {pos.x - radius, pos.y - radius, radius * 2.0f, radius * 2.0f};
 
-    if (intensity <= 0.01f || radius < 2.0f) return;
-    for (int r = 0; r < LIGHT_RINGS; r++)
+    if (intensity <= 0.01f || radius < 2.0f || !glow.id) return;
+    while (intensity > 0.01f)
     {
-        float k = 1.0f - (float)r / (float)LIGHT_RINGS;
-        Color c = {(unsigned char)(color.r * step), (unsigned char)(color.g * step), (unsigned char)(color.b * step), 255};
+        float k = intensity > 1.0f ? 1.0f : intensity;
+        Color tint = {(unsigned char)(color.r * k), (unsigned char)(color.g * k), (unsigned char)(color.b * k), 255};
 
-        DrawCircleV(pos, radius * k, c);
+        DrawTexturePro(glow, source, dest, (Vector2){0, 0}, 0.0f, tint);
+        intensity -= k;
     }
 }
 
@@ -223,9 +267,10 @@ void sv_light_draw(Camera2D camera)
     int gem_lights = 0;
 
     if (light_count == 0) sv_light_init();
+    if (!glow.id) make_glow();
     if (!layer.id || w != layer_w || h != layer_h)
     {
-        sv_light_unload();
+        if (layer.id) UnloadRenderTexture(layer);   // Só a camada muda de tamanho; a luz pronta continua
         layer = LoadRenderTexture(w, h);
         SetTextureFilter(layer.texture, TEXTURE_FILTER_POINT);
         layer_w = w;
