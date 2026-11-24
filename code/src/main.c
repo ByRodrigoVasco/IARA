@@ -12,6 +12,7 @@
 #include "helper.h"
 #include "accessibility.h"
 #include "preferences.h"
+#include "assets_fs.h"
 
 unsigned int screen_width = 0;
 unsigned int screen_height = 0;
@@ -49,6 +50,9 @@ int main(void)
     /* Assets e save são relativos à pasta do executável (US02): assim o jogo
      * abre certo por atalho ou por outro terminal, em qualquer pasta. */
     ChangeDirectory(GetApplicationDirectory());
+
+    /* No build de release os assets vêm de dentro do .exe (assets_fs.h); nos outros, do disco. */
+    assets_fs_init();
 
     /* InitWindow(0, 0) faz a Raylib abrir em tela cheia, então iniciamos com um
      *  tamanho fixo (janela) e depois ajustamos ao tamanho do monitor.
