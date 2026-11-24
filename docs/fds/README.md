@@ -12,7 +12,7 @@ Entregas da disciplina que já estão versionadas neste repositório.
 | Processo e versionamento | [CONTRIBUTING.md](../../CONTRIBUTING.md): fluxo de branches (GitFlow), padrão de commits e Pull Requests |
 | Report da Sprint 01 (Entrega 03) | [Report da Sprint 01](sprint-01/README.md): histórias implementadas, versionamento, testes, programação em pares e evidências |
 | Report da Sprint 02 | [Report da Sprint 02](sprint-02/README.md): histórias da Week 13e14, testes de sistema, [screencast dos testes](sprint-02/screencast-testes.mp4), bug tracker, programação em pares e prints do board |
-| Report da Sprint 03 | [Report da Sprint 03](sprint-03/README.md): testes de sistema das histórias restantes (CT-94 a CT-105), um screencast por caso e o bug tracker atualizado |
+| Report da Sprint 03 | [Report da Sprint 03](sprint-03/README.md): testes de sistema das histórias restantes (CT-94 a CT-105), um screencast por caso, o bug tracker atualizado, os prints do board da sprint final e a [rastreabilidade das 16 histórias entregues](sprint-03/README.md#rastreabilidade-das-histórias-pi2-330) |
 
 ## Screencast do protótipo
 
