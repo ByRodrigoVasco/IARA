@@ -87,7 +87,7 @@ static const SpawnWeight act_spawns[SV_ACT_COUNT][8] = {
     {{EN_ECO, 20}, {EN_AUDITOR, 7}, {EN_AFOGADO, 20}, {EN_CRACHA, 15}, {EN_AUTORESPOSTA, 15}, {EN_ALUCINACAO, 12}, {EN_DADO, 10}, {-1, 0}},
 };
 
-static const char *weapon_names[W_COUNT] = {"Grampeador", "Ponteiro", "Caneca Arremessada", "Post-its Orbitais", "Não Perturbe", "Deploy em Produção", "Nota Fiscal", "Modus Ponens", "Tabela-Verdade", "Colega de Plantão", "Nova Conversa", "Prompt da IARA", "Vera Fischer", "Fibra Óptica", "Mapa de Calor", "Negação"};
+static const char *weapon_names[W_COUNT] = {"Grampeador", "Ponteiro", "Caneca Arremessada", "Post-its Orbitais", "Não Perturbe", "Deploy em Produção", "Nota Fiscal", "Modus Ponens", "Tabela-Verdade", "Colega de Plantão", "Nova Conversa", "Prompt da IARA", "Vera Fischer", "Fibra Óptica", "Mapa de Calor", "Negação", "Recursão"};
 static const char *weapon_descriptions[W_COUNT] = {
     "Tiros retos no inimigo mais próximo.",
     "Golpe em linha, para os dois lados, na direção do inimigo mais próximo.",
@@ -104,8 +104,9 @@ static const char *weapon_descriptions[W_COUNT] = {
     "Se um golpe te acerta (V), o dano é falso (F): ele é anulado e solta uma onda. Também dispara sozinha quando alguém chega perto.",
     "Feixe de luz muito forte em linha reta, que atravessa todos os inimigos no caminho.",
     "Como num teste de usabilidade: marca onde os inimigos mais se juntam com um mapa de calor que queima quem fica dentro.",
-    "Um ¬ gigante cai sobre o maior grupo de inimigos: eles levam dano e ficam negados, andando para longe de você."};
-static const SvSpriteId weapon_icons[W_COUNT] = {SPR_ic_grampeador, SPR_ic_ponteiro, SPR_ic_caneca, SPR_ic_postits, SPR_ic_naoperturbe, SPR_ic_deploy, SPR_ic_nota, SPR_ic_modus, SPR_ic_tabela, SPR_ic_colega, SPR_ic_novaconversa, SPR_ic_prompt, SPR_ps_cracha, SPR_ic_fibra, SPR_ic_calor, SPR_ic_negacao};
+    "Um ¬ gigante cai sobre o maior grupo de inimigos: eles levam dano e ficam negados, andando para longe de você.",
+    "Dispara um f() no inimigo mais próximo. Ao acertar, ele chama a si mesmo: divide-se em duas cópias menores que buscam outros inimigos, até chegar ao caso base."};
+static const SvSpriteId weapon_icons[W_COUNT] = {SPR_ic_grampeador, SPR_ic_ponteiro, SPR_ic_caneca, SPR_ic_postits, SPR_ic_naoperturbe, SPR_ic_deploy, SPR_ic_nota, SPR_ic_modus, SPR_ic_tabela, SPR_ic_colega, SPR_ic_novaconversa, SPR_ic_prompt, SPR_ps_cracha, SPR_ic_fibra, SPR_ic_calor, SPR_ic_negacao, SPR_ic_recursao};
 
 static const char *passive_names[P_COUNT] = {"Café", "Manual", "Colinha", "Ergonomia", "Crachá", "Plano de Saúde", "Network", "Hora Extra", "Marmita Térmica", "Sorte de Principiante", "Espinhos Corporativos", "Foco", "Lanterna do Celular"};
 static const char *passive_descriptions[P_COUNT] = {
@@ -152,6 +153,7 @@ static const WeaponDef weapon_defs[W_COUNT] = {
     [W_CALOR]        = {{6, 6, 8, 8, 12}, {3.4f, 3.1f, 3.1f, 2.8f, 2.4f}, {1, 1, 2, 2, 3}, {58, 64, 64, 72, 82}, {3.0f, 3.4f, 3.4f, 4.0f, 4.6f}},
     // Negação: dano no impacto, recarga, quantos ¬ caem, raio e quantos segundos os inimigos ficam negados (confusos)
     [W_NEGACAO]      = {{14, 14, 18, 18, 26}, {3.0f, 2.8f, 2.8f, 2.5f, 2.2f}, {1, 1, 1, 2, 2}, {58, 64, 64, 72, 82}, {1.6f, 1.9f, 1.9f, 2.3f, 2.8f}},
+    [W_RECURSAO]     = {{11, 11, 14, 14, 18}, {1.7f, 1.55f, 1.55f, 1.4f, 1.2f}, {1, 1, 1, 2, 2}, {300, 320, 320, 340, 360}, {2, 2, 3, 3, 4}},
 };
 
 static const WeaponInfo weapon_infos[W_COUNT] = {
@@ -171,6 +173,7 @@ static const WeaponInfo weapon_infos[W_COUNT] = {
     [W_VERA]         = {"Recarga", "Ondas", "Raio", "Imunidade", true, true, false},
     [W_CALOR]        = {"Recarga", "Mapas", "Raio", "Duração", true, true, false},
     [W_NEGACAO]      = {"Recarga", "Negações", "Raio", "Confusão", true, true, false},
+    [W_RECURSAO]     = {"Recarga", "Chamadas", "Alcance", "Profundidade", false, false, false},
 };
 
 float sv_weapon_stat(int weapon, int stat, int level)
@@ -353,6 +356,7 @@ static void recompute_stats(void)
         p->kill_heal = c->kill_heal;
         p->kill_heal_every = c->kill_heal_every;
         p->extra_colleagues = c->extra_colleagues;
+        p->pure_every = c->pure_every;
     }
 
     if (old_max > 0.0f) p->hp += p->max_hp - old_max;
@@ -626,6 +630,17 @@ void sv_hurt_player(float amount, int effect, float effect_time)
         }
     }
 
+    // Função Pura (Danilo): sem efeitos colaterais, o golpe não muda o estado do jogador
+    if (p->pure_every > 0.0f && p->pure_timer <= 0.0f)
+    {
+        p->pure_timer = p->pure_every;
+        p->pure_flash = 0.9f;
+        p->invulnerable = 0.45f;
+        sv_spawn_fx(FX_FLASH, p->pos, 0.25f, 1.0f);
+        sv_sfx(SND_novaconversa);
+        return;
+    }
+
     damage = amount - p->armor;
     if (damage < amount * 0.4f) damage = amount * 0.4f;
     if (damage < 1.0f) damage = 1.0f;
@@ -896,6 +911,9 @@ static Vector2 aim_vector(float max_distance)
     if (target.found) return direction_of(sv_run.player.pos, target.pos);
     return sv_run.player.facing_vector;
 }
+
+#define RECURSAO_SPEED 330.0f     // Velocidade do f()
+#define RECURSAO_SPLIT 0.65f      // Cada chamada recursiva leva esta fração do dano e do tamanho da anterior
 
 #define NOTA_SPEED 360.0f          // Velocidade da nota fiscal, na ida
 #define NOTA_AIM_RANGE 380.0f     // Até onde procura o inimigo para mirar
@@ -1186,6 +1204,33 @@ static void fire_weapon(SvWeapon *w)
             z->life = z->max_life = NEGACAO_DELAY + 0.45f;
         }
         if (spot_count == 0) base_cd = 0.25f; // Ninguém por perto: tenta de novo logo, sem gastar a recarga
+        break;
+    }
+    case W_RECURSAO:
+    {
+        // Prof. Danilo (PIF): f() vai no inimigo mais próximo e, ao acertar, chama a si mesmo duas vezes
+        int count = (int)WS(W_RECURSAO, WSTAT_COUNT, level);
+        float reach = WS(W_RECURSAO, WSTAT_AREA, level);
+        Vector2 aim = aim_vector(reach);
+        float base_angle = atan2f(aim.y, aim.x);
+
+        base_cd = WS(W_RECURSAO, WSTAT_COOLDOWN, level);
+        for (int i = 0; i < count; i++)
+        {
+            SvShot *s = new_shot();
+            float a = base_angle + ((float)i - (count - 1) / 2.0f) * 0.5f;
+
+            if (!s) break;
+            s->kind = 3;
+            s->pos = p->pos;
+            s->vel = (Vector2){cosf(a) * RECURSAO_SPEED, sinf(a) * RECURSAO_SPEED};
+            s->damage = WS(W_RECURSAO, WSTAT_DAMAGE, level);
+            s->radius = 9.0f;
+            s->life = reach / RECURSAO_SPEED * p->duration_mult;
+            s->pierce = 1;
+            s->depth = (int)WS(W_RECURSAO, WSTAT_EXTRA, level);
+        }
+        sv_sfx(SND_grampeador);
         break;
     }
     case W_FIBRA:
@@ -1677,6 +1722,45 @@ static bool update_nota_flight(SvShot *s, float dt)
     return true;
 }
 
+// Recursão: o f() que acertou chama a si mesmo duas vezes. As cópias saem do ponto do golpe,
+// menores e mais fracas, cada uma atrás de um inimigo diferente que ainda não foi atingido.
+static void recursao_split(const SvShot *parent)
+{
+    unsigned skip[4];
+    Vector2 dir = Vector2Normalize(parent->vel);
+    float base = atan2f(dir.y, dir.x);
+
+    if (parent->depth <= 0) return;   // Caso base: não se divide mais
+    memcpy(skip, parent->hit_ids, sizeof(skip));
+    for (int k = 0; k < 2; k++)
+    {
+        SvShot *c = new_shot();
+        Target t = nearest_target(parent->pos, 220.0f, skip, 4);
+        float a = base + (k == 0 ? -0.7f : 0.7f);
+
+        if (!c) return;
+        if (t.found)
+        {
+            Vector2 to = direction_of(parent->pos, t.pos);
+
+            a = atan2f(to.y, to.x);
+            if (!t.is_boss && t.enemy)   // A outra cópia procura um alvo diferente
+            {
+                memmove(&skip[1], &skip[0], sizeof(unsigned) * 3);
+                skip[0] = t.enemy->id;
+            }
+        }
+        *c = *parent;
+        c->alive = true;
+        c->depth = parent->depth - 1;
+        c->damage = parent->damage * RECURSAO_SPLIT;
+        c->radius = fmaxf(4.0f, parent->radius * 0.8f);
+        c->vel = (Vector2){cosf(a) * RECURSAO_SPEED, sinf(a) * RECURSAO_SPEED};
+        c->life = 0.75f;
+        c->pierce = 1;
+    }
+}
+
 static void update_shots(float dt)
 {
     for (int i = 0; i < SV_MAX_SHOTS; i++)
@@ -1719,6 +1803,7 @@ static void update_shots(float dt)
                 memmove(&s->hit_ids[1], &s->hit_ids[0], sizeof(unsigned) * 3);
                 s->hit_ids[0] = e->id;
                 damage_enemy(e, s->damage, Vector2Subtract(s->pos, s->vel), 30.0f);
+                if (s->kind == 3) recursao_split(s);
                 if (--s->pierce <= 0) s->alive = false;
             }
         }
@@ -1730,6 +1815,7 @@ static void update_shots(float dt)
                 memmove(&s->hit_ids[1], &s->hit_ids[0], sizeof(unsigned) * 3);
                 s->hit_ids[0] = 0xB055u;
                 sv_damage_boss(s->damage * sv_run.player.dmg_mult);
+                if (s->kind == 3) recursao_split(s);
                 if (--s->pierce <= 0) s->alive = false;
             }
         }
@@ -2530,6 +2616,8 @@ static void update_player(float dt, Vector2 move)
     p->invert = p->invert > dt ? p->invert - dt : 0.0f;
     if (p->invulnerable > 0.0f) p->invulnerable -= dt;
     if (p->negate_flash > 0.0f) p->negate_flash -= dt;
+    if (p->pure_flash > 0.0f) p->pure_flash -= dt;
+    if (p->pure_timer > 0.0f) p->pure_timer -= dt;
     if (p->regen > 0.0f && p->hp < p->max_hp) p->hp = fminf(p->max_hp, p->hp + p->regen * dt);
     if (p->hurt_flash > 0.0f) p->hurt_flash -= dt;
 

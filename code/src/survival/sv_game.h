@@ -42,7 +42,7 @@ typedef enum { CHEAT_GOD, CHEAT_NO_SPAWN, CHEAT_ONE_HIT, CHEAT_FREEZE, CHEAT_COU
 typedef enum
 {
     W_GRAMPEADOR, W_PONTEIRO, W_CANECA, W_POSTITS, W_NAOPERTURBE, W_DEPLOY, W_NOTA, W_MODUS,
-    W_TABELA, W_COLEGA, W_NOVACONVERSA, W_PROMPT, W_VERA, W_FIBRA, W_CALOR, W_NEGACAO, W_COUNT
+    W_TABELA, W_COLEGA, W_NOVACONVERSA, W_PROMPT, W_VERA, W_FIBRA, W_CALOR, W_NEGACAO, W_RECURSAO, W_COUNT
 } SvWeaponId;
 
 typedef enum
@@ -84,11 +84,12 @@ typedef struct
     Vector2 pos, vel;
     float damage, radius, life;
     int pierce;
-    int kind;              // 0 grampo, 1 pacote de dados do Suporte de TI, 2 nota fiscal (vai e volta)
+    int kind;              // 0 grampo, 1 pacote de dados do Suporte de TI, 2 nota fiscal (vai e volta), 3 chamada recursiva
     float turn_time;       // Nota fiscal: quando a vida chega a este valor ela vira e volta para o jogador
     float speed;           // Nota fiscal: velocidade de ida e de volta
     float spin;            // Nota fiscal: ângulo atual do giro
     bool returning;        // Nota fiscal: já está voltando
+    int depth;             // Recursão: quantas vezes ainda se divide ao acertar
     unsigned hit_ids[4];
     int owner;             // Dupla: quem disparou (0 ou 1). No solo é sempre 0
     bool alive;
@@ -213,6 +214,9 @@ typedef struct
     int kill_heal_every;
     int kills_since_heal;
     int extra_colleagues;  // Vasco: colegas a mais quando ele tem o Colega de Plantão
+    float pure_every;      // Função Pura (Danilo): segundos entre um golpe anulado e o próximo (0 = não tem)
+    float pure_timer;      // Tempo até a Função Pura voltar; 0 = pronta para anular o próximo golpe
+    float pure_flash;      // Aviso na tela logo depois que a Função Pura anula um golpe
     bool moving;           // Andando neste quadro
     bool down;             // Dupla: caiu e espera o parceiro levantar (nunca acontece no solo)
     float revive;          // Dupla: segundos que o parceiro já passou ao lado para levantar este jogador
