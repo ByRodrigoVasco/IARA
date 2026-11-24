@@ -1,5 +1,6 @@
 #include "raylib.h"
 #include "characters.h"
+#include "assets_fs.h"
 #include "macros.h"
 
 void initialize_estagiario_1_textures(char_textures out)
@@ -38,7 +39,7 @@ bool has_walk_frames(const char *character, int direction)
 {
     for (int i = 0; i < WALK_FRAME_COUNT; i++)
     {
-        if (!FileExists(TextFormat("%s%s/walk/%s-%d.png", PERSONAGENS_PATH, character, walk_file_name(direction), i))) return false;
+        if (!asset_exists(TextFormat("%s%s/walk/%s-%d.png", PERSONAGENS_PATH, character, walk_file_name(direction), i))) return false;
     }
     return true;
 }
