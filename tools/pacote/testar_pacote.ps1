@@ -50,6 +50,10 @@ Write-Host ""
 Write-Host "Pasta do teste: $pasta"
 Write-Host ""
 
+# RNF04: executavel autocontido. O zip so traz o iara.exe e o LEIA-ME: sem DLLs nem pastas de assets
+$conteudo = @(Get-ChildItem $pasta | ForEach-Object { $_.Name } | Sort-Object)
+Checar "PKG-12" "O pacote e um executavel so (iara.exe e LEIA-ME, sem DLLs nem pastas)" (($conteudo -join ",") -eq "iara.exe,LEIA-ME.txt")
+
 # PI2-211: abre sozinho, sem MSYS2 no PATH e de outra pasta
 $jogo = Abrir-Jogo $exe $env:SystemRoot 6
 $rodando = -not $jogo.HasExited
