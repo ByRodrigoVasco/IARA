@@ -108,6 +108,16 @@ static Vector2 point_to_screen(Rectangle office, Vector2 map)
     return (Vector2){office.x + (map.x * scale), office.y + (map.y * scale)};
 }
 
+// O raylib 6 recebe o centro como Vector2; o 5 ainda recebe x e y inteiros
+static void draw_glow(Vector2 center, float radius, Color inner, Color outer)
+{
+#if RAYLIB_VERSION_MAJOR >= 6
+    DrawCircleGradient(center, radius, inner, outer);
+#else
+    DrawCircleGradient((int)center.x, (int)center.y, radius, inner, outer);
+#endif
+}
+
 // Aplica a opacidade da cena a um alfa próprio do efeito.
 static unsigned char faded(float effect_alpha, unsigned char scene_alpha)
 {
@@ -261,9 +271,9 @@ static void draw_human_bond(const SceneSymptoms *symptoms, Rectangle office, uns
     {
         if (symptoms->human_bond < warm_lights[i].from) continue;
 
-        DrawCircleGradient(point_to_screen(office, warm_lights[i].center),
-                           warm_lights[i].radius * scale,
-                           (Color){WARM_LIGHT_RGB, faded(strength, alpha)}, (Color){WARM_LIGHT_RGB, 0});
+        draw_glow(point_to_screen(office, warm_lights[i].center),
+                  warm_lights[i].radius * scale,
+                  (Color){WARM_LIGHT_RGB, faded(strength, alpha)}, (Color){WARM_LIGHT_RGB, 0});
     }
 
     EndBlendMode();
@@ -341,8 +351,8 @@ void draw_office_broken_lamps(Rectangle office, float campaign_progress, unsigne
 
         if (level <= 0.0f) continue;
 
-        DrawCircleGradient(center, ceiling_lamps[i].radius * scale,
-                           (Color){LAMP_LIGHT_RGB, faded(strength * level, alpha)}, (Color){LAMP_LIGHT_RGB, 0});
+        draw_glow(center, ceiling_lamps[i].radius * scale,
+                  (Color){LAMP_LIGHT_RGB, faded(strength * level, alpha)}, (Color){LAMP_LIGHT_RGB, 0});
     }
 
     EndBlendMode();
