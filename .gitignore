@@ -90,6 +90,8 @@ iara.survival.tmp
 iara.ranking
 iara.ranking.tmp
 teste.ranking
+iara_duplas.ranking
+iara_duplas.ranking.tmp
 
 # --- Registro de quadros que travaram (a pasta saves/ já está ignorada acima) ---
 iara-desempenho.log
