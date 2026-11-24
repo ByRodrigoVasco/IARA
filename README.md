@@ -9,7 +9,40 @@ as inconsistências. Assim, a mecânica ensina ao mesmo tempo ética em IA e ló
   <img src="docs/assets/capa.png" alt="Capa do projeto IARA" width="800">
 </p>
 
-> **Entrega 3 (FDS):** [Report da Sprint 01](docs/fds/sprint-01/README.md), com histórias, versionamento, testes, programação em pares e evidências.
+> **Entrega final (Unidade 2):** versão publicada nas [Releases do GitHub](https://github.com/ByRodrigoVasco/IARA/releases), reports das sprints [01](docs/fds/sprint-01/README.md), [02](docs/fds/sprint-02/README.md) e [03](docs/fds/sprint-03/README.md), [rastreabilidade das 16 histórias](docs/fds/sprint-03/README.md#rastreabilidade-das-histórias-pi2-330) e [bug tracker](docs/fds/testes/bugs.md).
+
+## Funcionalidades
+
+**Campanha (modo normal)**
+- 100 dias de expediente: 9 dias jogáveis, Flashes do dia e saltos no calendário, para a história caber numa sessão curta.
+- Em cada chamado o jogador escolhe: resolver sozinho, conferir a sugestão da IARA ou enviar sem conferir. A escolha pesa na pontuação e decide qual dos 4 finais o jogador recebe.
+- Puzzles de lógica proposicional ensinados pela própria história, com a colinha dos símbolos no Dia 1.
+- Dicas leves pelos NPCs e pelo mural, nunca a resposta pronta, e failsafe depois de 3 erros para ninguém ficar travado.
+- NPCs com diálogo opcional e um escritório que muda com os dias e com as escolhas, sem HUD numérico.
+- Save automático, com vários saves por modo.
+
+**Modo Sobrevivência**
+- Dez minutos num mapa de 15 áreas do escritório, com 5 atos e 5 chefes.
+- Banco de Horas para comprar melhorias no Plano de Carreira, e ranking de partidas.
+- Sobrevivência em dupla, para duas pessoas no mesmo computador.
+
+**Para todos os modos**
+- Configurações: volume da música e dos efeitos, brilho, alto contraste, tela cheia e janela maximizada.
+- Pausa, ajuda e confirmação antes de sair ou desistir.
+- Trilha sonora por momento do jogo e efeitos sonoros de ações e ambiente.
+- Um `iara.exe` só, sem instalação, conta ou internet.
+
+## Como o software evoluiu
+
+| Etapa | Período | O que entrou |
+|---|---|---|
+| Concepção | Ago a set/2026 | Personas, histórias de usuário, backlog no Trello, [diagramas de atividade](docs/fds/diagramas-atividade/README.md) e [protótipos lo-fi](docs/fds/prototipos-lofi/README.md) com screencast |
+| Núcleo em C | Set a out/2026 | Menu, máquina de estados, escritório com colisões e o primeiro quiz jogável ([screencast do núcleo](https://www.youtube.com/watch?v=z4OrasORL4c)) |
+| [Sprint 01](docs/fds/sprint-01/README.md) | 19/10 a 26/10 | Protótipo jogável para o teste de usabilidade, tela de créditos e a primeira suíte de testes de sistema (32 de 35 aprovados, 8 bugs abertos) |
+| [Sprint 02](docs/fds/sprint-02/README.md) | 26/10 a 06/11 | Save automático, sprites em 8 direções, campanha do Dia 1 ao Dia 100, alto contraste e configurações; suíte com 76 casos, todos aprovados |
+| [Sprint 03](docs/fds/sprint-03/README.md) | 07/11 a 21/11 | Modo Sobrevivência (e em dupla), NPCs, áudio e trilha por momento, pausa e ajuda pelas heurísticas de Nielsen, sintomas visuais e o `CONTRIBUTING.md`; testes CT-94 a CT-105 com um screencast por caso |
+| Final | 23/11 a 04/12 | Executável único, correções do bug tracker e documentação final. Em andamento: escolha de jogar novamente ou sair no fim da partida e a Release |
+
 
 ## Tecnologias
 
@@ -178,6 +211,10 @@ Testes de sistema das histórias que ainda não tinham caso de teste, executados
 Print de **20/11/2026** das [Issues do GitHub](https://github.com/ByRodrigoVasco/IARA/issues?q=is%3Aissue+label%3Abug), com as abertas e as fechadas. Cada issue tem o label da sprint, um responsável e aponta para a história do Jira, o teste e o PR da correção. O status de cada bug também fica em [bugs.md](docs/fds/testes/bugs.md).
 
 ![Bug tracker do GitHub em 20/11/2026](docs/fds/sprint-03/bug-tracker-2026-11-20.png)
+
+## Como contribuir
+
+O passo a passo para configurar o ambiente, o fluxo de branches (GitFlow), o padrão de commits, as issues e os Pull Requests estão no [`CONTRIBUTING.md`](CONTRIBUTING.md). Bugs e tarefas abertas ficam nas [Issues](https://github.com/ByRodrigoVasco/IARA/issues).
 
 ## Créditos de arte
 
