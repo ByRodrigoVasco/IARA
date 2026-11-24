@@ -18,6 +18,8 @@
 #include "calendar.h"
 #include "audio.h"
 #include "pause_menu.h"
+#include "confirm_dialog.h"
+#include "ui_theme.h"
 #include "symptoms.h"
 #include "office_symptoms.h"
 
@@ -34,6 +36,14 @@
 #define DAY_END_CARD_SCREEN 4          // Cartão de fim do dia, depois de sair pela porta
 #define DAY_TRANSITION_SCREEN 5        // Flash do dia e salto puro, até o próximo dia jogável
 #define ENDING_CARD_SCREEN 6           // Cartão do final, depois do Dia 100
+#define ENDING_CHOICE_SCREEN 7         // Depois do cartão do final: jogar novamente ou sair
+
+// Opções da tela que vem depois do final
+#define ENDING_CHOICE_COUNT 3
+#define ENDING_CHOICE_PLAY_AGAIN 0     // Recomeça a campanha do Dia 1, no mesmo save
+#define ENDING_CHOICE_MENU 1           // Volta ao menu principal
+#define ENDING_CHOICE_QUIT 2           // Fecha o jogo (pede confirmação)
+#define ENDING_CHOICE_INPUT_DELAY 0.6f // Segundos sem ler teclas: quem pulou o cartão com ESPAÇO não escolhe sem querer
 
 // ============================================================================
 // ESTADOS DA ANIMAÇÃO DO CARTÃO DO DIA (TRANSIÇÃO FADE IN / AWAIT / FADE OUT)
@@ -92,6 +102,10 @@ static bool render_calendar_day_card_finished = false;   // Indica se toda a seq
 static int current_screen = SCREEN_NONE;                  // Armazena qual tela do jogo está sendo processada no momento
 static bool game_loop_finished = false;                   // Indica que o dia terminou e a partida volta ao menu
 static bool game_loop_quit_requested = false;              // O jogador escolheu SAIR DO JOGO na pausa; a máquina de estados fecha o jogo
+static bool game_loop_replay_requested = false;            // O jogador escolheu JOGAR NOVAMENTE depois do final
+static int ending_choice_selected = ENDING_CHOICE_PLAY_AGAIN; // Opção marcada na tela depois do final
+static float ending_choice_wait = 0.0f;                    // Tempo desde que a tela depois do final abriu
+static GameEnding shown_ending = ENDING_UNHARMED;          // Final mostrado no cartão, repetido no título da escolha
 static bool leave_office = false;                        // Flag acionada ao interagir com a porta depois de concluir a tarefa
 static bool is_near_exit = false;                        // Flag que indica se o jogador alcança a porta de saída
 static bool enter_computer_screen = false;               // Flag acionada ao interagir com o computador para mudar de tela
@@ -460,7 +474,8 @@ static void advance_to_next_day(void)
  */
 static void show_ending(void)
 {
-    const EndingCard *card = &ending_cards[get_game_ending()];
+    shown_ending = get_game_ending();
+    const EndingCard *card = &ending_cards[shown_ending];
 
     color_to_fade.a = 0;
     start_day_card(card->title, card->line_1, card->line_2);
@@ -576,6 +591,7 @@ void initialize_game_loop_variables(void)
     // A partida pode recomeçar depois de voltar ao menu
     game_loop_finished = false;
     game_loop_quit_requested = false;
+    game_loop_replay_requested = false;
     leave_office = false;
     enter_computer_screen = false;
     nearby_npc_id = -1;
@@ -1634,6 +1650,102 @@ static void render_high_contrast_outlines(void)
 }
 
 /**
+ * @brief Abre a escolha que vem depois do cartão do final, com JOGAR NOVAMENTE já marcado.
+ */
+static void open_ending_choice(void)
+{
+    ending_choice_selected = ENDING_CHOICE_PLAY_AGAIN;
+    ending_choice_wait = 0.0f;
+    current_screen = ENDING_CHOICE_SCREEN;
+}
+
+/**
+ * @brief Executa uma opção da escolha depois do final. Jogar novamente e voltar ao menu encerram a
+ * partida (a máquina de estados salva o progresso); sair do jogo pede confirmação antes.
+ */
+static void choose_ending_option(int option)
+{
+    if (option != ENDING_CHOICE_QUIT) SetMouseCursor(MOUSE_CURSOR_ARROW);
+
+    if (option == ENDING_CHOICE_PLAY_AGAIN)
+    {
+        game_loop_replay_requested = true;
+        game_loop_finished = true;
+    }
+    else if (option == ENDING_CHOICE_MENU)
+    {
+        game_loop_finished = true;
+    }
+    else
+    {
+        confirm_open("SAIR PARA A ÁREA DE TRABALHO?", "O jogo fecha. Da próxima vez, este save recomeça a campanha do Dia 1.", "SAIR", "CONTINUAR", true);
+    }
+}
+
+/**
+ * @brief Tela depois do final da campanha: o jogador escolhe entre jogar de novo e sair,
+ * em vez de voltar ao menu sem saber que o save recomeça do Dia 1.
+ */
+static void handle_ending_choice(void)
+{
+    static const char *labels[ENDING_CHOICE_COUNT] = {"JOGAR NOVAMENTE", "SAIR PARA O MENU", "SAIR PARA A ÁREA DE TRABALHO"};
+    float scale = get_ui_scale();
+    float width = (float)GetScreenWidth();
+    float height = (float)GetScreenHeight();
+    float button_width = 520.0f * scale;
+    float button_height = 70.0f * scale;
+    float top = height * 0.46f;
+    Rectangle buttons[ENDING_CHOICE_COUNT];
+    int hovered = -1;
+
+    ending_choice_wait += GetFrameTime();
+
+    for (int i = 0; i < ENDING_CHOICE_COUNT; i++)
+    {
+        buttons[i] = (Rectangle){(width - button_width) / 2.0f, top + (float)i * (button_height + 16.0f * scale), button_width, button_height};
+        if (ui_mouse_over(buttons[i])) hovered = i;
+    }
+
+    ui_draw_backdrop();
+    ui_draw_centered(ending_cards[shown_ending].title, width / 2.0f, height * 0.16f, ui_font_size(3.0f), UI_BLOOD_COLOR);
+    ui_draw_centered("Fim da campanha. Jogar novamente recomeça do Dia 1, neste mesmo save.", width / 2.0f, height * 0.32f, ui_font_size(1.1f), UI_DIM_COLOR);
+
+    if (confirm_is_open())
+    {
+        // Os botões ficam desenhados por baixo da janela, que é a única a responder
+        for (int i = 0; i < ENDING_CHOICE_COUNT; i++) ui_draw_button(buttons[i], labels[i], i == ending_choice_selected, i == ENDING_CHOICE_QUIT);
+        if (confirm_update_and_draw() == CONFIRM_YES) game_loop_quit_requested = true;
+        return;
+    }
+
+    if (ending_choice_wait >= ENDING_CHOICE_INPUT_DELAY)
+    {
+        if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) ending_choice_selected = (ending_choice_selected + 1) % ENDING_CHOICE_COUNT;
+        if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) ending_choice_selected = (ending_choice_selected + ENDING_CHOICE_COUNT - 1) % ENDING_CHOICE_COUNT;
+
+        if (hovered >= 0)
+        {
+            Vector2 delta = GetMouseDelta();
+
+            if (delta.x != 0.0f || delta.y != 0.0f) ending_choice_selected = hovered;
+        }
+
+        if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_KP_ENTER)) choose_ending_option(ending_choice_selected);
+        else if (hovered >= 0 && IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+        {
+            ending_choice_selected = hovered;
+            choose_ending_option(hovered);
+        }
+    }
+
+    SetMouseCursor(hovered >= 0 ? MOUSE_CURSOR_POINTING_HAND : MOUSE_CURSOR_ARROW);
+
+    for (int i = 0; i < ENDING_CHOICE_COUNT; i++) ui_draw_button(buttons[i], labels[i], i == ending_choice_selected && !confirm_is_open(), i == ENDING_CHOICE_QUIT);
+    if (confirm_is_open()) confirm_update_and_draw();   // Abriu neste quadro: a janela já aparece (a primeira leitura de teclas é pulada)
+    ui_draw_hint("SETAS: escolher    ENTER: confirmar");
+}
+
+/**
  * @brief Gerencia e executa a máquina de estados principal que controla qual tela do jogo
  * deve ser atualizada e renderizada a cada quadro (frame).
  */
@@ -1792,10 +1904,12 @@ void handle_game_loop_screens(void)
     case ENDING_CARD_SCREEN:
         handle_calendar_day_card();
 
-        if (render_calendar_day_card_finished)
-        {
-            game_loop_finished = true;
-        }
+        // Em vez de voltar ao menu sozinho, o jogo pergunta o que o jogador quer fazer
+        if (render_calendar_day_card_finished) open_ending_choice();
+        break;
+
+    case ENDING_CHOICE_SCREEN:
+        handle_ending_choice();
         break;
 
     default:
@@ -1866,6 +1980,11 @@ bool is_game_loop_quit_requested(void)
 bool is_game_loop_finished(void)
 {
     return game_loop_finished;
+}
+
+bool is_game_loop_replay_requested(void)
+{
+    return game_loop_replay_requested;
 }
 
 /**
