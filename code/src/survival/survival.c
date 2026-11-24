@@ -32,7 +32,6 @@ static int hub_selected = 0;
 static bool duo = false;               // O save em uso é de uma dupla (saves/dupla): as partidas são em dupla
 static int char_cursor = 0;
 static int char_editing = 0;           // Dupla: de quem é o personagem que está sendo escolhido (0 ou 1)
-static Texture2D roster_icons[CH_COUNT];
 static float char_message_timer = 0.0f;
 static const char *char_message = "";
 static int shop_selected = 0;
@@ -97,8 +96,14 @@ static float job_sprites(void)
     return sv_load_sprites_step();
 }
 
+// Todos os personagens ficam na memória, um por quadro da tela de carregamento: assim escolher,
+// trocar (TAB na dupla) ou começar a partida não lê nada do disco
 static float job_characters(void)
 {
+    float progress = sv_load_characters_step();
+
+    if (progress < 1.0f) return progress;
+
     sv_load_player(sv_meta.character);
     if (duo)
     {
@@ -106,11 +111,6 @@ static float job_characters(void)
         sv_use_player_slot(1);
         sv_load_player(sv_meta.character2);
         sv_use_player_slot(0);
-    }
-    for (int i = 0; i < CH_COUNT; i++)
-    {
-        roster_icons[i] = LoadTexture(TextFormat("%s%s/walk/south-0.png", PERSONAGENS_PATH, sv_character(i)->folder));
-        if (roster_icons[i].id) SetTextureFilter(roster_icons[i], TEXTURE_FILTER_POINT);
     }
     return 1.0f;
 }
@@ -143,7 +143,7 @@ int survival_loading_jobs(loading_job *jobs)
 {
     jobs[0] = (loading_job){"Lendo o save", 0.3f, job_read_save};
     jobs[1] = (loading_job){"Imagens do mapa, dos inimigos e dos poderes", 5.0f, job_sprites};
-    jobs[2] = (loading_job){"Personagens", 1.0f, job_characters};
+    jobs[2] = (loading_job){"Personagens", 2.0f, job_characters};
     jobs[3] = (loading_job){"Sons e músicas", 3.5f, job_audio};
     jobs[4] = (loading_job){"Preparando o modo", 0.2f, job_ready};
     return 5;
@@ -167,13 +167,8 @@ void unload_survival(void)
     // Quem sai no meio da partida leva o que juntou até aqui
     if (screen == SCREEN_RUN || screen == SCREEN_PAUSE) finish_run();
 
-    for (int i = 0; i < CH_COUNT; i++)
-    {
-        if (roster_icons[i].id) UnloadTexture(roster_icons[i]);
-        roster_icons[i] = (Texture2D){0};
-    }
     sv_audio_close();
-    sv_unload_all_players();
+    sv_unload_characters();   // Também solta os conjuntos dos jogadores
     sv_unload_sprites();
     sv_light_unload();
     SetMouseCursor(MOUSE_CURSOR_ARROW);
@@ -519,30 +514,39 @@ static int saved_character(void)
     return char_editing == 1 ? sv_meta.character2 : sv_meta.character;
 }
 
-// Carrega a prévia no conjunto de quadros de quem está escolhendo (no solo, sempre o 0)
-static void load_preview(int id)
+// Carrega os quadros da partida no conjunto de quem está escolhendo (no solo, sempre o 0)
+static void load_chosen_player(int id)
 {
     sv_use_player_slot(char_editing);
     sv_load_player(id);
     sv_use_player_slot(0);
 }
 
+// Só move o cursor: o retrato e a fileira usam os quadros já carregados na tela de carregamento.
+// O conjunto da partida (sv_load_player) só troca quando o jogador confirma, também sem ler o disco.
 static void choose_character(int id)
 {
     if (id == char_cursor) return;
     char_cursor = id;
-    load_preview(id);
     sv_sfx(SND_escolha);
 }
 
-// Dupla: TAB passa a escolha para o outro jogador (quem saiu sem confirmar volta ao personagem salvo)
+// Dupla: TAB passa a escolha para o outro jogador (quem saiu sem confirmar continua com o personagem salvo)
 static void switch_character_editor(void)
 {
-    if (char_cursor != saved_character()) load_preview(saved_character());
     char_editing = 1 - char_editing;
     char_cursor = saved_character();
     char_message_timer = 0.0f;
     sv_sfx(SND_escolha);
+}
+
+// Desenha um quadro de frente do personagem, centrado
+static void draw_roster_frame(int id, int frame, Rectangle dest, Color tint)
+{
+    Texture2D texture = sv_character_frame(id, SOUTH, frame);
+
+    if (!texture.id) return;
+    DrawTexturePro(texture, (Rectangle){0, 0, (float)texture.width, (float)texture.height}, dest, (Vector2){0, 0}, 0.0f, tint);
 }
 
 static void render_characters(void)
@@ -579,6 +583,7 @@ static void render_characters(void)
         }
         else
         {
+            if (saved_character() != char_cursor) load_chosen_player(char_cursor);
             if (char_editing == 1) sv_meta.character2 = char_cursor;
             else sv_meta.character = char_cursor;
             sv_meta_save(sv_meta_path()); warn_if_save_failed();
@@ -590,9 +595,9 @@ static void render_characters(void)
 
     if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_BACKSPACE))
     {
-        // Quem sai sem escolher volta ao personagem salvo
-        if (char_cursor != saved_character()) load_preview(saved_character());
+        // Quem sai sem escolher continua com o personagem salvo (já carregado)
         char_editing = 0;
+        char_cursor = sv_meta.character;
         screen = SCREEN_HUB;
         sv_sfx(SND_confirma);
     }
@@ -614,9 +619,12 @@ static void render_characters(void)
 
     // Retrato grande. Bloqueado aparece como silhueta.
     DrawRectangleRounded((Rectangle){w / 2.0f - 170.0f * ui, 150.0f * ui, 340.0f * ui, 300.0f * ui}, 0.08f, 8, (Color){18, 8, 22, 220});
-    sv_use_player_slot(char_editing);
-    sv_draw_player(SOUTH, unlocked ? frame : 0, (Vector2){w / 2.0f, 300.0f * ui}, 8.0f * ui, unlocked ? WHITE : (Color){12, 8, 18, 255});
-    sv_use_player_slot(0);
+    {
+        Texture2D portrait = sv_character_frame(char_cursor, SOUTH, 0);
+        float pw = (float)portrait.width * 8.0f * ui, ph = (float)portrait.height * 8.0f * ui;
+
+        draw_roster_frame(char_cursor, unlocked ? frame : 0, (Rectangle){w / 2.0f - pw / 2.0f, 300.0f * ui - ph / 2.0f, pw, ph}, unlocked ? WHITE : (Color){12, 8, 18, 255});
+    }
 
     sv_text_centered(unlocked ? c->name : "???", w / 2.0f, 465.0f * ui, 64.0f * ui, WHITE);
     sv_text_centered(c->title, w / 2.0f, 535.0f * ui, 30.0f * ui, (Color){180, 170, 185, 255});
@@ -649,11 +657,10 @@ static void render_characters(void)
         }
         else if (i == sv_meta.character) DrawRectangleLinesEx(cell, 3.0f * ui, (Color){120, 230, 140, 255});
 
-        if (roster_icons[i].id)
         {
             float size = 96.0f * ui;
 
-            DrawTexturePro(roster_icons[i], (Rectangle){0, 0, (float)roster_icons[i].width, (float)roster_icons[i].height}, (Rectangle){cell.x + (cell.width - size) / 2.0f, cell.y + 20.0f * ui, size, size}, (Vector2){0, 0}, 0.0f, open ? WHITE : (Color){12, 8, 18, 255});
+            draw_roster_frame(i, 0, (Rectangle){cell.x + (cell.width - size) / 2.0f, cell.y + 20.0f * ui, size, size}, open ? WHITE : (Color){12, 8, 18, 255});
         }
         sv_text_centered(open ? sv_character(i)->name : "Bloqueado", cell.x + cell.width / 2.0f, cell.y + 145.0f * ui, 28.0f * ui, open ? WHITE : (Color){120, 100, 125, 255});
     }
