@@ -1001,18 +1001,35 @@ static void test_ranking(void)
 
     check("SV-100", "ranking vazio comeca sem ninguem", sv_ranking_count() == 0 && sv_ranking_get(0) == NULL);
 
-    sv_ranking_add("Ana", 300, 120, 10, 1, 0, false, NULL);
-    sv_ranking_add("Bruno", 420, 90, 12, 2, 1, false, NULL);
     {
-        int pos = sv_ranking_add("Caio", 300, 150, 9, 1, 2, false, NULL);
+        SvRankEntry e = {0};
 
-        check("SV-101", "mais tempo fica na frente; no empate de tempo, mais abates", pos == 2 && strcmp(sv_ranking_get(0)->name, "Bruno") == 0 && strcmp(sv_ranking_get(1)->name, "Caio") == 0 && strcmp(sv_ranking_get(2)->name, "Ana") == 0);
+        e.kills = 100;
+        e.seconds = 60;
+        e.bosses = 2;
+        e.won = true;
+        check("SV-143", "a pontuacao soma abates, tempo, chefes e o bonus de vitoria",
+              sv_ranking_score(&e) == 100 * SV_SCORE_PER_KILL + 60 * SV_SCORE_PER_SECOND + 2 * SV_SCORE_PER_BOSS + SV_SCORE_WIN_BONUS);
+        e.won = false;
+        check("SV-144", "sem vitoria nao tem o bonus", sv_ranking_score(&e) == 100 * SV_SCORE_PER_KILL + 60 * SV_SCORE_PER_SECOND + 2 * SV_SCORE_PER_BOSS);
     }
-    check("SV-102", "quem desligou a IARA fica na frente de qualquer derrota", sv_ranking_add("Duda", 600, 10, 20, 5, 3, true, NULL) == 1);
+
+    sv_ranking_add("Ana", 300, 120, 10, 1, 0, false, NULL);     // 3200 pontos
+    sv_ranking_add("Bruno", 420, 40, 12, 1, 1, false, NULL);    // 3000: sobreviveu mais, mas quase não lutou
+    {
+        int pos = sv_ranking_add("Caio", 280, 200, 9, 1, 2, false, NULL);   // 3900
+
+        check("SV-101", "quem derrotou mais inimigos passa na frente de quem so sobreviveu mais tempo",
+              pos == 1 && strcmp(sv_ranking_get(0)->name, "Caio") == 0 && strcmp(sv_ranking_get(1)->name, "Ana") == 0 && strcmp(sv_ranking_get(2)->name, "Bruno") == 0);
+    }
+    check("SV-102", "desligar a IARA da o bonus de vitoria e leva ao topo", sv_ranking_add("Duda", 600, 10, 20, 5, 3, true, NULL) == 1);
+    check("SV-145", "empate de pontos: quem derrotou mais inimigos fica na frente",
+          sv_ranking_add("Gabi", 200, 170, 8, 1, 0, false, NULL) == 3 && strcmp(sv_ranking_get(3)->name, "Ana") == 0);   // 3200, igual a Ana
     check("SV-103", "empate total: quem chegou primeiro fica na frente", sv_ranking_add("Eva", 300, 120, 10, 1, 0, false, NULL) == 5 && strcmp(sv_ranking_get(3)->name, "Ana") == 0);
+    sv_ranking_remove("Gabi");
 
     // Mesmo jogador: uma linha só, e só o recorde conta
-    check("SV-112", "partida pior do mesmo jogador nao muda o ranking", sv_ranking_add("Bruno", 100, 10, 3, 0, 1, false, &record) == 2 && !record && sv_ranking_count() == 5 && sv_ranking_get(1)->seconds == 420);
+    check("SV-112", "partida pior do mesmo jogador nao muda o ranking", sv_ranking_add("Bruno", 100, 10, 3, 0, 1, false, &record) == 5 && !record && sv_ranking_count() == 5 && sv_ranking_get(4)->seconds == 420);
     check("SV-113", "recorde novo substitui o antigo e sobe o jogador", sv_ranking_add("bruno", 700, 300, 25, 5, 1, true, &record) == 1 && record && sv_ranking_count() == 5 && sv_ranking_get(0)->seconds == 700);
     check("SV-114", "o nome e o mesmo sem diferenciar maiusculas", sv_ranking_find("BRUNO") == 0 && sv_ranking_find("ninguem") == -1);
 
