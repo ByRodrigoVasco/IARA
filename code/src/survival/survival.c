@@ -727,7 +727,16 @@ static void render_characters(void)
 
             draw_roster_frame(i, 0, (Rectangle){cell.x + (cell.width - size) / 2.0f, cell.y + 20.0f * ui, size, size}, open ? WHITE : (Color){12, 8, 18, 255});
         }
-        sv_text_centered(open ? sv_character(i)->name : "Bloqueado", cell.x + cell.width / 2.0f, cell.y + 145.0f * ui, 28.0f * ui, open ? WHITE : (Color){120, 100, 125, 255});
+        {
+            // O nome encolhe para caber na célula (com muitos personagens as células ficam estreitas)
+            const char *label = open ? sv_character(i)->name : "Bloqueado";
+            float name_size = 28.0f * ui;
+            float max_w = cell.width - 14.0f * ui;
+            float name_w = sv_text_width(label, name_size);
+
+            if (name_w > max_w && name_w > 0.0f) name_size *= max_w / name_w;
+            sv_text_centered(label, cell.x + cell.width / 2.0f, cell.y + 145.0f * ui + (28.0f * ui - name_size) / 2.0f, name_size, open ? WHITE : (Color){120, 100, 125, 255});
+        }
     }
 
     sv_text_centered(duo ? "Setas ou A/D trocam. Enter escolhe. TAB troca de jogador. ESC volta." : "Setas ou A/D trocam. Enter escolhe. ESC volta.", w / 2.0f, GetScreenHeight() - 60.0f * ui, 26.0f * ui, (Color){190, 180, 195, 255});
