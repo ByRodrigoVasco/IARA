@@ -39,6 +39,8 @@ save_*.txt
 .env
 .env.local
 *.local
+# URL e chave do Supabase usadas pelo build (tools/nuvem/LEIA-ME.md)
+tools/nuvem/nuvem.local
 
 # --- Editores / IDEs ---
 .idea/
