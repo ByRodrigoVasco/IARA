@@ -23,6 +23,8 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+from compactar_hd import compactar, grupos
+
 DIRECOES = ["south", "south-east", "east", "north-east", "north", "north-west", "south-west"]
 QUADROS = 4
 LADO = 192
@@ -336,3 +338,5 @@ def gerar(personagem):
 if __name__ == "__main__":
     for nome in sys.argv[1:] or PERSONAGENS:
         gerar(nome)
+    for nome, arquivos in grupos(set(sys.argv[1:] or PERSONAGENS)):
+        compactar(arquivos)
