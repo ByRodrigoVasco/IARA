@@ -308,6 +308,22 @@ void sv_light_draw(Camera2D camera)
 
     if (sv_run.boss.active) draw_light(sv_run.boss.pos, 150.0f, (Color){220, 60, 70, 255}, 0.75f + 0.25f * sinf(t * 3.0f));
 
+    // Aviso Prévio: o poder alcança longe, então o avião e o carimbo levam a própria luz pelo breu
+    for (int i = 0; i < SV_MAX_SHOTS; i++)
+    {
+        const SvShot *s = &sv_run.shots[i];
+
+        if (s->alive && s->kind == 4 && on_screen(s->pos, 56.0f, view)) draw_light(s->pos, 56.0f, (Color){200, 214, 245, 255}, 1.0f);
+    }
+    for (int i = 0; i < SV_MAX_ZONES; i++)
+    {
+        const SvZone *z = &sv_run.zones[i];
+        float reach = z->radius * 2.4f;
+
+        if (!z->alive || z->kind != ZK_AVISO || !on_screen(z->pos, reach, view)) continue;
+        draw_light(z->pos, reach, (Color){255, 190, 185, 255}, 1.2f * z->life / z->max_life);
+    }
+
     // A luz do jogador não oscila com a energia: é a lanterna do celular
     if (!sv_run.duo) draw_light(sv_run.player.pos, sv_light_vision_radius(), (Color){235, 228, 215, 255}, 1.15f);
     else
