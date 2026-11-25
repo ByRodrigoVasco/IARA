@@ -172,6 +172,8 @@ Uma partida em que qualquer cheat foi usado **não conta para o progresso do sav
 
 O jogo também registra em `iara-desempenho.log` (ao lado do executável, ignorado pelo git) os quadros que passaram de 60 ms, com a hora e a tela. É o primeiro lugar para olhar quando alguém disser que o jogo travou.
 
+> **Versão para terminal (PIF):** pronta. O jogo também roda inteiro no terminal, em texto, sem abrir janela e sem depender do raylib: são os mesmos 8 dias e as mesmas fórmulas de lógica, lidos dos mesmos arquivos do jogo gráfico. Como compilar e jogar está em [`code/terminal/LEIA-ME.md`](code/terminal/LEIA-ME.md).
+
 ### Eventos: saves e rankings na nuvem
 
 Para um evento com vários notebooks, o `iara.exe` pode ser gerado com a nuvem ligada ([Supabase](https://supabase.com/)). Sem ela, tudo continua local, como descrito acima.
