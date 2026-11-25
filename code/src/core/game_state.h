@@ -30,10 +30,9 @@
 #define PERCEPTION_HIGH_TOTAL 4
 #define HUMAN_BOND_HIGH_TOTAL 2
 
-// Evidências reunidas para a prova do Dia 100.
-#define EVIDENCE_NO_RESIGNATION_LETTER (1u << 0) // Dia 12: pediu a revisão da conciliação
-#define EVIDENCE_BADGE_AFTER_LEAVING (1u << 1)   // Dia 58: examinou o registro da catraca
-#define EVIDENCE_NO_HUMAN_ORDER (1u << 2)        // Dia 74: leu o bilhete da auditoria
+// Evidências reunidas para a prova do Dia 100: em evidencias.h, porque o jogo de
+// terminal lê as mesmas evidências e não pode incluir raylib.
+#include "evidencias.h"
 
 // Como um chamado foi concluído.
 typedef enum {
