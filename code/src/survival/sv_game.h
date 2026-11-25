@@ -302,7 +302,7 @@ typedef struct
 
 extern SvRun sv_run;
 
-// Velocidade do tempo escolhida pelo jogador (1, 2 ou 3). Só vale antes de SV_SPEEDUP_LIMIT.
+// Velocidade do tempo escolhida pelo jogador (1, 2 ou 3), em qualquer momento da partida.
 extern int sv_time_scale;
 
 // -----------------------------------------------------------------------------

@@ -880,9 +880,8 @@ static void render_run(void)
         }
         else
         {
-            // Acelerar o tempo (TAB ou clique no botão) vale só até os 7:00
-            if (sv_run.time >= SV_SPEEDUP_LIMIT) sv_time_scale = 1;
-            else if (IsKeyPressed(KEY_TAB) || (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(GetMousePosition(), sv_speed_button_rect())))
+            // Acelerar o tempo (TAB ou clique no botão) vale a partida inteira
+            if (IsKeyPressed(KEY_TAB) || (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(GetMousePosition(), sv_speed_button_rect())))
             {
                 sv_time_scale = sv_time_scale % 3 + 1;
                 sv_sfx(SND_escolha);
