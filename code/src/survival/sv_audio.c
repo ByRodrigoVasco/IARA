@@ -273,7 +273,7 @@ void sv_sfx(SvSound sound)
 
 static Music open_stream(const char *name)
 {
-    return asset_load_music(TextFormat("%s%s.wav", SV_AUDIO_PATH, name));
+    return asset_load_music(TextFormat("%s%s.ogg", SV_AUDIO_PATH, name));
 }
 
 // Toca a faixa: a preparada, se for ela (sem ler o disco), ou abre do disco na hora
