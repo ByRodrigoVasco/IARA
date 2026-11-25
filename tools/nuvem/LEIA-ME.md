@@ -42,6 +42,8 @@ NUVEM_CHAVE=<chave publishable>
   Ela não é um JWT, e o jogo a envia só no cabeçalho `apikey`. **Nunca** use a chave secreta
   (`sb_secret_...` ou `service_role`).
 
+O arquivo é local: cada cópia do repositório (ou worktree) que for gerar o executável precisa do seu.
+
 O `tools/release/build_release.ps1` lê esse arquivo e embute os dois valores no `iara.exe`. Sem o
 arquivo, o executável funciona só local. Não coloque os valores em commits, logs ou testes.
 
@@ -77,6 +79,24 @@ Depois apague os dados de teste:
 delete from iara_saves where nome_chave = 'zz teste';
 delete from iara_ranking where nome_chave = 'zz teste';
 ```
+
+## Como o jogo se comporta
+
+| Situação | O que acontece |
+|---|---|
+| Escolher o save | A lista vem da nuvem e é atualizada a cada 10 s; um save aberto em outro notebook aparece como "Em uso em outro notebook" |
+| Sem conexão na escolha do save | Não dá para abrir, criar nem apagar; a tela oferece "Tentar de novo" |
+| A rede cai durante a partida | O jogo segue; a gravação fica na fila e sobe quando a rede voltar |
+| Fechar o jogo sem rede | A fila fica no disco e sobe na próxima abertura |
+| Outro notebook assumiu o save, ou a nuvem tem gravação mais nova | O jogo avisa e para de subir aquele save; a gravação recusada fica em `nuvem\conflito-*.txt` |
+| Modo normal (campanha) | Sobe quando o jogo grava: ao voltar ao menu e ao fechar |
+| Partida sem conexão | Vai para a fila do ranking; a tabela mostra o ranking deste computador, marcada como OFFLINE |
+| Partida com cheat | Não vai para o ranking |
+| Saves que já existiam no computador | Não aparecem na lista da nuvem. Se um save da nuvem tiver o mesmo nome, o progresso local vai para `<arquivo>.anterior` |
+
+A pasta `Documentos\IARA\nuvem` guarda o código deste notebook (`notebook.id`) e a fila. **Não copie
+essa pasta de um notebook para outro**: dois notebooks com o mesmo código conseguem abrir o mesmo save
+ao mesmo tempo.
 
 ## Regras do servidor
 

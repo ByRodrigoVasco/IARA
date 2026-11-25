@@ -741,3 +741,26 @@ Branch aberta a partir da `develop` (`a2b8e07`) para fechar as issues de bug que
 **Execução dos testes:** os 13 conjuntos e o executável do jogo compilam. Na máquina em que a correção foi feita, o Windows (Controle de Aplicativo) bloqueou a execução dos `.exe` recém-compilados, então os CT-95, CT-97, CT-98 e os SV-137 a SV-142 ainda precisam ser rodados na `develop`. Até lá, os resultados registrados no [README dos testes](README.md) continuam os da execução de 20/11/2026.
 
 **Issues:** as issues #59, #94, #98, #99, #101, #102 e #103 receberam o comentário com a correção e foram fechadas em 24/11/2026. As #58, #95 e #96 receberam um comentário com a situação e seguem abertas, junto com as #97, #104 e #110.
+
+---
+
+<a id="nuvem-saves-ranking"></a>
+
+## Branch `feat/nuvem-saves-ranking` (25/11/2026): saves e rankings na nuvem
+
+Funcionalidade nova, para eventos com vários notebooks. Não corrige nem abre bug com issue. Guia de montagem e comportamento: [tools/nuvem/LEIA-ME.md](../../../tools/nuvem/LEIA-ME.md).
+
+**Execução dos testes (25/11/2026):** 13 dos 14 conjuntos passaram. `test_cloud` (NV-01 a NV-42, com um servidor falso, sem rede) com 42 de 42; blocos 1 a 3 com 32 de 32, 37 de 37 e 58 de 58; `test_survival` com 148 de 148. A única falha é o CT-100 no bloco 4, o [BUG-42](#bug-42) já aberto, que depende de arte. O executável de release compilou com a nuvem, e a leitura de saves e rankings no servidor real respondeu certo.
+
+**Ainda não verificado:**
+
+- Criar, abrir, gravar, renovar, liberar e apagar contra o servidor real, pelo jogo.
+- Dois notebooks de verdade ao mesmo tempo (trava, conflito e queda de rede).
+- A tela de escolha do save e o ranking com a nuvem ligada, jogados à mão.
+
+**Limitações conhecidas:**
+
+- Sem conexão, não dá para abrir, criar nem apagar saves.
+- A campanha só sobe quando o jogo grava (ao voltar ao menu e ao fechar).
+- No servidor, `iara_gravar_save` recria um save que não existe. O jogo confere antes de reenviar a fila depois de uma falha de rede, mas um notebook que ficou suspenso sem registrar falha pode recriar um save apagado nesse intervalo.
+- Saves que já existiam em um computador não são enviados para a nuvem.
