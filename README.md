@@ -21,6 +21,10 @@ quiz jogável. Desde então entrou:
 | **Campanha do Dia 1 ao Dia 100** | O expediente inteiro, com 9 dias jogáveis, Flashes do dia e saltos no calendário. Cada dia traz um conceito de lógica dentro do trabalho, e as escolhas levam a um dos 4 finais |
 | **Modo Sobrevivência** | Dez minutos num mapa de 15 áreas do escritório, com 5 atos, 5 chefes, Banco de Horas para comprar melhorias e ranking de partidas |
 | **Sobrevivência em dupla** | Duas pessoas no mesmo computador, com controles separados, XP dividida e ranking próprio |
+| **Progressão e conquistas** | 12 personagens, cada um com o seu poder, liberados por objetivos, com notificação de conquista |
+| **Arte nova** | Personagens e Colegas de Plantão redesenhados em alta resolução, e o executável reduzido de cerca de 54 MB para 30 MB |
+| **Versão para terminal** | A campanha em texto, sem janela e sem raylib, para PIF |
+| **Eventos** | Saves e rankings compartilhados entre notebooks, opcional |
 | **Saves por modo** | Save automático com vários slots, separados entre campanha, Sobrevivência e dupla |
 | **Configurações** | Volume da música e dos efeitos, brilho, tela cheia e janela maximizada, guardados entre sessões |
 | **Acessibilidade** | Alto contraste, pausa, tela de ajuda e confirmação antes de sair ou desistir |
@@ -41,6 +45,8 @@ está em [Como o software evoluiu](#como-o-software-evoluiu).
 **Modo Sobrevivência**
 - Dez minutos num mapa de 15 áreas do escritório, com 5 atos e 5 chefes.
 - Banco de Horas para comprar melhorias no Plano de Carreira, e ranking de partidas.
+- 12 personagens e 17 poderes. O poder de cada personagem só aparece nas cartas depois que ele é liberado, e cada liberação vira uma [conquista](#personagens-poderes-e-conquistas).
+- Velocidade do tempo em x1, x2 ou x3, a partida inteira.
 - Sobrevivência em dupla, para duas pessoas no mesmo computador.
 
 **Para todos os modos**
@@ -59,7 +65,7 @@ está em [Como o software evoluiu](#como-o-software-evoluiu).
 | [Sprint 01](docs/fds/sprint-01/README.md) | 19/10 a 26/10 | Protótipo jogável para o teste de usabilidade, tela de créditos e a primeira suíte de testes de sistema (32 de 35 aprovados, 8 bugs abertos) |
 | [Sprint 02](docs/fds/sprint-02/README.md) | 26/10 a 06/11 | Save automático, sprites em 8 direções, campanha do Dia 1 ao Dia 100, alto contraste e configurações; suíte com 76 casos, todos aprovados |
 | [Sprint 03](docs/fds/sprint-03/README.md) | 07/11 a 21/11 | Modo Sobrevivência (e em dupla), NPCs, áudio e trilha por momento, pausa e ajuda pelas heurísticas de Nielsen, sintomas visuais e o `CONTRIBUTING.md`; testes CT-94 a CT-105 com um screencast por caso |
-| Final | 23/11 a 04/12 | Executável único, correções do bug tracker e documentação final. Em andamento: escolha de jogar novamente ou sair no fim da partida e a Release |
+| Final | 23/11 a 04/12 | Executável único, correções do bug tracker, escolha de jogar novamente ou sair no fim da partida, nuvem para eventos, versão para terminal, arte nova dos personagens, colegas e poderes, Aviso Prévio no lugar do Ponteiro, progressão com conquistas, jogo mais leve e a Release |
 
 
 ## Tecnologias
@@ -149,13 +155,34 @@ Quem já jogava antes disso não perde nada: o `iara.save` e o `iara.survival` a
 
 ### Modo Sobrevivência
 
-O `MODO SOBREVIVÊNCIA`, na escolha do modo depois de `INICIAR`, é separado da campanha: dez minutos de expediente em um mapa grande de 15 áreas do escritório, com cinco atos e cinco chefes, do Impressora de Rescisões à própria IARA. Mova a Estagiária com **WASD** ou as setas. Os poderes atacam sozinhos, e cada nível dá a escolha de um poder novo ou de um upgrade. **ESC** pausa.
+O `MODO SOBREVIVÊNCIA`, na escolha do modo depois de `INICIAR`, é separado da campanha: dez minutos de expediente em um mapa grande de 15 áreas do escritório, com cinco atos e cinco chefes, do Impressora de Rescisões à própria IARA. Mova o personagem com **WASD** ou as setas. Os poderes atacam sozinhos, e cada nível dá a escolha de um poder novo ou de um upgrade. **TAB** (ou o botão **TEMPO**) alterna a velocidade entre x1, x2 e x3, e **ESC** pausa.
 
 O Banco de Horas coletado na partida, mesmo que você perca, compra upgrades permanentes no `PLANO DE CARREIRA`. O progresso fica no save escolhido (`saves/sobrevivencia/<nome do save>/progresso.survival`). Sprites e sons vêm de `code/assets/sprites/sobrevivencia` e `code/assets/audio` (músicas e ambientes em OGG, efeitos em WAV), e o áudio segue as regras de mistura em `code/src/survival/sv_audio.h`.
 
 Os 12 personagens e os 4 Colegas de Plantão são desenhados em alta resolução (192x192 por quadro, no mesmo espaço de tela do antigo pixel art), a partir das folhas de `docs/arte/conceito`, com `tools/sprites/preparar_personagem_hd.py` e `tools/sprites/preparar_colegas_hd.py` (precisam de Pillow e NumPy). A arte e o áudio originais ficam em [`arquivo/`](arquivo), fora do executável.
 
 O ranking (`iara.ranking`) ordena os jogadores pela **pontuação** da melhor partida de cada um: **10 pontos por inimigo derrotado, 5 por segundo sobrevivido, 500 por chefe derrotado e 2000 de bônus por desligar a IARA**. Os abates pesam mais que o tempo, então quem só foge sem lutar não passa na frente de quem durou um pouco menos mas derrotou mais inimigos. No empate de pontos, fica na frente quem tem mais abates, depois quem sobreviveu mais tempo e, por fim, quem jogou primeiro. A pontuação é calculada na hora a partir do arquivo, então os pesos podem ser ajustados em `code/src/survival/sv_ranking.h` sem apagar o ranking da feira.
+
+#### Personagens, poderes e conquistas
+
+Cada personagem, escolhido em `PERSONAGEM`, começa com um poder próprio. Enquanto o personagem não é liberado no save, o poder dele **não aparece nas cartas** de subir de nível. Ao cumprir o objetivo, mesmo no meio da partida, o jogo avisa a **conquista**, com o desenho do personagem, o objetivo e um som.
+
+| Personagem | Poder | Como liberar |
+|---|---|---|
+| Estagiário | Grampeador | Já liberado |
+| Laura | Post-its Orbitais | Sobreviva 3:00 em uma partida |
+| Anderson | Vera Fischer | Elimine 500 inimigos no total |
+| Julio | Deploy em Produção | Jogue 5 partidas |
+| Nicollas | Colega de Plantão | Sobreviva 6:30 em uma partida |
+| Prof. Guilherme | Negação | Jogue 10 partidas |
+| Prof. Danilo | Recursão | Elimine 1500 inimigos no total |
+| Prof. Lucas | Prompt da IARA | Sobreviva 8:30 em uma partida |
+| Zito | Nota Fiscal | Jogue 15 partidas |
+| Vasco | Não Perturbe | Elimine 3000 inimigos no total |
+| Prof. Baudel | Mapa de Calor | Sobreviva 10:00 em uma partida |
+| JV | Modus Ponens | Derrote a IARA uma vez |
+
+Os poderes **Aviso Prévio**, **Caneca Arremessada**, **Tabela-Verdade**, **Nova Conversa** e **Fibra Óptica** não são de ninguém e valem desde a primeira partida. As regras ficam em `code/src/survival/sv_rules.c`.
 
 #### Sobrevivência em dupla
 
@@ -165,11 +192,11 @@ Cada save da dupla é uma dupla (o nome aparece no ranking, por exemplo `Ana e B
 
 #### Modo debug (para testar à mão)
 
-Na partida do Sobrevivência, **F1** liga e desliga o modo debug. Ligado, ele mostra por cima do jogo os obstáculos do mapa (caixa de colisão em vermelho), os círculos de colisão dos inimigos e do jogador, o alcance de coleta, os chefes, as zonas dos poderes, os perigos dos chefes, os tiros com o caminho que ainda vão percorrer, e um painel com os números da partida (FPS, tempo de cada quadro, inimigos, poderes e atributos). Também libera todos os personagens.
+Na partida do Sobrevivência, **F1** liga e desliga o modo debug. Ligado, ele mostra por cima do jogo os obstáculos do mapa (caixa de colisão em vermelho), os círculos de colisão dos inimigos e do jogador, o alcance de coleta, os chefes, as zonas dos poderes, os perigos dos chefes, os tiros com o caminho que ainda vão percorrer, e um painel com os números da partida (FPS, tempo de cada quadro, inimigos, poderes e atributos). Também libera todos os personagens e todos os poderes.
 
 Com o debug ligado, **F2** abre o menu de cheats e para a partida: dar ou tirar poderes e passivos no nível escolhido (**Esq/Dir** muda o nível, **Del** tira), chamar qualquer chefe ou qualquer inimigo (em 1, 5, 10, 25 ou 50 de uma vez), ficar invulnerável, curar, subir de nível, derrubar tudo com um golpe, pular o tempo, ir para antes de cada chefe, parar os nascimentos e congelar os inimigos. **Setas/WASD** escolhem, **Enter** aplica, **Esc** volta e o mouse também funciona.
 
-Uma partida em que qualquer cheat foi usado **não conta para o progresso do save**: não dá Banco de Horas, não conta vitória nem recorde. A tela de fim avisa.
+Uma partida em que qualquer cheat foi usado **não conta para o progresso do save**: não dá Banco de Horas, não conta vitória nem recorde, e não libera conquista. A tela de fim avisa.
 
 O jogo também registra em `iara-desempenho.log` (ao lado do executável, ignorado pelo git) os quadros que passaram de 60 ms, com a hora e a tela. É o primeiro lugar para olhar quando alguém disser que o jogo travou.
 
@@ -187,6 +214,8 @@ Para um evento com vários notebooks, o `iara.exe` pode ser gerado com a nuvem l
 - O [ranking ao vivo na web](https://github.com/ByRodrigoVasco/IARA-Ranking-ao-vivo) mostra os dois rankings para um telão ou para o celular.
 
 Como montar o banco, configurar o build e testar: [tools/nuvem/LEIA-ME.md](tools/nuvem/LEIA-ME.md). A URL e a chave ficam em `tools/nuvem/nuvem.local`, que não vai para o git.
+
+**A nuvem só liga no executável gerado por `tools/release/build_release.ps1`** (ou `tools/pacote/empacotar.ps1`) com o `nuvem.local` na pasta. Compilar pelo `gcc` ou pelo VS Code gera o jogo só local, sem aviso. Ao gerar, confira a mensagem `nuvem ligada`.
 
 **Antes do evento:** o plano gratuito do Supabase pausa o projeto após cerca de 7 dias sem atividade.
 
