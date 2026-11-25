@@ -71,7 +71,7 @@ A história passa por 100 dias, e você joga 9 deles. O que você escolhe define
 | PowerShell | Rodar os testes e gerar o executável |
 | Supabase | Banco dos saves e rankings compartilhados |
 | Vercel | Hospedagem do ranking ao vivo e do manual |
-| GitHub, Jira e Figma | Código, sprints em Scrum/Kanban e protótipos |
+| GitHub, Jira e Figma | Código, sprints e protótipos |
 
 ## Entregáveis
 
@@ -100,45 +100,15 @@ A tabela abaixo leva direto ao que entregamos em cada matéria. A página [Entre
 
 ### Sumário dos entregáveis
 
-| Matéria | Atalhos | Página |
+| Matéria ou tema | Atalhos | Página |
 |---|---|---|
 | **FDS** · Fundamentos de Desenvolvimento de Software | [Backlog](docs/fds/backlog-board/README.md) · [Diagramas](docs/fds/diagramas-atividade/README.md) · [Protótipos](docs/fds/prototipos-lofi/README.md) · [Sprint 01](docs/fds/sprint-01/README.md) · [02](docs/fds/sprint-02/README.md) · [03](docs/fds/sprint-03/README.md) · [Testes](docs/fds/testes/README.md) · [Bugs](docs/fds/testes/bugs.md) | [Abrir](docs/entregaveis/README.md#fds-fundamentos-de-desenvolvimento-de-software) |
 | **PIF** · Programação Imperativa e Funcional | [Núcleo em C](code/src) · [Jogo no terminal](code/terminal/LEIA-ME.md) · [Uso de ponteiros](docs/entregaveis/README.md#uso-de-ponteiros) · [Screencast U2](https://drive.google.com/file/d/1soQDTz9SJSCRORCqMzA3ldWT3vO0Zb2M/view) | [Abrir](docs/entregaveis/README.md#pif-programação-imperativa-e-funcional) |
 | **IHC** · Interação Humano-Computador | [Heurísticas de Nielsen](docs/fds/usabilidade-nielsen.md) · [Alto contraste](docs/ihc/alto-contraste.md) · [Vídeo de usabilidade](https://www.youtube.com/watch?v=w3n0H6hxeks) | [Abrir](docs/entregaveis/README.md#ihc-interação-humano-computador) |
 | **LMC** · Lógica para Computação | [Puzzles e auditoria de teoria](docs/lmc/mapeamento-puzzles.md) | [Abrir](docs/entregaveis/README.md#lmc-lógica-para-computação) |
+| **Metodologia** · Scrum e Kanban | [Jira](https://csprj-adsr-2p-e8.atlassian.net/jira/software/c/projects/PI2/boards/2/backlog) · [Como contribuímos](CONTRIBUTING.md) | [Abrir](docs/entregaveis/README.md#metodologia) |
 
-**Mais:** [Metodologia](#metodologia) · [Guia do jogo](docs/entregaveis/guia-do-jogo.md) · [Evolução do software](docs/entregaveis/README.md#como-o-software-evoluiu) · [Como contribuir](CONTRIBUTING.md) · [Links externos](docs/entregaveis/README.md#links-externos) · [Arte e áudio originais](arquivo/README.md)
-
-### Metodologia
-
-Trabalhamos com **Scrum e Kanban** no [Jira](https://csprj-adsr-2p-e8.atlassian.net/jira/software/c/projects/PI2/boards/2/backlog).
-
-- **Sprints** de uma ou duas semanas, cada uma com objetivo e entregáveis definidos.
-- **Histórias de usuário** divididas em subtarefas, cada uma com responsável.
-- **Quadro** para acompanhar cada card até a coluna Concluído.
-- **Código** em branches no GitHub, com Pull Request para a `develop` ([como contribuímos](CONTRIBUTING.md)); bugs registrados nas Issues.
-
-Em 25/11/2026 o Jira tinha 62 histórias e 211 subtarefas nas sprints, todas concluídas. No começo do projeto, o backlog ficava no [Trello](docs/fds/backlog-board/README.md).
-
-<details>
-<summary><b>Sprints do projeto</b></summary>
-
-<br>
-
-| Sprint | Período | Objetivo |
-|---|---|---|
-| Week 01 · Kick-off | 03/08 a 08/08 | Início do projeto e formação das squads |
-| Week 02 e 03 · Apoio e pesquisa | 19/08 a 22/08 | Montagem do backlog e pesquisa inicial |
-| Week 04 e 05 · Setup técnico | 25/08 a 05/09 | Preparação do ambiente e da especificação |
-| Week 06 e 07 · Integração | 08/09 a 19/09 | Primeira sprint e integração das entregas da Unidade 1 |
-| Week 08 e 09 · Checkpoint | 21/09 a 03/10 | Fechamento da Unidade 1 |
-| Week 10 e 11 · Replanejamento | 05/10 a 17/10 | Replanejamento da Unidade 2 |
-| Week 12 · Protótipo | 19/10 a 24/10 | Versão jogável para o teste de usabilidade ([report](docs/fds/sprint-01/README.md)) |
-| Week 13 e 14 · Ajustes | 27/10 a 07/11 | Ajustes depois do teste e validação ([report](docs/fds/sprint-02/README.md)) |
-| Week 15 e 16 · Apresentação | 07/11 a 21/11 | Build final e documentação ([report](docs/fds/sprint-03/README.md)) |
-| Week 17 e 18 · Preparação final | 23/11 a 05/12 | Apresentação final e avaliação do processo |
-
-</details>
+**Mais:** [Guia do jogo](docs/entregaveis/guia-do-jogo.md) · [Evolução do software](docs/entregaveis/README.md#como-o-software-evoluiu) · [Como contribuir](CONTRIBUTING.md) · [Links externos](docs/entregaveis/README.md#links-externos) · [Arte e áudio originais](arquivo/README.md)
 
 ## Como instalar e rodar
 

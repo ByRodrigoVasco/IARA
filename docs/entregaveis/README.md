@@ -2,7 +2,7 @@
 
 O que entregamos em cada matéria. [Voltar ao início](../../README.md)
 
-**Ir para:** [FDS](#fds-fundamentos-de-desenvolvimento-de-software) · [PIF](#pif-programação-imperativa-e-funcional) · [IHC](#ihc-interação-humano-computador) · [LMC](#lmc-lógica-para-computação) · [Links externos](#links-externos) · [Guia do jogo](guia-do-jogo.md) · [Contribuição](../../CONTRIBUTING.md)
+**Ir para:** [FDS](#fds-fundamentos-de-desenvolvimento-de-software) · [PIF](#pif-programação-imperativa-e-funcional) · [IHC](#ihc-interação-humano-computador) · [LMC](#lmc-lógica-para-computação) · [Metodologia](#metodologia) · [Links externos](#links-externos) · [Guia do jogo](guia-do-jogo.md) · [Contribuição](../../CONTRIBUTING.md)
 
 ---
 
@@ -161,6 +161,39 @@ Entregas da disciplina que já estão versionadas neste repositório.
 | Puzzles ligados à teoria | [Mapeamento de puzzles e auditoria de teoria](../lmc/mapeamento-puzzles.md): cada puzzle associado ao conceito formal de lógica, aguardando a revisão com o material da disciplina |
 | Lógica nas histórias de usuário | Diagramas de atividade [US07](../fds/diagramas-atividade/US07-logica-narrativa.md) e [US09](../fds/diagramas-atividade/US09-revisao-correcao-logica.md), em [FDS](../fds/diagramas-atividade/README.md) |
 | Avaliador de fórmulas | [`code/src/game/logic.c`](../../code/src/game/logic.c), usado pelo jogo gráfico e pelo [jogo no terminal](../../code/terminal/LEIA-ME.md) |
+
+---
+
+## Metodologia
+
+Trabalhamos com **Scrum e Kanban** no [Jira](https://csprj-adsr-2p-e8.atlassian.net/jira/software/c/projects/PI2/boards/2/backlog).
+
+- **Sprints** de uma ou duas semanas, cada uma com objetivo e entregáveis definidos.
+- **Histórias de usuário** divididas em subtarefas, cada uma com responsável.
+- **Quadro** para acompanhar cada card até a coluna Concluído.
+- **Código** em branches no GitHub, com Pull Request para a `develop` ([como contribuímos](../../CONTRIBUTING.md)); bugs registrados nas Issues.
+
+Em 25/11/2026 o Jira tinha 62 histórias e 211 subtarefas nas sprints, todas concluídas. No começo do projeto, o backlog ficava no [Trello](../fds/backlog-board/README.md).
+
+<details>
+<summary><b>Sprints do projeto</b></summary>
+
+<br>
+
+| Sprint | Período | Objetivo |
+|---|---|---|
+| Week 01 · Kick-off | 03/08 a 08/08 | Início do projeto e formação das squads |
+| Week 02 e 03 · Apoio e pesquisa | 19/08 a 22/08 | Montagem do backlog e pesquisa inicial |
+| Week 04 e 05 · Setup técnico | 25/08 a 05/09 | Preparação do ambiente e da especificação |
+| Week 06 e 07 · Integração | 08/09 a 19/09 | Primeira sprint e integração das entregas da Unidade 1 |
+| Week 08 e 09 · Checkpoint | 21/09 a 03/10 | Fechamento da Unidade 1 |
+| Week 10 e 11 · Replanejamento | 05/10 a 17/10 | Replanejamento da Unidade 2 |
+| Week 12 · Protótipo | 19/10 a 24/10 | Versão jogável para o teste de usabilidade ([report](../fds/sprint-01/README.md)) |
+| Week 13 e 14 · Ajustes | 27/10 a 07/11 | Ajustes depois do teste e validação ([report](../fds/sprint-02/README.md)) |
+| Week 15 e 16 · Apresentação | 07/11 a 21/11 | Build final e documentação ([report](../fds/sprint-03/README.md)) |
+| Week 17 e 18 · Preparação final | 23/11 a 05/12 | Apresentação final e avaliação do processo |
+
+</details>
 
 ---
 
