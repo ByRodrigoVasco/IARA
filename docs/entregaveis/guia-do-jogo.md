@@ -27,11 +27,13 @@ Quem já jogava antes disso não perde nada: o `iara.save` e o `iara.survival` a
 
 O `MODO SOBREVIVÊNCIA`, na escolha do modo depois de `INICIAR`, é separado da campanha: dez minutos de expediente em um mapa grande de 14 áreas do escritório, com cinco atos e cinco chefes, do Impressora de Rescisões à própria IARA. Mova o personagem com **WASD** ou as setas. Os poderes atacam sozinhos, e cada nível dá a escolha de um poder novo ou de um upgrade. **TAB** (ou o botão **TEMPO**) alterna a velocidade entre x1, x2 e x3, e **ESC** pausa.
 
+Derrotar a IARA vence a partida, e o jogo pergunta se você quer **encerrar** ou **continuar na hora extra**: nela nascem o dobro de inimigos, com o dobro de vida e dano, XP e Banco de Horas em dobro, e a cada minuto os inimigos ficam 10% mais fortes. Perder durante a hora extra não tira a vitória.
+
 O Banco de Horas coletado na partida, mesmo que você perca, compra upgrades permanentes no `PLANO DE CARREIRA`. O progresso fica no save escolhido (`saves/sobrevivencia/<nome do save>/progresso.survival`). Sprites e sons vêm de `code/assets/sprites/sobrevivencia` e `code/assets/audio` (músicas e ambientes em OGG, efeitos em WAV), e o áudio segue as regras de mistura em `code/src/survival/sv_audio.h`.
 
 Os 12 personagens e os 4 Colegas de Plantão são desenhados em alta resolução (192x192 por quadro, no mesmo espaço de tela do antigo pixel art). A arte e o áudio originais ficam em [`arquivo/`](../../arquivo), fora do executável.
 
-O ranking (`iara.ranking`) ordena os jogadores pela **pontuação** da melhor partida de cada um: **10 pontos por inimigo derrotado, 5 por segundo sobrevivido, 500 por chefe derrotado e 2000 de bônus por desligar a IARA**. Os abates pesam mais que o tempo, então quem só foge sem lutar não passa na frente de quem durou um pouco menos mas derrotou mais inimigos. No empate de pontos, fica na frente quem tem mais abates, depois quem sobreviveu mais tempo e, por fim, quem jogou primeiro. A pontuação é calculada na hora a partir do arquivo, então os pesos podem ser ajustados em `code/src/survival/sv_ranking.h` sem apagar o ranking da feira.
+O ranking (`iara.ranking`) ordena os jogadores pela **pontuação** da melhor partida de cada um: **10 pontos por inimigo derrotado, 5 por segundo sobrevivido, 500 por chefe derrotado e 2000 de bônus por desligar a IARA**. Os abates pesam mais que o tempo, então quem só foge sem lutar não passa na frente de quem durou um pouco menos mas derrotou mais inimigos. Depois dos 10 minutos (hora extra), os segundos e os abates **valem o dobro**. No empate de pontos, fica na frente quem tem mais abates, depois quem sobreviveu mais tempo e, por fim, quem jogou primeiro. A pontuação é calculada na hora a partir do arquivo, então os pesos podem ser ajustados em `code/src/survival/sv_ranking.h` sem apagar o ranking da feira.
 
 ### Personagens, poderes e conquistas
 
@@ -44,23 +46,33 @@ Cada personagem, escolhido em `PERSONAGEM`, começa com um poder próprio. Enqua
 | Personagem | Poder | Como liberar |
 |---|---|---|
 | Estagiário | Grampeador | Já liberado |
-| Laura | Post-its Orbitais | Sobreviva 3:00 em uma partida |
-| Anderson | Vera Fischer | Elimine 500 inimigos no total |
+| Laura | Post-its Orbitais | Derrote o primeiro chefe |
+| Anderson | Vera Fischer | Elimine 1000 inimigos no total |
 | Julio | Deploy em Produção | Jogue 5 partidas |
-| Nicollas | Colega de Plantão | Sobreviva 6:30 em uma partida |
+| Nicollas | Colega de Plantão | Sobreviva 7:30 em uma partida |
 | Prof. Guilherme | Negação | Jogue 10 partidas |
-| Prof. Danilo | Recursão | Elimine 1500 inimigos no total |
-| Prof. Lucas | Prompt da IARA | Sobreviva 8:30 em uma partida |
+| Prof. Danilo | Recursão | Elimine 3000 inimigos no total |
+| Prof. Lucas | Prompt da IARA | Sobreviva 9:30 em uma partida |
 | Zito | Nota Fiscal | Jogue 15 partidas |
-| Vasco | Não Perturbe | Elimine 3000 inimigos no total |
-| Prof. Baudel | Mapa de Calor | Sobreviva 10:00 em uma partida |
+| Vasco | Não Perturbe | Elimine 6000 inimigos no total |
+| Prof. Baudel | Mapa de Calor | Sobreviva 11:00 em uma partida |
 | JV | Modus Ponens | Derrote a IARA uma vez |
 
 <p align="center">
   <img src="../assets/conquista.png" alt="Notificação de conquista ao liberar a Laura" width="420">
 </p>
 
-Os poderes **Aviso Prévio**, **Caneca Arremessada**, **Tabela-Verdade**, **Nova Conversa** e **Fibra Óptica** não são de ninguém e valem desde a primeira partida. As regras ficam em `code/src/survival/sv_rules.c`.
+Os poderes **Caneca Arremessada** e **Tabela-Verdade** não são de ninguém e valem desde a primeira partida. Outros três têm conquista própria, da mais fácil para a mais difícil:
+
+| Poder | Como liberar |
+|---|---|
+| Nova Conversa | Chegue ao nível 15 em uma partida |
+| Fibra Óptica | Elimine 900 inimigos em uma partida |
+| Aviso Prévio | Derrote 4 chefes em uma partida |
+
+Cada poder tem um tier, e os mais fortes aparecem menos nas cartas: **C** (Grampeador, Caneca, Tabela-Verdade), **B** (Nova Conversa, Post-its, Vera Fischer, Deploy), **A** (Fibra Óptica, Colega de Plantão, Negação, Recursão, Prompt da IARA) e **S** (Aviso Prévio, Nota Fiscal, Não Perturbe, Mapa de Calor, Modus Ponens). Um poder de tier S tem 40% da chance de um de tier C.
+
+A marmita só cai de inimigos de nível 3 para cima, com chance que cresce de 0,4% a 0,9% ao longo da partida. As regras ficam em `code/src/survival/sv_rules.c`.
 
 Quem pega o **Colega de Plantão** luta acompanhado, cada colega com uma função: Segurança, Suporte de TI, Enfermeira do RH e Entregador.
 
@@ -76,7 +88,7 @@ Cada save da dupla é uma dupla (o nome aparece no ranking, por exemplo `Ana e B
 
 ### Modo debug (para testar à mão)
 
-Na partida do Sobrevivência, **F1** liga e desliga o modo debug. Ligado, ele mostra por cima do jogo os obstáculos do mapa (caixa de colisão em vermelho), os círculos de colisão dos inimigos e do jogador, o alcance de coleta, os chefes, as zonas dos poderes, os perigos dos chefes, os tiros com o caminho que ainda vão percorrer, e um painel com os números da partida (FPS, tempo de cada quadro, inimigos, poderes e atributos). Também libera todos os personagens e todos os poderes.
+No Modo Sobrevivência, **Shift+F1** liga o modo debug, depois de pedir a senha dos cheats, e desliga. Ligado, ele mostra por cima do jogo os obstáculos do mapa (caixa de colisão em vermelho), os círculos de colisão dos inimigos e do jogador, o alcance de coleta, os chefes, as zonas dos poderes, os perigos dos chefes, os tiros com o caminho que ainda vão percorrer, e um painel com os números da partida (FPS, tempo de cada quadro, inimigos, poderes e atributos). Também libera todos os personagens e todos os poderes.
 
 Com o debug ligado, **F2** abre o menu de cheats e para a partida: dar ou tirar poderes e passivos no nível escolhido (**Esq/Dir** muda o nível, **Del** tira), chamar qualquer chefe ou qualquer inimigo (em 1, 5, 10, 25 ou 50 de uma vez), ficar invulnerável, curar, subir de nível, derrubar tudo com um golpe, pular o tempo, ir para antes de cada chefe, parar os nascimentos e congelar os inimigos. **Setas/WASD** escolhem, **Enter** aplica, **Esc** volta e o mouse também funciona.
 
@@ -88,9 +100,11 @@ O jogo também registra em `iara-desempenho.log` (ao lado do executável, ignora
 
 Em um evento com vários dispositivos, dá para gerar o `iara.exe` com a nuvem ligada ([Supabase](https://supabase.com/)). Sem ela, tudo fica salvo no próprio dispositivo, como descrito acima.
 
-- Os saves dos três modos e os rankings solo e de duplas são os mesmos em todos os dispositivos. As configurações (`iara.ini`) e o log continuam em cada um.
-- Um save aberto em um dispositivo fica **em uso** para os outros. A trava vence em 2 minutos sem contato, e uma gravação mais velha que a do servidor é recusada.
-- Escolher, criar e apagar save precisam de internet; apagar pede a senha da organização. Se a rede cair durante a partida, o que não subiu fica numa fila e sobe depois.
+- **Com conexão**, os saves dos três modos e os rankings solo e de duplas são os mesmos em todos os dispositivos. As configurações (`iara.ini`) e o log continuam em cada um.
+- **Sem conexão** (ou sem acesso ao servidor), o jogo funciona normalmente: saves e rankings ficam em `Documentos\IARA`, e o que foi jogado sobe quando a rede voltar.
+- Se o save mudou **nos dois lados** desde a última sincronização, abrir o save pergunta qual vale, o **online** ou o **local**. O outro fica guardado em uma cópia na pasta `nuvem`. Se só um lado mudou, o jogo usa o mais novo sem perguntar.
+- Um save aberto em um dispositivo fica **em uso** para os outros. A trava vence em 2 minutos sem contato, e uma gravação mais velha que a do servidor nunca sobrescreve sem a escolha do jogador.
+- Apagar um save da nuvem pede a senha da organização; sem a senha, ele sai só do dispositivo.
 - Os menus mostram a conexão (**online** ou **offline**), e o motivo de uma queda vai para o `iara-desempenho.log`.
 - Partidas com cheats não entram no ranking.
 - O [ranking ao vivo na web](https://iara-ranking-ao-vivo.vercel.app/) mostra os dois rankings para um telão ou para o celular.
