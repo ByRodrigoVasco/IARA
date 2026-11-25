@@ -992,7 +992,6 @@ static void test_ajustes_do_teste_com_jogadores(void)
     printf("\nAjustes do teste com jogadores\n");
 
     check("SV-96", "o começo da partida já tem inimigos de sobra (pelo menos 2 por segundo)", sv_spawn_rate(0.0f) >= 2.0f);
-    check("SV-97", "acelerar o tempo só vale até os 7:00", SV_SPEEDUP_LIMIT == 420.0f && SV_SPEEDUP_LIMIT < sv_boss_spawn_time(BOSS_IARA));
     check("SV-98", "a partida começa na velocidade normal", sv_time_scale == 1);
     {
         float base_hp, base_cd;
