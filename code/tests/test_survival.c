@@ -1195,6 +1195,35 @@ static void test_duo(void)
     step_duo(1, (Vector2){0, 0}, (Vector2){0, 0});
     check("SV-120", "um chip de XP pego por um sobe a barra dos dois", sv_duo_player(0)->xp > 0.0f && fabsf(sv_duo_player(0)->xp - sv_duo_player(1)->xp) < 0.001f);
 
+    // O chip vale menos na dupla: o mesmo chip rende SV_DUO_XP_MULT do valor para cada um.
+    // O chip é de 1: bem abaixo dos 9 de XP do nível 1, para ninguém subir de nível no meio da conta.
+    {
+        float solo_xp;
+
+        sv_duo_mode = false;
+        sv_game_start(14);
+        clear_enemies();
+        sv_run.player.xp = 0.0f;
+        sv_add_gem(sv_run.player.pos, 0, 1.0f);
+        sv_game_update(1.0f / 60.0f, (Vector2){0, 0});
+        solo_xp = sv_run.player.xp / sv_run.player.xp_mult;
+
+        start_duo(14);
+        clear_enemies();
+        sv_duo_player(0)->xp = 0.0f;
+        sv_duo_player(1)->xp = 0.0f;
+        sv_add_gem(sv_duo_player(0)->pos, 0, 1.0f);
+        step_duo(1, (Vector2){0, 0}, (Vector2){0, 0});
+        check("SV-146", "na dupla cada chip de XP vale menos que no solo, para os dois",
+              SV_DUO_XP_MULT < 1.0f && fabsf(solo_xp - 1.0f) < 0.001f &&
+              fabsf(sv_duo_player(0)->xp / sv_duo_player(0)->xp_mult - SV_DUO_XP_MULT) < 0.001f &&
+              fabsf(sv_duo_player(1)->xp / sv_duo_player(1)->xp_mult - SV_DUO_XP_MULT) < 0.001f);
+    }
+
+    // Os dois sobem de nível juntos: volta ao estado do SV-120
+    start_duo(14);
+    clear_enemies();
+
     sv_duo_player(0)->xp = (float)sv_duo_player(0)->xp_needed;
     sv_duo_player(1)->xp = (float)sv_duo_player(1)->xp_needed;
     step_duo(1, (Vector2){0, 0}, (Vector2){0, 0});
@@ -1231,6 +1260,19 @@ static void test_duo(void)
 
         step_duo(30, (Vector2){0, 0}, (Vector2){1, 0});
         check("SV-124", "quem caiu fica parado no chão", Vector2Distance(where, sv_duo_player(1)->pos) < 0.01f);
+    }
+
+    // Com um caído, a dupla vira um jogo solo para quem está de pé: a câmera é dele e não há distância máxima
+    check("SV-147", "com um caído, a câmera (e o nascimento dos inimigos) segue quem está de pé",
+          sv_duo_focus_player() == 0 && Vector2Distance(sv_duo_focus(), sv_duo_player(0)->pos) < 0.01f);
+    {
+        Vector2 fallen = sv_duo_player(1)->pos;
+
+        sv_duo_player(0)->pos = Vector2Add(fallen, (Vector2){SV_DUO_LEASH_X + 300.0f, 0.0f});
+        clear_enemies();
+        step_duo(1, (Vector2){0, 0}, (Vector2){0, 0});
+        check("SV-148", "com um caído, quem está de pé pode se afastar além da distância máxima da dupla",
+              fabsf(sv_duo_player(0)->pos.x - fallen.x) > SV_DUO_LEASH_X + 200.0f && Vector2Distance(fallen, sv_duo_player(1)->pos) < 0.01f);
     }
 
     // O parceiro chega perto e fica ao lado

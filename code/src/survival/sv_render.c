@@ -939,6 +939,43 @@ static void draw_offscreen_boss_arrow(Camera2D camera)
     }
 }
 
+// Dupla: quem caiu e está fora da tela ganha uma seta na borda, na cor dele, com "J1" ou "J2",
+// para o parceiro saber para onde voltar e levantá-lo
+static void draw_offscreen_partner_arrow(Camera2D camera)
+{
+    float ui = sv_ui();
+    float margin = 46.0f * ui;
+    float w = (float)GetScreenWidth(), h = (float)GetScreenHeight();
+
+    if (!sv_run.duo) return;
+
+    for (int i = 0; i < SV_DUO_PLAYERS; i++)
+    {
+        SvPlayer *p = sv_duo_player(i);
+        Vector2 screen;
+        char label[8];
+
+        if (!p->down) continue;
+        screen = GetWorldToScreen2D(p->pos, camera);
+        if (screen.x > 0 && screen.x < w && screen.y > 0 && screen.y < h) continue;
+
+        {
+            Vector2 center = {w / 2.0f, h / 2.0f};
+            Vector2 direction = Vector2Normalize(Vector2Subtract(screen, center));
+            Vector2 arrow = {Clamp(center.x + direction.x * w, margin, w - margin), Clamp(center.y + direction.y * h, margin, h - margin)};
+            float angle = atan2f(direction.y, direction.x);
+            float size = 18.0f * ui;
+            Vector2 a = {arrow.x + cosf(angle) * size, arrow.y + sinf(angle) * size};
+            Vector2 c = {arrow.x + cosf(angle + 2.5f) * size, arrow.y + sinf(angle + 2.5f) * size};
+            Vector2 d = {arrow.x + cosf(angle - 2.5f) * size, arrow.y + sinf(angle - 2.5f) * size};
+
+            DrawTriangle(a, d, c, duo_colors[i]);
+            snprintf(label, sizeof(label), "J%d", i + 1);
+            sv_text_centered(label, arrow.x - cosf(angle) * size * 1.6f, arrow.y - sinf(angle) * size * 1.6f - 12.0f * ui, 24.0f * ui, duo_colors[i]);
+        }
+    }
+}
+
 // O botão fica no canto de baixo à direita: é a única parte da tela que o HUD deixa livre
 // (vida no alto à esquerda, tempo no centro, Banco de Horas no alto à direita, poderes embaixo à esquerda).
 // A largura vem do maior texto que ele mostra, então o texto nunca passa da borda.
@@ -1125,6 +1162,7 @@ static void draw_hud(Camera2D camera)
         }
         draw_offscreen_boss_arrow(camera);
     }
+    draw_offscreen_partner_arrow(camera);
 
     // Aviso grande
     if (sv_run.banner > 0.0f && sv_run.banner_text)
@@ -1177,6 +1215,41 @@ static void draw_hud(Camera2D camera)
     }
 }
 
+// Dupla: quando a câmera troca de alvo (o meio dos dois <-> quem ficou de pé), ela desliza até o alvo
+// novo em vez de pular. Guarda a distância que falta e a desconta aos poucos; fora das trocas ela
+// segue o alvo exatamente, como antes.
+#define CAMERA_SWITCH_SPEED 6.0f   // Quanto maior, mais rápido ela chega (fração por segundo, em escala exponencial)
+
+static Vector2 duo_camera_focus(void)
+{
+    static Vector2 last_target = {0};
+    static Vector2 pending = {0};
+    static int last_mode = -2;
+    static float last_time = -1.0f;
+    Vector2 focus = sv_duo_focus();
+    int mode = sv_duo_focus_player();
+    float dt = GetFrameTime();
+
+    // Solo ou partida nova: sem deslize
+    if (!sv_run.duo || sv_run.time < last_time || last_mode == -2)
+    {
+        pending = (Vector2){0};
+        last_mode = mode;
+    }
+    else if (mode != last_mode)
+    {
+        pending = Vector2Subtract(last_target, focus);   // Começa de onde a câmera estava
+        last_mode = mode;
+    }
+
+    pending = Vector2Scale(pending, expf(-CAMERA_SWITCH_SPEED * dt));
+    if (Vector2Length(pending) < 0.5f) pending = (Vector2){0};
+
+    last_time = sv_run.time;
+    last_target = Vector2Add(focus, pending);
+    return last_target;
+}
+
 void sv_render_game(void)
 {
     Camera2D camera = {0};
@@ -1187,7 +1260,8 @@ void sv_render_game(void)
     if (camera.zoom < 0.75f) camera.zoom = 0.75f;
     camera.offset = (Vector2){GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f};
     {
-        Vector2 focus = sv_duo_focus();   // No solo, a posição do jogador; na dupla, o meio entre os dois
+        // No solo, a posição do jogador; na dupla, o meio entre os dois, ou quem ficou de pé se o outro caiu
+        Vector2 focus = duo_camera_focus();
 
         camera.target = (Vector2){focus.x + sinf(sv_run.time * 90.0f) * shake, focus.y + cosf(sv_run.time * 80.0f) * shake};
     }
