@@ -1,8 +1,13 @@
 # Matriz de rastreabilidade
 
-Relação entre os requisitos do GDD (seção 8.4) e o código, conferida em 03/11/2026 na branch
-`test/campanha-100-dias`. O log da execução está em
-[`execucao-2026-11-03.txt`](evidencias/execucao-2026-11-03.txt): **76 de 76 casos aprovados**.
+Relação entre os requisitos do GDD (seção 8.4) e o código. As linhas foram conferidas em
+03/11/2026 na branch `test/campanha-100-dias` e revistas em 25/11/2026 sobre a `develop`
+(`c4b2c7c`).
+
+O resultado corrente da suíte **não fica aqui**: ele muda a cada sprint e está no
+[relatório de testes](README.md), que registra cada execução com data, branch e log. Na conferência
+de 03/11 eram 76 casos; hoje a suíte passa de 107, mais os conjuntos de unidade e o do
+Sobrevivência.
 
 **Situação:** ✅ implementado e testado · 🟡 parcial · ❌ não implementado.
 A coluna de issue traz só o que foi confirmado no Jira; as demais ficam para a equipe preencher.
