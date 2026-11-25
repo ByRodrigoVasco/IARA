@@ -32,9 +32,15 @@ void render_game_loop(void);
 bool is_game_loop_finished(void);
 
 /**
- * @brief Informa que o jogador escolheu SAIR DO JOGO no menu de pausa.
+ * @brief Informa que o jogador escolheu SAIR DO JOGO no menu de pausa ou depois do final.
  */
 bool is_game_loop_quit_requested(void);
+
+/**
+ * @brief Informa que, depois do final, o jogador escolheu JOGAR NOVAMENTE: a máquina de estados
+ * recarrega o mesmo save, que recomeça a campanha do Dia 1. Só vale junto com is_game_loop_finished().
+ */
+bool is_game_loop_replay_requested(void);
 
 /**
  * @brief Informa se a tela do computador está aberta: nela, o ESC sai do computador, não do jogo.

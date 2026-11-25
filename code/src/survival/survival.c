@@ -39,6 +39,14 @@ static int levelup_selected = 0;
 static int pause_selected = 0;
 static bool pause_help_open = false;   // O painel de ajuda está aberto por cima da pausa
 static int earned_coins = 0;
+
+// Escolha no fim da partida: voltar ao início do modo (onde JOGAR já vem marcado) ou sair para o menu principal
+#define OVER_OPTIONS 2
+#define OVER_SURVIVAL_MENU 0
+#define OVER_MAIN_MENU 1
+#define OVER_INPUT_DELAY 0.6f          // Segundos sem ler teclas: quem estava apertando algo ao morrer não escolhe sem querer
+static int over_selected = OVER_SURVIVAL_MENU;
+static float over_wait = 0.0f;
 static float shop_message_timer = 0.0f;
 static const char *shop_message = "";
 
@@ -49,6 +57,14 @@ static int last_rank_position = 0;     // Posição do jogador depois da última
 static long last_rank_order = 0;       // Para destacar a linha do jogador no ranking
 
 static void finish_run(void);
+
+// Abre a tela de resultado com MENU DA SOBREVIVÊNCIA marcado
+static void enter_over_screen(void)
+{
+    screen = SCREEN_OVER;
+    over_selected = OVER_SURVIVAL_MENU;
+    over_wait = 0.0f;
+}
 
 static const char *upgrade_names[UPG_COUNT] = {
     "Plano de Saúde Premium", "Bônus de Desempenho", "Sapato Confortável", "Atalhos de Teclado", "Monitor Ultrawide",
@@ -844,7 +860,7 @@ static void render_run(void)
     if (sv_run.phase == SV_DEAD || sv_run.phase == SV_WON)
     {
         finish_run(); warn_if_save_failed();
-        screen = SCREEN_OVER;
+        enter_over_screen();
         return;
     }
 
@@ -863,7 +879,7 @@ static void abandon_run(void)
 {
     sv_run.phase = SV_DEAD;
     finish_run(); warn_if_save_failed();
-    screen = SCREEN_OVER;
+    enter_over_screen();
     sv_music_play(MUS_GAMEOVER);
 }
 
@@ -930,24 +946,70 @@ static void render_pause(void)
     end_game_drawing();
 }
 
+// Botões do fim da partida, lado a lado embaixo do ranking (medidas em 1080p, como o resto do modo)
+static Rectangle over_button(int index)
+{
+    float ui = sv_ui();
+    float width = 540.0f * ui;
+    float gap = 30.0f * ui;
+    float total = width * OVER_OPTIONS + gap * (OVER_OPTIONS - 1);
+
+    return (Rectangle){(GetScreenWidth() - total) / 2.0f + (float)index * (width + gap), 925.0f * ui, width, 62.0f * ui};
+}
+
+// Executa a escolha do fim da partida. O resultado já foi pago e registrado em finish_run().
+static void choose_over_option(int option)
+{
+    sv_sfx(SND_confirma);
+    sv_ambient_play(-1);
+    SetMouseCursor(MOUSE_CURSOR_ARROW);
+
+    screen = SCREEN_HUB;
+    hub_selected = 0;
+    sv_music_play(MUS_MENU);
+    sv_audio_prepare(MUS_ATO1, sv_start_ambient());   // Para a próxima partida começar sem ler o disco
+
+    if (option == OVER_MAIN_MENU) leave_to_menu = true;
+}
+
 static void render_over(void)
 {
+    static const char *labels[OVER_OPTIONS] = {"MENU DA SOBREVIVÊNCIA", "SAIR PARA O MENU"};
     float ui = sv_ui();
     float w = (float)GetScreenWidth();
     bool won = sv_run.phase == SV_WON;
     char text[128];
+    int hovered = -1;
 
     sv_audio_update(GetFrameTime());
     if (won && sv_music_current() != MUS_VITORIA) sv_music_play(MUS_VITORIA);
 
-    if (pressed_confirm() || IsKeyPressed(KEY_ESCAPE))
+    over_wait += GetFrameTime();
+    for (int i = 0; i < OVER_OPTIONS; i++)
     {
-        screen = SCREEN_HUB;
-        hub_selected = 0;
-        sv_music_play(MUS_MENU);
-        sv_ambient_play(-1);
-        sv_audio_prepare(MUS_ATO1, sv_start_ambient());   // Para a próxima partida começar sem ler o disco
-        sv_sfx(SND_confirma);
+        if (CheckCollisionPointRec(GetMousePosition(), over_button(i))) hovered = i;
+    }
+
+    if (over_wait >= OVER_INPUT_DELAY)
+    {
+        Vector2 delta = GetMouseDelta();
+
+        if (pressed_right() || pressed_down()) { over_selected = (over_selected + 1) % OVER_OPTIONS; sv_sfx(SND_escolha); }
+        if (pressed_left() || pressed_up()) { over_selected = (over_selected + OVER_OPTIONS - 1) % OVER_OPTIONS; sv_sfx(SND_escolha); }
+        if (hovered >= 0 && hovered != over_selected && (delta.x != 0.0f || delta.y != 0.0f)) { over_selected = hovered; sv_sfx(SND_escolha); }
+
+        if (IsKeyPressed(KEY_ESCAPE)) choose_over_option(OVER_SURVIVAL_MENU);   // Como antes: ESC volta ao início do modo
+        else if (pressed_confirm()) choose_over_option(over_selected);
+        else if (hovered >= 0 && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) { over_selected = hovered; choose_over_option(hovered); }
+    }
+
+    // A escolha já trocou de tela: este quadro só limpa o fundo
+    if (screen != SCREEN_OVER)
+    {
+        begin_game_drawing();
+        draw_backdrop();
+        end_game_drawing();
+        return;
     }
 
     begin_game_drawing();
@@ -987,7 +1049,18 @@ static void render_over(void)
 
     draw_ranking(w / 2.0f - 420.0f * ui, 600.0f * ui, 840.0f * ui, 5, 34.0f * ui);
 
-    sv_text_centered("Enter para voltar", w / 2.0f, 1000.0f * ui, 34.0f * ui, (Color){190, 180, 195, 255});
+    for (int i = 0; i < OVER_OPTIONS; i++)
+    {
+        Rectangle button = over_button(i);
+        bool selected = i == over_selected;
+
+        DrawRectangleRec(button, selected ? (Color){70, 14, 26, 220} : (Color){10, 4, 16, 200});
+        DrawRectangleLinesEx(button, 2.0f * ui, selected ? (Color){255, 70, 80, 255} : (Color){120, 30, 44, 255});
+        sv_text_centered(labels[i], button.x + button.width / 2.0f, button.y + 12.0f * ui, 38.0f * ui, selected ? (Color){255, 70, 80, 255} : (Color){225, 215, 225, 255});
+    }
+    SetMouseCursor(hovered >= 0 ? MOUSE_CURSOR_POINTING_HAND : MOUSE_CURSOR_ARROW);
+
+    ui_draw_hint("SETAS: escolher    ENTER: confirmar    ESC: menu da Sobrevivência");
 
     end_game_drawing();
 }
