@@ -20,8 +20,6 @@ O jogo tem dois jeitos de jogar:
   <a href="https://github.com/ByRodrigoVasco/IARA/releases/latest"><b>Baixar o jogo</b></a>
 </p>
 
-> **Entrega final (Unidade 2):** versão publicada nas [Releases do GitHub](https://github.com/ByRodrigoVasco/IARA/releases/latest), com o `IARA-windows.zip` pronto para baixar e jogar, reports das sprints [01](docs/fds/sprint-01/README.md), [02](docs/fds/sprint-02/README.md) e [03](docs/fds/sprint-03/README.md), [rastreabilidade das 16 histórias](docs/fds/sprint-03/README.md#rastreabilidade-das-histórias-pi2-330) e [bug tracker](docs/fds/testes/bugs.md).
-
 ## Novidades da Unidade 2
 
 Na Unidade 1 o jogo era o núcleo em C: menu, máquina de estados, o escritório com colisões e um
