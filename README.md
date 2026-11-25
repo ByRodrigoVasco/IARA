@@ -1,26 +1,79 @@
-# IARA
-
-Você investiga um caso de horror corporativo envolvendo IARA, uma inteligência
-artificial fictícia. Quanto mais questiona as respostas dela em vez de
-aceitá-las automaticamente, mais precisa recorrer à lógica para provar
-as inconsistências. Assim, a mecânica ensina ao mesmo tempo ética em IA e lógica clássica.
-
-O jogo tem dois jeitos de jogar:
-
-- **Modo História:** cem dias de expediente na CISSA, vividos em nove dias jogáveis. Em cada chamado você decide se resolve sozinho, confere a sugestão da IARA ou envia sem conferir, e as escolhas levam a um dos 4 finais.
-- **Modo Sobrevivência:** um **roguelike** de dez minutos. Cada partida começa do zero, você escolhe poderes a cada nível, enfrenta cinco chefes e, com o que conquistar, libera melhorias e personagens. Dá para jogar sozinho ou em dupla.
-
 <p align="center">
-  <img src="docs/assets/capa.png" alt="Capa do projeto IARA" width="800">
+  <img src="docs/assets/capa.png" alt="IARA" width="800">
 </p>
 
 <p align="center">
-  <a href="https://iara-ranking-ao-vivo.vercel.app/"><b>Ranking ao vivo</b></a> ·
-  <a href="https://iara-tech-night.vercel.app/"><b>Manual do jogo</b></a> ·
-  <a href="https://github.com/ByRodrigoVasco/IARA/releases/latest"><b>Baixar o jogo</b></a>
+  <a href="https://iara-ranking-ao-vivo.vercel.app/"><img src="https://img.shields.io/badge/Ranking%20ao%20vivo-C0182B?style=for-the-badge" alt="Ranking ao vivo"></a>
+  <a href="https://iara-tech-night.vercel.app/"><img src="https://img.shields.io/badge/Manual%20do%20jogo-1F6F78?style=for-the-badge" alt="Manual do jogo"></a>
+  <a href="https://github.com/ByRodrigoVasco/IARA/releases/latest"><img src="https://img.shields.io/badge/Baixar%20o%20jogo-2E7D32?style=for-the-badge" alt="Baixar o jogo"></a>
 </p>
 
-## Novidades da Unidade 2
+<p align="center">
+  <a href="#a-história">História</a> ·
+  <a href="#tecnologias">Tecnologias</a> ·
+  <a href="#entregáveis">Entregáveis</a> ·
+  <a href="#como-instalar-e-rodar">Instalar e rodar</a> ·
+  <a href="#funcionalidades">Funcionalidades</a> ·
+  <a href="#squad">Squad</a> ·
+  <a href="#créditos-e-menções-honrosas">Créditos</a>
+</p>
+
+## A história
+
+Você é o estagiário recém-chegado à CISSA e vai trabalhar ao lado da **IARA**, a inteligência artificial da empresa. Ela responde rápido, com confiança, e quase sempre acerta. Os dias passam, o escritório vai mudando e algumas respostas deixam de fazer sentido. Para investigar o que está acontecendo, só há uma ferramenta confiável: a **lógica**. No caminho, o jogo ensina ao mesmo tempo ética em IA e lógica clássica.
+
+## Como se joga
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### Modo História
+
+Ande pelo escritório, converse com os colegas e resolva os chamados no computador. Em cada um você escolhe:
+
+- **resolver sozinho**;
+- **conferir** a sugestão da IARA;
+- **enviar sem conferir**.
+
+São 100 dias de expediente, vividos em 9 dias jogáveis, com puzzles de lógica. As suas escolhas levam a um dos **4 finais**.
+
+</td>
+<td width="50%" valign="top">
+
+### Modo Sobrevivência
+
+Um **roguelike** de 10 minutos, sozinho ou em dupla:
+
+- você anda, e os **poderes atacam sozinhos**;
+- a cada nível, **escolha uma carta**: poder novo ou melhoria;
+- **cinco chefes** aparecem ao longo da partida;
+- o **Banco de Horas** compra melhorias permanentes;
+- objetivos cumpridos **liberam personagens e poderes**.
+
+</td>
+</tr>
+</table>
+
+## Tecnologias
+
+<p align="center">
+
+![C](https://img.shields.io/badge/C-00599C?style=for-the-badge&logo=c&logoColor=white) ![raylib](https://img.shields.io/badge/raylib-000000?style=for-the-badge) ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white) ![Supabase](https://img.shields.io/badge/Supabase-1C1C1C?style=for-the-badge&logo=supabase&logoColor=3FCF8E) ![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white) ![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white) ![Figma](https://img.shields.io/badge/Figma-F24E1E?style=for-the-badge&logo=figma&logoColor=white) ![Jira](https://img.shields.io/badge/Jira-0052CC?style=for-the-badge&logo=jira&logoColor=white)
+
+</p>
+
+| Tecnologia | Para que é usada |
+|---|---|
+| **C** e **raylib** | O jogo: loop, telas, desenho 2D, áudio e saves. A versão para terminal é C puro |
+| **Python** e **PowerShell** | Ferramentas de arte, testes e geração do executável |
+| **Supabase** | Banco de dados dos saves e rankings compartilhados |
+| **Vercel** | Hospedagem do ranking ao vivo e do manual do jogo |
+| **GitHub**, **Jira** e **Figma** | Versionamento, gestão das sprints e protótipos |
+
+## Entregáveis
+
+### Introdução: novidades da Unidade 2
 
 Na Unidade 1 o jogo era o núcleo em C: menu, máquina de estados, o escritório com colisões e um
 quiz jogável. Desde então entrou:
@@ -39,66 +92,52 @@ quiz jogável. Desde então entrou:
 | **Acessibilidade** | Alto contraste, pausa, tela de ajuda e confirmação antes de sair ou desistir |
 
 Tudo isso roda a partir de um `iara.exe` único, sem instalação nem conta. O detalhamento por sprint
-está em [Como o software evoluiu](#como-o-software-evoluiu).
+está em [Como o software evoluiu](docs/entregaveis/README.md#como-o-software-evoluiu).
 
-## Sumário
+Abaixo estão os atalhos para tudo o que foi entregue: histórias, protótipos, sprints, testes, o jogo no terminal, usabilidade, acessibilidade e lógica. A página **[Entregáveis](docs/entregaveis/README.md)** reúne os detalhes, a evolução do software, o uso de ponteiros e o bug tracker.
 
-| Seção | O que tem |
-|---|---|
-| [Como compilar e executar](#como-compilar-e-executar) | Baixar o jogo pronto ou compilar, controles e versão para terminal |
-| [Funcionalidades](#funcionalidades) | O que cada modo faz |
-| [Documentação](#documentação) | Guia do jogo, nuvem, terminal, contribuição e manual |
-| [Entregas por matéria](#entregas-por-matéria) | [FDS](#fds-fundamentos-de-desenvolvimento-de-software), [PIF](#pif-programação-imperativa-e-funcional), [IHC](#ihc-interação-humano-computador) e [LMC](#lmc-lógica-para-computação) |
-| [Como o software evoluiu](#como-o-software-evoluiu) | Da concepção à entrega final |
-| [Tecnologias](#tecnologias) e [links externos](#links-externos) | Ferramentas, board, protótipos e vídeos |
-| [Uso de ponteiros](#uso-de-ponteiros) | Quatro exemplos no código C |
-| [Qualidade e testes](#qualidade-e-testes) | Suíte, evidências e bug tracker |
-| [Como contribuir](#como-contribuir), [créditos de arte](#créditos-de-arte) e [squad](#squad) | Equipe e regras do repositório |
+### Sumário dos entregáveis
 
-## Como compilar e executar
+| Matéria | Destaques | Página |
+|---|---|---|
+| **FDS** · Fundamentos de Desenvolvimento de Software | [Backlog](docs/fds/backlog-board/README.md) · [Diagramas](docs/fds/diagramas-atividade/README.md) · [Protótipos](docs/fds/prototipos-lofi/README.md) · [Sprint 01](docs/fds/sprint-01/README.md) · [02](docs/fds/sprint-02/README.md) · [03](docs/fds/sprint-03/README.md) · [Testes](docs/fds/testes/README.md) · [Bugs](docs/fds/testes/bugs.md) | [Abrir](docs/entregaveis/README.md#fds-fundamentos-de-desenvolvimento-de-software) |
+| **PIF** · Programação Imperativa e Funcional | [Núcleo em C](code/src) · [Jogo no terminal](code/terminal/LEIA-ME.md) · [Uso de ponteiros](docs/entregaveis/README.md#uso-de-ponteiros) · [Screencast U2](https://drive.google.com/file/d/1soQDTz9SJSCRORCqMzA3ldWT3vO0Zb2M/view) | [Abrir](docs/entregaveis/README.md#pif-programação-imperativa-e-funcional) |
+| **IHC** · Interação Humano-Computador | [Heurísticas de Nielsen](docs/fds/usabilidade-nielsen.md) · [Alto contraste](docs/ihc/alto-contraste.md) · [Vídeo de usabilidade](https://www.youtube.com/watch?v=w3n0H6hxeks) | [Abrir](docs/entregaveis/README.md#ihc-interação-humano-computador) |
+| **LMC** · Lógica para Computação | [Puzzles e auditoria de teoria](docs/lmc/mapeamento-puzzles.md) | [Abrir](docs/entregaveis/README.md#lmc-lógica-para-computação) |
 
-**Só quer jogar?** Baixe o `IARA-windows.zip` nas [Releases](https://github.com/ByRodrigoVasco/IARA/releases/latest), extraia e abra o `iara.exe`. Não precisa instalar nada.
+**Mais:** [Guia do jogo](docs/entregaveis/guia-do-jogo.md) · [Evolução do software](docs/entregaveis/README.md#como-o-software-evoluiu) · [Como contribuir](CONTRIBUTING.md) · [Links externos](docs/entregaveis/README.md#links-externos) · [Arte e áudio originais](arquivo/README.md)
 
-Para compilar, siga os passos abaixo.
+## Como instalar e rodar
 
-### 1. Instalar o MSYS2
+### Só quero jogar
 
-1. Baixe o instalador em [msys2.org](https://www.msys2.org/) e execute.
-2. Clique em "Next" até o fim, **sem mudar a pasta de instalação** (`C:\msys64`).
+Baixe o `IARA-windows.zip` nas [Releases](https://github.com/ByRodrigoVasco/IARA/releases/latest), extraia e abra o `iara.exe`. Não precisa instalar nada.
 
-### 2. Abrir o terminal
+### Compilar o projeto (Windows)
 
-No menu Iniciar, abra o **MSYS2 UCRT64**.
+**1.** Instale o [MSYS2](https://www.msys2.org/) sem mudar a pasta (`C:\msys64`) e abra o **MSYS2 UCRT64**.
 
-### 3. Instalar as dependências
+**2.** Instale as ferramentas:
 
 ```bash
-pacman -S --needed git mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-raylib
+pacman -S --needed git mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-raylib mingw-w64-ucrt-x86_64-glfw
 ```
 
-Se perguntar `[Y/n]`, digite `Y`.
-
-### 4. Baixar o projeto
+**3.** Baixe o projeto:
 
 ```bash
 git clone https://github.com/ByRodrigoVasco/IARA.git
 cd IARA
 ```
 
-### 5. Compilar
+**4.** Compile e jogue:
 
 ```bash
 gcc -O2 code/src/*.c code/src/*/*.c -Icode/src -Icode/src/core -Icode/src/screens -Icode/src/ui -Icode/src/game -Icode/src/survival -o iara.exe -lraylib -lopengl32 -lgdi32 -lwinmm
-```
-O `-O2` liga as otimizações do compilador e deixa o jogo bem mais leve; sem ele, o jogo roda, mas gasta mais do processador.
-
-Ou, no VS Code com a pasta `IARA` aberta, aperte `Ctrl + Shift + B`: ele compila e já abre o jogo.
-
-### 6. Jogar
-
-```bash
 ./iara.exe
 ```
+
+No VS Code, `Ctrl + Shift + B` compila e abre o jogo.
 
 | Ação | Teclas |
 |---|---|
@@ -109,186 +148,187 @@ Ou, no VS Code com a pasta `IARA` aberta, aperte `Ctrl + Shift + B`: ele compila
 | Pausar ou voltar | **ESC** (ou **P**) |
 | Tela cheia | **F11** |
 
-Janela, saves, modo debug e os outros detalhes estão no [guia do jogo](docs/jogo/README.md).
+<details>
+<summary><b>Versão para terminal</b></summary>
 
-### Versão para terminal (PIF)
+<br>
 
-O jogo também roda dentro do terminal, em texto, sem abrir janela e sem depender do raylib. No **MSYS2 UCRT64**, na pasta do projeto:
+O jogo também roda em texto, sem janela e sem raylib, com os 8 dias que têm mesa de triagem:
 
 ```bash
 gcc -O2 -std=c11 code/terminal/*.c code/src/game/logic.c -Icode/terminal -Icode/src/game -Icode/src/core -Icode/src/screens -o iara-terminal.exe
 ./iara-terminal.exe
 ```
 
-São os **8 dias com mesa de triagem** (3, 12, 27, 41, 58, 74, 89 e 100), com os mesmos enunciados e fórmulas do jogo gráfico. A campanha gráfica tem 9 dias jogáveis porque inclui o Dia 1, de perguntas sobre IA. Detalhes em [`code/terminal/LEIA-ME.md`](code/terminal/LEIA-ME.md).
+Detalhes em [`code/terminal/LEIA-ME.md`](code/terminal/LEIA-ME.md).
+
+</details>
+
+<details>
+<summary><b>Gerar o pacote para outras máquinas</b></summary>
+
+<br>
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/pacote/empacotar.ps1
+```
+
+Gera `build/IARA-windows.zip` e `build/release/iara.exe`, um arquivo só, com imagens, sons e bibliotecas dentro. Para testar o pacote fora do ambiente de desenvolvimento: `tools/pacote/testar_pacote.ps1` e o [roteiro de máquina limpa](docs/fds/testes/maquina-limpa.md).
+
+</details>
+
+<details>
+<summary><b>Opcional: hospedar o banco, o ranking ao vivo e o manual</b></summary>
+
+<br>
+
+Sem estes passos o jogo funciona normalmente, com tudo salvo no próprio computador.
+
+**Banco de dados (Supabase)**
+
+1. Em [supabase.com](https://supabase.com), crie um projeto gratuito na região South America (São Paulo).
+2. No **SQL Editor**, cole e execute o conteúdo de [`tools/nuvem/supabase.sql`](tools/nuvem/supabase.sql).
+3. Defina a senha de apagar saves, trocando `SUA-SENHA` (não salve essa consulta):
+
+   ```sql
+   insert into iara_config (chave, valor)
+   values ('senha_apagar', encode(sha256(convert_to('SUA-SENHA', 'UTF8')), 'hex'))
+   on conflict (chave) do update set valor = excluded.valor;
+   ```
+
+4. Crie o arquivo `tools/nuvem/nuvem.local` (o git o ignora) com a *Project URL* e a chave **publishable**. Nunca use a chave secreta.
+
+   ```
+   NUVEM_URL=https://<id-do-projeto>.supabase.co
+   NUVEM_CHAVE=<chave publishable>
+   ```
+
+5. Gere o jogo com `tools/pacote/empacotar.ps1` e confira a mensagem **`nuvem ligada`**. Compilar pelo `gcc` ou pelo VS Code gera o jogo sem nuvem.
+
+**Ranking ao vivo (Vercel):** importe o repositório [IARA-Ranking-ao-vivo](https://github.com/ByRodrigoVasco/IARA-Ranking-ao-vivo), escolha o preset **Other**, crie as variáveis `NUVEM_URL` e `NUVEM_CHAVE` e clique em **Deploy**.
+
+**Manual do jogo (Vercel):** importe este repositório, escolha **Root Directory** `docs/tech-night`, preset **Other** e a branch a publicar ([detalhes](docs/tech-night/README.md)).
+
+O plano gratuito do Supabase pausa após cerca de 7 dias sem uso. O guia completo, com os testes do banco, está em [`tools/nuvem/LEIA-ME.md`](tools/nuvem/LEIA-ME.md).
+
+</details>
 
 ## Funcionalidades
 
-**Modo História (`MODO NORMAL` no menu)**
-- 100 dias de expediente: 9 dias jogáveis, Flashes do dia e saltos no calendário, para a história caber numa sessão curta.
-- Em cada chamado o jogador escolhe: resolver sozinho, conferir a sugestão da IARA ou enviar sem conferir. A escolha pesa na pontuação e decide qual dos 4 finais o jogador recebe.
-- Puzzles de lógica proposicional ensinados pela própria história, com a colinha dos símbolos no Dia 1.
-- Dicas leves pelos NPCs e pelo mural, nunca a resposta pronta, e failsafe depois de 3 erros para ninguém ficar travado.
-- NPCs com diálogo opcional e um escritório que muda com os dias e com as escolhas, sem HUD numérico.
-- Save automático, com vários saves por modo.
-
-**Modo Sobrevivência**
-- Dez minutos num mapa de 14 áreas do escritório, com 5 atos e 5 chefes.
-- Banco de Horas para comprar melhorias no Plano de Carreira, e ranking de partidas.
-- 12 personagens e 17 poderes. O poder de cada personagem só aparece nas cartas depois que ele é liberado, e cada liberação vira uma [conquista](docs/jogo/README.md#personagens-poderes-e-conquistas).
-- Velocidade do tempo em x1, x2 ou x3, a partida inteira.
-- Sobrevivência em dupla, para duas pessoas no mesmo computador.
-
-**Para todos os modos**
-- Configurações: volume da música e dos efeitos, brilho, alto contraste, tela cheia e janela maximizada.
-- Pausa, ajuda e confirmação antes de sair ou desistir.
-- Trilha sonora por momento do jogo e efeitos sonoros de ações e ambiente.
-- Um `iara.exe` só, sem instalação nem conta, que funciona sem internet.
-- Versão para eventos, opcional: [saves e rankings compartilhados entre notebooks](docs/jogo/README.md#eventos-saves-e-rankings-na-nuvem) e [ranking ao vivo na web](https://iara-ranking-ao-vivo.vercel.app/).
-
-## Documentação
-
-| Documento | O que explica |
+| Modo História | Modo Sobrevivência |
 |---|---|
-| [Guia do jogo](docs/jogo/README.md) | Modos e saves, Sobrevivência, personagens e conquistas, dupla, debug, nuvem e pacote |
-| [Manual do jogo](https://iara-tech-night.vercel.app/) | Página para quem joga, feita para o celular ([fonte](docs/tech-night/README.md)) |
-| [Ranking ao vivo](https://iara-ranking-ao-vivo.vercel.app/) | Os rankings do evento ([repositório](https://github.com/ByRodrigoVasco/IARA-Ranking-ao-vivo)) |
-| [Jogo no terminal](code/terminal/LEIA-ME.md) | Como compilar, jogar e como o código é organizado |
-| [Nuvem](tools/nuvem/LEIA-ME.md) | Banco de dados, configuração do build e testes |
-| [Contribuição](CONTRIBUTING.md) | Ambiente, branches, commits, issues e Pull Requests |
-| [Arquivo](arquivo/README.md) | Arte e áudio antigos, fora do executável |
+| 100 dias de expediente, com 9 dias jogáveis, Flashes do dia e saltos no calendário | Mapa com 14 áreas, 5 atos e 5 chefes |
+| Resolver, conferir ou enviar sem conferir: a escolha decide entre 4 finais | 12 personagens e 17 poderes, liberados por objetivos |
+| Puzzles de lógica proposicional ensinados pela história | Conquistas com notificação e som |
+| Dicas pelos NPCs e pelo mural, sem resposta pronta | Plano de Carreira com melhorias permanentes |
+| Escritório que muda com os dias e com as escolhas, sem HUD numérico | Sobrevivência em dupla no mesmo computador |
+| Save automático com vários slots | Velocidade x1, x2 ou x3 e ranking de partidas |
 
-## Entregas por matéria
+**Para todos os modos:** volume, brilho, alto contraste, tela cheia, pausa, ajuda e confirmação antes de sair. Opcional para eventos: saves e rankings compartilhados entre notebooks, com [ranking ao vivo](https://iara-ranking-ao-vivo.vercel.app/).
 
-Cada matéria tem uma página própria com todas as suas entregas.
+<p align="center">
+  <img src="docs/assets/personagens.png" alt="Os 12 personagens" width="800">
+</p>
 
-### FDS: Fundamentos de Desenvolvimento de Software
-
-[Página de FDS](docs/fds/README.md)
-
-| Entrega | Onde está |
-|---|---|
-| Histórias de usuário, backlog e board | [Backlog e board](docs/fds/backlog-board/README.md) e [Jira](https://csprj-adsr-2p-e8.atlassian.net/jira/software/c/projects/PI2/boards/2/backlog) |
-| Diagramas de atividade | [Um por história](docs/fds/diagramas-atividade/README.md) |
-| Protótipos lo-fi e screencast | [Protótipos](docs/fds/prototipos-lofi/README.md) e [vídeo](https://youtu.be/qE2Gn79bmqw) |
-| Reports das sprints | [Sprint 01](docs/fds/sprint-01/README.md), [Sprint 02](docs/fds/sprint-02/README.md) e [Sprint 03](docs/fds/sprint-03/README.md) |
-| Testes, bugs e rastreabilidade | [Testes](docs/fds/testes/README.md), [bug tracker](docs/fds/testes/bugs.md) e [rastreabilidade](docs/fds/sprint-03/README.md#rastreabilidade-das-histórias-pi2-330) |
-| Versionamento | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
-
-### PIF: Programação Imperativa e Funcional
-
-[Página de PIF](docs/pif/README.md)
-
-| Entrega | Onde está |
-|---|---|
-| Núcleo do jogo em C (Unidade 1) | [`code/src`](code/src) e [screencast](https://www.youtube.com/watch?v=z4OrasORL4c) |
-| Jogo no terminal (Unidade 2) | [`code/terminal`](code/terminal/LEIA-ME.md) |
-| Screencast da Unidade 2 | [Vídeo](https://drive.google.com/file/d/1soQDTz9SJSCRORCqMzA3ldWT3vO0Zb2M/view) |
-| Uso de ponteiros | [Quatro exemplos](#uso-de-ponteiros) |
-
-### IHC: Interação Humano-Computador
-
-[Página de IHC](docs/ihc/README.md)
-
-| Entrega | Onde está |
-|---|---|
-| Protótipo lo-fi e screencast | [Protótipos](docs/fds/prototipos-lofi/README.md) e [vídeo](https://youtu.be/qE2Gn79bmqw) |
-| Avaliação heurística (Nielsen) | [Auditoria de usabilidade](docs/fds/usabilidade-nielsen.md) e [relatório](https://drive.google.com/file/d/1koLQyc7byRok119UhpnPiuLb0MBrtWH4/view) |
-| Comprovação de usabilidade | [Vídeo](https://www.youtube.com/watch?v=w3n0H6hxeks) |
-| Acessibilidade | [Modo de alto contraste](docs/ihc/alto-contraste.md) |
-
-### LMC: Lógica para Computação
-
-[Página de LMC](docs/lmc/README.md)
-
-| Entrega | Onde está |
-|---|---|
-| Puzzles ligados à teoria | [Mapeamento e auditoria](docs/lmc/mapeamento-puzzles.md) |
-| Regras lógicas das histórias | [US07](docs/fds/diagramas-atividade/US07-logica-narrativa.md) e [US09](docs/fds/diagramas-atividade/US09-revisao-correcao-logica.md) |
-| Avaliador de fórmulas no código | [`game/logic.c`](code/src/game/logic.c) |
-
-## Como o software evoluiu
-
-| Etapa | Período | O que entrou |
-|---|---|---|
-| Concepção | Ago a set/2026 | Personas, histórias de usuário, backlog no Trello, [diagramas de atividade](docs/fds/diagramas-atividade/README.md) e [protótipos lo-fi](docs/fds/prototipos-lofi/README.md) com screencast |
-| Núcleo em C | Set a out/2026 | Menu, máquina de estados, escritório com colisões e o primeiro quiz jogável ([screencast do núcleo](https://www.youtube.com/watch?v=z4OrasORL4c)) |
-| [Sprint 01](docs/fds/sprint-01/README.md) | 19/10 a 26/10 | Protótipo jogável para o teste de usabilidade, tela de créditos e a primeira suíte de testes de sistema (32 de 35 aprovados, 8 bugs abertos) |
-| [Sprint 02](docs/fds/sprint-02/README.md) | 26/10 a 06/11 | Save automático, sprites em 8 direções, campanha do Dia 1 ao Dia 100, alto contraste e configurações; suíte com 76 casos, todos aprovados |
-| [Sprint 03](docs/fds/sprint-03/README.md) | 07/11 a 21/11 | Modo Sobrevivência (e em dupla), NPCs, áudio e trilha por momento, pausa e ajuda pelas heurísticas de Nielsen, sintomas visuais e o `CONTRIBUTING.md`; testes CT-94 a CT-105 com um screencast por caso |
-| Final | 23/11 a 04/12 | Executável único, correções do bug tracker, escolha de jogar novamente ou sair no fim da partida, nuvem para eventos, versão para terminal, arte nova dos personagens, colegas e poderes, Aviso Prévio no lugar do Ponteiro, progressão com conquistas, jogo mais leve e a Release |
-
-## Tecnologias
-
-![C](https://img.shields.io/badge/c-%23A8B9CC.svg?style=for-the-badge&logo=c&logoColor=black)
-![raylib](https://img.shields.io/badge/raylib-000000.svg?style=for-the-badge)
-![GitHub](https://img.shields.io/badge/github-%23181717.svg?style=for-the-badge&logo=github&logoColor=white)
-
-- **Motor e gameplay:** C, para o game loop, menus, gerenciamento de estado e persistência.
-- **Renderização:** [raylib](https://www.raylib.com/), biblioteca gráfica em C, 2D.
-- **Áudio:** raylib, com música em loop durante a navegação do menu, configurações e créditos, música de gameplay e efeitos para cliques e passos durante a movimentação. A trilha acompanha o momento da campanha: o ambiente do escritório (que fica mais tenso com os dias), uma faixa própria na tela do quiz, e a trilha abafada com um som curto de entrada nos cartões de Flash do dia e de salto puro. A troca entre faixas e entre telas é um fade suave de 0,8 s. A voz da IARA acompanha a digitação da sugestão e para quando o texto termina. O volume geral pode ser ajustado nas configurações e fica salvo nas preferências.
-- **Versão para terminal:** C puro, sem raylib, lendo o mesmo roteiro e as mesmas regras de lógica do jogo gráfico.
-- **Versionamento:** GitHub, com o fluxo descrito no [`CONTRIBUTING.md`](CONTRIBUTING.md).
-
-## Links externos
-
-Materiais hospedados fora do repositório:
-
-| Recurso | Descrição | Disciplina |
-|---|---|---|
-| [Ranking ao vivo](https://iara-ranking-ao-vivo.vercel.app/) | Rankings solo e de duplas em tempo real | Todas |
-| [Manual do jogo](https://iara-tech-night.vercel.app/) | Como jogar, chefes, monstros e personagens | Todas |
-| [Releases](https://github.com/ByRodrigoVasco/IARA/releases/latest) | Versão publicada da Unidade 2, com o `IARA-windows.zip` gerado pelo `empacotar.ps1` | [FDS](docs/fds/README.md) e [PIF](docs/pif/README.md) |
-| [Jira](https://csprj-adsr-2p-e8.atlassian.net/jira/software/c/projects/PI2/boards/2/backlog) | Board e backlog do projeto | [FDS](docs/fds/README.md) |
-| [Figma](https://www.figma.com/design/DpnmgBif3vJcn336pefbpa/IARA---PROTOTIPO-FDS?node-id=0-1&t=vm69jod3fxAtJGjN-1) | Protótipos de baixa fidelidade | [FDS](docs/fds/README.md) e [IHC](docs/ihc/README.md) |
-| [Screencast do protótipo](https://youtu.be/qE2Gn79bmqw) | Vídeo de demonstração do protótipo lo-fi | [FDS](docs/fds/README.md) e [IHC](docs/ihc/README.md) |
-| [Comprovação de usabilidade](https://www.youtube.com/watch?v=w3n0H6hxeks) | Vídeo do jogo mostrando os critérios de usabilidade atendidos (entrega de 20/11/2026) | [IHC](docs/ihc/README.md) |
-| [User Stories](https://docs.google.com/document/d/1xystBOI81sAymF35XBoupr6fe_IPjK8L6bB3qOobUpk/edit) | Histórias de usuário que originaram os diagramas de atividade | [FDS](docs/fds/README.md) |
-| [raylib](https://www.raylib.com/) | Biblioteca gráfica usada no núcleo em C | [PIF](docs/pif/README.md) |
-
-## Uso de ponteiros
-
-O jogo usa ponteiros em todo o código C. Quatro exemplos:
-
-| Uso | Onde | Como |
-|---|---|---|
-| Passagem por referência | `fade_in_texture()` em [`ui/animations.c`](code/src/ui/animations.c) | Recebe `Color *color` e `bool *is_animation_finished`: a função muda o alpha da cor de quem chamou e avisa o fim da animação pelo mesmo ponteiro, sem precisar devolver nada. |
-| Vetor de ponteiros | `day_27_clauses[]` e `day_58_clauses[]` em [`screens/computer_days.h`](code/src/screens/computer_days.h), lidos por `logic_is_satisfiable()` em [`game/logic.c`](code/src/game/logic.c) | Cada dia guarda suas cláusulas como `const LogicExpression *const day_N_clauses[]`, um vetor de ponteiros para fórmulas. A função recebe esse vetor como `const LogicExpression *const *expressions` e testa todas as combinações de valores. |
-| Struct ligada por ponteiros | `LogicExpression` em [`game/logic.h`](code/src/game/logic.h) e `logic_evaluate()` em [`game/logic.c`](code/src/game/logic.c) | Cada fórmula é uma árvore: a struct aponta para as subfórmulas pelos campos `left` e `right`, e `logic_evaluate()` percorre a árvore de forma recursiva seguindo esses ponteiros. |
-| Manipulação de struct por ponteiro | `recompute_stats()` em [`survival/sv_game.c`](code/src/survival/sv_game.c) | `SvPlayer *p = &sv_run.player;` aponta para o jogador da partida, e a função recalcula vida, dano, velocidade e os outros atributos direto na struct original, com `p->campo`. |
-
-Além disso, os textos do jogo circulam como `const char *`, e o save é lido e gravado com `FILE *` em `save_game_state()` e `load_game_state()` ([`core/save.c`](code/src/core/save.c)).
-
-## Qualidade e testes
-
-A suíte automatizada (`tools/tests/run_tests.ps1`) monta o jogo de verdade e o conduz como um jogador. O relatório completo está em [docs/fds/testes](docs/fds/testes/README.md).
-
-As evidências da Sprint 03, com pré-condição, passos, resultado de cada caso (CT-94 a CT-105), um screencast por caso e os prints do Jira, estão no [report da Sprint 03](docs/fds/sprint-03/README.md).
-
-### Bug Tracker
-
-Print de **25/11/2026**, véspera da entrega, das [Issues do GitHub](https://github.com/ByRodrigoVasco/IARA/issues?q=is%3Aissue+label%3Abug), com as abertas e as fechadas: **44 bugs, 6 em aberto**. Cada issue tem o label da sprint, um responsável e aponta para a história do Jira, o teste e o PR da correção. O status de cada bug também fica em [bugs.md](docs/fds/testes/bugs.md), em dia com as issues.
-
-![Bug tracker do GitHub em 25/11/2026](docs/fds/sprint-03/bug-tracker-2026-11-25.png)
-
-## Como contribuir
-
-O passo a passo para configurar o ambiente, o fluxo de branches (GitFlow), o padrão de commits, as issues e os Pull Requests estão no [`CONTRIBUTING.md`](CONTRIBUTING.md). Bugs e tarefas abertas ficam nas [Issues](https://github.com/ByRodrigoVasco/IARA/issues).
-
-## Créditos de arte
-
-Os móveis do Modo Sobrevivência (mesas, cadeiras, arquivos, estantes, cofre, caixas, lixeira, planta e longarina) foram recortados do pacote gratuito [Post Apoc Office](https://0-mem0ry.itch.io/), de **0_mem0ry**. A licença permite usar e modificar os assets em projetos comerciais e não comerciais, mas não permite revender ou redistribuir o pacote original; por isso o repositório guarda só os recortes usados no jogo.
+<p align="center">
+  <img src="docs/assets/colegas.png" alt="Colegas de Plantão: Segurança, Suporte de TI, Enfermeira e Entregador" width="390">
+  <img src="docs/assets/conquista.png" alt="Notificação de conquista" width="390">
+</p>
 
 ## Squad
- 
-Fotos e sprites ficam em [`docs/assets/`](docs/assets).
- 
-| Foto | Sprite | Nome | Função | GitHub | LinkedIn | Email |
-|---|---|---|---|---|---|---|
-| ![](docs/assets/team/anderson-santos.png) | ![](docs/assets/sprites/anderson-santos.png) | Anderson Santos | Lógica matemática | [acampospsantos](https://github.com/acampospsantos) | [andersoncampospsantos](https://www.linkedin.com/in/andersoncampospsantos) | acps@cesar.school |
-| ![](docs/assets/team/joao-vitor-medeiros.png) | ![](docs/assets/sprites/joao-vitor-medeiros.png) | João Vitor Medeiros | Desenvolvimento do motor em C | [JvMedeiros7](https://github.com/JvMedeiros7) | [jvmedeiros7](https://www.linkedin.com/in/jvmedeiros7/) | jvm7@cesar.school |
-| ![](docs/assets/team/julio-cesar-lins.png) | ![](docs/assets/sprites/julio-cesar-lins.png) | Julio Cesar Lins | Desenvolvimento do motor em C | [Lins-ju](https://github.com/Lins-ju) | [júlio-lins](https://www.linkedin.com/in/j%C3%BAlio-lins-123905182/) | jcsl@cesar.school |
-| ![](docs/assets/team/laura-brayner.png) | ![](docs/assets/sprites/laura-brayner.png) | Laura Brayner | Design e integração | [laurabrayner](https://github.com/laurabrayner) | [laurabrayner](https://www.linkedin.com/in/laurabrayner) | lcbc@cesar.school |
-| ![](docs/assets/team/luan-arruda.png) | ![](docs/assets/sprites/luan-arruda.png) | Luan Arruda | Design e integração | [luan-arruda](https://github.com/luan-arruda) | [luan-arruda-548a9534b](https://www.linkedin.com/in/luan-arruda-548a9534b) | las9@cesar.school |
-| ![](docs/assets/team/nicolas-mauricio.png) | ![](docs/assets/sprites/nicolas-mauricio.png) | Nicolas Mauricio | Gestão ágil | [nicollasfr](https://github.com/nicollasfr) | [nicollasmfranca](https://www.linkedin.com/in/nicollasmfranca/) | nmcf@cesar.school |
-| ![](docs/assets/team/rodrigo-vasco.png) | ![](docs/assets/sprites/rodrigo-vasco.png) | Rodrigo Vasco | Engenharia de software | [ByRodrigoVasco](https://github.com/ByRodrigoVasco) | [rodrigo-vlm](https://www.linkedin.com/in/rodrigo-vlm/) | rvlm@cesar.school |
+
+<table>
+<tr>
+<td align="center" width="25%">
+<img src="docs/assets/team/anderson-santos.png" alt="Foto de Anderson Santos" height="150"><br>
+<img src="docs/assets/sprites/anderson-santos.png" alt="Personagem de Anderson Santos" width="80"><br>
+<b>Anderson Santos</b><br>
+<sub>Lógica matemática</sub><br>
+<a href="https://github.com/acampospsantos">GitHub</a> · <a href="https://www.linkedin.com/in/andersoncampospsantos">LinkedIn</a><br>
+<sub>acps@cesar.school</sub>
+</td>
+<td align="center" width="25%">
+<img src="docs/assets/team/joao-vitor-medeiros.png" alt="Foto de João Vitor Medeiros" height="150"><br>
+<img src="docs/assets/sprites/joao-vitor-medeiros.png" alt="Personagem de João Vitor Medeiros" width="80"><br>
+<b>João Vitor Medeiros</b><br>
+<sub>Desenvolvimento do motor em C</sub><br>
+<a href="https://github.com/JvMedeiros7">GitHub</a> · <a href="https://www.linkedin.com/in/jvmedeiros7/">LinkedIn</a><br>
+<sub>jvm7@cesar.school</sub>
+</td>
+<td align="center" width="25%">
+<img src="docs/assets/team/julio-cesar-lins.png" alt="Foto de Julio Cesar Lins" height="150"><br>
+<img src="docs/assets/sprites/julio-cesar-lins.png" alt="Personagem de Julio Cesar Lins" width="80"><br>
+<b>Julio Cesar Lins</b><br>
+<sub>Desenvolvimento do motor em C</sub><br>
+<a href="https://github.com/Lins-ju">GitHub</a> · <a href="https://www.linkedin.com/in/j%C3%BAlio-lins-123905182/">LinkedIn</a><br>
+<sub>jcsl@cesar.school</sub>
+</td>
+<td align="center" width="25%">
+<img src="docs/assets/team/laura-brayner.png" alt="Foto de Laura Brayner" height="150"><br>
+<img src="docs/assets/sprites/laura-brayner.png" alt="Personagem de Laura Brayner" width="80"><br>
+<b>Laura Brayner</b><br>
+<sub>Design e integração</sub><br>
+<a href="https://github.com/laurabrayner">GitHub</a> · <a href="https://www.linkedin.com/in/laurabrayner">LinkedIn</a><br>
+<sub>lcbc@cesar.school</sub>
+</td>
+</tr>
+<tr>
+<td align="center" width="25%">
+<img src="docs/assets/team/luan-arruda.png" alt="Foto de Luan Arruda" height="150"><br>
+<img src="docs/assets/sprites/luan-arruda.png" alt="Personagem de Luan Arruda" width="80"><br>
+<b>Luan Arruda</b><br>
+<sub>Design e integração</sub><br>
+<a href="https://github.com/luan-arruda">GitHub</a> · <a href="https://www.linkedin.com/in/luan-arruda-548a9534b">LinkedIn</a><br>
+<sub>las9@cesar.school</sub>
+</td>
+<td align="center" width="25%">
+<img src="docs/assets/team/nicolas-mauricio.png" alt="Foto de Nicolas Mauricio" height="150"><br>
+<img src="docs/assets/sprites/nicolas-mauricio.png" alt="Personagem de Nicolas Mauricio" width="80"><br>
+<b>Nicolas Mauricio</b><br>
+<sub>Gestão ágil</sub><br>
+<a href="https://github.com/nicollasfr">GitHub</a> · <a href="https://www.linkedin.com/in/nicollasmfranca/">LinkedIn</a><br>
+<sub>nmcf@cesar.school</sub>
+</td>
+<td align="center" width="25%">
+<img src="docs/assets/team/rodrigo-vasco.png" alt="Foto de Rodrigo Vasco" height="150"><br>
+<img src="docs/assets/sprites/rodrigo-vasco.png" alt="Personagem de Rodrigo Vasco" width="80"><br>
+<b>Rodrigo Vasco</b><br>
+<sub>Engenharia de software</sub><br>
+<a href="https://github.com/ByRodrigoVasco">GitHub</a> · <a href="https://www.linkedin.com/in/rodrigo-vlm/">LinkedIn</a><br>
+<sub>rvlm@cesar.school</sub>
+</td>
+</tr>
+</table>
+
+## Créditos e menções honrosas
+
+Aos professores que acompanharam o projeto e que também estão no jogo como personagens:
+
+<table>
+<tr>
+<td align="center" width="25%">
+<img src="docs/assets/professores/lucas.png" alt="Prof. Lucas" width="130"><br>
+<b>Prof. Lucas</b><br>
+<sub>Engenharia de Software</sub>
+</td>
+<td align="center" width="25%">
+<img src="docs/assets/professores/baudel.png" alt="Prof. Baudel" width="130"><br>
+<b>Prof. Baudel</b><br>
+<sub>Interação Humano-Computador</sub>
+</td>
+<td align="center" width="25%">
+<img src="docs/assets/professores/guilherme.png" alt="Prof. Guilherme" width="130"><br>
+<b>Prof. Guilherme</b><br>
+<sub>Lógica para Computação</sub>
+</td>
+<td align="center" width="25%">
+<img src="docs/assets/professores/danilo.png" alt="Prof. Danilo" width="130"><br>
+<b>Prof. Danilo</b><br>
+<sub>Programação Imperativa e Funcional</sub>
+</td>
+</tr>
+</table>
+
+> *Seção em construção.*
+
+**Créditos de arte.** Os móveis do Modo Sobrevivência (mesas, cadeiras, arquivos, estantes, cofre, caixas, lixeira, planta e longarina) foram recortados do pacote gratuito [Post Apoc Office](https://0-mem0ry.itch.io/), de **0_mem0ry**. A licença permite usar e modificar os assets em projetos comerciais e não comerciais, mas não permite revender ou redistribuir o pacote original; por isso o repositório guarda só os recortes usados no jogo.
