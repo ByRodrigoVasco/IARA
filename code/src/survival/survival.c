@@ -623,6 +623,15 @@ static void draw_roster_frame(int id, int frame, Rectangle dest, Color tint)
     DrawTexturePro(texture, (Rectangle){0, 0, (float)texture.width, (float)texture.height}, dest, (Vector2){0, 0}, 0.0f, tint);
 }
 
+// Texto centralizado que encolhe até caber na largura, sem sair do lugar na vertical
+static void draw_fitted(const char *text, float center_x, float y, float size, float max_width, Color color)
+{
+    float width = sv_text_width(text, size);
+    float fitted = width > max_width && width > 0.0f ? size * max_width / width : size;
+
+    sv_text_centered(text, center_x, y + (size - fitted) / 2.0f, fitted, color);
+}
+
 static void render_characters(void)
 {
     float ui = sv_ui();
@@ -737,14 +746,21 @@ static void render_characters(void)
             draw_roster_frame(i, 0, (Rectangle){cell.x + (cell.width - size) / 2.0f, cell.y + 20.0f * ui, size, size}, open ? WHITE : (Color){12, 8, 18, 255});
         }
         {
-            // O nome encolhe para caber na célula (com muitos personagens as células ficam estreitas)
+            // "Prof. Fulano" vai em duas linhas: numa só, os nomes compridos ficavam miúdos
             const char *label = open ? sv_character(i)->name : "Bloqueado";
-            float name_size = 28.0f * ui;
+            Color color = open ? WHITE : (Color){120, 100, 125, 255};
             float max_w = cell.width - 14.0f * ui;
-            float name_w = sv_text_width(label, name_size);
+            float center = cell.x + cell.width / 2.0f;
+            float y = cell.y + 145.0f * ui;
 
-            if (name_w > max_w && name_w > 0.0f) name_size *= max_w / name_w;
-            sv_text_centered(label, cell.x + cell.width / 2.0f, cell.y + 145.0f * ui + (28.0f * ui - name_size) / 2.0f, name_size, open ? WHITE : (Color){120, 100, 125, 255});
+            if (strncmp(label, "Prof. ", 6) == 0)
+            {
+                draw_fitted("Prof.", center, cell.y + 124.0f * ui, 22.0f * ui, max_w, color);
+                label += 6;
+                y = cell.y + 150.0f * ui;
+            }
+            // Mesmo numa linha só o nome encolhe para caber na célula (com muitos personagens ela é estreita)
+            draw_fitted(label, center, y, 28.0f * ui, max_w, color);
         }
     }
 
