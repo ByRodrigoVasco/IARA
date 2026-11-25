@@ -1,6 +1,6 @@
 # Entregáveis
 
-Tudo o que foi entregue em cada matéria, em uma página. [Voltar ao início](../../README.md)
+O que entregamos em cada matéria. [Voltar ao início](../../README.md)
 
 **Ir para:** [FDS](#fds-fundamentos-de-desenvolvimento-de-software) · [PIF](#pif-programação-imperativa-e-funcional) · [IHC](#ihc-interação-humano-computador) · [LMC](#lmc-lógica-para-computação) · [Links externos](#links-externos) · [Guia do jogo](guia-do-jogo.md) · [Contribuição](../../CONTRIBUTING.md)
 

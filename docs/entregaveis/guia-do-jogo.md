@@ -1,6 +1,6 @@
 # Guia do jogo
 
-Os detalhes de como o IARA funciona. Para instalar e compilar, veja o [README principal](../../README.md#como-instalar-e-rodar).
+Como o jogo funciona, com mais detalhe. Para instalar e compilar, veja o [README principal](../../README.md#como-instalar-e-rodar).
 
 [Ranking ao vivo](https://iara-ranking-ao-vivo.vercel.app/) · [Manual do jogo](https://iara-tech-night.vercel.app/)
 
@@ -86,10 +86,10 @@ O jogo também registra em `iara-desempenho.log` (ao lado do executável, ignora
 
 ## Eventos: saves e rankings na nuvem
 
-Para um evento com vários notebooks, o `iara.exe` pode ser gerado com a nuvem ligada ([Supabase](https://supabase.com/)). Sem ela, tudo continua local, como descrito acima.
+Em um evento com vários dispositivos, dá para gerar o `iara.exe` com a nuvem ligada ([Supabase](https://supabase.com/)). Sem ela, tudo fica salvo no próprio dispositivo, como descrito acima.
 
-- Os saves dos três modos e os rankings solo e de duplas são os mesmos em todos os notebooks. As configurações (`iara.ini`) e o log continuam em cada um.
-- Um save aberto em um notebook fica **em uso** para os outros. A trava vence em 2 minutos sem contato, e uma gravação mais velha que a do servidor é recusada.
+- Os saves dos três modos e os rankings solo e de duplas são os mesmos em todos os dispositivos. As configurações (`iara.ini`) e o log continuam em cada um.
+- Um save aberto em um dispositivo fica **em uso** para os outros. A trava vence em 2 minutos sem contato, e uma gravação mais velha que a do servidor é recusada.
 - Escolher, criar e apagar save precisam de internet; apagar pede a senha da organização. Se a rede cair durante a partida, o que não subiu fica numa fila e sobe depois.
 - Os menus mostram a conexão (**online** ou **offline**), e o motivo de uma queda vai para o `iara-desempenho.log`.
 - Partidas com cheats não entram no ranking.
