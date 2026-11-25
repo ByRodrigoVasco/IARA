@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include "raylib.h"
+#include "rlgl.h"
 #include "game_loop.h"
 #include "game_state.h"
 #include "macros.h"
@@ -1244,9 +1245,16 @@ static void render_computer_backdrop(void)
 static void render_office_scene(void)
 {
     render_game_loop_escritorio();
+    // As bordas suavizadas dos personagens não podem deixar a textura da cena translúcida: só a cor
+    // se mistura, e o alfa continua cheio. Sem isso o fundo vaza quando a cena é desenhada na tela.
+    // Vem depois do escritório, que troca o modo de mistura nos sintomas.
+    rlSetBlendFactorsSeparate(RL_SRC_ALPHA, RL_ONE_MINUS_SRC_ALPHA, RL_ONE, RL_ONE_MINUS_SRC_ALPHA,
+                              RL_FUNC_ADD, RL_FUNC_ADD);
+    BeginBlendMode(BLEND_CUSTOM_SEPARATE);
     draw_npcs_lit(get_scale(), character_light, current_estagiario_position.y, true);
     render_player();
     draw_npcs_lit(get_scale(), character_light, current_estagiario_position.y, false);
+    EndBlendMode();
 }
 
 static void render_office_with_glass(void)
