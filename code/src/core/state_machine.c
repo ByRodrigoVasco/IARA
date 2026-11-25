@@ -15,6 +15,11 @@
 #include "save_select.h"
 #include "save_slots.h"
 #include "save.h"
+#include "cloud_sync.h"
+#include "cloud.h"
+#include "accessibility.h"
+#include "fonts.h"
+#include "helper.h"
 #include "loading.h"
 #include "screen_style.h"
 #include "state_machine.h"
@@ -42,8 +47,32 @@ static void save_progress_with_notice(void)
     }
 }
 
+// Bolinha e palavra no canto de cima dos menus: a conexão com a nuvem. Sem nuvem, nada aparece.
+static void draw_connection_status(void)
+{
+    int screen = current_game_state_variables.current_screen;
+    cloud_link link = cloud_connection(NULL, 0);
+    const char *word = link == CLOUD_LINK_ONLINE ? "online" : "offline";
+    float scale, size;
+    Vector2 measure, position;
+
+    if (link == CLOUD_LINK_UNKNOWN) return;
+    if (screen != MENU_SCREEN && screen != MODE_SELECT_SCREEN && screen != SAVE_SELECT_SCREEN && screen != SETTINGS_SCREEN &&
+        screen != HELP_SCREEN && !(screen == SURVIVAL_SCREEN && survival_in_menu())) return;
+
+    scale = get_ui_scale();
+    size = DEFAULT_TEXT_FONT_SIZE * 0.95f * scale;
+    measure = MeasureTextEx(default_game_font, word, size, size * 0.06f);
+    position = (Vector2){GetScreenWidth() - measure.x - 22.0f * scale, 18.0f * scale};
+    DrawRectangleRounded((Rectangle){position.x - 38.0f * scale, position.y - 7.0f * scale, measure.x + 51.0f * scale, measure.y + 14.0f * scale}, 0.4f, 6, (Color){0, 0, 0, 160});
+    DrawCircleV((Vector2){position.x - 19.0f * scale, position.y + measure.y / 2.0f}, 8.5f * scale,
+                link == CLOUD_LINK_ONLINE ? (Color){60, 210, 100, 255} : (Color){235, 60, 60, 255});
+    DrawTextEx(default_game_font, word, position, size, size * 0.06f, RAYWHITE);
+}
+
 void handle_state_initialization(void)
 {
+    set_frame_overlay(draw_connection_status);
     initialize_pre_menu_textures();
 }
 
@@ -128,6 +157,7 @@ bool save_active_campaign_progress(void)
     if (!campaign_state_ready || !active_save_is_set() || active_save_mode() != SAVE_MODE_NORMAL || !active_save_path(path, sizeof(path))) return false;
 
     status = save_game_state(path);
+    if (status == SAVE_OK) cloud_sync_active_save();
     if (status == SAVE_OK) TraceLog(LOG_INFO, "SAVE: progresso de \"%s\" gravado (dia %d)", active_save_name(), current_game_state_variables.current_day);
     else TraceLog(LOG_WARNING, "SAVE: não foi possível gravar \"%s\": %s", active_save_name(), save_result_to_string(status));
     return status == SAVE_OK;
@@ -269,6 +299,7 @@ void handle_state_machine(void)
             }
             else
             {
+                cloud_sync_close_save();
                 active_save_clear();
                 initialize_menu_variables();
                 current_game_state_variables.current_screen = MENU_SCREEN;
@@ -283,6 +314,7 @@ void handle_state_machine(void)
             save_mode mode = active_save_mode();   // Solo ou dupla: a troca volta para a lista do mesmo modo
 
             unload_survival();
+            cloud_sync_close_save();
             active_save_clear();
             if (switch_player)
             {

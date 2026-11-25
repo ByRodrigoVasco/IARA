@@ -61,6 +61,9 @@ void draw_brightness_overlay(void);
  */
 void begin_game_drawing(void);
 
+/** @brief Desenho feito por cima de todo quadro, com as cores originais. NULL tira. */
+void set_frame_overlay(void (*draw)(void));
+
 /**
  * @brief Termina um quadro do jogo iniciado por begin_game_drawing().
  */
