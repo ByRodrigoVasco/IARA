@@ -61,11 +61,11 @@ static void draw_connection_status(void)
         screen != HELP_SCREEN && !(screen == SURVIVAL_SCREEN && survival_in_menu())) return;
 
     scale = get_ui_scale();
-    size = DEFAULT_TEXT_FONT_SIZE * 0.7f * scale;
+    size = DEFAULT_TEXT_FONT_SIZE * 0.95f * scale;
     measure = MeasureTextEx(default_game_font, word, size, size * 0.06f);
-    position = (Vector2){GetScreenWidth() - measure.x - 18.0f * scale, 14.0f * scale};
-    DrawRectangleRounded((Rectangle){position.x - 28.0f * scale, position.y - 5.0f * scale, measure.x + 38.0f * scale, measure.y + 10.0f * scale}, 0.4f, 6, (Color){0, 0, 0, 160});
-    DrawCircleV((Vector2){position.x - 14.0f * scale, position.y + measure.y / 2.0f}, 6.0f * scale,
+    position = (Vector2){GetScreenWidth() - measure.x - 22.0f * scale, 18.0f * scale};
+    DrawRectangleRounded((Rectangle){position.x - 38.0f * scale, position.y - 7.0f * scale, measure.x + 51.0f * scale, measure.y + 14.0f * scale}, 0.4f, 6, (Color){0, 0, 0, 160});
+    DrawCircleV((Vector2){position.x - 19.0f * scale, position.y + measure.y / 2.0f}, 8.5f * scale,
                 link == CLOUD_LINK_ONLINE ? (Color){60, 210, 100, 255} : (Color){235, 60, 60, 255});
     DrawTextEx(default_game_font, word, position, size, size * 0.06f, RAYWHITE);
 }
