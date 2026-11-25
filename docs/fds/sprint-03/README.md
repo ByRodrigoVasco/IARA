@@ -88,6 +88,39 @@ O professor não tem acesso ao Jira, então os prints do board ficam aqui. A spr
 
 ![Cards da Week 15e16 no Jira, parte 2: PI2-198 a PI2-313, todos concluídos, com os responsáveis](board-week-15e16-parte-2.png)
 
+## Programação em pares (PI2-331)
+
+Na [Sprint 02](../sprint-02/README.md#programação-em-pares) a equipe não fez sessões em pares, e as da [Sprint 01](../sprint-01/README.md#programação-em-pares) ficaram registradas lá. Esta é a sessão desta etapa, e a seção que faltava neste report.
+
+| Dupla | Quando | Em que trabalharam |
+|---|---|---|
+| João Vitor Medeiros e Laura Brayner | 25/11/2026, 13h33 | Jogo de terminal da Unidade 2 de PIF, na branch `feature/jogo-de-terminal` ([PR #136](https://github.com/ByRodrigoVasco/IARA/pull/136)) |
+
+A sessão foi em chamada no Google Meet, com João Vitor compartilhando a tela e Laura acompanhando. Passaram por quatro pontos:
+
+- **A validação da entrada**, em [`code/terminal/entrada.c`](../../../code/terminal/entrada.c), função `entrada_ler_linha`. O ponto discutido foi o descarte da sobra da linha: quando o que o jogador digita não cabe no buffer, o resto fica no `stdin` e viraria a resposta da pergunta seguinte se não fosse jogado fora na hora.
+- **O log de desempenho**, em [`code/src/main.c`](../../../code/src/main.c), função `log_frame_spike`, que registra em `iara-desempenho.log` os quadros que passaram de 60 ms, com a hora e a tela.
+- **O jogo rodando.** Compilaram e jogaram o Dia 3, a mesa do Tiago, conferindo a norma `(P ∧ ¬B) ∨ I` linha por linha contra os valores de cada chamado.
+- **Revisão geral** dos quatro módulos do jogo de terminal: `jogo.c`, `mesa.c`, `entrada.c` e `texto.c`.
+
+**E daí.** A sessão alinhou a dupla num código que até então só um integrante tinha mexido. A versão para terminal nasceu inteira na Unidade 2, com quatro módulos novos e um header compartilhado com o jogo gráfico; depois da sessão, Laura conhece a estrutura e consegue revisar o PR ou continuar o trabalho sem partir do zero. Esse foi o ganho principal, acima de qualquer correção pontual — num grupo onde cada um vinha pegando uma história e implementando sozinho, o risco real não era o bug, era o código que só uma pessoa sabe ler.
+
+**Sobre a data.** A sessão foi em 25/11/2026, já na Week 17e18, enquanto a squad fechava a entrega da Unidade 2. A Sprint 03 (Week 15e16) havia encerrado em 21/11/2026. O relato fica neste report porque é aqui que a seção de pares faltava, mas a data é a real, e está visível nos próprios registros abaixo.
+
+Registros da sessão:
+
+Google Meet com a tela compartilhada, mostrando o projeto aberto na branch `feature/jogo-de-terminal` e a pasta `code/terminal` com os módulos novos:
+
+![Sessão de programação em pares de João Vitor e Laura no Google Meet, com main.c aberto e a pasta code/terminal à vista](pair-programming/joao-laura-01.webp)
+
+O jogo de terminal rodando no PowerShell, no Dia 3, com o bilhete do Tiago e a norma a aplicar:
+
+![O jogo de terminal rodando durante a sessão, no Dia 3, mostrando a mesa do Tiago e a pergunta sobre o palpite da IARA](pair-programming/joao-laura-02.png)
+
+A função `entrada_ler_linha` em `entrada.c`, o trecho da validação da entrada discutido na sessão:
+
+![entrada.c aberto na função entrada_ler_linha durante a sessão de pares](pair-programming/joao-laura-03.webp)
+
 ## Rastreabilidade das histórias (PI2-330)
 
 Uma linha por história entregue, da necessidade da persona até a evidência. Conferido em 24/11/2026 na `develop` (`c9b0d28`).
