@@ -86,6 +86,16 @@ int main(void)
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
     InitWindow(800, 450, IARA_TITLE);
     SetWindowMinSize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT);
+    {
+        /* Ícone da janela e da barra de tarefas. O do iara.exe no Explorer vem do tools/release/iara.rc. */
+        Image icon = LoadImage(IARA_ICON_PNG_PATH);
+
+        if (icon.data != NULL)
+        {
+            SetWindowIcon(icon);
+            UnloadImage(icon);
+        }
+    }
 
     if (!initialize_audio())
     {
