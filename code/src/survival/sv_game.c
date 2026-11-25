@@ -2087,10 +2087,15 @@ static void update_gems(float dt)
             switch (g->kind)
             {
             case 0:
-                p->xp += g->value * p->xp_mult;
-                share_with_partner(0, g->value);
+            {
+                // Na dupla cada chip vale menos (SV_DUO_XP_MULT): caem mais chips e os dois ganham o valor inteiro
+                float value = g->value * (sv_run.duo ? SV_DUO_XP_MULT : 1.0f);
+
+                p->xp += value * p->xp_mult;
+                share_with_partner(0, value);
                 sv_sfx(SND_coletaXp);
                 break;
+            }
             case 1:
                 sv_run.coins++;
                 sv_sfx(SND_coletaMoeda);
