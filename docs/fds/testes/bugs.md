@@ -750,13 +750,20 @@ Branch aberta a partir da `develop` (`a2b8e07`) para fechar as issues de bug que
 
 Funcionalidade nova, para eventos com vários notebooks. Não corrige nem abre bug com issue. Guia de montagem e comportamento: [tools/nuvem/LEIA-ME.md](../../../tools/nuvem/LEIA-ME.md).
 
-**Execução dos testes (25/11/2026):** 13 dos 14 conjuntos passaram. `test_cloud` (NV-01 a NV-42, com um servidor falso, sem rede) com 42 de 42; blocos 1 a 3 com 32 de 32, 37 de 37 e 58 de 58; `test_survival` com 148 de 148. A única falha é o CT-100 no bloco 4, o [BUG-42](#bug-42) já aberto, que depende de arte. O executável de release compilou com a nuvem, e a leitura de saves e rankings no servidor real respondeu certo.
+**Execução dos testes (25/11/2026):** 13 dos 14 conjuntos passaram. `test_cloud` (NV-01 a NV-43, com um servidor falso, sem rede) com 43 de 43; blocos 1 a 3 com 32 de 32, 37 de 37 e 58 de 58; `test_survival` com 148 de 148. A única falha é o CT-100 no bloco 4, o [BUG-42](#bug-42) já aberto, que depende de arte. A suíte foi repetida no fim, já com o indicador de conexão e os personagens da dupla, com o mesmo resultado. O executável de release compilou com a nuvem, e a leitura de saves e rankings no servidor real respondeu certo.
+
+**Depois da primeira entrega:**
+
+- Os menus mostram a conexão (bolinha verde "online" ou vermelha "offline"), e o motivo da queda vai para o `iara-desempenho.log`.
+- O ranking de duplas passou a levar os personagens dos dois jogadores no mesmo campo (J1 + 16 × (J2 + 1)), sem mudar o banco.
+- O ranking ao vivo na web ficou em um repositório próprio, [IARA-Ranking-ao-vivo](https://github.com/ByRodrigoVasco/IARA-Ranking-ao-vivo).
+
+**Conferido à mão (25/11/2026):** o save no servidor real, testado e aprovado por Rodrigo.
 
 **Ainda não verificado:**
 
-- Criar, abrir, gravar, renovar, liberar e apagar contra o servidor real, pelo jogo.
-- Dois notebooks de verdade ao mesmo tempo (trava, conflito e queda de rede).
-- A tela de escolha do save e o ranking com a nuvem ligada, jogados à mão.
+- O roteiro com dois notebooks ao mesmo tempo (trava, conflito e queda de rede) não tem resultado registrado.
+- Uma partida em dupla de verdade conferida na página do ranking (J1 e J2).
 
 **Limitações conhecidas:**
 
