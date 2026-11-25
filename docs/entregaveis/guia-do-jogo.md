@@ -1,6 +1,6 @@
 # Guia do jogo
 
-Os detalhes de como o IARA funciona. Para instalar e compilar, veja o [README principal](../../README.md#como-compilar-e-executar).
+Os detalhes de como o IARA funciona. Para instalar e compilar, veja o [README principal](../../README.md#como-instalar-e-rodar).
 
 [Ranking ao vivo](https://iara-ranking-ao-vivo.vercel.app/) · [Manual do jogo](https://iara-tech-night.vercel.app/)
 
@@ -95,17 +95,4 @@ Para um evento com vários notebooks, o `iara.exe` pode ser gerado com a nuvem l
 - Partidas com cheats não entram no ranking.
 - O [ranking ao vivo na web](https://iara-ranking-ao-vivo.vercel.app/) mostra os dois rankings para um telão ou para o celular.
 
-Como montar o banco, configurar o build e testar: [tools/nuvem/LEIA-ME.md](../../tools/nuvem/LEIA-ME.md). A URL e a chave ficam em `tools/nuvem/nuvem.local`, que não vai para o git.
-
-**A nuvem só liga no executável gerado por `tools/release/build_release.ps1`** (ou `tools/pacote/empacotar.ps1`) com o `nuvem.local` na pasta. Compilar pelo `gcc` ou pelo VS Code gera o jogo só local, sem aviso. Ao gerar, confira a mensagem `nuvem ligada`.
-
-**Antes do evento:** o plano gratuito do Supabase pausa o projeto após cerca de 7 dias sem atividade.
-
-## Gerar o pacote para outras máquinas
-
-```powershell
-powershell -ExecutionPolicy Bypass -File tools/pacote/empacotar.ps1
-powershell -ExecutionPolicy Bypass -File tools/pacote/testar_pacote.ps1
-```
-
-O primeiro comando gera `build/IARA-windows.zip`, com um `iara.exe` só: as imagens, os sons e as bibliotecas (raylib, GLFW) estão dentro dele, e o jogo roda sem pastas nem DLLs ao lado. Para gerar só o executável, use `tools/release/build_release.ps1` (saída em `build/release/iara.exe`). Quem recebe só abre o `iara.exe`: não precisa de instalação, conta, internet nem administrador (a versão com a [nuvem](#eventos-saves-e-rankings-na-nuvem) precisa de internet para escolher o save). O segundo testa o pacote fora do ambiente de desenvolvimento; o teste em máquina real segue o [roteiro de máquina limpa](../fds/testes/maquina-limpa.md).
+Como montar o banco e hospedar as páginas está no [README principal](../../README.md#como-instalar-e-rodar); o passo a passo completo, em [tools/nuvem/LEIA-ME.md](../../tools/nuvem/LEIA-ME.md).
