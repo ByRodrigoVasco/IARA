@@ -118,6 +118,11 @@ $suite = @(
         Fonte = @("code/tests/test_save_slots.c", "code/src/core/assets_fs.c", "code/src/core/save_slots.c")
     },
     @{
+        Nome  = "test_cloud"
+        Nota  = "Unidade: nuvem sem rede, fila offline e respostas"
+        Fonte = @("code/tests/test_cloud.c", "code/src/core/cloud.c", "code/src/core/cloud_json.c")
+    },
+    @{
         Nome  = "test_hints"
         Nota  = "Unidade: dica no mural e pontuacao"
         Fonte = @(
