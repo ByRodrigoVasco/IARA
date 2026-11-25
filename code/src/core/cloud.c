@@ -64,7 +64,9 @@ static struct
 {
     bool enabled;
     bool stopping;
-    bool online;
+    cloud_link link;
+    char reason[128];      // Motivo de estar offline
+    ULONGLONG last_call;
     bool flush_now;
     cloud_transport transport;
     char folder[512];
@@ -232,6 +234,30 @@ static void block_open_save(cloud_notice_kind kind)
 // Chamadas
 // -----------------------------------------------------------------------------
 
+// Por que a chamada não deu certo, em palavras. status negativo = erro de rede do Windows.
+static void describe_failure(bool answered, int status, char *out, size_t size)
+{
+    const char *text = NULL;
+
+    if (!answered)
+    {
+        int error = -status;
+
+        if (error == 12002) text = "o servidor demorou demais para responder";
+        else if (error == 12007) text = "endereco do servidor nao encontrado (sem internet ou falha de DNS)";
+        else if (error == 12029) text = "nao foi possivel conectar ao servidor (sem internet, firewall ou proxy)";
+        else if (error == 12030) text = "a conexao caiu no meio da resposta";
+        else if (error == 12175) text = "falha de seguranca na conexao (certificado; confira a data do computador)";
+        else if (error > 0) snprintf(out, size, "erro de rede do Windows %d", error);
+        else text = "sem resposta do servidor";
+    }
+    else if (status == 401 || status == 403) snprintf(out, size, "o servidor recusou a chave (HTTP %d)", status);
+    else if (status == 404) snprintf(out, size, "funcao nao encontrada no servidor; confira o supabase.sql (HTTP 404)");
+    else if (status >= 500) snprintf(out, size, "servidor com erro ou projeto pausado (HTTP %d)", status);
+    else snprintf(out, size, "o servidor respondeu HTTP %d", status);
+    if (text != NULL) snprintf(out, size, "%s", text);
+}
+
 // Faz a chamada e libera o corpo. CLOUD_OK = o servidor respondeu 200 (a resposta ainda será lida).
 static cloud_status call(const char *function, char *body, char **response, int *http)
 {
@@ -247,7 +273,18 @@ static cloud_status call(const char *function, char *body, char **response, int 
     free(body);
 
     EnterCriticalSection(&cloud.lock);
-    cloud.online = answered && status < 500;
+    cloud.last_call = GetTickCount64();
+    // HTTP 400 é a recusa de um pedido, com o servidor funcionando
+    if (answered && (status == 200 || status == 400))
+    {
+        cloud.link = CLOUD_LINK_ONLINE;
+        cloud.reason[0] = '\0';
+    }
+    else
+    {
+        cloud.link = CLOUD_LINK_OFFLINE;
+        describe_failure(answered, status, cloud.reason, sizeof(cloud.reason));
+    }
     LeaveCriticalSection(&cloud.lock);
 
     if (!answered) return CLOUD_OFFLINE;
@@ -944,6 +981,25 @@ static void renew_open_save(void)
 // Thread
 // -----------------------------------------------------------------------------
 
+// Sem outros pedidos, pergunta ao servidor de tempos em tempos: é o que mantém o "online" da tela
+static void check_connection(void)
+{
+    cj_writer writer;
+    char *response = NULL;
+    bool idle;
+
+    EnterCriticalSection(&cloud.lock);
+    idle = cloud.last_call == 0 || GetTickCount64() - cloud.last_call >= retry_ms / 2;
+    LeaveCriticalSection(&cloud.lock);
+    if (!idle) return;
+
+    cj_begin(&writer);
+    cj_add_string(&writer, "p_tipo", "solo");
+    cj_add_int(&writer, "p_limite", 1);
+    call("iara_ler_ranking", cj_end(&writer), &response, NULL);
+    free(response);
+}
+
 static DWORD WINAPI worker(LPVOID unused)
 {
     (void)unused;
@@ -980,7 +1036,11 @@ static DWORD WINAPI worker(LPVOID unused)
 
         if (request != NULL) run_job(request);
         else if (stopping) break;
-        else if (flush) flush_queue();
+        else if (flush)
+        {
+            flush_queue();
+            check_connection();
+        }
         renew_open_save();
     }
     run_close();
@@ -1105,9 +1165,22 @@ bool cloud_online(void)
 
     if (!cloud.enabled) return false;
     EnterCriticalSection(&cloud.lock);
-    online = cloud.online;
+    online = cloud.link == CLOUD_LINK_ONLINE;
     LeaveCriticalSection(&cloud.lock);
     return online;
+}
+
+cloud_link cloud_connection(char *reason, size_t size)
+{
+    cloud_link link = CLOUD_LINK_UNKNOWN;
+
+    if (reason != NULL && size > 0) reason[0] = '\0';
+    if (!cloud.enabled) return link;
+    EnterCriticalSection(&cloud.lock);
+    link = cloud.link;
+    if (reason != NULL && size > 0) snprintf(reason, size, "%s", cloud.reason);
+    LeaveCriticalSection(&cloud.lock);
+    return link;
 }
 
 int cloud_pending_count(void)

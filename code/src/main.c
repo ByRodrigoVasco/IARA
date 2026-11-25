@@ -38,7 +38,7 @@ static void log_frame_spike(double frame_ms, double state_machine_ms, int screen
     if (frame_ms < FRAME_SPIKE_MS || lines >= FRAME_SPIKE_MAX_LINES) return;
 
     TraceLog(LOG_WARNING, "DESEMPENHO: quadro de %.0f ms na tela %d (%.0f ms na maquina de estados)", frame_ms, screen, state_machine_ms);
-    file = fopen(FRAME_SPIKE_LOG_PATH, lines == 0 ? "w" : "a");
+    file = fopen(FRAME_SPIKE_LOG_PATH, "a");
     if (file == NULL) return;
     fprintf(file, "%.1f s  tela %d  quadro de %.0f ms  (maquina de estados %.0f ms, fora dela %.0f ms)  foco %s  janela mexida %s\n",
             GetTime(), screen, frame_ms, state_machine_ms, frame_ms - state_machine_ms,
@@ -77,6 +77,9 @@ int main(void)
             else TraceLog(LOG_WARNING, "DADOS: nao deu para usar %s; os dados ficam ao lado do executavel", data_dir);
         }
     }
+
+    /* O log recomeça a cada execução. Os quadros lentos e a conexão com a nuvem escrevem no fim dele. */
+    remove(FRAME_SPIKE_LOG_PATH);
 
     /* Saves e rankings compartilhados entre notebooks (cloud.h). Só o build com a URL e a chave liga
      * a nuvem; a fila offline fica na pasta de dados, por isso vem depois da troca de pasta. */

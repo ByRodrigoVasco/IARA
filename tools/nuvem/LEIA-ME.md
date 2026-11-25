@@ -84,6 +84,7 @@ delete from iara_ranking where nome_chave = 'zz teste';
 
 | Situação | O que acontece |
 |---|---|
+| Nos menus | No canto de cima, bolinha verde "online" ou vermelha "offline"; o motivo da queda vai para o `iara-desempenho.log` |
 | Escolher o save | A lista vem da nuvem e é atualizada a cada 10 s; um save aberto em outro notebook aparece como "Em uso em outro notebook" |
 | Sem conexão na escolha do save | Não dá para abrir, criar nem apagar; a tela oferece "Tentar de novo" |
 | A rede cai durante a partida | O jogo segue; a gravação fica na fila e sobe quando a rede voltar |

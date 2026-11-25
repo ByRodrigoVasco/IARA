@@ -21,6 +21,9 @@ bool render_survival(void);
 /** @brief Depois que render_survival() devolve true: se o jogador escolheu TROCAR JOGADOR (volta para a lista de saves). */
 bool survival_wants_player_switch(void);
 
+/** @brief true fora da partida (início, loja, personagens, pausa e resultado). */
+bool survival_in_menu(void);
+
 void unload_survival(void);
 
 #endif // SURVIVAL_H

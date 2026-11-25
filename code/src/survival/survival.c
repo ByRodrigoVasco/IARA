@@ -1132,6 +1132,11 @@ bool render_survival(void)
     return leave_to_menu || leave_to_saves;
 }
 
+bool survival_in_menu(void)
+{
+    return screen != SCREEN_RUN;
+}
+
 bool survival_wants_player_switch(void)
 {
     return leave_to_saves;
