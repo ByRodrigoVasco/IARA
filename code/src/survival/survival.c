@@ -686,7 +686,7 @@ static void render_characters(void)
     DrawRectangleRounded((Rectangle){w / 2.0f - 170.0f * ui, 150.0f * ui, 340.0f * ui, 300.0f * ui}, 0.08f, 8, (Color){18, 8, 22, 220});
     {
         Texture2D portrait = sv_character_frame(char_cursor, SOUTH, 0);
-        float pw = (float)portrait.width * 8.0f * ui, ph = (float)portrait.height * 8.0f * ui;
+        float pw = CHARACTER_BASE_SIZE * 8.0f * ui, ph = pw * (float)portrait.height / (float)portrait.width;
 
         draw_roster_frame(char_cursor, unlocked ? frame : 0, (Rectangle){w / 2.0f - pw / 2.0f, 300.0f * ui - ph / 2.0f, pw, ph}, unlocked ? WHITE : (Color){12, 8, 18, 255});
     }
