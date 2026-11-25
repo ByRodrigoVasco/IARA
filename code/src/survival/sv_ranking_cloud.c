@@ -78,7 +78,7 @@ static void apply_table(const cloud_result *result)
         to->kills = from->kills;
         to->level = from->level;
         to->bosses = from->bosses;
-        to->character = from->character;
+        to->character = from->character % SV_CLOUD_CHARACTER_BASE;   // Na dupla, o do J1
         to->won = from->won;
         to->order = 0;
     }

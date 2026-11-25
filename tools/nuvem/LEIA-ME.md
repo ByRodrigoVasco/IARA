@@ -109,6 +109,7 @@ ao mesmo tempo.
 | Conteúdo de um save | até 65536 caracteres |
 | Partida impossível (mais de 600 s, mais de 5 chefes, abates demais) | recusada (posição 0) |
 | Apagar save | exige a senha e também tira o jogador do ranking |
+| Personagem no ranking | solo: o número do personagem; dupla: J1 + 16 × (J2 + 1) |
 
 Os pesos da pontuação (`iara_pontos`) são os de `code/src/survival/sv_ranking.h`: ao mudar um,
 mude o outro e rode o `supabase.sql` de novo.

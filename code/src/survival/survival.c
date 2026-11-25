@@ -303,6 +303,14 @@ static const char *player_name(void)
     return active_save_is_set() ? active_save_name() : "Anônimo";
 }
 
+// O personagem que vai para o ranking da nuvem; na dupla, os dois (J1 e J2)
+static int cloud_characters(void)
+{
+    _Static_assert(CH_COUNT < SV_CLOUD_CHARACTER_BASE, "os personagens da dupla nao cabem no codigo do ranking");
+    if (!sv_run.duo) return sv_run.player.character;
+    return SV_CLOUD_DUO_CHARACTERS(sv_duo_player(0)->character, sv_duo_player(1)->character);
+}
+
 // Termina a partida: paga o Banco de Horas e registra o resultado no ranking (uma vez só)
 static void finish_run(void)
 {
@@ -310,7 +318,7 @@ static void finish_run(void)
     if (!sv_run.cheated) cloud_sync_active_save();   // sv_game_finish gravou o progresso
     if (run_ranked || sv_run.cheated) return;   // Partida com cheat não entra no ranking
     run_ranked = true;
-    sv_ranking_cloud_submit(player_name(), (int)sv_run.time, sv_run.kills, sv_run.player.level, sv_run.bosses_defeated, sv_run.player.character, sv_run.phase == SV_WON);
+    sv_ranking_cloud_submit(player_name(), (int)sv_run.time, sv_run.kills, sv_run.player.level, sv_run.bosses_defeated, cloud_characters(), sv_run.phase == SV_WON);
     last_rank_position = sv_ranking_add(player_name(), (int)sv_run.time, sv_run.kills, sv_run.player.level, sv_run.bosses_defeated, sv_run.player.character, sv_run.phase == SV_WON, &last_run_record);
     last_rank_order = last_rank_position > 0 ? sv_ranking_get(last_rank_position - 1)->order : 0;
 }

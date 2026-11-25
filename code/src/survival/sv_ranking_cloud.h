@@ -9,6 +9,12 @@
  * é a reserva: vale quando a nuvem está desligada ou sem conexão.
  */
 
+// O servidor guarda um número só (0 a 255) para o personagem. Na dupla ele leva os dois:
+// J1 + 16 x (J2 + 1). Abaixo de 16 há um personagem só (o ranking solo). Cabem até 15 personagens.
+// A página do ranking ao vivo decodifica do mesmo jeito.
+#define SV_CLOUD_CHARACTER_BASE 16
+#define SV_CLOUD_DUO_CHARACTERS(j1, j2) ((j1) + SV_CLOUD_CHARACTER_BASE * ((j2) + 1))
+
 typedef enum
 {
     SV_SEND_NONE = 0,   // Nenhuma partida enviada nesta tela
