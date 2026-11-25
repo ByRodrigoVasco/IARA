@@ -6,7 +6,7 @@
 /*
  * Modo debug do Sobrevivência, para testar o jogo à mão.
  *
- *   F1  liga e desliga o modo debug. Ele mostra os obstáculos do mapa, os inimigos, os chefes, os
+ *   Shift+F1  liga (com senha) e desliga o modo debug. Ele mostra os obstáculos do mapa, os inimigos, os chefes, os
  *       tiros com a trajetória, as zonas e os perigos, e um painel com os números da partida e o
  *       tempo de cada quadro. Também libera todos os personagens.
  *   F2  (só com o debug ligado, durante a partida) abre o menu de cheats e para a partida: dar
@@ -15,7 +15,12 @@
  * Uma partida em que algum cheat foi usado não conta para o progresso do save.
  */
 
-/** @brief Liga ou desliga o modo debug (F1). Ao desligar, os cheats ligados também são desligados. */
+#define SV_CHEAT_PASSWORD "1324"
+
+/** @brief Liga o modo debug se a senha confere. Devolve false (e não muda nada) se não confere. */
+bool sv_debug_unlock(const char *password);
+
+/** @brief Liga ou desliga o modo debug (Shift+F1, que pede a senha para ligar). Ao desligar, os cheats ligados também são desligados. */
 void sv_debug_toggle(void);
 
 /** @brief Trata F2 e o menu de cheats. Devolve true se o menu está aberto (a partida deve ficar parada). */

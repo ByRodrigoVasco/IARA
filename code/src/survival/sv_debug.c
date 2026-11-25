@@ -55,6 +55,13 @@ void sv_debug_toggle(void)
     }
 }
 
+bool sv_debug_unlock(const char *password)
+{
+    if (password == NULL || strcmp(password, SV_CHEAT_PASSWORD) != 0) return false;
+    if (!sv_debug_mode) sv_debug_toggle();
+    return true;
+}
+
 bool sv_debug_menu_open(void)
 {
     return menu_open && sv_debug_mode;
@@ -267,7 +274,7 @@ void sv_debug_draw_hud(void)
     for (int i = 0; i < SV_MAX_HAZARDS; i++) if (sv_run.hazards[i].alive) hazards++;
     for (int i = 0; i < SV_MAX_GEMS; i++) if (sv_run.gems[i].alive) gems++;
 
-    snprintf(lines[count++], sizeof(lines[0]), "DEBUG   F1: sair   F2: cheats");
+    snprintf(lines[count++], sizeof(lines[0]), "DEBUG   Shift+F1: sair   F2: cheats");
     snprintf(lines[count++], sizeof(lines[0]), "FPS %d   quadro %.1f ms   media %.1f   pior %.1f", GetFPS(), current, sum / FRAME_HISTORY, worst);
     snprintf(lines[count++], sizeof(lines[0]), "tempo %d:%02d   ato %d   nascem %.1f/s   vida dos inimigos x%.2f", (int)sv_run.time / 60, (int)sv_run.time % 60, sv_run.act + 1, sv_spawn_rate(sv_run.time), sv_enemy_hp_scale(sv_run.time));
     snprintf(lines[count++], sizeof(lines[0]), "inimigos %d/%d   tiros %d   zonas %d   perigos %d   itens %d", enemies, SV_MAX_ENEMIES, shots, zones, hazards, gems);

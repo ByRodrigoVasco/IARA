@@ -24,7 +24,8 @@ typedef enum
     VIEW_LIST,      // A lista de saves
     VIEW_NAME,      // Digitando o nome de um save novo
     VIEW_DELETE,    // Confirmando a exclusão de um save
-    VIEW_BUSY       // Nuvem: esperando o servidor criar, abrir ou apagar
+    VIEW_BUSY,      // Nuvem: esperando o servidor criar, abrir ou apagar
+    VIEW_CHOOSE     // Nuvem: o save online e o deste dispositivo estão diferentes
 } view_state;
 
 typedef struct
@@ -32,7 +33,8 @@ typedef struct
     save_slot_info info;
     char summary[64];
     char date[32];
-    bool in_use;     // Nuvem: aberto em outro notebook
+    bool in_use;     // Nuvem: aberto em outro dispositivo
+    bool in_cloud;   // Veio da lista da nuvem
 } save_entry;
 
 static save_mode save_select_mode = SAVE_MODE_NORMAL;
@@ -61,7 +63,6 @@ static bool save_notice_is_error = false;
 
 // Nuvem
 static int list_ticket = 0;              // Pedido da lista em andamento
-static bool list_loaded = false;         // Já veio uma lista desta nuvem
 static bool list_offline = false;        // A última busca falhou
 static double list_requested_at = 0.0;
 static int busy_ticket = 0;
@@ -70,6 +71,17 @@ static const char *busy_label = "";
 static char busy_name[SAVE_NAME_MAX + 1];
 static char save_password[PASSWORD_BYTES];
 static const char *password_error = NULL;
+static bool delete_in_cloud = false;     // O apagar vale para a nuvem (pede senha)
+static int choose_choice = -1;           // Divergência: -1 nada escolhido, 0 online, 1 local
+static bool choose_missing = false;      // O save foi apagado na nuvem
+static char choose_cloud[128];
+static char choose_local[128];
+
+// Há como falar com a nuvem agora? Sem ela, tudo acontece neste dispositivo.
+static bool cloud_up(void)
+{
+    return cloud_enabled() && !list_offline && cloud_connection(NULL, 0) != CLOUD_LINK_OFFLINE;
+}
 
 // -----------------------------------------------------------------------------
 // Lista
@@ -136,6 +148,7 @@ static void reload_local_slots(void)
     {
         save_list[i].info = slots[i];
         save_list[i].in_use = false;
+        save_list[i].in_cloud = false;
         save_slot_summary(save_select_mode, slots[i].name, save_list[i].summary, sizeof(save_list[i].summary));
         format_date(slots[i].modified, save_list[i].date, sizeof(save_list[i].date));
     }
@@ -150,42 +163,85 @@ static void request_cloud_list(void)
 
 static void reload_slots(void)
 {
-    if (cloud_enabled()) request_cloud_list();
-    else reload_local_slots();
+    reload_local_slots();                        // A lista deste dispositivo aparece na hora
+    if (cloud_enabled()) request_cloud_list();   // A da nuvem se junta a ela quando chegar
 }
 
-// Põe na tela a lista que veio da nuvem, mantendo escolhido o mesmo save
-static void apply_cloud_list(const cloud_result *result)
+static void remember_choice(char *chosen, size_t size, bool *on_back)
 {
-    char chosen[SAVE_NAME_MAX + 1] = "";
-    bool first = !list_loaded;
-    bool on_back = !first && save_selected_row == save_count + 1;
+    chosen[0] = '\0';
+    *on_back = save_count > 0 && save_selected_row == save_count + 1;
+    if (save_selected_row >= 1 && save_selected_row <= save_count) snprintf(chosen, size, "%s", save_list[save_selected_row - 1].info.name);
+}
 
-    if (save_selected_row >= 1 && save_selected_row <= save_count) snprintf(chosen, sizeof(chosen), "%s", save_list[save_selected_row - 1].info.name);
-
-    save_count = reserve_entries(result->save_count) ? result->save_count : 0;
-    for (int i = 0; i < save_count; i++)
-    {
-        const cloud_save_info *from = &result->saves[i];
-        save_entry *to = &save_list[i];
-
-        snprintf(to->info.name, sizeof(to->info.name), "%s", from->name);
-        to->info.modified = (long)from->updated;
-        to->in_use = from->in_use;
-        snprintf(to->summary, sizeof(to->summary), "%s", from->in_use ? "Em uso em outro notebook" : from->has_progress ? "Com progresso" : "Sem progresso");
-        format_date(from->updated, to->date, sizeof(to->date));
-    }
-    list_loaded = true;
-    list_offline = false;
-
+static void restore_choice(const char *chosen, bool on_back)
+{
     if (on_back) save_selected_row = save_count + 1;
-    // Quem já tem um save entra com ele escolhido: é o caso mais comum
-    else if (first) save_selected_row = save_count > 0 ? 1 : 0;
     for (int i = 0; chosen[0] != '\0' && i < save_count; i++)
     {
         if (names_equal(chosen, save_list[i].info.name)) save_selected_row = i + 1;
     }
     if (save_selected_row > save_count + 1) save_selected_row = save_count + 1;
+}
+
+// Põe na tela os saves da nuvem e, depois deles, os que só existem neste dispositivo
+static void apply_cloud_list(const cloud_result *result)
+{
+    static save_slot_info local[SAVE_SLOTS_MAX];
+    int local_count = save_slots_list(save_select_mode, local, SAVE_SLOTS_MAX);
+    char chosen[SAVE_NAME_MAX + 1];
+    bool on_back;
+    bool nothing_chosen = save_selected_row == 0 && save_count == 0;
+
+    remember_choice(chosen, sizeof(chosen), &on_back);
+
+    save_count = 0;
+    if (!reserve_entries(result->save_count + local_count)) return;
+    for (int i = 0; i < result->save_count; i++)
+    {
+        const cloud_save_info *from = &result->saves[i];
+        save_entry *to = &save_list[save_count++];
+
+        snprintf(to->info.name, sizeof(to->info.name), "%s", from->name);
+        to->info.modified = (long)from->updated;
+        to->in_use = from->in_use;
+        to->in_cloud = true;
+        snprintf(to->summary, sizeof(to->summary), "%s", from->in_use ? "Em uso em outro dispositivo" : from->has_progress ? "Com progresso" : "Sem progresso");
+        format_date(from->updated, to->date, sizeof(to->date));
+    }
+    for (int i = 0; i < local_count; i++)
+    {
+        bool repeated = false;
+        save_entry *to;
+        char summary[48];
+
+        for (int j = 0; j < result->save_count; j++) repeated = repeated || names_equal(local[i].name, result->saves[j].name);
+        if (repeated) continue;
+        to = &save_list[save_count++];
+        to->info = local[i];
+        to->in_use = false;
+        to->in_cloud = false;
+        save_slot_summary(save_select_mode, local[i].name, summary, sizeof(summary));
+        snprintf(to->summary, sizeof(to->summary), "%.40s (neste dispositivo)", summary);
+        format_date(local[i].modified, to->date, sizeof(to->date));
+    }
+    list_offline = false;
+
+    // Quem já tem um save entra com ele escolhido: é o caso mais comum
+    if (nothing_chosen && save_count > 0) save_selected_row = 1;
+    restore_choice(chosen, on_back);
+}
+
+// Sem conexão, a lista é a deste dispositivo
+static void apply_offline_list(void)
+{
+    char chosen[SAVE_NAME_MAX + 1];
+    bool on_back;
+
+    remember_choice(chosen, sizeof(chosen), &on_back);
+    list_offline = true;
+    reload_local_slots();
+    restore_choice(chosen, on_back);
 }
 
 void initialize_save_select(save_mode mode)
@@ -200,7 +256,6 @@ void initialize_save_select(save_mode mode)
     save_notice_until = 0.0;
     save_count = 0;
     list_ticket = 0;      // Uma resposta de antes, de outro modo, é ignorada
-    list_loaded = false;
     list_offline = false;
     busy_ticket = 0;
     memset(save_password, 0, sizeof(save_password));
@@ -267,10 +322,27 @@ static bool is_player_mode(void)
 // Texto conforme o modo: save do modo normal, jogador do Sobrevivência ou dupla
 #define MODE_TEXT(normal, player, duo) (save_select_mode == SAVE_MODE_DUO ? (duo) : is_player_mode() ? (player) : (normal))
 
+// Sem a nuvem, joga com o save deste dispositivo
+static void play_local(const char *name)
+{
+    if (!save_slot_exists(save_select_mode, name))
+    {
+        save_view = VIEW_LIST;
+        show_error("Sem conexão: esse save só está na nuvem.");
+        return;
+    }
+    save_view = VIEW_LIST;
+    if (cloud_enabled()) notice_show("Sem conexão: o jogo salva neste dispositivo e envia quando a rede voltar.", NOTICE_INFO);
+    choose_slot(name);
+}
+
 // Apaga a cópia deste computador e a linha do ranking local
 static bool delete_local(const char *name)
 {
     bool deleted = save_slot_delete(save_select_mode, name);
+
+    // O que estava na fila para subir não pode recriar o save na nuvem
+    if (cloud_enabled()) cloud_forget_save(save_mode_folder(save_select_mode), name);
 
     // Jogador apagado sai do ranking junto com o progresso
     if (deleted && is_player_mode())
@@ -318,14 +390,14 @@ static char simplify_character(int codepoint)
     return 0;
 }
 
-// Na nuvem o nome é único no evento: a conferência usa a lista que veio do servidor
+// O nome não pode repetir um save da lista (nuvem e dispositivo) nem uma pasta daqui
 static save_name_check check_new_name(void)
 {
     save_name_check check;
     char trimmed[SAVE_NAME_MAX + 1];
 
     if (!cloud_enabled()) return save_slot_check_name(save_select_mode, name_input);
-    check = save_name_check_rules(name_input);
+    check = save_slot_check_name(save_select_mode, name_input);
     if (check != SAVE_NAME_OK) return check;
     snprintf(trimmed, sizeof(trimmed), "%s", name_input);
     save_name_trim(trimmed);
@@ -358,14 +430,14 @@ static void start_busy(int ticket, int kind, const char *name, const char *label
     busy_ticket = ticket;
     busy_kind = kind;
     busy_label = label;
-    snprintf(busy_name, sizeof(busy_name), "%s", name);
+    if (name != busy_name) snprintf(busy_name, sizeof(busy_name), "%s", name);   // Pode vir do próprio busy_name
     save_view = VIEW_BUSY;
     SetMouseCursor(MOUSE_CURSOR_ARROW);
 }
 
 static void start_open(const char *name)
 {
-    int ticket = cloud_open_save(save_mode_folder(save_select_mode), name);
+    int ticket = cloud_sync_open_save(save_select_mode, name);
 
     if (ticket != 0) start_busy(ticket, BUSY_OPEN, name, "Abrindo o save...");
     else show_error("Esse nome de save não é aceito.");
@@ -375,7 +447,7 @@ static void try_create_from_input(void)
 {
     save_name_check check;
 
-    if (cloud_enabled())
+    if (cloud_up())
     {
         char trimmed[SAVE_NAME_MAX + 1];
 
@@ -387,7 +459,12 @@ static void try_create_from_input(void)
             start_busy(cloud_create_save(save_mode_folder(save_select_mode), trimmed), BUSY_CREATE, trimmed, "Criando o save...");
         }
     }
-    else check = save_select_create_named(name_input);
+    else
+    {
+        check = check_new_name();
+        if (check == SAVE_NAME_OK) check = save_select_create_named(name_input);
+        if (check == SAVE_NAME_OK && cloud_enabled()) notice_show("Sem conexão: o jogo salva neste dispositivo e envia quando a rede voltar.", NOTICE_INFO);
+    }
 
     if (check != SAVE_NAME_OK)
     {
@@ -488,7 +565,7 @@ static void draw_delete_panel(Rectangle *cancel_button, Rectangle *delete_button
 {
     float scale = get_ui_scale();
     float width = GetScreenWidth() * 0.6f;
-    float height = (cloud_enabled() ? 500.0f : 340.0f) * scale;
+    float height = (delete_in_cloud ? 540.0f : 340.0f) * scale;
     Rectangle panel = {(GetScreenWidth() - width) / 2.0f, (GetScreenHeight() - height) / 2.0f, width, height};
     float padding = 36.0f * scale;
     float title_size = style_font_size(0.62f);
@@ -504,7 +581,7 @@ static void draw_delete_panel(Rectangle *cancel_button, Rectangle *delete_button
                        DEFAULT_TEXT_FONT_SIZE * scale, STYLE_DIM_COLOR);
 
     *cancel_button = (Rectangle){panel.x + panel.width - padding - button_width * 2.0f - 20.0f * scale, panel.y + panel.height - padding - button_height, button_width, button_height};
-    if (cloud_enabled())
+    if (delete_in_cloud)
     {
         float size = DEFAULT_TEXT_FONT_SIZE * 0.8f * scale;
         Rectangle box = {panel.x + padding, cancel_button->y - 112.0f * scale, panel.width - padding * 2.0f, 60.0f * scale};
@@ -518,7 +595,7 @@ static void draw_delete_panel(Rectangle *cancel_button, Rectangle *delete_button
         }
         hidden[letters] = '\0';
 
-        DrawTextEx(default_game_font, "Senha da organização:", (Vector2){box.x, box.y - size - 8.0f * scale}, size, 2.0f * scale, STYLE_DIM_COLOR);
+        DrawTextEx(default_game_font, "Senha da organização (sem ela, apaga só deste dispositivo):", (Vector2){box.x, box.y - size - 8.0f * scale}, size, 2.0f * scale, STYLE_DIM_COLOR);
         DrawRectangleRec(box, (Color){10, 6, 12, 255});
         DrawRectangleLinesEx(box, 2.0f * scale, password_error != NULL ? STYLE_WARNING_COLOR : (Color){120, 90, 140, 255});
         DrawTextEx(default_game_font, hidden, (Vector2){box.x + 16.0f * scale, box.y + (box.height - size) / 2.0f}, size, 4.0f * scale, STYLE_TEXT_COLOR);
@@ -527,6 +604,37 @@ static void draw_delete_panel(Rectangle *cancel_button, Rectangle *delete_button
     *delete_button = (Rectangle){panel.x + panel.width - padding - button_width, cancel_button->y, button_width, button_height};
     style_button(*cancel_button, "CANCELAR", save_delete_choice == 0, false);
     style_button(*delete_button, "APAGAR", save_delete_choice == 1, true);
+}
+
+static void draw_choose_panel(Rectangle *online_button, Rectangle *local_button)
+{
+    float scale = get_ui_scale();
+    float width = GetScreenWidth() * 0.72f;
+    float height = 480.0f * scale;
+    Rectangle panel = {(GetScreenWidth() - width) / 2.0f, (GetScreenHeight() - height) / 2.0f, width, height};
+    float padding = 36.0f * scale;
+    float inner = panel.width - padding * 2.0f;
+    float title_size = style_font_size(0.56f);
+    float line_size = DEFAULT_TEXT_FONT_SIZE * scale;
+    float button_width = (inner - 24.0f * scale) / 2.0f;
+    float button_height = 66.0f * scale;
+    float y = panel.y + padding;
+    char name[96];
+
+    style_panel(panel);
+    DrawTextEx(default_game_font, choose_missing ? "SAVE APAGADO NA NUVEM" : "OS SAVES ESTÃO DIFERENTES", (Vector2){panel.x + padding, y}, title_size, title_size * 0.06f, STYLE_WARNING_COLOR);
+    y += title_size + 14.0f * scale;
+    snprintf(name, sizeof(name), "\"%s\"", busy_name);
+    DrawTextEx(default_game_font, name, (Vector2){panel.x + padding, y}, style_font_size(0.46f), 3.0f * scale, STYLE_TEXT_COLOR);
+    y += style_font_size(0.46f) + 22.0f * scale;
+    y += style_wrapped_text(choose_cloud, panel.x + padding, y, inner, line_size, STYLE_TEXT_COLOR) + 10.0f * scale;
+    y += style_wrapped_text(choose_local, panel.x + padding, y, inner, line_size, STYLE_TEXT_COLOR) + 22.0f * scale;
+    style_wrapped_text(choose_missing ? "Enviar o local cria o save na nuvem de novo." : "Escolha qual continua valendo. O outro fica guardado em uma cópia.", panel.x + padding, y, inner, line_size * 0.85f, STYLE_DIM_COLOR);
+
+    *online_button = (Rectangle){panel.x + padding, panel.y + panel.height - padding - button_height, button_width, button_height};
+    *local_button = (Rectangle){online_button->x + button_width + 24.0f * scale, online_button->y, button_width, button_height};
+    style_button(*online_button, choose_missing ? "VOLTAR" : "USAR O ONLINE", choose_choice == 0, false);
+    style_button(*local_button, choose_missing ? "ENVIAR O LOCAL" : "USAR O LOCAL", choose_choice == 1, false);
 }
 
 static void close_delete(void)
@@ -543,34 +651,32 @@ static void confirm_delete(void)
         close_delete();
         return;
     }
-    if (cloud_enabled())
+    if (delete_in_cloud && save_password[0] != '\0')
     {
-        if (save_password[0] == '\0') password_error = "Digite a senha para apagar.";
-        else
-        {
-            start_busy(cloud_delete_save(save_mode_folder(save_select_mode), save_delete_name, save_password), BUSY_DELETE, save_delete_name, "Apagando...");
-            memset(save_password, 0, sizeof(save_password));
-            password_error = NULL;
-        }
+        start_busy(cloud_delete_save(save_mode_folder(save_select_mode), save_delete_name, save_password), BUSY_DELETE, save_delete_name, "Apagando...");
+        memset(save_password, 0, sizeof(save_password));
+        password_error = NULL;
         return;
     }
-    if (save_select_delete_named(save_delete_name)) show_notice(MODE_TEXT("Save apagado.", "Jogador apagado.", "Dupla apagada."));
-    else show_error("Não consegui apagar o save.");
+    if (delete_in_cloud && !save_slot_exists(save_select_mode, save_delete_name))
+    {
+        password_error = "Digite a senha para apagar.";
+        return;
+    }
+    if (!save_select_delete_named(save_delete_name)) show_error("Não consegui apagar o save.");
+    else if (delete_in_cloud) show_notice("Apagado deste dispositivo. O save continua na nuvem.");
+    else show_notice(MODE_TEXT("Save apagado.", "Jogador apagado.", "Dupla apagada."));
     save_view = VIEW_LIST;
 }
 
 static void confirm_row(int row)
 {
-    if (row == 0)
-    {
-        // Sem a lista da nuvem, a primeira linha tenta buscar de novo
-        if (cloud_enabled() && (!list_loaded || list_offline)) request_cloud_list();
-        else open_name_input();
-    }
+    if (row == 0) open_name_input();
     else if (row <= save_count)
     {
-        if (cloud_enabled()) start_open(save_list[row - 1].info.name);
-        else choose_slot(save_list[row - 1].info.name);
+        if (!cloud_enabled()) choose_slot(save_list[row - 1].info.name);
+        else if (cloud_up()) start_open(save_list[row - 1].info.name);
+        else play_local(save_list[row - 1].info.name);
     }
     else
     {
@@ -584,6 +690,7 @@ static void open_delete(int row)
     if (row < 1 || row > save_count) return;
     snprintf(save_delete_name, sizeof(save_delete_name), "%s", save_list[row - 1].info.name);
     save_delete_choice = 0;
+    delete_in_cloud = save_list[row - 1].in_cloud && cloud_up();
     memset(save_password, 0, sizeof(save_password));
     password_error = NULL;
     // A tecla X que abriu o painel não pode virar a primeira letra da senha
@@ -636,9 +743,48 @@ static void finish_create(const cloud_result *result)
     }
     else
     {
-        show_error("Sem conexão com a nuvem: o save não foi criado.");
+        // A conexão caiu no meio: o save nasce aqui e sobe depois
         save_view = VIEW_LIST;
+        if (save_select_create_named(busy_name) == SAVE_NAME_OK) notice_show("Sem conexão: o jogo salva neste dispositivo e envia quando a rede voltar.", NOTICE_INFO);
+        else show_error("Não consegui criar o save.");
     }
+}
+
+// Monta as duas linhas da escolha entre o save online e o deste dispositivo
+static void open_choose_panel(const cloud_result *result)
+{
+    char summary[64], date[32], path[600];
+    const char *cloud_date = "";
+
+    for (int i = 0; i < save_count; i++)
+    {
+        if (save_list[i].in_cloud && names_equal(busy_name, save_list[i].info.name)) cloud_date = save_list[i].date;
+    }
+    choose_missing = result->cloud_missing;
+    save_content_summary(save_select_mode, result->content, summary, sizeof(summary));
+    if (choose_missing) snprintf(choose_cloud, sizeof(choose_cloud), "ONLINE: esse save foi apagado da nuvem");
+    else snprintf(choose_cloud, sizeof(choose_cloud), "ONLINE: %s%s%s", summary, cloud_date[0] != '\0' ? ", salvo em " : "", cloud_date);
+
+    date[0] = '\0';
+    if (save_slot_path(save_select_mode, busy_name, path, sizeof(path)) && FileExists(path)) format_date(GetFileModTime(path), date, sizeof(date));
+    save_content_summary(save_select_mode, result->local_content, summary, sizeof(summary));
+    snprintf(choose_local, sizeof(choose_local), "LOCAL: %s%s%s", summary, date[0] != '\0' ? ", salvo em " : "", date);
+
+    choose_choice = -1;
+    save_view = VIEW_CHOOSE;
+}
+
+static void cancel_choose(void)
+{
+    cloud_close_save();
+    save_view = VIEW_LIST;
+}
+
+static void confirm_choose(void)
+{
+    if (choose_choice < 0) return;
+    if (choose_missing && choose_choice == 0) cancel_choose();
+    else start_busy(cloud_resolve_save(save_mode_folder(save_select_mode), busy_name, choose_choice == 1), BUSY_OPEN, busy_name, "Abrindo o save...");
 }
 
 static void finish_open(const cloud_result *result)
@@ -648,16 +794,24 @@ static void finish_open(const cloud_result *result)
     {
         if (cloud_sync_write_local(save_select_mode, busy_name, result->content))
         {
-            if (result->local_discarded) notice_show("Havia uma gravação antiga deste computador que não subiu. Vale a da nuvem.", NOTICE_ERROR);
             choose_slot(busy_name);
             return;
         }
         cloud_close_save();
         show_error("Não consegui gravar o save neste computador.");
     }
-    else if (result->status == CLOUD_IN_USE) show_error("Esse save está em uso em outro notebook.");
+    else if (result->status == CLOUD_DIVERGED)
+    {
+        open_choose_panel(result);
+        return;
+    }
+    else if (result->status == CLOUD_IN_USE) show_error("Esse save está em uso em outro dispositivo.");
     else if (result->status == CLOUD_NOT_FOUND) show_error("Esse save foi apagado.");
-    else show_error("Sem conexão com a nuvem: o save não foi aberto.");
+    else
+    {
+        play_local(busy_name);
+        return;
+    }
     request_cloud_list();
 }
 
@@ -676,7 +830,7 @@ static void finish_delete(const cloud_result *result)
         delete_local(busy_name);
         show_notice(MODE_TEXT("Save apagado.", "Jogador apagado.", "Dupla apagada."));
     }
-    else if (result->status == CLOUD_IN_USE) show_error("Esse save está em uso em outro notebook e não foi apagado.");
+    else if (result->status == CLOUD_IN_USE) show_error("Esse save está em uso em outro dispositivo e não foi apagado.");
     else if (result->status == CLOUD_NOT_FOUND) show_error("Esse save já tinha sido apagado.");
     else show_error("Sem conexão com a nuvem: nada foi apagado.");
     list_ticket = 0;      // Uma lista pedida antes de apagar ainda traria o save
@@ -689,11 +843,12 @@ static void update_cloud(void)
 
     if (!cloud_enabled()) return;
 
-    if (list_ticket != 0 && cloud_poll(list_ticket, &result))
+    // Com uma janela aberta a resposta espera: a lista não muda embaixo dela
+    if (list_ticket != 0 && save_view == VIEW_LIST && cloud_poll(list_ticket, &result))
     {
         list_ticket = 0;
         if (result.status == CLOUD_OK) apply_cloud_list(&result);
-        else list_offline = true;
+        else apply_offline_list();
         cloud_result_free(&result);
     }
     if (save_view == VIEW_BUSY)
@@ -775,7 +930,7 @@ int render_save_select(void)
     else if (save_view == VIEW_DELETE)
     {
         // Com senha, as letras e o espaço são dela: só as setas, TAB, ENTER e ESC comandam o painel
-        bool typing = cloud_enabled();
+        bool typing = delete_in_cloud;
 
         if (typing) handle_password_input();
         if (IsKeyPressed(KEY_LEFT) || (!typing && IsKeyPressed(KEY_A))) save_delete_choice = 0;
@@ -783,6 +938,14 @@ int render_save_select(void)
         if (IsKeyPressed(KEY_TAB)) save_delete_choice = 1 - save_delete_choice;
         if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER) || (!typing && IsKeyPressed(KEY_SPACE))) confirm_delete();
         if (IsKeyPressed(KEY_ESCAPE)) close_delete();
+    }
+    else if (save_view == VIEW_CHOOSE)
+    {
+        if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_A)) choose_choice = 0;
+        if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D)) choose_choice = 1;
+        if (IsKeyPressed(KEY_TAB)) choose_choice = choose_choice == 0 ? 1 : 0;
+        if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER)) confirm_choose();
+        if (IsKeyPressed(KEY_ESCAPE)) cancel_choose();
     }
 
     // -------- desenho
@@ -799,11 +962,6 @@ int render_save_select(void)
         const char *label = row == 0 ? (MODE_TEXT("+  NOVO SAVE", "+  NOVO JOGADOR", "+  NOVA DUPLA")) : save_list[row - 1].info.name;
         const char *first_detail = MODE_TEXT("Começar do zero com um nome novo", "Digite seu nome para entrar no ranking", "Digite o nome da dupla para entrar no ranking");
 
-        if (row == 0 && cloud_enabled() && (!list_loaded || list_offline))
-        {
-            label = list_ticket != 0 ? "BUSCANDO OS SAVES..." : "TENTAR DE NOVO";
-            first_detail = list_offline ? "Sem conexão com a nuvem. Confira a internet deste notebook." : "Os saves ficam na nuvem, para todos os notebooks.";
-        }
         row_areas[row - save_first_visible] = card;
         style_card_frame(card, selected, row == 0);
         DrawTextEx(default_game_font, label, (Vector2){card.x + padding, card.y + 12.0f * scale}, name_size, name_size * 0.06f, selected ? STYLE_TEXT_COLOR : (Color){200, 192, 206, 255});
@@ -861,7 +1019,7 @@ int render_save_select(void)
         char status[128];
         Vector2 measure;
 
-        if (list_offline) snprintf(status, sizeof(status), "Sem conexão com a nuvem.");
+        if (list_offline) snprintf(status, sizeof(status), "Sem conexão: jogando e salvando neste dispositivo.");
         else snprintf(status, sizeof(status), "Envios aguardando a nuvem: %d", cloud_pending_count());
         measure = MeasureTextEx(default_game_font, status, size, 2.0f * scale);
         DrawTextEx(default_game_font, status, (Vector2){(screen_w - measure.x) / 2.0f, back_button.y - 40.0f * scale}, size, 2.0f * scale, list_offline ? STYLE_WARNING_COLOR : STYLE_DIM_COLOR);
@@ -880,6 +1038,10 @@ int render_save_select(void)
     else if (save_view == VIEW_DELETE)
     {
         draw_delete_panel(&cancel_button, &delete_button);
+    }
+    else if (save_view == VIEW_CHOOSE)
+    {
+        draw_choose_panel(&cancel_button, &delete_button);
     }
     else
     {
@@ -921,6 +1083,15 @@ int render_save_select(void)
     else if (active_view == VIEW_NAME)
     {
         handle_name_input(create_button, cancel_button);
+    }
+    else if (active_view == VIEW_CHOOSE && save_view == VIEW_CHOOSE)
+    {
+        // Na divergência, os botões da esquerda (online) e da direita (local)
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+        {
+            if (style_mouse_over(cancel_button)) { choose_choice = 0; confirm_choose(); }
+            else if (style_mouse_over(delete_button)) { choose_choice = 1; confirm_choose(); }
+        }
     }
     else if (active_view == VIEW_DELETE && save_view == VIEW_DELETE)
     {

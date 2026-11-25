@@ -30,7 +30,9 @@ SE ALGO DER ERRADO
 - O computador precisa de placa de video com suporte a OpenGL 3.3.
 
 VERSAO COM NUVEM (eventos com varios dispositivos)
-Se o iara.exe foi gerado com a nuvem ligada, os saves e os rankings sao
-compartilhados entre os dispositivos e precisam de internet para escolher o
-save. As preferencias e o log continuam so neste computador. Nao copie a
-pasta Documentos\IARA\nuvem de um computador para outro.
+Se o iara.exe foi gerado com a nuvem ligada e houver internet, os saves e os
+rankings sao compartilhados entre os dispositivos. Sem internet o jogo roda
+normalmente, salvando em Documentos\IARA, e envia quando a rede voltar. Se o
+save online e o local estiverem diferentes, o jogo pergunta qual usar. As
+preferencias e o log continuam so neste computador. Nao copie a pasta
+Documentos\IARA\nuvem de um computador para outro.

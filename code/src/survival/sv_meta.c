@@ -55,6 +55,9 @@ bool sv_meta_load(const char *path)
         else if (!strcmp(line, "wins")) sv_meta.wins = value;
         else if (!strcmp(line, "best_seconds")) sv_meta.best_seconds = value;
         else if (!strcmp(line, "kills")) sv_meta.kills = value;
+        else if (!strcmp(line, "best_level")) sv_meta.best_level = value;
+        else if (!strcmp(line, "run_kills")) sv_meta.run_kills = value;
+        else if (!strcmp(line, "run_bosses")) sv_meta.run_bosses = value;
         else if (!strcmp(line, "character")) sv_meta.character = value < CH_COUNT ? value : 0;
         else if (!strcmp(line, "character2")) sv_meta.character2 = value < CH_COUNT ? value : 0;
         else
@@ -83,6 +86,7 @@ static bool write_meta_file(const char *path)
     fprintf(file, "coins=%d\nruns=%d\nwins=%d\nbest_seconds=%d\nkills=%d\ncharacter=%d\n", sv_meta.coins, sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills, sv_meta.character);
     if (sv_meta.character2 != 0) fprintf(file, "character2=%d\n", sv_meta.character2);   // Só o save da dupla usa
     for (int i = 0; i < UPG_COUNT; i++) fprintf(file, "%s=%d\n", upgrade_keys[i], sv_meta.upgrades[i]);
+    fprintf(file, "best_level=%d\nrun_kills=%d\nrun_bosses=%d\n", sv_meta.best_level, sv_meta.run_kills, sv_meta.run_bosses);
 
     if (fclose(file) != 0) return false;
 

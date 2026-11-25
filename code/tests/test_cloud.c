@@ -46,13 +46,14 @@ static struct
     int match_http;                // Código devolvido por registrar partida (200 por padrão)
     int matches;
     char last_match_name[32];
+    long long last_extra;
     int releases;
 } server;
 
 typedef struct
 {
     char mode[16], name[32], machine[48], content[4096], password[64];
-    long long base, seconds;
+    long long base, seconds, extra;
 } fake_args;
 
 static void read_args(const char *body, fake_args *args)
@@ -70,6 +71,7 @@ static void read_args(const char *body, fake_args *args)
         if (!cj_read_key(&reader, key, sizeof(key))) break;
         if (!strcmp(key, "p_versao_base")) cj_read_long(&reader, &args->base);
         else if (!strcmp(key, "p_segundos")) cj_read_long(&reader, &args->seconds);
+        else if (!strcmp(key, "p_abates_extra")) cj_read_long(&reader, &args->extra);
         else if (!strcmp(key, "p_modo") || !strcmp(key, "p_tipo")) { text = cj_read_string(&reader); snprintf(args->mode, sizeof(args->mode), "%s", text ? text : ""); }
         else if (!strcmp(key, "p_nome")) { text = cj_read_string(&reader); snprintf(args->name, sizeof(args->name), "%s", text ? text : ""); }
         else if (!strcmp(key, "p_maquina")) { text = cj_read_string(&reader); snprintf(args->machine, sizeof(args->machine), "%s", text ? text : ""); }
@@ -227,9 +229,10 @@ static bool fake_transport(const char *function, const char *body, int *http, ch
         if (*http == 200)
         {
             server.matches++;
+            server.last_extra = strstr(body, "p_abates_extra") != NULL ? args.extra : -1;
             snprintf(server.last_match_name, sizeof(server.last_match_name), "%s", args.name);
         }
-        *response = _strdup(*http == 200 ? (args.seconds > 600 ? "0" : "3") : "{\"message\":\"erro\"}");
+        *response = _strdup(*http == 200 ? (args.seconds > 7200 ? "0" : "3") : "{\"message\":\"erro\"}");
     }
     else if (!strcmp(function, "iara_ler_ranking"))
     {
@@ -367,7 +370,7 @@ static void clean_folder(void)
 
 static cloud_status open_save(const char *name)
 {
-    return status_of(cloud_open_save("sobrevivencia", name));
+    return status_of(cloud_open_save("sobrevivencia", name, NULL));
 }
 
 // -----------------------------------------------------------------------------
@@ -454,7 +457,7 @@ static void test_cloud(void)
     snprintf(machine, sizeof(machine), "%s", cloud_machine_id());
     check("NV-08", "o notebook ganha um código aleatório de 32 caracteres", strlen(machine) == 32 && strspn(machine, "0123456789abcdef") == 32);
     check("NV-09", "nome ou modo fora das regras não vira pedido", cloud_create_save("sobrevivencia", "../x") == 0 && cloud_create_save("outro", "Ana") == 0 &&
-                                                                      cloud_open_save("normal", "abcdefghijklmnopqrstu") == 0);
+                                                                      cloud_open_save("normal", "abcdefghijklmnopqrstu", NULL) == 0);
     check("NV-10", "criar um save novo dá ok", status_of(cloud_create_save("sobrevivencia", "Ana")) == CLOUD_OK);
     check("NV-11", "nome repetido, sem diferenciar maiúsculas, dá existe", status_of(cloud_create_save("sobrevivencia", "ANA")) == CLOUD_EXISTS);
 
@@ -469,7 +472,7 @@ static void test_cloud(void)
     check("NV-13", "save aberto em outro notebook responde em uso", open_save("Bia") == CLOUD_IN_USE);
     check("NV-14", "save que não existe responde nao_existe", open_save("Ninguem") == CLOUD_NOT_FOUND);
 
-    ticket = cloud_open_save("sobrevivencia", "Ana");
+    ticket = cloud_open_save("sobrevivencia", "Ana", NULL);
     wait_result(ticket, &result);
     check("NV-15", "abrir trava o save para este notebook", result.status == CLOUD_OK && result.content != NULL && result.content[0] == '\0' &&
                                                              strcmp(snapshot("sobrevivencia", "Ana").holder, machine) == 0);
@@ -517,18 +520,32 @@ static void test_cloud(void)
     check("NV-21", "e as gravações seguintes continuam subindo", wait_content("sobrevivencia", "Ana", "coins=55\n"));
 
     {
-        bool kept;
+        bool warned;
 
         Sleep(100);
         other_machine("sobrevivencia", "Ana", "coins=999\n", machine);
         cloud_store_save("sobrevivencia", "Ana", "coins=60\n");
-        kept = wait_notice(CLOUD_NOTICE_CONFLICT) && wait_pending(0);
-        check("NV-22", "gravação mais velha que a do servidor não sobrescreve e avisa", kept && strcmp(snapshot("sobrevivencia", "Ana").content, "coins=999\n") == 0);
-        check("NV-23", "a gravação recusada fica guardada em uma cópia", count_files("conflito-sobrevivencia-Ana-*") == 1);
+        warned = wait_notice(CLOUD_NOTICE_CONFLICT);
+        check("NV-22", "gravação que parte de uma versão antiga não sobrescreve e avisa", warned && strcmp(snapshot("sobrevivencia", "Ana").content, "coins=999\n") == 0);
         cloud_store_save("sobrevivencia", "Ana", "coins=61\n");
         Sleep(150);
-        check("NV-24", "depois do conflito, nada mais sobe até abrir de novo", cloud_pending_count() == 0 && strcmp(snapshot("sobrevivencia", "Ana").content, "coins=999\n") == 0);
+        check("NV-23", "depois do conflito, nada sobe e a gravação mais nova fica na fila",
+              cloud_pending_count() == 1 && strcmp(snapshot("sobrevivencia", "Ana").content, "coins=999\n") == 0);
     }
+    ticket = cloud_open_save("sobrevivencia", "Ana", "coins=61\n");
+    wait_result(ticket, &result);
+    check("NV-24", "abrir de novo mostra a divergência, com as duas gravações",
+          result.status == CLOUD_DIVERGED && !result.cloud_missing && result.content != NULL && strcmp(result.content, "coins=999\n") == 0 &&
+              result.local_content != NULL && strcmp(result.local_content, "coins=61\n") == 0);
+    cloud_result_free(&result);
+    Sleep(150);
+    check("NV-44", "enquanto o jogador não escolhe, nada sobe", cloud_pending_count() == 1 && strcmp(snapshot("sobrevivencia", "Ana").content, "coins=999\n") == 0);
+    ticket = cloud_resolve_save("sobrevivencia", "Ana", false);
+    wait_result(ticket, &result);
+    check("NV-45", "escolher o online entrega o da nuvem e guarda uma cópia do local",
+          result.status == CLOUD_OK && result.content != NULL && strcmp(result.content, "coins=999\n") == 0 && cloud_pending_count() == 0 &&
+              count_files("conflito-sobrevivencia-Ana-*") == 1);
+    cloud_result_free(&result);
 
     printf("\n  --- Trava ---\n\n");
     open_save("Ana");
@@ -570,6 +587,9 @@ static void test_cloud(void)
 
     // Gravação na fila de um save que alguém apagou
     open_save("Ana");
+    cloud_store_save("sobrevivencia", "Ana", "coins=85\n");
+    wait_content("sobrevivencia", "Ana", "coins=85\n");
+    wait_pending(0);
     set_offline(true);
     cloud_store_save("sobrevivencia", "Ana", "coins=90\n");
     cloud_stop(3000);
@@ -578,7 +598,17 @@ static void test_cloud(void)
     find_save("sobrevivencia", "Ana")->used = false;
     LeaveCriticalSection(&server.lock);
     cloud_start(TEST_FOLDER, fake_transport);
-    check("NV-31", "a fila não recria um save apagado", wait_notice(CLOUD_NOTICE_LOST) && wait_pending(0) && !snapshot("sobrevivencia", "Ana").used);
+    Sleep(200);
+    check("NV-31", "a fila não recria um save apagado, e o progresso continua guardado", cloud_pending_count() == 1 && !snapshot("sobrevivencia", "Ana").used);
+    ticket = cloud_open_save("sobrevivencia", "Ana", "coins=90\n");
+    wait_result(ticket, &result);
+    check("NV-46", "abrir um save apagado na nuvem pergunta antes", result.status == CLOUD_DIVERGED && result.cloud_missing);
+    cloud_result_free(&result);
+    check("NV-47", "para um save apagado não há online para escolher", status_of(cloud_resolve_save("sobrevivencia", "Ana", false)) == CLOUD_SERVER_ERROR);
+    check("NV-48", "escolher o local envia o save de novo",
+          status_of(cloud_resolve_save("sobrevivencia", "Ana", true)) == CLOUD_OK && wait_content("sobrevivencia", "Ana", "coins=90\n") && wait_pending(0));
+    cloud_close_save();
+    Sleep(150);
 
     // Abrir com uma gravação ainda na fila, mais nova e mais velha que a do servidor
     status_of(cloud_create_save("sobrevivencia", "Caio"));
@@ -592,11 +622,11 @@ static void test_cloud(void)
         server.offline = false;
         find_save("sobrevivencia", "Caio")->holder[0] = '\0';
         cloud_start(TEST_FOLDER, fake_transport);
-        ticket = cloud_open_save("sobrevivencia", "Caio");
+        ticket = cloud_open_save("sobrevivencia", "Caio", NULL);
         LeaveCriticalSection(&server.lock);
         wait_result(ticket, &result);
         check("NV-32", "abrir entrega a gravação da fila quando ela é a mais nova",
-              result.status == CLOUD_OK && result.content != NULL && strcmp(result.content, "coins=1\n") == 0 && !result.local_discarded && wait_content("sobrevivencia", "Caio", "coins=1\n"));
+              result.status == CLOUD_OK && result.content != NULL && strcmp(result.content, "coins=1\n") == 0 && wait_content("sobrevivencia", "Caio", "coins=1\n"));
         cloud_result_free(&result);
     }
     wait_pending(0);
@@ -608,12 +638,77 @@ static void test_cloud(void)
     LeaveCriticalSection(&server.lock);
     other_machine("sobrevivencia", "Caio", "coins=500\n", "");
     cloud_start(TEST_FOLDER, fake_transport);
-    ticket = cloud_open_save("sobrevivencia", "Caio");
+    ticket = cloud_open_save("sobrevivencia", "Caio", "coins=2\n");
     wait_result(ticket, &result);
-    check("NV-33", "abrir descarta a gravação da fila mais velha que a do servidor",
-          result.status == CLOUD_OK && result.content != NULL && strcmp(result.content, "coins=500\n") == 0 && wait_pending(0) &&
+    check("NV-33", "se os dois lados mudaram sem conexão, abrir pergunta qual fica",
+          result.status == CLOUD_DIVERGED && result.content != NULL && strcmp(result.content, "coins=500\n") == 0 &&
               strcmp(snapshot("sobrevivencia", "Caio").content, "coins=500\n") == 0);
     cloud_result_free(&result);
+    ticket = cloud_resolve_save("sobrevivencia", "Caio", true);
+    wait_result(ticket, &result);
+    check("NV-49", "escolher o local sobe o deste dispositivo e guarda o da nuvem",
+          result.status == CLOUD_OK && strcmp(result.content, "coins=2\n") == 0 && wait_content("sobrevivencia", "Caio", "coins=2\n") && wait_pending(0) &&
+              count_files("conflito-sobrevivencia-Caio-*") == 1);
+    cloud_result_free(&result);
+    cloud_close_save();
+    Sleep(150);
+
+    printf("\n  --- Jogar sem conexão ---\n\n");
+    // Save criado sem conexão, que nunca foi aberto na nuvem
+    set_offline(true);
+    cloud_store_save("sobrevivencia", "Duda", "coins=3\n");
+    Sleep(100);
+    cloud_store_save("sobrevivencia", "Duda", "coins=4\n");
+    check("NV-50", "o save criado sem conexão fica na fila", cloud_pending_count() == 1);
+    set_offline(false);
+    check("NV-51", "e é criado na nuvem quando a rede volta, sem ficar travado",
+          wait_content("sobrevivencia", "Duda", "coins=4\n") && wait_pending(0) && (Sleep(100), snapshot("sobrevivencia", "Duda").holder[0] == '\0'));
+
+    // Já sincronizado, jogado sem conexão sem ninguém mexer na nuvem: sobe sem perguntar
+    set_offline(true);
+    cloud_store_save("sobrevivencia", "Duda", "coins=5\n");
+    Sleep(100);
+    set_offline(false);
+    check("NV-52", "um save já sincronizado sobe sozinho se a nuvem não mudou", wait_content("sobrevivencia", "Duda", "coins=5\n") && wait_pending(0));
+
+    // Só a nuvem mudou: vale a dela, sem perguntar
+    Sleep(100);
+    other_machine("sobrevivencia", "Duda", "coins=600\n", "");
+    ticket = cloud_open_save("sobrevivencia", "Duda", "coins=5\n");
+    wait_result(ticket, &result);
+    check("NV-53", "se só a nuvem mudou, abrir traz a dela sem perguntar", result.status == CLOUD_OK && strcmp(result.content, "coins=600\n") == 0);
+    cloud_result_free(&result);
+    cloud_close_save();
+    Sleep(150);
+
+    // Só o dispositivo mudou, sem nada na fila (jogado numa versão sem nuvem)
+    ticket = cloud_open_save("sobrevivencia", "Duda", "coins=601\n");
+    wait_result(ticket, &result);
+    check("NV-54", "se só este dispositivo mudou, abrir mantém o local e envia",
+          result.status == CLOUD_OK && strcmp(result.content, "coins=601\n") == 0 && wait_content("sobrevivencia", "Duda", "coins=601\n"));
+    cloud_result_free(&result);
+    cloud_close_save();
+    Sleep(150);
+
+    // Mesmo nome criado sem conexão e já usado na nuvem: nada é sobrescrito
+    other_machine("sobrevivencia", "Eva", "coins=700\n", "");
+    set_offline(true);
+    cloud_store_save("sobrevivencia", "Eva", "coins=7\n");
+    Sleep(100);
+    set_offline(false);
+    Sleep(200);
+    check("NV-55", "um nome que já tem progresso na nuvem não é sobrescrito",
+          cloud_pending_count() == 1 && strcmp(snapshot("sobrevivencia", "Eva").content, "coins=700\n") == 0 && snapshot("sobrevivencia", "Eva").holder[0] == '\0');
+    ticket = cloud_open_save("sobrevivencia", "Eva", "coins=7\n");
+    wait_result(ticket, &result);
+    check("NV-56", "e abrir pergunta qual fica", result.status == CLOUD_DIVERGED);
+    cloud_result_free(&result);
+    cloud_close_save();
+    Sleep(150);
+    check("NV-57", "sair sem escolher mantém os dois e libera o save",
+          cloud_pending_count() == 1 && strcmp(snapshot("sobrevivencia", "Eva").content, "coins=700\n") == 0 && snapshot("sobrevivencia", "Eva").holder[0] == '\0');
+    cloud_forget_save("sobrevivencia", "Eva");
+    check("NV-58", "apagar o save deste dispositivo tira o que estava na fila", cloud_pending_count() == 0);
 
     printf("\n  --- Apagar ---\n\n");
     check("NV-34", "senha errada não apaga", status_of(cloud_delete_save("sobrevivencia", "Caio", "errada")) == CLOUD_WRONG_PASSWORD && snapshot("sobrevivencia", "Caio").used);
@@ -625,6 +720,15 @@ static void test_cloud(void)
     wait_result(ticket, &result);
     check("NV-36", "a partida sobe e devolve a posição", result.status == CLOUD_OK && result.position == 3 && strcmp(server.last_match_name, "Ana") == 0 && wait_pending(0));
     cloud_result_free(&result);
+    check("NV-59", "sem hora extra o parâmetro novo não vai ao servidor", server.last_extra == -1);
+    {
+        cloud_match overtime = {"Ana", 700, 1500, 20, 5, 4, true, 321};
+
+        wait_result(cloud_register_match("solo", &overtime), &result);
+        check("NV-60", "os abates da hora extra vão junto da partida", result.status == CLOUD_OK && server.last_extra == 321 && wait_pending(0));
+        cloud_result_free(&result);
+        server.matches--;
+    }
 
     set_offline(true);
     ticket = cloud_register_match("dupla", &match);
