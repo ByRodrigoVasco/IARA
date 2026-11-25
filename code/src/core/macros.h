@@ -109,6 +109,9 @@ extern unsigned int middle_screen_y;
 // Icon de indicação de interação com o computador
 #define ARROW_DOWN_PNG_PATH  "code/assets/icons/arrow-down.png"
 
+// Ícone da janela e da barra de tarefas (gerado por tools/release/gerar_icone.py)
+#define IARA_ICON_PNG_PATH   "code/assets/icons/iara.png"
+
 // PATHS PARA ÁUDIO
 #define SOUNDS_PATH "code/assets/sounds/"
 #define MENU_MUSIC_PATH SOUNDS_PATH "DEMO -  MENU.mp3"
