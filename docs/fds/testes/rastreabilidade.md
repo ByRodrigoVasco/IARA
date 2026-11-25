@@ -1,8 +1,13 @@
 # Matriz de rastreabilidade
 
-Relação entre os requisitos do GDD (seção 8.4) e o código, conferida em 03/11/2026 na branch
-`test/campanha-100-dias`. O log da execução está em
-[`execucao-2026-11-03.txt`](evidencias/execucao-2026-11-03.txt): **76 de 76 casos aprovados**.
+Relação entre os requisitos do GDD (seção 8.4) e o código. As linhas foram conferidas em
+03/11/2026 na branch `test/campanha-100-dias` e revistas em 25/11/2026 sobre a `develop`
+(`c4b2c7c`).
+
+O resultado corrente da suíte **não fica aqui**: ele muda a cada sprint e está no
+[relatório de testes](README.md), que registra cada execução com data, branch e log. Na conferência
+de 03/11 eram 76 casos; hoje a suíte passa de 107, mais os conjuntos de unidade e o do
+Sobrevivência.
 
 **Situação:** ✅ implementado e testado · 🟡 parcial · ❌ não implementado.
 A coluna de issue traz só o que foi confirmado no Jira; as demais ficam para a equipe preencher.
@@ -38,6 +43,23 @@ A coluna de issue traz só o que foi confirmado no Jira; as demais ficam para a 
 | RNF05 | Save ausente ou corrompido | `core/save.c` | `test_save`, PKG-07 a PKG-09 | ✅ | |
 | RNF06 | Entrada inválida no puzzle | Quiz aceita só cliques nos botões | Inspeção | 🟡 | Sem teste específico; rever com puzzles de entrada livre |
 
+## Fora do escopo desta matriz: o Modo Sobrevivência
+
+O Modo Sobrevivência não aparece nas tabelas acima porque **não é requisito da seção 8.4 do GDD**:
+ele nasceu para o estande da Tech Night, com [página própria](../../tech-night/README.md). Ficava
+ausente da matriz sem explicação, o que dava a entender que não era testado. É testado, e por uma
+suíte só dele.
+
+| Item | Onde |
+|---|---|
+| Código | `code/src/survival/`, com o modo em dupla em `sv_duo.c`, o ranking em `sv_ranking.c` e a luz em `sv_light.c` |
+| Suíte própria | `code/tests/test_survival.c`, com os casos `SV-*` |
+| Textos e HUD | UX-23 a UX-26, no bloco 3 de sistema |
+| Fim de partida | CT-107, ainda a executar (PI2-318) |
+
+O resultado de cada execução fica no [relatório de testes](README.md). Se a equipe decidir trazer
+o modo para o escopo do GDD, ele passa a pedir linhas de RF e RNF aqui.
+
 ## Verificação regra × código
 
 O repositório ainda não tem as regras formalizadas por LMC. A verificação usa as regras escritas no GDD.
@@ -48,7 +70,7 @@ O repositório ainda não tem as regras formalizadas por LMC. A verificação us
 | Dica não reduz a pontuação | `toggle_hint_note()` | `test_hints`, CT-39 | Respeitada |
 | Dica não entrega a resposta | Bilhete em `hints.c` | `test_hints` procura termos da resposta | Respeitada; a avaliação pedagógica é da equipe |
 | Dica não vem da IA | Item no mural e dicas de erro do roteiro | Inspeção | Respeitada |
-| Sem tela de teoria isolada | Telas do Dia 1 | [Auditoria](../../lmc/mapeamento-puzzles.md) | Respeitada |
+| Sem tela de teoria isolada | Telas dos 9 dias jogáveis | [Auditoria](../../lmc/mapeamento-puzzles.md), nas duas passagens | Respeitada; os 7 trechos em voz de apostila achados na segunda passagem foram reescritos (PI2-214 e PI2-215) |
 | Manual = 10, automático = -5, failsafe = -10 (US11) | Nenhum | Busca no código | **Não implementada**: o jogo usa 10, 0 e 0 por chamado |
 | Pontos nunca negativos (GDD 7.3/7.5) | CT-47 a CT-49, CT-51, CT-58 | Leitura do GDD | **Conflita com a US11**, que prevê -5 e -10; a equipe precisa decidir |
 | 3 erros seguidos acionam o failsafe | `continue_after_answer()` | CT-50, CT-51, CT-56 | Respeitada |
