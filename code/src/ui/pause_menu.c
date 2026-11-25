@@ -63,6 +63,7 @@ pause_action pause_menu_update_and_draw(void)
     float scale = get_ui_scale();
     float width = (float)GetScreenWidth();
     float height = (float)GetScreenHeight();
+    float label_size = ui_font_size(1.3f);   // O mesmo tamanho que ui_draw_button usa no rótulo
     float button_width = 460.0f * scale;
     float button_height = 70.0f * scale;
     float top = height * 0.36f;
@@ -71,6 +72,14 @@ pause_action pause_menu_update_and_draw(void)
     int hovered = -1;
 
     if (!pause_open) return PAUSE_NONE;
+
+    // Os botões ficam da largura do rótulo mais comprido, com folga dos dois lados, para o texto não sair do botão
+    for (int i = 0; i < PAUSE_OPTION_COUNT; i++)
+    {
+        float needed = MeasureTextEx(default_game_font, labels[i], label_size, label_size * 0.06f).x + (80.0f * scale);
+
+        if (needed > button_width) button_width = needed;
+    }
 
     for (int i = 0; i < PAUSE_OPTION_COUNT; i++)
     {
