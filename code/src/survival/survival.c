@@ -4,10 +4,13 @@
 #include "raylib.h"
 #include "accessibility.h"
 #include "survival.h"
+#include "sv_achievements.h"
 #include "sv_game.h"
 #include "sv_render.h"
 #include "sv_light.h"
 #include "sv_ranking.h"
+#include "sv_ranking_cloud.h"
+#include "cloud.h"
 #include "sv_meta.h"
 #include "sv_audio.h"
 #include "sv_assets.h"
@@ -17,6 +20,7 @@
 #include "macros.h"
 #include "loading.h"
 #include "save_slots.h"
+#include "cloud_sync.h"
 #include "confirm_dialog.h"
 #include "help.h"
 #include "notice.h"
@@ -58,6 +62,13 @@ static long last_rank_order = 0;       // Para destacar a linha do jogador no ra
 
 static void finish_run(void);
 
+// Fim de cada quadro do modo: a notificação de conquista vai por cima de qualquer tela
+static void end_frame(void)
+{
+    sv_ach_draw(GetFrameTime());
+    end_game_drawing();
+}
+
 // Abre a tela de resultado com MENU DA SOBREVIVÊNCIA marcado
 static void enter_over_screen(void)
 {
@@ -85,6 +96,14 @@ static void warn_if_save_failed(void)
     if (!sv_meta_last_save_ok()) notice_show("Não consegui salvar o progresso do Sobrevivência. Confira se há espaço livre no disco e se a pasta de saves permite gravar arquivos.", NOTICE_ERROR);
 }
 
+// Grava o progresso no disco e manda para a nuvem
+static void save_meta(void)
+{
+    sv_meta_save(sv_meta_path());
+    warn_if_save_failed();
+    if (sv_meta_last_save_ok()) cloud_sync_active_save();
+}
+
 static float job_read_save(void)
 {
     char path[512];
@@ -94,12 +113,14 @@ static float job_read_save(void)
     duo = active_save_is_set() && active_save_mode() == SAVE_MODE_DUO;
     sv_ranking_set_path(duo ? SV_RANKING_DUO_PATH : NULL);
     sv_ranking_load();
+    sv_ranking_cloud_open(duo);
 
     // Cada save tem o seu arquivo de progresso; sem save escolhido (testes), vale o arquivo antigo
     if (active_save_is_set() && save_mode_is_survival(active_save_mode()) && active_save_path(path, sizeof(path))) sv_meta_set_path(path);
     else sv_meta_set_path(NULL);
 
     sv_meta_load(sv_meta_path());
+    sv_ach_reset((SvProgress){sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills}); // O que o save já tem não é novidade
     sv_meta.character = sv_playable_character(sv_meta.character);
     sv_meta.character2 = sv_playable_character(sv_meta.character2);
     char_cursor = sv_meta.character;
@@ -291,12 +312,22 @@ static const char *player_name(void)
     return active_save_is_set() ? active_save_name() : "Anônimo";
 }
 
+// O personagem que vai para o ranking da nuvem; na dupla, os dois (J1 e J2)
+static int cloud_characters(void)
+{
+    _Static_assert(CH_COUNT < SV_CLOUD_CHARACTER_BASE, "os personagens da dupla nao cabem no codigo do ranking");
+    if (!sv_run.duo) return sv_run.player.character;
+    return SV_CLOUD_DUO_CHARACTERS(sv_duo_player(0)->character, sv_duo_player(1)->character);
+}
+
 // Termina a partida: paga o Banco de Horas e registra o resultado no ranking (uma vez só)
 static void finish_run(void)
 {
     earned_coins = sv_game_finish();
+    if (!sv_run.cheated) cloud_sync_active_save();   // sv_game_finish gravou o progresso
     if (run_ranked || sv_run.cheated) return;   // Partida com cheat não entra no ranking
     run_ranked = true;
+    sv_ranking_cloud_submit(player_name(), (int)sv_run.time, sv_run.kills, sv_run.player.level, sv_run.bosses_defeated, cloud_characters(), sv_run.phase == SV_WON);
     last_rank_position = sv_ranking_add(player_name(), (int)sv_run.time, sv_run.kills, sv_run.player.level, sv_run.bosses_defeated, sv_run.player.character, sv_run.phase == SV_WON, &last_run_record);
     last_rank_order = last_rank_position > 0 ? sv_ranking_get(last_rank_position - 1)->order : 0;
 }
@@ -330,7 +361,7 @@ static void revalidate_characters(void)
     if (changed)
     {
         char_cursor = sv_meta.character;
-        sv_meta_save(sv_meta_path()); warn_if_save_failed();
+        save_meta();
     }
 }
 
@@ -341,6 +372,7 @@ static void start_run(void)
     last_run_record = false;
     last_rank_position = 0;
     last_rank_order = 0;
+    sv_ranking_cloud_new_run();
     sv_duo_mode = duo;
     sv_game_start((unsigned)(GetTime() * 1000.0) | 1u);
     sv_time_scale = 1;
@@ -371,7 +403,9 @@ static void draw_ranking(float x, float y, float width, int rows, float size)
     float line = size * 1.25f;
     float pad = 16.0f * ui;
     float gap = size * 0.5f;
-    int count = sv_ranking_count();
+    // A tabela da nuvem junta todos os notebooks; sem ela, vale a deste computador
+    bool shared = sv_ranking_cloud_online();
+    int count = shared ? sv_ranking_cloud_count() : sv_ranking_count();
     char text[96];
     Color header = (Color){160, 150, 165, 255};
     // Cada coluna tem a largura do maior entre o título e o maior número que cabe nela
@@ -389,13 +423,18 @@ static void draw_ranking(float x, float y, float width, int rows, float size)
 
     sv_text("#", x + pad, y + pad, size, header);
     sv_text("NOME", name_x, y + pad, size, header);
+    if (cloud_enabled())
+    {
+        sv_text(shared ? "ONLINE" : "OFFLINE", name_x + sv_text_width("NOME  ", size), y + pad + size * 0.15f, size * 0.7f,
+                shared ? (Color){120, 230, 160, 255} : (Color){255, 140, 120, 255});
+    }
     sv_text("PONTOS", points_right - sv_text_width("PONTOS", size), y + pad, size, (Color){255, 214, 80, 255});
     sv_text("TEMPO", time_right - sv_text_width("TEMPO", size), y + pad, size, header);
     sv_text("ABATES", kills_right - sv_text_width("ABATES", size), y + pad, size, header);
 
     for (int i = 0; i < rows; i++)
     {
-        const SvRankEntry *e = sv_ranking_get(i);
+        const SvRankEntry *e = shared ? sv_ranking_cloud_get(i) : sv_ranking_get(i);
         float ry = y + pad + line * (float)(i + 1) + size * 0.4f;
         Color color = i == 0 ? (Color){255, 214, 80, 255} : (i < 3 ? (Color){235, 225, 235, 255} : (Color){200, 190, 205, 255});
 
@@ -404,7 +443,9 @@ static void draw_ranking(float x, float y, float width, int rows, float size)
             if (i == 0 && count == 0) sv_text("Ninguém jogou ainda. Seja o primeiro!", x + pad, ry, size * 0.85f, header);
             break;
         }
-        if (last_rank_order != 0 && e->order == last_rank_order)
+        // Destaque da partida que acabou: no ranking da nuvem o jogador é achado pelo nome
+        if (shared ? sv_ranking_cloud_send_state() == SV_SEND_DONE && _stricmp(e->name, player_name()) == 0
+                   : last_rank_order != 0 && e->order == last_rank_order)
         {
             DrawRectangleRec((Rectangle){x + 4.0f * ui, ry - size * 0.1f, width - 8.0f * ui, line}, (Color){90, 20, 34, 230});
             color = (Color){255, 120, 130, 255};
@@ -515,7 +556,7 @@ static void render_hub(void)
         ui_draw_hint("SETAS: escolher    ENTER: confirmar    ESC: voltar ao menu");
     }
 
-    end_game_drawing();
+    end_frame();
 }
 
 // -----------------------------------------------------------------------------
@@ -582,6 +623,15 @@ static void draw_roster_frame(int id, int frame, Rectangle dest, Color tint)
     DrawTexturePro(texture, (Rectangle){0, 0, (float)texture.width, (float)texture.height}, dest, (Vector2){0, 0}, 0.0f, tint);
 }
 
+// Texto centralizado que encolhe até caber na largura, sem sair do lugar na vertical
+static void draw_fitted(const char *text, float center_x, float y, float size, float max_width, Color color)
+{
+    float width = sv_text_width(text, size);
+    float fitted = width > max_width && width > 0.0f ? size * max_width / width : size;
+
+    sv_text_centered(text, center_x, y + (size - fitted) / 2.0f, fitted, color);
+}
+
 static void render_characters(void)
 {
     float ui = sv_ui();
@@ -619,7 +669,7 @@ static void render_characters(void)
             if (saved_character() != char_cursor) load_chosen_player(char_cursor);
             if (char_editing == 1) sv_meta.character2 = char_cursor;
             else sv_meta.character = char_cursor;
-            sv_meta_save(sv_meta_path()); warn_if_save_failed();
+            save_meta();
             char_message = "Personagem escolhido.";
             sv_sfx(SND_confirma);
         }
@@ -654,7 +704,7 @@ static void render_characters(void)
     DrawRectangleRounded((Rectangle){w / 2.0f - 170.0f * ui, 150.0f * ui, 340.0f * ui, 300.0f * ui}, 0.08f, 8, (Color){18, 8, 22, 220});
     {
         Texture2D portrait = sv_character_frame(char_cursor, SOUTH, 0);
-        float pw = (float)portrait.width * 8.0f * ui, ph = (float)portrait.height * 8.0f * ui;
+        float pw = CHARACTER_BASE_SIZE * 8.0f * ui, ph = pw * (float)portrait.height / (float)portrait.width;
 
         draw_roster_frame(char_cursor, unlocked ? frame : 0, (Rectangle){w / 2.0f - pw / 2.0f, 300.0f * ui - ph / 2.0f, pw, ph}, unlocked ? WHITE : (Color){12, 8, 18, 255});
     }
@@ -695,13 +745,29 @@ static void render_characters(void)
 
             draw_roster_frame(i, 0, (Rectangle){cell.x + (cell.width - size) / 2.0f, cell.y + 20.0f * ui, size, size}, open ? WHITE : (Color){12, 8, 18, 255});
         }
-        sv_text_centered(open ? sv_character(i)->name : "Bloqueado", cell.x + cell.width / 2.0f, cell.y + 145.0f * ui, 28.0f * ui, open ? WHITE : (Color){120, 100, 125, 255});
+        {
+            // "Prof. Fulano" vai em duas linhas: numa só, os nomes compridos ficavam miúdos
+            const char *label = open ? sv_character(i)->name : "Bloqueado";
+            Color color = open ? WHITE : (Color){120, 100, 125, 255};
+            float max_w = cell.width - 14.0f * ui;
+            float center = cell.x + cell.width / 2.0f;
+            float y = cell.y + 145.0f * ui;
+
+            if (strncmp(label, "Prof. ", 6) == 0)
+            {
+                draw_fitted("Prof.", center, cell.y + 124.0f * ui, 22.0f * ui, max_w, color);
+                label += 6;
+                y = cell.y + 150.0f * ui;
+            }
+            // Mesmo numa linha só o nome encolhe para caber na célula (com muitos personagens ela é estreita)
+            draw_fitted(label, center, y, 28.0f * ui, max_w, color);
+        }
     }
 
     sv_text_centered(duo ? "Setas ou A/D trocam. Enter escolhe. TAB troca de jogador. ESC volta." : "Setas ou A/D trocam. Enter escolhe. ESC volta.", w / 2.0f, GetScreenHeight() - 60.0f * ui, 26.0f * ui, (Color){190, 180, 195, 255});
     if (char_message_timer > 0.0f) sv_text_centered(char_message, w / 2.0f, GetScreenHeight() - 105.0f * ui, 30.0f * ui, (Color){255, 214, 80, 255});
 
-    end_game_drawing();
+    end_frame();
 }
 
 static void render_shop(void)
@@ -732,7 +798,7 @@ static void render_shop(void)
         {
             shop_message = "Comprado.";
             sv_sfx(SND_compra);
-            sv_meta_save(sv_meta_path()); warn_if_save_failed();
+            save_meta();
         }
         else
         {
@@ -788,7 +854,7 @@ static void render_shop(void)
     sv_text_centered("Setas e Enter para comprar. ESC volta.", w / 2.0f, GetScreenHeight() - 70.0f * ui, 26.0f * ui, (Color){190, 180, 195, 255});
     if (shop_message_timer > 0.0f) sv_text_centered(shop_message, w / 2.0f, GetScreenHeight() - 110.0f * ui, 30.0f * ui, (Color){255, 214, 80, 255});
 
-    end_game_drawing();
+    end_frame();
 }
 
 // -----------------------------------------------------------------------------
@@ -839,9 +905,8 @@ static void render_run(void)
         }
         else
         {
-            // Acelerar o tempo (TAB ou clique no botão) vale só até os 7:00
-            if (sv_run.time >= SV_SPEEDUP_LIMIT) sv_time_scale = 1;
-            else if (IsKeyPressed(KEY_TAB) || (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(GetMousePosition(), sv_speed_button_rect())))
+            // Acelerar o tempo (TAB ou clique no botão) vale a partida inteira
+            if (IsKeyPressed(KEY_TAB) || (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(GetMousePosition(), sv_speed_button_rect())))
             {
                 sv_time_scale = sv_time_scale % 3 + 1;
                 sv_sfx(SND_escolha);
@@ -868,7 +933,7 @@ static void render_run(void)
     sv_render_game();
     if (sv_run.phase == SV_LEVELUP) sv_render_levelup(levelup_selected);
     sv_debug_draw_menu();
-    end_game_drawing();
+    end_frame();
 }
 
 #define PAUSE_OPTIONS 3
@@ -943,7 +1008,7 @@ static void render_pause(void)
 
         if (confirm_is_open() && confirm_update_and_draw() == CONFIRM_YES) abandon_run();
     }
-    end_game_drawing();
+    end_frame();
 }
 
 // Botões do fim da partida, lado a lado embaixo do ranking (medidas em 1080p, como o resto do modo)
@@ -1008,7 +1073,7 @@ static void render_over(void)
     {
         begin_game_drawing();
         draw_backdrop();
-        end_game_drawing();
+        end_frame();
         return;
     }
 
@@ -1040,6 +1105,14 @@ static void render_over(void)
     sv_text_centered(text, w / 2.0f, 470.0f * ui, 36.0f * ui, (Color){255, 214, 80, 255});
 
     if (sv_run.cheated) sv_text_centered("Cheats usados: esta partida não conta para o progresso nem para o ranking.", w / 2.0f, 530.0f * ui, 28.0f * ui, (Color){255, 140, 120, 255});
+    else if (sv_ranking_cloud_send_state() == SV_SEND_DONE)
+    {
+        snprintf(text, sizeof(text), "%s está em %dº no ranking geral!", player_name(), sv_ranking_cloud_position());
+        sv_text_centered(text, w / 2.0f, 530.0f * ui, 40.0f * ui, sv_ranking_cloud_position() <= 5 ? (Color){255, 214, 80, 255} : (Color){230, 220, 230, 255});
+    }
+    else if (sv_ranking_cloud_send_state() == SV_SEND_WAITING) sv_text_centered("Enviando a partida ao ranking...", w / 2.0f, 530.0f * ui, 32.0f * ui, (Color){230, 220, 230, 255});
+    else if (sv_ranking_cloud_send_state() == SV_SEND_OFFLINE) sv_text_centered("Sem conexão: a partida vai para o ranking geral quando a rede voltar.", w / 2.0f, 530.0f * ui, 30.0f * ui, (Color){255, 140, 120, 255});
+    else if (sv_ranking_cloud_send_state() == SV_SEND_REFUSED) sv_text_centered("O servidor não aceitou esta partida no ranking geral.", w / 2.0f, 530.0f * ui, 30.0f * ui, (Color){255, 140, 120, 255});
     else if (last_rank_position > 0)
     {
         if (last_run_record) snprintf(text, sizeof(text), "NOVO RECORDE! %s agora está em %dº de %d no ranking!", player_name(), last_rank_position, sv_ranking_count());
@@ -1062,13 +1135,18 @@ static void render_over(void)
 
     ui_draw_hint("SETAS: escolher    ENTER: confirmar    ESC: menu da Sobrevivência");
 
-    end_game_drawing();
+    end_frame();
 }
 
 bool render_survival(void)
 {
     // F1 liga e desliga o modo debug em qualquer tela do modo
     if (IsKeyPressed(KEY_F1)) sv_debug_toggle();
+    // Durante a partida a tabela não aparece: as respostas são lidas fora dela
+    if (screen != SCREEN_RUN && screen != SCREEN_PAUSE) sv_ranking_cloud_update();
+
+    // Vale durante a partida (tempo e abates) e logo depois dela (número de partidas)
+    sv_ach_check(sv_progress_now());
 
     switch (screen)
     {
@@ -1096,6 +1174,11 @@ bool render_survival(void)
     }
 
     return leave_to_menu || leave_to_saves;
+}
+
+bool survival_in_menu(void)
+{
+    return screen != SCREEN_RUN;
 }
 
 bool survival_wants_player_switch(void)

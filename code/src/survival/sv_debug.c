@@ -230,6 +230,14 @@ void sv_debug_draw_world(void)
 // Painel
 // -----------------------------------------------------------------------------
 
+// Junta um texto ao fim de buffer sem passar do tamanho dele: o que não couber fica de fora.
+static void append_text(char *buffer, size_t size, const char *text)
+{
+    size_t used = strlen(buffer);
+
+    if (used + 1 < size) snprintf(buffer + used, size - used, "%s", text);
+}
+
 void sv_debug_draw_hud(void)
 {
     SvPlayer *p = &sv_run.player;
@@ -280,14 +288,14 @@ void sv_debug_draw_hud(void)
             char one[40];
 
             snprintf(one, sizeof(one), "%s%s %d", i ? ", " : "", sv_passive_name(p->passives[i].id), p->passives[i].level);
-            if (strlen(passives) + strlen(one) < sizeof(passives)) strcat(passives, one);
+            if (strlen(passives) + strlen(one) < sizeof(passives)) append_text(passives, sizeof(passives), one);
         }
         snprintf(lines[count++], sizeof(lines[0]), "passivos: %s", passives);
     }
-    if (sv_cheat_active(CHEAT_GOD)) strcat(cheats, "INVULNERAVEL ");
-    if (sv_cheat_active(CHEAT_NO_SPAWN)) strcat(cheats, "SEM NASCIMENTOS ");
-    if (sv_cheat_active(CHEAT_ONE_HIT)) strcat(cheats, "UM GOLPE ");
-    if (sv_cheat_active(CHEAT_FREEZE)) strcat(cheats, "CONGELADO ");
+    if (sv_cheat_active(CHEAT_GOD)) append_text(cheats, sizeof(cheats), "INVULNERAVEL ");
+    if (sv_cheat_active(CHEAT_NO_SPAWN)) append_text(cheats, sizeof(cheats), "SEM NASCIMENTOS ");
+    if (sv_cheat_active(CHEAT_ONE_HIT)) append_text(cheats, sizeof(cheats), "UM GOLPE ");
+    if (sv_cheat_active(CHEAT_FREEZE)) append_text(cheats, sizeof(cheats), "CONGELADO ");
     snprintf(lines[count++], sizeof(lines[0]), "cheats ligados: %s", cheats[0] ? cheats : "nenhum");
     if (sv_run.cheated) snprintf(lines[count++], sizeof(lines[0]), "PARTIDA COM CHEATS: nao conta para o progresso");
 

@@ -41,7 +41,7 @@ typedef enum { CHEAT_GOD, CHEAT_NO_SPAWN, CHEAT_ONE_HIT, CHEAT_FREEZE, CHEAT_COU
 
 typedef enum
 {
-    W_GRAMPEADOR, W_PONTEIRO, W_CANECA, W_POSTITS, W_NAOPERTURBE, W_DEPLOY, W_NOTA, W_MODUS,
+    W_GRAMPEADOR, W_AVISO, W_CANECA, W_POSTITS, W_NAOPERTURBE, W_DEPLOY, W_NOTA, W_MODUS,
     W_TABELA, W_COLEGA, W_NOVACONVERSA, W_PROMPT, W_VERA, W_FIBRA, W_CALOR, W_NEGACAO, W_RECURSAO, W_COUNT
 } SvWeaponId;
 
@@ -84,19 +84,21 @@ typedef struct
     Vector2 pos, vel;
     float damage, radius, life;
     int pierce;
-    int kind;              // 0 grampo, 1 pacote de dados do Suporte de TI, 2 nota fiscal (vai e volta), 3 chamada recursiva
+    int kind;              // 0 grampo, 1 pacote de dados do Suporte de TI, 2 nota fiscal (vai e volta), 3 chamada recursiva, 4 aviso prévio
     float turn_time;       // Nota fiscal: quando a vida chega a este valor ela vira e volta para o jogador
     float speed;           // Nota fiscal: velocidade de ida e de volta
     float spin;            // Nota fiscal: ângulo atual do giro
     bool returning;        // Nota fiscal: já está voltando
     int depth;             // Recursão: quantas vezes ainda se divide ao acertar
     unsigned hit_ids[4];
+    unsigned target_id;    // Aviso prévio: o inimigo que o avião persegue (0 = nenhum, 0xB055 é o chefe)
+    float blast;           // Aviso prévio: raio do carimbo na chegada
     int owner;             // Dupla: quem disparou (0 ou 1). No solo é sempre 0
     bool alive;
 } SvShot;
 
 typedef enum { ZONE_CIRCLE, ZONE_RECT } SvZoneShape;
-typedef enum { ZK_CANECA, ZK_DEPLOY, ZK_PONTEIRO, ZK_PROMPT, ZK_VERA, ZK_FIBRA, ZK_CALOR, ZK_NEGACAO } SvZoneKind;
+typedef enum { ZK_CANECA, ZK_DEPLOY, ZK_AVISO, ZK_PROMPT, ZK_VERA, ZK_FIBRA, ZK_CALOR, ZK_NEGACAO } SvZoneKind;
 
 typedef struct
 {
@@ -238,6 +240,8 @@ typedef struct
     float colega_attack[SV_MAX_COLEGAS];
     float colega_walk[SV_MAX_COLEGAS];
     bool colega_moving[SV_MAX_COLEGAS];
+    Vector2 colega_vel[SV_MAX_COLEGAS];
+    Vector2 colega_leader;
     float colega_heal;
     float colega_heal_flash;
 } SvSeat;
@@ -271,8 +275,10 @@ typedef struct
     Vector2 colega_dir[SV_MAX_COLEGAS];   // Para onde cada um olha
     float colega_cd[SV_MAX_COLEGAS];      // Recarga de cada um
     float colega_attack[SV_MAX_COLEGAS];  // Tempo que falta da animação do golpe
-    float colega_walk[SV_MAX_COLEGAS];    // Relógio da caminhada
+    float colega_walk[SV_MAX_COLEGAS];    // Quadro da caminhada, avança com a distância andada
     bool colega_moving[SV_MAX_COLEGAS];
+    Vector2 colega_vel[SV_MAX_COLEGAS];   // Velocidade atual de cada um, suavizada
+    Vector2 colega_leader;                // Onde o jogador estava no quadro anterior
     float colega_heal;                    // Enfermeira: tempo até a próxima cura
     float colega_heal_flash;              // Brilho da cura, para o desenho
     float trail_timer;
@@ -296,7 +302,7 @@ typedef struct
 
 extern SvRun sv_run;
 
-// Velocidade do tempo escolhida pelo jogador (1, 2 ou 3). Só vale antes de SV_SPEEDUP_LIMIT.
+// Velocidade do tempo escolhida pelo jogador (1, 2 ou 3), em qualquer momento da partida.
 extern int sv_time_scale;
 
 // -----------------------------------------------------------------------------
@@ -308,6 +314,12 @@ extern bool sv_debug_mode;   // Ligado pela tecla F1 (sv_debug.c). Libera as tra
 /** @brief Personagem que vale de verdade: o pedido, se estiver liberado (ou com o debug ligado), senão o Estagiário.
  *  A aparência carregada, a habilidade da partida e o save usam todos este mesmo valor. */
 int sv_playable_character(int character);
+
+// O progresso do save somado ao da partida em andamento (partida com trapaça não soma).
+SvProgress sv_progress_now(void);
+
+// Se o poder pode sair nas cartas: com o debug ligado todos podem.
+bool sv_weapon_available(int weapon);
 
 // Modo dupla: ligado antes de sv_game_start para a próxima partida ser em dupla (veja sv_duo.h).
 extern bool sv_duo_mode;

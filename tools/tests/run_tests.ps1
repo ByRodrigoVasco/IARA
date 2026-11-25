@@ -120,6 +120,11 @@ $suite = @(
         Fonte = @("code/tests/test_save_slots.c", "code/src/core/assets_fs.c", "code/src/core/save_slots.c")
     },
     @{
+        Nome  = "test_cloud"
+        Nota  = "Unidade: nuvem sem rede, fila offline e respostas"
+        Fonte = @("code/tests/test_cloud.c", "code/src/core/cloud.c", "code/src/core/cloud_json.c")
+    },
+    @{
         Nome  = "test_hints"
         Nota  = "Unidade: dica no mural e pontuacao"
         Fonte = @(
@@ -179,14 +184,15 @@ $suite = @(
         Fonte = @(
             "code/tests/test_fluxo.c", "code/src/core/assets_fs.c",
             "code/src/core/state_machine.c", "code/src/core/game_state.c", "code/src/core/save.c", "code/src/core/save_slots.c",
+            "code/src/core/cloud.c", "code/src/core/cloud_json.c", "code/src/core/cloud_http.c", "code/src/core/cloud_sync.c",
             "code/src/screens/mode_select.c", "code/src/screens/save_select.c", "code/src/screens/loading.c", "code/src/ui/screen_style.c",
             "code/src/core/helper.c", "code/src/screens/pre_menu.c",
             "code/src/game/collisions.c", "code/src/game/characters.c", "code/src/game/npcs.c",
             "code/src/ui/fonts.c", "code/src/ui/animations.c", "code/src/ui/button.c",
             "code/src/ui/accessibility.c", "code/src/game/hints.c", "code/src/screens/settings.c",
             "code/src/core/preferences.c", "code/src/ui/cheat_sheet.c", "code/src/ui/computer_art.c", "code/src/ui/logic_text.c", "code/src/game/logic.c", "code/src/game/calendar.c",
-            "code/src/survival/sv_game.c", "code/src/survival/sv_boss.c", "code/src/survival/sv_render.c", "code/src/survival/sv_light.c", "code/src/survival/sv_ranking.c", "code/src/survival/sv_duo.c", "code/src/survival/sv_debug.c",
-            "code/src/survival/sv_audio.c", "code/src/survival/sv_map.c", "code/src/survival/sv_assets.c", "code/src/survival/sv_meta.c", "code/src/survival/sv_rules.c",
+            "code/src/survival/sv_game.c", "code/src/survival/sv_boss.c", "code/src/survival/sv_render.c", "code/src/survival/sv_light.c", "code/src/survival/sv_ranking.c", "code/src/survival/sv_ranking_cloud.c", "code/src/survival/sv_duo.c", "code/src/survival/sv_debug.c",
+            "code/src/survival/sv_audio.c", "code/src/survival/sv_achievements.c", "code/src/survival/sv_map.c", "code/src/survival/sv_assets.c", "code/src/survival/sv_meta.c", "code/src/survival/sv_rules.c",
             "code/src/core/audio.c",
             "code/src/ui/notice.c", "code/src/ui/ui_widgets.c", "code/src/ui/confirm_dialog.c",
             "code/src/screens/help.c", "code/src/ui/pause_menu.c",
@@ -201,14 +207,15 @@ $suite = @(
         Fonte = @(
             "code/tests/test_sprint03.c", "code/src/core/assets_fs.c",
             "code/src/core/state_machine.c", "code/src/core/game_state.c", "code/src/core/save.c", "code/src/core/save_slots.c",
+            "code/src/core/cloud.c", "code/src/core/cloud_json.c", "code/src/core/cloud_http.c", "code/src/core/cloud_sync.c",
             "code/src/screens/mode_select.c", "code/src/screens/save_select.c", "code/src/screens/loading.c", "code/src/ui/screen_style.c",
             "code/src/core/helper.c", "code/src/screens/pre_menu.c",
             "code/src/game/collisions.c", "code/src/game/characters.c", "code/src/game/npcs.c",
             "code/src/ui/fonts.c", "code/src/ui/animations.c", "code/src/ui/button.c",
             "code/src/ui/accessibility.c", "code/src/game/hints.c", "code/src/screens/settings.c",
             "code/src/core/preferences.c", "code/src/ui/cheat_sheet.c", "code/src/ui/computer_art.c", "code/src/ui/logic_text.c", "code/src/game/logic.c", "code/src/game/calendar.c",
-            "code/src/survival/sv_game.c", "code/src/survival/sv_boss.c", "code/src/survival/sv_render.c", "code/src/survival/sv_light.c", "code/src/survival/sv_ranking.c", "code/src/survival/sv_duo.c", "code/src/survival/sv_debug.c",
-            "code/src/survival/sv_audio.c", "code/src/survival/sv_map.c", "code/src/survival/sv_assets.c", "code/src/survival/sv_meta.c", "code/src/survival/sv_rules.c",
+            "code/src/survival/sv_game.c", "code/src/survival/sv_boss.c", "code/src/survival/sv_render.c", "code/src/survival/sv_light.c", "code/src/survival/sv_ranking.c", "code/src/survival/sv_ranking_cloud.c", "code/src/survival/sv_duo.c", "code/src/survival/sv_debug.c",
+            "code/src/survival/sv_audio.c", "code/src/survival/sv_achievements.c", "code/src/survival/sv_map.c", "code/src/survival/sv_assets.c", "code/src/survival/sv_meta.c", "code/src/survival/sv_rules.c",
             "code/src/ui/notice.c", "code/src/ui/ui_widgets.c", "code/src/ui/confirm_dialog.c",
             "code/src/screens/help.c", "code/src/ui/pause_menu.c",
             "code/src/game/symptoms.c", "code/src/ui/office_symptoms.c"

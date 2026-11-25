@@ -21,7 +21,7 @@
     X(bo_rene, "bo_rene", 80, 80, 24) \
     X(bo_iara, "bo_iara", 96, 96, 24) \
     X(fx_grampeador, "fx_grampeador", 28, 12, 4) \
-    X(fx_ponteiro, "fx_ponteiro", 66, 13, 4) \
+    X(fx_aviso, "fx_aviso", 28, 16, 4) \
     X(fx_caneca, "fx_caneca", 48, 44, 4) \
     X(fx_postits, "fx_postits", 50, 50, 4) \
     X(fx_naoperturbe, "fx_naoperturbe", 64, 64, 4) \
@@ -51,7 +51,7 @@
     X(bp_falsa, "bp_falsa", 72, 44, 4) \
     X(bp_nota, "bp_nota", 24, 24, 4) \
     X(ic_grampeador, "ic_grampeador", 24, 24, 4) \
-    X(ic_ponteiro, "ic_ponteiro", 24, 24, 4) \
+    X(ic_aviso, "ic_aviso", 24, 24, 4) \
     X(ic_caneca, "ic_caneca", 24, 24, 4) \
     X(ic_postits, "ic_postits", 24, 24, 4) \
     X(ic_naoperturbe, "ic_naoperturbe", 24, 24, 4) \

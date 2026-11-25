@@ -11,6 +11,23 @@ as inconsistências. Assim, a mecânica ensina ao mesmo tempo ética em IA e ló
 
 > **Entrega final (Unidade 2):** versão publicada nas [Releases do GitHub](https://github.com/ByRodrigoVasco/IARA/releases), reports das sprints [01](docs/fds/sprint-01/README.md), [02](docs/fds/sprint-02/README.md) e [03](docs/fds/sprint-03/README.md), [rastreabilidade das 16 histórias](docs/fds/sprint-03/README.md#rastreabilidade-das-histórias-pi2-330) e [bug tracker](docs/fds/testes/bugs.md).
 
+## Novidades da Unidade 2
+
+Na Unidade 1 o jogo era o núcleo em C: menu, máquina de estados, o escritório com colisões e um
+quiz jogável. Desde então entrou:
+
+| Novidade | O que é |
+|---|---|
+| **Campanha do Dia 1 ao Dia 100** | O expediente inteiro, com 9 dias jogáveis, Flashes do dia e saltos no calendário. Cada dia traz um conceito de lógica dentro do trabalho, e as escolhas levam a um dos 4 finais |
+| **Modo Sobrevivência** | Dez minutos num mapa de 15 áreas do escritório, com 5 atos, 5 chefes, Banco de Horas para comprar melhorias e ranking de partidas |
+| **Sobrevivência em dupla** | Duas pessoas no mesmo computador, com controles separados, XP dividida e ranking próprio |
+| **Saves por modo** | Save automático com vários slots, separados entre campanha, Sobrevivência e dupla |
+| **Configurações** | Volume da música e dos efeitos, brilho, tela cheia e janela maximizada, guardados entre sessões |
+| **Acessibilidade** | Alto contraste, pausa, tela de ajuda e confirmação antes de sair ou desistir |
+
+Tudo isso roda a partir de um `iara.exe` único, sem instalação nem conta. O detalhamento por sprint
+está em [Como o software evoluiu](#como-o-software-evoluiu).
+
 ## Funcionalidades
 
 **Campanha (modo normal)**
@@ -30,7 +47,8 @@ as inconsistências. Assim, a mecânica ensina ao mesmo tempo ética em IA e ló
 - Configurações: volume da música e dos efeitos, brilho, alto contraste, tela cheia e janela maximizada.
 - Pausa, ajuda e confirmação antes de sair ou desistir.
 - Trilha sonora por momento do jogo e efeitos sonoros de ações e ambiente.
-- Um `iara.exe` só, sem instalação, conta ou internet.
+- Um `iara.exe` só, sem instalação nem conta, que funciona sem internet.
+- Versão para eventos, opcional: [saves e rankings compartilhados entre notebooks](#eventos-saves-e-rankings-na-nuvem) e [ranking ao vivo na web](https://github.com/ByRodrigoVasco/IARA-Ranking-ao-vivo).
 
 ## Como o software evoluiu
 
@@ -132,7 +150,9 @@ Quem já jogava antes disso não perde nada: o `iara.save` e o `iara.survival` a
 
 O `MODO SOBREVIVÊNCIA`, na escolha do modo depois de `INICIAR`, é separado da campanha: dez minutos de expediente em um mapa grande de 15 áreas do escritório, com cinco atos e cinco chefes, do Impressora de Rescisões à própria IARA. Mova a Estagiária com **WASD** ou as setas. Os poderes atacam sozinhos, e cada nível dá a escolha de um poder novo ou de um upgrade. **ESC** pausa.
 
-O Banco de Horas coletado na partida, mesmo que você perca, compra upgrades permanentes no `PLANO DE CARREIRA`. O progresso fica no save escolhido (`saves/sobrevivencia/<nome do save>/progresso.survival`). Sprites e sons vêm de `code/assets/sprites/sobrevivencia` e `code/assets/audio`, e o áudio segue as regras de mistura em `code/src/survival/sv_audio.h`.
+O Banco de Horas coletado na partida, mesmo que você perca, compra upgrades permanentes no `PLANO DE CARREIRA`. O progresso fica no save escolhido (`saves/sobrevivencia/<nome do save>/progresso.survival`). Sprites e sons vêm de `code/assets/sprites/sobrevivencia` e `code/assets/audio` (músicas e ambientes em OGG, efeitos em WAV), e o áudio segue as regras de mistura em `code/src/survival/sv_audio.h`.
+
+Os 12 personagens e os 4 Colegas de Plantão são desenhados em alta resolução (192x192 por quadro, no mesmo espaço de tela do antigo pixel art), a partir das folhas de `docs/arte/conceito`, com `tools/sprites/preparar_personagem_hd.py` e `tools/sprites/preparar_colegas_hd.py` (precisam de Pillow e NumPy). A arte e o áudio originais ficam em [`arquivo/`](arquivo), fora do executável.
 
 O ranking (`iara.ranking`) ordena os jogadores pela **pontuação** da melhor partida de cada um: **10 pontos por inimigo derrotado, 5 por segundo sobrevivido, 500 por chefe derrotado e 2000 de bônus por desligar a IARA**. Os abates pesam mais que o tempo, então quem só foge sem lutar não passa na frente de quem durou um pouco menos mas derrotou mais inimigos. No empate de pontos, fica na frente quem tem mais abates, depois quem sobreviveu mais tempo e, por fim, quem jogou primeiro. A pontuação é calculada na hora a partir do arquivo, então os pesos podem ser ajustados em `code/src/survival/sv_ranking.h` sem apagar o ranking da feira.
 
@@ -152,7 +172,22 @@ Uma partida em que qualquer cheat foi usado **não conta para o progresso do sav
 
 O jogo também registra em `iara-desempenho.log` (ao lado do executável, ignorado pelo git) os quadros que passaram de 60 ms, com a hora e a tela. É o primeiro lugar para olhar quando alguém disser que o jogo travou.
 
-> **Versão para terminal (PIF):** em desenvolvimento.
+> **Versão para terminal (PIF):** pronta. O jogo também roda inteiro no terminal, em texto, sem abrir janela e sem depender do raylib: são os mesmos 8 dias e as mesmas fórmulas de lógica, lidos dos mesmos arquivos do jogo gráfico. Como compilar e jogar está em [`code/terminal/LEIA-ME.md`](code/terminal/LEIA-ME.md).
+
+### Eventos: saves e rankings na nuvem
+
+Para um evento com vários notebooks, o `iara.exe` pode ser gerado com a nuvem ligada ([Supabase](https://supabase.com/)). Sem ela, tudo continua local, como descrito acima.
+
+- Os saves dos três modos e os rankings solo e de duplas são os mesmos em todos os notebooks. As configurações (`iara.ini`) e o log continuam em cada um.
+- Um save aberto em um notebook fica **em uso** para os outros. A trava vence em 2 minutos sem contato, e uma gravação mais velha que a do servidor é recusada.
+- Escolher, criar e apagar save precisam de internet; apagar pede a senha da organização. Se a rede cair durante a partida, o que não subiu fica numa fila e sobe depois.
+- Os menus mostram a conexão (**online** ou **offline**), e o motivo de uma queda vai para o `iara-desempenho.log`.
+- Partidas com cheats não entram no ranking.
+- O [ranking ao vivo na web](https://github.com/ByRodrigoVasco/IARA-Ranking-ao-vivo) mostra os dois rankings para um telão ou para o celular.
+
+Como montar o banco, configurar o build e testar: [tools/nuvem/LEIA-ME.md](tools/nuvem/LEIA-ME.md). A URL e a chave ficam em `tools/nuvem/nuvem.local`, que não vai para o git.
+
+**Antes do evento:** o plano gratuito do Supabase pausa o projeto após cerca de 7 dias sem atividade.
 
 ### Gerar o pacote para outras máquinas
 
@@ -161,7 +196,7 @@ powershell -ExecutionPolicy Bypass -File tools/pacote/empacotar.ps1
 powershell -ExecutionPolicy Bypass -File tools/pacote/testar_pacote.ps1
 ```
 
-O primeiro comando gera `build/IARA-windows.zip`, com um `iara.exe` só: as imagens, os sons e as bibliotecas (raylib, GLFW) estão dentro dele, e o jogo roda sem pastas nem DLLs ao lado. Para gerar só o executável, use `tools/release/build_release.ps1` (saída em `build/release/iara.exe`). Quem recebe só abre o `iara.exe`: não precisa de instalação, conta, internet nem administrador. O segundo testa o pacote fora do ambiente de desenvolvimento; o teste em máquina real segue o [roteiro de máquina limpa](docs/fds/testes/maquina-limpa.md).
+O primeiro comando gera `build/IARA-windows.zip`, com um `iara.exe` só: as imagens, os sons e as bibliotecas (raylib, GLFW) estão dentro dele, e o jogo roda sem pastas nem DLLs ao lado. Para gerar só o executável, use `tools/release/build_release.ps1` (saída em `build/release/iara.exe`). Quem recebe só abre o `iara.exe`: não precisa de instalação, conta, internet nem administrador (a versão com a [nuvem](#eventos-saves-e-rankings-na-nuvem) precisa de internet para escolher o save). O segundo testa o pacote fora do ambiente de desenvolvimento; o teste em máquina real segue o [roteiro de máquina limpa](docs/fds/testes/maquina-limpa.md).
 
 ## Entregas por disciplina
 
@@ -210,9 +245,9 @@ Testes de sistema das histórias que ainda não tinham caso de teste, executados
 
 ### Bug Tracker
 
-Print de **20/11/2026** das [Issues do GitHub](https://github.com/ByRodrigoVasco/IARA/issues?q=is%3Aissue+label%3Abug), com as abertas e as fechadas. Cada issue tem o label da sprint, um responsável e aponta para a história do Jira, o teste e o PR da correção. O status de cada bug também fica em [bugs.md](docs/fds/testes/bugs.md).
+Print de **25/11/2026**, véspera da entrega, das [Issues do GitHub](https://github.com/ByRodrigoVasco/IARA/issues?q=is%3Aissue+label%3Abug), com as abertas e as fechadas: **44 bugs, 6 em aberto**. Cada issue tem o label da sprint, um responsável e aponta para a história do Jira, o teste e o PR da correção. O status de cada bug também fica em [bugs.md](docs/fds/testes/bugs.md), em dia com as issues.
 
-![Bug tracker do GitHub em 20/11/2026](docs/fds/sprint-03/bug-tracker-2026-11-20.png)
+![Bug tracker do GitHub em 25/11/2026](docs/fds/sprint-03/bug-tracker-2026-11-25.png)
 
 ## Como contribuir
 

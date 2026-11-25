@@ -205,6 +205,25 @@ static void draw_bolt_path(Vector2 from, Vector2 to, unsigned seed, float spread
     }
 }
 
+// A palavra do carimbo do Aviso Prévio vai por cima dos inimigos e dos estouros, senão não se lê
+static void draw_stamp_words(void)
+{
+    for (int i = 0; i < SV_MAX_ZONES; i++)
+    {
+        const SvZone *z = &sv_run.zones[i];
+        float t, y;
+        unsigned char fade;
+
+        if (!z->alive || z->kind != ZK_AVISO) continue;
+        t = 1.0f - z->life / z->max_life;
+        fade = (unsigned char)(255.0f * (1.0f - t * t));
+        y = z->pos.y - 22.0f - 10.0f * t;
+        DrawRectangle((int)z->pos.x - 32, (int)y - 9, 64, 18, (Color){20, 6, 10, (unsigned char)(fade * 4 / 5)});
+        DrawRectangleLines((int)z->pos.x - 32, (int)y - 9, 64, 18, (Color){230, 50, 60, fade});
+        sv_text_centered("DEMITIDO", z->pos.x, y - 7.0f, 15.0f, (Color){255, 92, 96, fade});
+    }
+}
+
 static void draw_lightning(void)
 {
     for (int i = 0; i < SV_MAX_ZONES; i++)
@@ -324,13 +343,32 @@ static void draw_zones(void)
 
             progress = 1.0f - z->life / z->max_life;
             if (z->kind == ZK_FIBRA) sv_draw_stretched(SPR_fx_fibra, (int)(progress * 4.0f), center, length, z->radius * 2.0f + 10.0f, z->angle, WHITE);
-            else sv_draw_stretched(SPR_fx_ponteiro, (int)(progress * 4.0f), center, length, 13.0f, z->angle, WHITE);
             continue;
         }
 
         if (z->kind == ZK_CALOR)
         {
             draw_heatmap(z, 1.0f);
+            continue;
+        }
+
+        if (z->kind == ZK_AVISO)
+        {
+            // O carimbo: o anel vermelho se abre, os pedaços de papel voam e a palavra fica um instante
+            float t = 1.0f - z->life / z->max_life;
+            float open = 1.0f - (1.0f - t) * (1.0f - t);
+            unsigned char fade = (unsigned char)(255.0f * (1.0f - t * t));
+
+            DrawCircleV(z->pos, z->radius * open, (Color){200, 28, 40, (unsigned char)(fade / 5)});
+            DrawRing(z->pos, fmaxf(0.0f, z->radius * open - 3.0f), z->radius * open, 0.0f, 360.0f, 40, (Color){230, 50, 60, fade});
+            for (int k = 0; k < 10; k++)
+            {
+                float a = (float)k * 0.628f + z->pos.x * 0.07f;
+                float d = z->radius * (0.35f + 0.75f * open) * (k % 2 ? 1.0f : 0.72f);
+                Vector2 bit = {z->pos.x + cosf(a) * d, z->pos.y + sinf(a) * d};
+
+                DrawRectanglePro((Rectangle){bit.x, bit.y, 5.0f, 4.0f}, (Vector2){2.5f, 2.0f}, t * 540.0f + (float)k * 36.0f, (Color){240, 242, 236, fade});
+            }
             continue;
         }
 
@@ -564,7 +602,6 @@ static void draw_colega(int c)
     Vector2 dir = sv_run.colega_dir[c];
     bool moving = sv_run.colega_moving[c];
     float attack = sv_run.colega_attack[c];
-    float bob = moving ? 0.0f : sinf(sv_run.time * 3.0f + (float)c * 1.7f);
     int frame;
     bool flip = dir.x < 0.0f;
     Color color = colega_colors[c];
@@ -579,7 +616,7 @@ static void draw_colega(int c)
         int base = fabsf(dir.x) >= fabsf(dir.y) ? 4 : dir.y > 0.0f ? 0 : 8;
 
         if (base != 4) flip = false;
-        frame = base + (moving ? (int)(sv_run.colega_walk[c] * 9.0f) % 4 : 0);
+        frame = base + (moving ? (int)sv_run.colega_walk[c] % 4 : 0);
     }
 
     draw_shadow(pos, 9.0f);
@@ -589,8 +626,8 @@ static void draw_colega(int c)
 
         DrawCircleLinesV(pos, 12.0f + 18.0f * t, (Color){color.r, color.g, color.b, (unsigned char)(200.0f * (1.0f - t))});
     }
-    sv_draw(colega_sprites[c], frame, (Vector2){pos.x, pos.y + bob}, 1.0f, 0.0f, flip, WHITE);
-    DrawRectanglePro((Rectangle){pos.x, pos.y - 25.0f + bob, 4.0f, 4.0f}, (Vector2){2.0f, 2.0f}, 45.0f, color);
+    sv_draw(colega_sprites[c], frame, pos, 1.0f, 0.0f, flip, WHITE);
+    DrawRectanglePro((Rectangle){pos.x, pos.y - 25.0f, 4.0f, 4.0f}, (Vector2){2.0f, 2.0f}, 45.0f, color);
 
     if (c == 2 && sv_run.colega_heal_flash > 0.0f)
     {
@@ -762,6 +799,20 @@ static void draw_shots(void)
 
                 DrawRectanglePro((Rectangle){s->pos.x + stamp.x, s->pos.y + stamp.y, 5.0f, 4.0f}, (Vector2){2.5f, 2.0f}, s->spin, (Color){64, 176, 104, 255});
             }
+            continue;
+        }
+        if (s->kind == 4)
+        {
+            // Aviso prévio: o avião de papel, com um rastro tracejado
+            Vector2 dir = Vector2Normalize(s->vel);
+
+            for (int k = 1; k <= 3; k++)
+            {
+                Vector2 a = Vector2Subtract(s->pos, Vector2Scale(dir, 10.0f + 10.0f * (float)k));
+
+                DrawLineEx(a, Vector2Add(a, Vector2Scale(dir, 5.0f)), 1.5f, (Color){200, 210, 235, (unsigned char)(190 - 50 * k)});
+            }
+            sv_draw(SPR_fx_aviso, anim_frame(s->life, 10.0f) % 4, s->pos, 1.0f, atan2f(s->vel.y, s->vel.x) * RAD2DEG, false, WHITE);
             continue;
         }
         if (s->kind == 3)
@@ -939,6 +990,43 @@ static void draw_offscreen_boss_arrow(Camera2D camera)
     }
 }
 
+// Dupla: quem caiu e está fora da tela ganha uma seta na borda, na cor dele, com "J1" ou "J2",
+// para o parceiro saber para onde voltar e levantá-lo
+static void draw_offscreen_partner_arrow(Camera2D camera)
+{
+    float ui = sv_ui();
+    float margin = 46.0f * ui;
+    float w = (float)GetScreenWidth(), h = (float)GetScreenHeight();
+
+    if (!sv_run.duo) return;
+
+    for (int i = 0; i < SV_DUO_PLAYERS; i++)
+    {
+        SvPlayer *p = sv_duo_player(i);
+        Vector2 screen;
+        char label[8];
+
+        if (!p->down) continue;
+        screen = GetWorldToScreen2D(p->pos, camera);
+        if (screen.x > 0 && screen.x < w && screen.y > 0 && screen.y < h) continue;
+
+        {
+            Vector2 center = {w / 2.0f, h / 2.0f};
+            Vector2 direction = Vector2Normalize(Vector2Subtract(screen, center));
+            Vector2 arrow = {Clamp(center.x + direction.x * w, margin, w - margin), Clamp(center.y + direction.y * h, margin, h - margin)};
+            float angle = atan2f(direction.y, direction.x);
+            float size = 18.0f * ui;
+            Vector2 a = {arrow.x + cosf(angle) * size, arrow.y + sinf(angle) * size};
+            Vector2 c = {arrow.x + cosf(angle + 2.5f) * size, arrow.y + sinf(angle + 2.5f) * size};
+            Vector2 d = {arrow.x + cosf(angle - 2.5f) * size, arrow.y + sinf(angle - 2.5f) * size};
+
+            DrawTriangle(a, d, c, duo_colors[i]);
+            snprintf(label, sizeof(label), "J%d", i + 1);
+            sv_text_centered(label, arrow.x - cosf(angle) * size * 1.6f, arrow.y - sinf(angle) * size * 1.6f - 12.0f * ui, 24.0f * ui, duo_colors[i]);
+        }
+    }
+}
+
 // O botão fica no canto de baixo à direita: é a única parte da tela que o HUD deixa livre
 // (vida no alto à esquerda, tempo no centro, Banco de Horas no alto à direita, poderes embaixo à esquerda).
 // A largura vem do maior texto que ele mostra, então o texto nunca passa da borda.
@@ -1051,8 +1139,8 @@ static void draw_hud(Camera2D camera)
         sv_text_centered(sv_act_name(sv_run.act), w / 2.0f, pad + 38.0f * ui, 22.0f * ui, (Color){200, 170, 170, 255});
     }
 
-    // Botão de velocidade do tempo: só até os 7:00, depois a tela já está cheia
-    if (sv_run.time < SV_SPEEDUP_LIMIT && sv_run.phase == SV_PLAYING)
+    // Botão de velocidade do tempo
+    if (sv_run.phase == SV_PLAYING)
     {
         Rectangle button = sv_speed_button_rect();
         bool hot = sv_time_scale > 1;
@@ -1125,6 +1213,7 @@ static void draw_hud(Camera2D camera)
         }
         draw_offscreen_boss_arrow(camera);
     }
+    draw_offscreen_partner_arrow(camera);
 
     // Aviso grande
     if (sv_run.banner > 0.0f && sv_run.banner_text)
@@ -1177,6 +1266,41 @@ static void draw_hud(Camera2D camera)
     }
 }
 
+// Dupla: quando a câmera troca de alvo (o meio dos dois <-> quem ficou de pé), ela desliza até o alvo
+// novo em vez de pular. Guarda a distância que falta e a desconta aos poucos; fora das trocas ela
+// segue o alvo exatamente, como antes.
+#define CAMERA_SWITCH_SPEED 6.0f   // Quanto maior, mais rápido ela chega (fração por segundo, em escala exponencial)
+
+static Vector2 duo_camera_focus(void)
+{
+    static Vector2 last_target = {0};
+    static Vector2 pending = {0};
+    static int last_mode = -2;
+    static float last_time = -1.0f;
+    Vector2 focus = sv_duo_focus();
+    int mode = sv_duo_focus_player();
+    float dt = GetFrameTime();
+
+    // Solo ou partida nova: sem deslize
+    if (!sv_run.duo || sv_run.time < last_time || last_mode == -2)
+    {
+        pending = (Vector2){0};
+        last_mode = mode;
+    }
+    else if (mode != last_mode)
+    {
+        pending = Vector2Subtract(last_target, focus);   // Começa de onde a câmera estava
+        last_mode = mode;
+    }
+
+    pending = Vector2Scale(pending, expf(-CAMERA_SWITCH_SPEED * dt));
+    if (Vector2Length(pending) < 0.5f) pending = (Vector2){0};
+
+    last_time = sv_run.time;
+    last_target = Vector2Add(focus, pending);
+    return last_target;
+}
+
 void sv_render_game(void)
 {
     Camera2D camera = {0};
@@ -1187,7 +1311,8 @@ void sv_render_game(void)
     if (camera.zoom < 0.75f) camera.zoom = 0.75f;
     camera.offset = (Vector2){GetScreenWidth() / 2.0f, GetScreenHeight() / 2.0f};
     {
-        Vector2 focus = sv_duo_focus();   // No solo, a posição do jogador; na dupla, o meio entre os dois
+        // No solo, a posição do jogador; na dupla, o meio entre os dois, ou quem ficou de pé se o outro caiu
+        Vector2 focus = duo_camera_focus();
 
         camera.target = (Vector2){focus.x + sinf(sv_run.time * 90.0f) * shake, focus.y + cosf(sv_run.time * 80.0f) * shake};
     }
@@ -1220,6 +1345,7 @@ void sv_render_game(void)
         if (sv_run.hazards[i].alive && sv_run.hazards[i].kind == HZ_PROJ) draw_hazard(&sv_run.hazards[i]);
     }
     draw_fx();
+    draw_stamp_words();
     if (sv_debug_mode) sv_debug_draw_world();
     EndMode2D();
 

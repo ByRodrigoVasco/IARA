@@ -25,6 +25,7 @@ typedef struct
     Texture2D texture;
     int frame_width;
     int frame_height;
+    int detail;       // Pixels do arquivo por pixel do mundo: 1 no pixel art, 6 na arte em alta resolução
     int frames;
     Texture2D glow;   // Só os pixels vermelhos-vivos (olhos, sangue), que brilham no escuro. id 0 = sem brilho
 } SvSprite;
