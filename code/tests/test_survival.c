@@ -670,9 +670,32 @@ static void test_characters(void)
         check("SV-67", "a cada 20 inimigos derrotados a Nicollas recupera 4 de vida", sv_run.kills >= 20 && sv_run.player.hp > hp + 3.9f && sv_run.player.hp < hp + 4.1f);
 
         sv_game_start(15);
+        sv_run.player.weapons[0].id = W_AVISO;
         sv_spawn_enemy_at(EN_CHAMADO, (Vector2){sv_run.player.pos.x + 70.0f, sv_run.player.pos.y}, false);
         for (int frame = 0; frame < 60 * 3 && sv_run.kills == 0; frame++) sv_game_update(1.0f / 60.0f, (Vector2){0.0f, 0.0f});
-        check("SV-68", "o Ponteiro acerta o inimigo mesmo fora da direção em que o jogador olha", sv_run.kills >= 1);
+        check("SV-68", "o Aviso Prévio acerta o inimigo mesmo fora da direção em que o jogador olha", sv_run.kills >= 1);
+
+        // O avião escolhe o mais distante: com um perto e um longe, o carimbo cai no de longe
+        {
+            bool stamped_far = false;
+
+            sv_game_start(18);
+            sv_run.player.weapons[0].id = W_AVISO;
+            sv_run.cheats[CHEAT_NO_SPAWN] = true;
+            sv_run.cheats[CHEAT_FREEZE] = true;
+            memset(sv_run.enemies, 0, sizeof(sv_run.enemies));
+            sv_spawn_enemy_at(EN_CHAMADO, (Vector2){sv_run.player.pos.x + 90.0f, sv_run.player.pos.y + 90.0f}, false);
+            sv_spawn_enemy_at(EN_CHAMADO, (Vector2){sv_run.player.pos.x - 420.0f, sv_run.player.pos.y}, false);
+            for (int frame = 0; frame < 60 * 3 && !stamped_far; frame++)
+            {
+                sv_game_update(1.0f / 60.0f, (Vector2){0.0f, 0.0f});
+                for (int z = 0; z < SV_MAX_ZONES; z++)
+                {
+                    if (sv_run.zones[z].alive && sv_run.zones[z].kind == ZK_AVISO && sv_run.zones[z].pos.x < sv_run.player.pos.x - 330.0f) stamped_far = true;
+                }
+            }
+            check("SV-149", "o Aviso Prévio voa até o inimigo mais distante, a mais de 400 px, e carimba lá", stamped_far);
+        }
     }
 
     // Colegas de Plantão: o Vasco traz um a mais, e cada função faz a sua parte
