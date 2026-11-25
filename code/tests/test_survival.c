@@ -412,7 +412,7 @@ static void test_choices(void)
         SvChoice fresh = {0, W_TABELA};
 
         n = sv_choice_lines(&fresh, lines);
-        check("SV-36", "poder novo mostra os atributos do nível 1", n >= 3 && strstr(lines[0], "Dano: 6") && !strstr(lines[0], "->"));
+        check("SV-36", "poder novo mostra os atributos do nível 1", n >= 3 && strstr(lines[0], "Dano: 5,5") && !strstr(lines[0], "->"));
     }
 
     {
@@ -462,12 +462,21 @@ static void test_choices(void)
     sv_meta_reset();
 }
 
+// Progresso de um save, só com o que os personagens olham
+static SvProgress P(int runs, int wins, int best_seconds, int kills, int bosses)
+{
+    return (SvProgress){runs, wins, best_seconds, kills, 0, 0, bosses};
+}
+
 static void unlock_everything(void)
 {
     sv_meta.runs = 99;
     sv_meta.wins = 9;
-    sv_meta.best_seconds = 600;
+    sv_meta.best_seconds = 660;
     sv_meta.kills = 99999;
+    sv_meta.best_level = 99;
+    sv_meta.run_kills = 9999;
+    sv_meta.run_bosses = 5;
 }
 
 static void test_characters(void)
@@ -493,16 +502,19 @@ static void test_characters(void)
     }
 
     check("SV-42", "só o Estagiário vem liberado; os outros abrem com o progresso",
-          sv_character_unlocked(CH_ESTAGIARIO, 0, 0, 0, 0) && !sv_character_unlocked(CH_LAURA, 0, 0, 0, 0) &&
-          !sv_character_unlocked(CH_LAURA, 0, 0, 179, 0) && sv_character_unlocked(CH_LAURA, 0, 0, 180, 0) &&
-          sv_character_unlocked(CH_ANDERSON, 0, 0, 0, 500) && sv_character_unlocked(CH_JULIO, 5, 0, 0, 0) &&
-          sv_character_unlocked(CH_NICOLLAS, 0, 0, 390, 0) && sv_character_unlocked(CH_VASCO, 0, 0, 0, 3000) &&
-          sv_character_unlocked(CH_ZITO, 15, 0, 0, 0) && !sv_character_unlocked(CH_JV, 99, 0, 600, 99999) && sv_character_unlocked(CH_JV, 0, 1, 0, 0));
+          sv_character_unlocked(CH_ESTAGIARIO, P(0, 0, 0, 0, 0)) && !sv_character_unlocked(CH_LAURA, P(9, 0, 600, 9999, 0)) &&
+          sv_character_unlocked(CH_LAURA, P(0, 0, 0, 0, 1)) &&
+          !sv_character_unlocked(CH_ANDERSON, P(0, 0, 0, 999, 0)) && sv_character_unlocked(CH_ANDERSON, P(0, 0, 0, 1000, 0)) && sv_character_unlocked(CH_JULIO, P(5, 0, 0, 0, 0)) &&
+          !sv_character_unlocked(CH_NICOLLAS, P(0, 0, 449, 0, 0)) && sv_character_unlocked(CH_NICOLLAS, P(0, 0, 450, 0, 0)) &&
+          !sv_character_unlocked(CH_DANILO, P(0, 0, 0, 2999, 0)) && sv_character_unlocked(CH_DANILO, P(0, 0, 0, 3000, 0)) &&
+          !sv_character_unlocked(CH_VASCO, P(0, 0, 0, 5999, 0)) && sv_character_unlocked(CH_VASCO, P(0, 0, 0, 6000, 0)) &&
+          !sv_character_unlocked(CH_BAUDEL, P(0, 0, 659, 0, 0)) && sv_character_unlocked(CH_BAUDEL, P(0, 0, 660, 0, 0)) &&
+          sv_character_unlocked(CH_ZITO, P(15, 0, 0, 0, 0)) && !sv_character_unlocked(CH_JV, P(99, 0, 660, 99999, 5)) && sv_character_unlocked(CH_JV, P(0, 1, 0, 0, 0)));
 
     {
         bool all_open = true;
 
-        for (int i = 0; i < CH_COUNT; i++) all_open = all_open && sv_character_unlocked(i, 99, 9, 600, 99999);
+        for (int i = 0; i < CH_COUNT; i++) all_open = all_open && sv_character_unlocked(i, P(99, 9, 660, 99999, 5));
         check("SV-43", "com o progresso máximo todos estão liberados; id inválido cai no Estagiário", all_open && sv_character(-1) == sv_character(CH_ESTAGIARIO) && sv_character(99) == sv_character(CH_ESTAGIARIO));
     }
 
@@ -526,7 +538,7 @@ static void test_characters(void)
 
         sv_meta.character = CH_VASCO;
         sv_game_start(7);
-        check("SV-47", "Vasco: coleta maior, 15% a mais de XP e 1 colega a mais", sv_run.player.magnet_range > base_magnet * 1.7f && sv_run.player.xp_mult > 1.14f && sv_run.player.xp_mult < 1.16f && sv_run.player.extra_colleagues == 1);
+        check("SV-47", "Vasco: coleta maior, 15% a mais de XP e 1 colega a mais", sv_run.player.magnet_range > base_magnet * 1.7f && fabsf(sv_run.player.xp_mult - SV_BASE_XP * 1.15f) < 0.001f && sv_run.player.extra_colleagues == 1);
 
         sv_meta.character = CH_NICOLLAS;
         sv_game_start(7);
@@ -1006,7 +1018,7 @@ static void test_ajustes_do_teste_com_jogadores(void)
         sv_meta.character = CH_LUCAS;
         sv_game_start(7);
         check("SV-99", "Prof. Lucas (Engenharia de Software): abre aos 8:30, começa com o Prompt, recarrega mais rápido e perde 10 de vida",
-              !sv_character_unlocked(CH_LUCAS, 99, 9, 509, 99999) && sv_character_unlocked(CH_LUCAS, 0, 0, 510, 0) &&
+              !sv_character_unlocked(CH_LUCAS, P(99, 9, 569, 99999, 5)) && sv_character_unlocked(CH_LUCAS, P(0, 0, 570, 0, 0)) &&
               sv_run.player.weapons[0].id == W_PROMPT && sv_run.player.max_hp == base_hp - 10.0f && sv_run.player.cooldown_mult < base_cd);
     }
 }
@@ -1181,7 +1193,8 @@ static void test_duo(void)
     sv_meta_reset();
     sv_meta.character = CH_ESTAGIARIO;
     sv_meta.character2 = CH_LAURA;
-    sv_meta.runs = 99; sv_meta.wins = 9; sv_meta.best_seconds = 900; sv_meta.kills = 99999;   // Tudo liberado
+    unlock_everything();
+    sv_meta.best_seconds = 900;   // Tudo liberado
     sv_duo_mode = true;
     sv_game_start(12);
     sv_duo_mode = false;
@@ -1479,7 +1492,7 @@ static bool cards_offer(int wanted, bool *only_available)
 
 static void test_poderes_por_personagem(void)
 {
-    SvProgress zero = {0, 0, 0, 0};
+    SvProgress zero = {0};
     bool free_ok = true, locked_ok = true, only = false;
 
     printf("\nPoderes liberados por personagem\n");
@@ -1490,10 +1503,10 @@ static void test_poderes_por_personagem(void)
     {
         int owner = sv_weapon_owner(w);
 
-        if (owner < 0 || owner == CH_ESTAGIARIO) free_ok = free_ok && sv_weapon_unlocked(w, zero);
+        if ((owner < 0 && !sv_weapon_unlock_text(w)) || owner == CH_ESTAGIARIO) free_ok = free_ok && sv_weapon_unlocked(w, zero);
         else locked_ok = locked_ok && !sv_weapon_unlocked(w, zero);
     }
-    check("SV-150", "save novo: só os poderes sem dono e o do Estagiário estão liberados", free_ok && locked_ok);
+    check("SV-150", "save novo: só os poderes livres e o do Estagiário estão liberados", free_ok && locked_ok);
 
     {
         int laura = sv_character(CH_LAURA)->start_weapon;
@@ -1501,7 +1514,7 @@ static void test_poderes_por_personagem(void)
 
         check("SV-151", "as cartas nunca oferecem o poder de um personagem bloqueado", !seen && only);
 
-        sv_meta.best_seconds = 180;
+        sv_meta.run_bosses = 1;
         check("SV-152", "liberado o personagem no save, o poder dele passa a sair nas cartas", cards_offer(laura, &only) && only);
 
         sv_meta_reset();
@@ -1510,11 +1523,137 @@ static void test_poderes_por_personagem(void)
         sv_debug_mode = false;
 
         sv_game_start(21);
-        sv_run.time = 181.0f;
-        check("SV-154", "o poder libera no meio da partida que cumpriu o objetivo", sv_weapon_available(laura) && sv_progress_now().best_seconds == 181);
+        sv_run.bosses_defeated = 1;
+        check("SV-154", "o poder libera no meio da partida que cumpriu o objetivo", sv_weapon_available(laura) && sv_progress_now().run_bosses == 1);
         sv_run.cheated = true;
-        check("SV-155", "partida com trapaça não libera nada", !sv_weapon_available(laura) && sv_progress_now().best_seconds == 0);
+        check("SV-155", "partida com trapaça não libera nada", !sv_weapon_available(laura) && sv_progress_now().run_bosses == 0);
     }
+    sv_meta_reset();
+}
+
+static void test_balanceamento(void)
+{
+    bool only = false;
+
+    printf("\nConquistas dos poderes e balanceamento\n");
+    sv_debug_mode = false;
+    sv_meta_reset();
+    {
+        int nova = sv_locked_power(0), fibra = sv_locked_power(1), aviso = sv_locked_power(2);
+        bool locked = !cards_offer(nova, &only) && !cards_offer(fibra, &only) && !cards_offer(aviso, &only);
+
+        check("SV-170", "Nova Conversa, Fibra Óptica e Aviso Prévio começam bloqueados, nessa ordem",
+              locked && nova == W_NOVACONVERSA && fibra == W_FIBRA && aviso == W_AVISO && sv_locked_power(3) == -1);
+        sv_meta.best_level = 15;
+        check("SV-171", "o nível 15 em uma partida libera só a Nova Conversa", cards_offer(nova, &only) && only && !sv_weapon_available(fibra) && !sv_weapon_available(aviso));
+        sv_meta.run_kills = 899;
+        {
+            bool before = !sv_weapon_available(fibra);
+
+            sv_meta.run_kills = 900;
+            check("SV-172", "900 inimigos em uma partida liberam a Fibra Óptica", before && cards_offer(fibra, &only) && only);
+        }
+        sv_meta.run_bosses = 3;
+        {
+            bool before = !sv_weapon_available(aviso);
+
+            sv_meta.run_bosses = 4;
+            check("SV-173", "4 chefes em uma partida liberam o Aviso Prévio", before && cards_offer(aviso, &only) && only);
+        }
+        check("SV-174", "o tier mais alto aparece menos nas cartas", sv_weapon_weight(W_CANECA) > sv_weapon_weight(nova) &&
+              sv_weapon_weight(nova) > sv_weapon_weight(fibra) && sv_weapon_weight(fibra) > sv_weapon_weight(aviso));
+    }
+    sv_meta_reset();
+    sv_game_start(31);
+    sv_run.bosses_defeated = 2;
+    sv_run.kills = 40;
+    sv_run.player.level = 7;
+    sv_game_finish();
+    check("SV-175", "o fim da partida grava o maior nível, os abates e os chefes dela",
+          sv_meta.best_level == 7 && sv_meta.run_kills == 40 && sv_meta.run_bosses == 2 && sv_meta_save(TEST_META_PATH) && sv_meta_load(TEST_META_PATH) &&
+          sv_meta.best_level == 7 && sv_meta.run_kills == 40 && sv_meta.run_bosses == 2);
+    check("SV-176", "a marmita só vem de inimigo de nível 3 ou mais, com chance que cresce com o tempo",
+          sv_enemy_level(EN_CHAMADO) < SV_STRONG_ENEMY && sv_enemy_level(EN_NOTIFICACAO) < SV_STRONG_ENEMY && sv_enemy_level(EN_ESVAZIADO) >= SV_STRONG_ENEMY &&
+          sv_heal_drop_chance(0.0f, 0) == 4 && sv_heal_drop_chance(300.0f, 0) > 4 && sv_heal_drop_chance(600.0f, 0) == 9 && sv_heal_drop_chance(900.0f, 1) == 11);
+    sv_meta_reset();
+    sv_game_start(33);
+    check("SV-177", "sem upgrades, o jogador começa com o dano e o XP base reduzidos",
+          fabsf(sv_run.player.dmg_mult - SV_BASE_DAMAGE) < 0.001f && fabsf(sv_run.player.xp_mult - SV_BASE_XP * sv_character(CH_ESTAGIARIO)->xp_mult) < 0.001f);
+    sv_meta_reset();
+}
+
+static void test_hora_extra(void)
+{
+    printf("\nHora extra depois da IARA\n");
+    sv_debug_mode = false;
+    sv_meta_reset();
+    check("SV-180", "a força é o dobro e cresce 10% a cada minuto completo",
+          fabsf(sv_overtime_strength(0.0f) - 2.0f) < 0.001f && fabsf(sv_overtime_strength(59.0f) - 2.0f) < 0.001f &&
+          fabsf(sv_overtime_strength(60.0f) - 2.2f) < 0.001f && fabsf(sv_overtime_strength(125.0f) - 2.42f) < 0.001f);
+
+    sv_game_start(61);
+    sv_run.player.hp = sv_run.player.max_hp = 100000.0f;
+    check("SV-181", "sem vencer não há o que continuar, e a força é 1", !sv_game_continue() && sv_extra_strength() == 1.0f && !sv_run_won());
+    sv_run.time = 599.99f;
+    sv_run.next_boss = BOSS_COUNT;
+    sv_run.kills = 100;
+    sv_game_update(0.05f, (Vector2){0.0f, 0.0f});
+    sv_run.kills += 30;
+    check("SV-182", "os abates depois dos 10:00 são contados à parte", sv_run.overtime && sv_overtime_kills() >= 30 && sv_overtime_kills() < 40);
+
+    sv_boss_spawn(BOSS_IARA);
+    sv_damage_boss(1000000.0f);
+    check("SV-183", "a IARA cai e a partida fica vencida, esperando a escolha", sv_run.phase == SV_WON && sv_run_won());
+    {
+        bool continued = sv_game_continue();
+        float before = sv_run.time;
+
+        sv_game_update(1.0f / 60.0f, (Vector2){0.0f, 0.0f});
+        check("SV-184", "continuar volta ao jogo na hora extra, uma vez só",
+              continued && sv_run.endless && sv_run.time > before && !sv_game_continue() && fabsf(sv_extra_strength() - 2.0f) < 0.001f);
+    }
+    {
+        int spawned = sv_run.enemy_count;
+        SvEnemy *last = NULL;
+        float hp;
+
+        sv_spawn_enemy_at(EN_ESVAZIADO, sv_run.player.pos, false);
+        for (int i = 0; i < SV_MAX_ENEMIES; i++)
+            if (sv_run.enemies[i].alive && sv_run.enemies[i].id == sv_run.next_enemy_id) last = &sv_run.enemies[i];
+        hp = last ? last->max_hp : 0.0f;
+        check("SV-185", "na hora extra o inimigo nasce com o dobro da vida", sv_run.enemy_count == spawned + 1 && fabsf(hp - 33.0f * sv_enemy_hp_scale(sv_run.time) * 2.0f) < 0.1f);
+    }
+    sv_run.player.revive_ready = false;
+    sv_run.player.hp = 0.0f;
+    sv_run.player.invulnerable = 0.0f;
+    sv_game_update(1.0f / 60.0f, (Vector2){0.0f, 0.0f});
+    sv_game_finish();
+    check("SV-186", "perder na hora extra não tira a vitória", sv_run.phase == SV_DEAD && sv_run_won() && sv_meta.wins == 1 && sv_meta.best_seconds >= 600);
+
+    {
+        SvRankEntry normal = {0}, extra = {0};
+
+        normal.seconds = 600;
+        normal.kills = 100;
+        extra = normal;
+        extra.seconds = 660;
+        extra.kills = 150;
+        extra.extra_kills = 50;
+        check("SV-187", "segundos e abates da hora extra valem o dobro de pontos",
+              sv_ranking_score(&extra) - sv_ranking_score(&normal) == 2 * (60 * SV_SCORE_PER_SECOND + 50 * SV_SCORE_PER_KILL));
+    }
+    sv_ranking_set_path("teste.ranking");
+    sv_ranking_clear();
+    {
+        bool record = false;
+
+        sv_ranking_add_run("Ana", 660, 150, 20, 5, 0, true, 50, &record);
+        check("SV-188", "o ranking guarda os abates da hora extra no arquivo",
+              record && sv_ranking_load() && sv_ranking_count() == 1 && sv_ranking_get(0)->extra_kills == 50);
+    }
+    sv_ranking_clear();
+    remove("teste.ranking");
+    sv_ranking_set_path(NULL);
     sv_meta_reset();
 }
 
@@ -1529,7 +1668,7 @@ static void test_correcoes_do_bug_tracker(void)
     sv_debug_mode = false;
     for (int c = 0; c < CH_COUNT && locked < 0; c++)
     {
-        if (!sv_character_unlocked(c, sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills)) locked = c;
+        if (!sv_character_unlocked(c, sv_progress_saved())) locked = c;
     }
     check("SV-137", "sem o debug, um personagem bloqueado (ou inválido) vale como Estagiário; com o debug, vale ele mesmo",
           locked >= 0 && sv_playable_character(locked) == CH_ESTAGIARIO && sv_playable_character(-1) == CH_ESTAGIARIO &&
@@ -1619,6 +1758,8 @@ int main(void)
     test_ajustes_do_teste_com_jogadores();
     test_ranking();
     test_duo();
+    test_balanceamento();
+    test_hora_extra();
     test_correcoes_do_bug_tracker();
     test_poderes_por_personagem();
 

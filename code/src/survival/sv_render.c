@@ -659,7 +659,7 @@ static int compare_drawables(const void *a, const void *b)
 
 static void draw_world_objects(Camera2D camera)
 {
-    static Drawable list[1200];
+    static Drawable list[1600];
     int count = 0;
     float half_w = GetScreenWidth() / 2.0f / camera.zoom + 120.0f;
     float half_h = GetScreenHeight() / 2.0f / camera.zoom + 120.0f;
@@ -673,7 +673,7 @@ static void draw_world_objects(Camera2D camera)
         if (fabsf(p->x - camera.target.x) < half_w + 100.0f && p->y > camera.target.y - half_h && p->y < camera.target.y + half_h + 120.0f) list[count++] = (Drawable){p->y, DR_PROP, i};
     }
 
-    for (int i = 0; i < SV_MAX_ENEMIES && count < 1190; i++)
+    for (int i = 0; i < SV_MAX_ENEMIES && count < 1590; i++)
     {
         SvEnemy *e = &sv_run.enemies[i];
 
@@ -1133,7 +1133,8 @@ static void draw_hud(Camera2D camera)
     {
         float remaining = SV_RUN_SECONDS - sv_run.time;
 
-        if (remaining < 0.0f) snprintf(text, sizeof(text), "HORA EXTRA +%d:%02d", (int)(-remaining) / 60, (int)(-remaining) % 60);
+        if (sv_run.endless) snprintf(text, sizeof(text), "HORA EXTRA +%d:%02d  x%.1f", (int)(-remaining) / 60, (int)(-remaining) % 60, sv_extra_strength());
+        else if (remaining < 0.0f) snprintf(text, sizeof(text), "HORA EXTRA +%d:%02d", (int)(-remaining) / 60, (int)(-remaining) % 60);
         else snprintf(text, sizeof(text), "%d:%02d", seconds / 60, seconds % 60);
         sv_text_centered(text, w / 2.0f, pad - 4.0f * ui, 44.0f * ui, remaining < 0.0f ? (Color){230, 60, 60, 255} : WHITE);
         sv_text_centered(sv_act_name(sv_run.act), w / 2.0f, pad + 38.0f * ui, 22.0f * ui, (Color){200, 170, 170, 255});

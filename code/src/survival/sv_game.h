@@ -20,7 +20,8 @@
 #define SV_WORLD_W (SV_COLS * SV_CELL_W)
 #define SV_WORLD_H (SV_ROWS * SV_CELL_H)
 
-#define SV_MAX_ENEMIES 340
+#define SV_MAX_ENEMIES 660          // A hora extra dobra os inimigos em tela
+#define SV_ENEMY_LIMIT 320          // Até onde os nascimentos vão nos 10 minutos (na hora extra, o dobro)
 #define SV_MAX_SHOTS 120
 #define SV_MAX_ZONES 80
 #define SV_MAX_HAZARDS 140
@@ -290,6 +291,10 @@ typedef struct
     const char *banner_text;
     float shake;
     bool overtime;
+    int kills_at_overtime;       // Abates que já havia aos 10:00: os de depois valem o dobro de pontos
+    bool iara_defeated;          // A IARA caiu: a partida já é uma vitória, mesmo que continue
+    bool endless;                // O jogador escolheu continuar depois da IARA (hora extra em dobro)
+    float endless_start;         // Instante em que continuou
     bool cheated;                // Alguma trapaça foi usada: a partida não conta para o progresso do save
     bool cheats[CHEAT_COUNT];    // Trapaças ligadas agora
 
@@ -309,7 +314,7 @@ extern int sv_time_scale;
 // Modo debug: trapaças para testar o jogo à mão. Qualquer uma marca a partida como trapaceada.
 // -----------------------------------------------------------------------------
 
-extern bool sv_debug_mode;   // Ligado pela tecla F1 (sv_debug.c). Libera as trapaças e todos os personagens.
+extern bool sv_debug_mode;   // Ligado por Shift+F1 e senha (sv_debug.c). Libera as trapaças e todos os personagens.
 
 /** @brief Personagem que vale de verdade: o pedido, se estiver liberado (ou com o debug ligado), senão o Estagiário.
  *  A aparência carregada, a habilidade da partida e o save usam todos este mesmo valor. */
@@ -320,6 +325,24 @@ SvProgress sv_progress_now(void);
 
 // Se o poder pode sair nas cartas: com o debug ligado todos podem.
 bool sv_weapon_available(int weapon);
+
+// O progresso já gravado no save, sem a partida em andamento.
+SvProgress sv_progress_saved(void);
+
+// A partida é uma vitória (a IARA caiu, continuando ou não).
+bool sv_run_won(void);
+
+// Continua a partida vencida, na hora extra. Só vale logo depois de derrotar a IARA.
+bool sv_game_continue(void);
+
+// Multiplicador atual de vida e dano dos inimigos: 1 fora da hora extra.
+float sv_extra_strength(void);
+
+// Abates feitos depois dos 10 minutos.
+int sv_overtime_kills(void);
+
+// Nível de força do inimigo, de 1 a 5.
+int sv_enemy_level(int type);
 
 // Modo dupla: ligado antes de sv_game_start para a próxima partida ser em dupla (veja sv_duo.h).
 extern bool sv_duo_mode;

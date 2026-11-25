@@ -12,6 +12,10 @@
 #define SV_ACT_COUNT 5          // Atos I a V
 #define SV_BASE_HP 100.0f       // "Vida base": o teto de dano dos chefes é percentual dela
 #define SV_BOSS_HIT_CAP 0.30f   // Nenhum golpe de chefe passa de 30% da vida base
+#define SV_BASE_DAMAGE 0.92f    // Dano dos poderes sem upgrade nenhum
+#define SV_BASE_XP 0.95f        // XP ganho sem upgrade nenhum
+#define SV_STRONG_ENEMY 3       // Do nível 3 para cima o inimigo sempre solta o chip de XP e pode soltar marmita
+#define SV_WEAK_CHIP_PERCENT 80 //Chance de um inimigo de nível 1 ou 2 soltar o chip de XP
 
 // Os 5 chefes, na ordem em que aparecem.
 typedef enum { BOSS_IMPRESSORA, BOSS_MODELO, BOSS_DIEGO, BOSS_RENE, BOSS_IARA, BOSS_COUNT } SvBossId;
@@ -86,9 +90,6 @@ typedef struct
 // Dados do personagem. Um id inválido devolve o Estagiário.
 const SvCharacter *sv_character(int id);
 
-// Se o personagem está liberado para o progresso informado.
-bool sv_character_unlocked(int id, int runs, int wins, int best_seconds, int kills);
-
 // O progresso que libera personagens, poderes e conquistas
 typedef struct
 {
@@ -96,12 +97,39 @@ typedef struct
     int wins;          // Vezes que a IARA foi derrotada
     int best_seconds;  // Maior tempo de sobrevivência
     int kills;         // Inimigos eliminados no total
+    int best_level;    // Maior nível alcançado em uma partida
+    int run_kills;     // Mais inimigos eliminados em uma partida
+    int run_bosses;    // Mais chefes derrotados em uma partida
 } SvProgress;
+
+// Se o personagem está liberado para o progresso informado.
+bool sv_character_unlocked(int id, SvProgress progress);
+
+// Poderes sem dono que só saem nas cartas depois de uma conquista, do mais fácil para o mais difícil.
+#define SV_LOCKED_POWERS 3
+
+// O poder da conquista de índice 0 a SV_LOCKED_POWERS - 1, ou -1.
+int sv_locked_power(int index);
+
+// O objetivo que libera o poder, ou NULL se ele não depende de conquista própria.
+const char *sv_weapon_unlock_text(int weapon);
+
+// Peso do poder novo no sorteio das cartas: quanto mais alto o tier, menor (veja sv_rules.c).
+int sv_weapon_weight(int weapon);
+
+#define SV_OVERTIME_MULT 2.0f       // Hora extra: inimigos, vida, dano, XP e Banco de Horas em dobro
+#define SV_OVERTIME_STEP 1.10f      // E a cada minuto completo dela os inimigos ficam 10% mais fortes
+
+// Multiplicador de vida e dano dos inimigos depois de tantos segundos de hora extra.
+float sv_overtime_strength(float seconds_in_overtime);
+
+// Chance, em partes por mil, de um inimigo forte soltar uma marmita no instante t. luck é o nível de Sorte.
+int sv_heal_drop_chance(float seconds, int luck);
 
 // O personagem que começa com o poder, ou -1 se o poder não é de ninguém.
 int sv_weapon_owner(int weapon);
 
-// Poder sem dono está sempre liberado; o de um personagem só com o personagem liberado.
+// O poder de um personagem exige o personagem liberado; os de conquista, o objetivo; o resto é livre.
 bool sv_weapon_unlocked(int weapon, SvProgress progress);
 
 #endif // SV_RULES_H

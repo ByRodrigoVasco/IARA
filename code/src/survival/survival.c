@@ -26,7 +26,7 @@
 #include "notice.h"
 #include "ui_theme.h"
 
-typedef enum { SCREEN_HUB, SCREEN_SHOP, SCREEN_CHARS, SCREEN_RUN, SCREEN_PAUSE, SCREEN_OVER } SvScreen;
+typedef enum { SCREEN_HUB, SCREEN_SHOP, SCREEN_CHARS, SCREEN_RUN, SCREEN_PAUSE, SCREEN_OVER, SCREEN_VICTORY } SvScreen;
 
 static SvScreen screen = SCREEN_HUB;
 static bool loaded = false;
@@ -61,6 +61,16 @@ static int last_rank_position = 0;     // Posição do jogador depois da última
 static long last_rank_order = 0;       // Para destacar a linha do jogador no ranking
 
 static void finish_run(void);
+
+static int victory_selected = 0;
+static float victory_wait = 0.0f;
+
+static void enter_victory_screen(void)
+{
+    screen = SCREEN_VICTORY;
+    victory_selected = 0;
+    victory_wait = 0.0f;
+}
 
 // Fim de cada quadro do modo: a notificação de conquista vai por cima de qualquer tela
 static void end_frame(void)
@@ -120,7 +130,7 @@ static float job_read_save(void)
     else sv_meta_set_path(NULL);
 
     sv_meta_load(sv_meta_path());
-    sv_ach_reset((SvProgress){sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills}); // O que o save já tem não é novidade
+    sv_ach_reset(sv_progress_saved()); // O que o save já tem não é novidade
     sv_meta.character = sv_playable_character(sv_meta.character);
     sv_meta.character2 = sv_playable_character(sv_meta.character2);
     char_cursor = sv_meta.character;
@@ -202,7 +212,7 @@ void unload_survival(void)
     if (!loaded) return;
 
     // Quem sai no meio da partida leva o que juntou até aqui
-    if (screen == SCREEN_RUN || screen == SCREEN_PAUSE) finish_run();
+    if (screen == SCREEN_RUN || screen == SCREEN_PAUSE || screen == SCREEN_VICTORY) finish_run();
 
     sv_audio_close();
     sv_unload_characters();   // Também solta os conjuntos dos jogadores
@@ -327,8 +337,8 @@ static void finish_run(void)
     if (!sv_run.cheated) cloud_sync_active_save();   // sv_game_finish gravou o progresso
     if (run_ranked || sv_run.cheated) return;   // Partida com cheat não entra no ranking
     run_ranked = true;
-    sv_ranking_cloud_submit(player_name(), (int)sv_run.time, sv_run.kills, sv_run.player.level, sv_run.bosses_defeated, cloud_characters(), sv_run.phase == SV_WON);
-    last_rank_position = sv_ranking_add(player_name(), (int)sv_run.time, sv_run.kills, sv_run.player.level, sv_run.bosses_defeated, sv_run.player.character, sv_run.phase == SV_WON, &last_run_record);
+    sv_ranking_cloud_submit(player_name(), (int)sv_run.time, sv_run.kills, sv_run.player.level, sv_run.bosses_defeated, cloud_characters(), sv_run_won(), sv_overtime_kills());
+    last_rank_position = sv_ranking_add_run(player_name(), (int)sv_run.time, sv_run.kills, sv_run.player.level, sv_run.bosses_defeated, sv_run.player.character, sv_run_won(), sv_overtime_kills(), &last_run_record);
     last_rank_order = last_rank_position > 0 ? sv_ranking_get(last_rank_position - 1)->order : 0;
 }
 
@@ -566,7 +576,7 @@ static void render_hub(void)
 static bool character_unlocked(int id)
 {
     // No modo debug todos os personagens estão liberados
-    return sv_debug_mode || sv_character_unlocked(id, sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills);
+    return sv_debug_mode || sv_character_unlocked(id, sv_progress_saved());
 }
 
 static Rectangle roster_cell(int index)
@@ -922,7 +932,13 @@ static void render_run(void)
 
     sv_audio_update(dt);
 
-    if (sv_run.phase == SV_DEAD || sv_run.phase == SV_WON)
+    // A IARA caiu: antes de fechar a conta, o jogador decide se continua na hora extra
+    if (sv_run.phase == SV_WON)
+    {
+        enter_victory_screen();
+        return;
+    }
+    if (sv_run.phase == SV_DEAD)
     {
         finish_run(); warn_if_save_failed();
         enter_over_screen();
@@ -945,7 +961,7 @@ static void abandon_run(void)
     sv_run.phase = SV_DEAD;
     finish_run(); warn_if_save_failed();
     enter_over_screen();
-    sv_music_play(MUS_GAMEOVER);
+    sv_music_play(sv_run_won() ? MUS_VITORIA : MUS_GAMEOVER);
 }
 
 static void choose_pause_option(int option)
@@ -962,7 +978,8 @@ static void choose_pause_option(int option)
     }
     else
     {
-        confirm_open("DESISTIR DA PARTIDA?", "Desistir conta como derrota. O Banco de Horas que você juntou até aqui fica com você.", "DESISTIR", "CONTINUAR", true);
+        if (sv_run.endless) confirm_open("ENCERRAR A PARTIDA?", "A vitória, os pontos e o Banco de Horas até aqui ficam com você.", "ENCERRAR", "CONTINUAR", true);
+        else confirm_open("DESISTIR DA PARTIDA?", "Desistir conta como derrota. O Banco de Horas que você juntou até aqui fica com você.", "DESISTIR", "CONTINUAR", true);
     }
 }
 
@@ -970,7 +987,8 @@ static void render_pause(void)
 {
     float ui = sv_ui();
     float w = (float)GetScreenWidth(), h = (float)GetScreenHeight();
-    static const char *labels[PAUSE_OPTIONS] = {"CONTINUAR", "COMO JOGAR", "DESISTIR"};
+    // Na hora extra a partida já está ganha: sair dela é encerrar, não desistir
+    const char *labels[PAUSE_OPTIONS] = {"CONTINUAR", "COMO JOGAR", sv_run.endless ? "ENCERRAR PARTIDA" : "DESISTIR"};
     bool dialog_blocks = confirm_is_open() || pause_help_open;   // Com uma janela aberta, só ela responde às teclas
     bool clicked = false;
     int hovered = -1;
@@ -1011,6 +1029,64 @@ static void render_pause(void)
     end_frame();
 }
 
+// -----------------------------------------------------------------------------
+// IARA desligada: continuar na hora extra ou encerrar
+// -----------------------------------------------------------------------------
+
+#define VICTORY_OPTIONS 2
+
+static void render_victory(void)
+{
+    static const char *labels[VICTORY_OPTIONS] = {"CONTINUAR", "ENCERRAR PARTIDA"};
+    float ui = sv_ui();
+    float w = (float)GetScreenWidth(), h = (float)GetScreenHeight();
+    bool clicked = false;
+    int hovered = -1, choice = -1;
+    char text[160];
+
+    sv_audio_update(GetFrameTime());
+    victory_wait += GetFrameTime();
+    if (victory_wait >= OVER_INPUT_DELAY)
+    {
+        if (pressed_down() || pressed_right()) { victory_selected = (victory_selected + 1) % VICTORY_OPTIONS; sv_sfx(SND_escolha); }
+        if (pressed_up() || pressed_left()) { victory_selected = (victory_selected + VICTORY_OPTIONS - 1) % VICTORY_OPTIONS; sv_sfx(SND_escolha); }
+        hovered = mouse_pick(VICTORY_OPTIONS, h * 0.54f / ui, 90.0f, 620.0f, &clicked);
+        if (hovered >= 0 && hovered != victory_selected) { victory_selected = hovered; sv_sfx(SND_escolha); }
+        if (pressed_confirm() || clicked) choice = victory_selected;
+    }
+
+    if (choice == 0 && sv_game_continue())
+    {
+        sv_sfx(SND_confirma);
+        SetMouseCursor(MOUSE_CURSOR_ARROW);
+        screen = SCREEN_RUN;
+    }
+    else if (choice == 1)
+    {
+        sv_sfx(SND_confirma);
+        finish_run(); warn_if_save_failed();
+        enter_over_screen();
+    }
+
+    begin_game_drawing();
+    sv_render_game();
+    DrawRectangle(0, 0, (int)w, (int)h, (Color){4, 0, 8, 215});
+    if (screen == SCREEN_VICTORY)
+    {
+        sv_text_centered("A IARA FOI DESLIGADA", w / 2.0f, h * 0.14f, 100.0f * ui, (Color){120, 230, 160, 255});
+        snprintf(text, sizeof(text), "Tempo %d:%02d   Abates %d   Chefes %d", (int)sv_run.time / 60, (int)sv_run.time % 60, sv_run.kills, sv_run.bosses_defeated);
+        sv_text_centered(text, w / 2.0f, h * 0.30f, 40.0f * ui, (Color){220, 205, 215, 255});
+        sv_text_centered("Fazer hora extra? Inimigos, XP e Banco de Horas em dobro,", w / 2.0f, h * 0.40f, 34.0f * ui, (Color){255, 214, 80, 255});
+        sv_text_centered("10% mais fortes a cada minuto, e pontos valendo o dobro.", w / 2.0f, h * 0.45f, 34.0f * ui, (Color){255, 214, 80, 255});
+        for (int i = 0; i < VICTORY_OPTIONS; i++)
+        {
+            sv_text_centered(labels[i], w / 2.0f, h * 0.54f + (float)i * 90.0f * ui, 56.0f * ui, i == victory_selected ? (Color){255, 70, 80, 255} : (Color){225, 215, 225, 255});
+        }
+        ui_draw_hint("SETAS: escolher    ENTER: confirmar");
+    }
+    end_frame();
+}
+
 // Botões do fim da partida, lado a lado embaixo do ranking (medidas em 1080p, como o resto do modo)
 static Rectangle over_button(int index)
 {
@@ -1042,8 +1118,8 @@ static void render_over(void)
     static const char *labels[OVER_OPTIONS] = {"MENU DA SOBREVIVÊNCIA", "SAIR PARA O MENU"};
     float ui = sv_ui();
     float w = (float)GetScreenWidth();
-    bool won = sv_run.phase == SV_WON;
-    char text[128];
+    bool won = sv_run_won();
+    char text[160];
     int hovered = -1;
 
     sv_audio_update(GetFrameTime());
@@ -1094,7 +1170,9 @@ static void render_over(void)
         run.kills = sv_run.kills;
         run.bosses = sv_run.bosses_defeated;
         run.won = won;
-        snprintf(text, sizeof(text), "%d PONTOS   (abate %d · segundo %d · chefe %d · vitória %d)", sv_ranking_score(&run), SV_SCORE_PER_KILL, SV_SCORE_PER_SECOND, SV_SCORE_PER_BOSS, SV_SCORE_WIN_BONUS);
+        run.extra_kills = sv_overtime_kills();
+        snprintf(text, sizeof(text), "%d PONTOS   (abate %d · segundo %d · chefe %d · vitória %d%s)", sv_ranking_score(&run), SV_SCORE_PER_KILL, SV_SCORE_PER_SECOND, SV_SCORE_PER_BOSS, SV_SCORE_WIN_BONUS,
+                 sv_run.time > SV_RUN_SECONDS ? " · hora extra em dobro" : "");
         sv_text_centered(text, w / 2.0f, 335.0f * ui, 28.0f * ui, (Color){255, 214, 80, 255});
     }
 
@@ -1138,12 +1216,83 @@ static void render_over(void)
     end_frame();
 }
 
+// -----------------------------------------------------------------------------
+// Senha do modo debug
+// -----------------------------------------------------------------------------
+
+static bool cheat_prompt = false;
+static bool cheat_wrong = false;
+static char cheat_code[9] = "";
+
+static void open_cheat_prompt(void)
+{
+    cheat_prompt = true;
+    cheat_wrong = false;
+    cheat_code[0] = '\0';
+    while (GetCharPressed() > 0) { }
+}
+
+// Enquanto a senha está na tela, o resto do modo (inclusive a partida) fica parado
+static void render_cheat_prompt(void)
+{
+    float ui = sv_ui();
+    float w = (float)GetScreenWidth(), h = (float)GetScreenHeight();
+    size_t length = strlen(cheat_code);
+    char hidden[sizeof(cheat_code) * 2] = "";
+    int codepoint = GetCharPressed();
+
+    while (codepoint > 0)
+    {
+        if (codepoint >= '0' && codepoint <= '9' && length + 1 < sizeof(cheat_code))
+        {
+            cheat_code[length++] = (char)codepoint;
+            cheat_code[length] = '\0';
+            cheat_wrong = false;
+        }
+        codepoint = GetCharPressed();
+    }
+    if (IsKeyPressed(KEY_BACKSPACE) && length > 0) cheat_code[--length] = '\0';
+    if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER))
+    {
+        if (sv_debug_unlock(cheat_code)) cheat_prompt = false;
+        else
+        {
+            cheat_wrong = true;
+            cheat_code[0] = '\0';
+            length = 0;
+        }
+    }
+    if (IsKeyPressed(KEY_ESCAPE)) cheat_prompt = false;
+
+    for (size_t i = 0; i < length; i++) strcat(hidden, i > 0 ? " *" : "*");
+
+    sv_audio_update(GetFrameTime());
+    begin_game_drawing();
+    draw_backdrop();
+    DrawRectangleRec((Rectangle){w / 2.0f - 420.0f * ui, h / 2.0f - 200.0f * ui, 840.0f * ui, 400.0f * ui}, (Color){10, 4, 16, 235});
+    DrawRectangleLinesEx((Rectangle){w / 2.0f - 420.0f * ui, h / 2.0f - 200.0f * ui, 840.0f * ui, 400.0f * ui}, 3.0f * ui, (Color){255, 70, 80, 255});
+    sv_text_centered("SENHA DOS CHEATS", w / 2.0f, h / 2.0f - 160.0f * ui, 60.0f * ui, (Color){255, 214, 80, 255});
+    sv_text_centered(hidden[0] != '\0' ? hidden : "_", w / 2.0f, h / 2.0f - 40.0f * ui, 64.0f * ui, WHITE);
+    if (cheat_wrong) sv_text_centered("Senha errada.", w / 2.0f, h / 2.0f + 60.0f * ui, 36.0f * ui, (Color){255, 140, 120, 255});
+    ui_draw_hint("ENTER: confirmar    ESC: voltar");
+    end_frame();
+}
+
 bool render_survival(void)
 {
-    // F1 liga e desliga o modo debug em qualquer tela do modo
-    if (IsKeyPressed(KEY_F1)) sv_debug_toggle();
+    // Shift+F1 liga (com senha) e desliga o modo debug em qualquer tela do modo
+    if (!cheat_prompt && IsKeyPressed(KEY_F1) && (IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT)))
+    {
+        if (sv_debug_mode) sv_debug_toggle();
+        else open_cheat_prompt();
+    }
+    if (cheat_prompt)
+    {
+        render_cheat_prompt();
+        return false;
+    }
     // Durante a partida a tabela não aparece: as respostas são lidas fora dela
-    if (screen != SCREEN_RUN && screen != SCREEN_PAUSE) sv_ranking_cloud_update();
+    if (screen != SCREEN_RUN && screen != SCREEN_PAUSE && screen != SCREEN_VICTORY) sv_ranking_cloud_update();
 
     // Vale durante a partida (tempo e abates) e logo depois dela (número de partidas)
     sv_ach_check(sv_progress_now());
@@ -1167,6 +1316,9 @@ bool render_survival(void)
         break;
     case SCREEN_PAUSE:
         render_pause();
+        break;
+    case SCREEN_VICTORY:
+        render_victory();
         break;
     case SCREEN_OVER:
         render_over();

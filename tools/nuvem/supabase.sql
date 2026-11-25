@@ -40,9 +40,18 @@ create table if not exists public.iara_ranking (
     venceu        boolean     not null,
     pontos        integer     not null,
     registrado_em timestamptz not null default now(),
+    abates_extra  integer     not null default 0,
     constraint iara_ranking_pkey primary key (tipo, nome_chave),
     constraint iara_ranking_tipo_check check (tipo in ('solo', 'dupla'))
 );
+
+-- Banco montado antes da hora extra: ganha a coluna nova
+alter table public.iara_ranking add column if not exists abates_extra integer not null default 0;
+
+-- As funcoes do ranking mudaram de assinatura: as antigas saem para nao haver duas com o mesmo nome
+drop function if exists public.iara_pontos(integer, integer, integer, boolean);
+drop function if exists public.iara_registrar_partida(text, text, integer, integer, integer, integer, integer, boolean);
+drop function if exists public.iara_ler_ranking(text, integer);
 
 create table if not exists public.iara_config (
     chave text not null,
@@ -220,15 +229,17 @@ begin
     return 'ok';
 end $function$;
 
-CREATE OR REPLACE FUNCTION public.iara_pontos(p_segundos integer, p_abates integer, p_chefes integer, p_venceu boolean)
+CREATE OR REPLACE FUNCTION public.iara_pontos(p_segundos integer, p_abates integer, p_chefes integer, p_venceu boolean, p_abates_extra integer DEFAULT 0)
  RETURNS integer
  LANGUAGE sql
  IMMUTABLE
 AS $function$
-    select p_abates * 10 + p_segundos * 5 + p_chefes * 500 + case when p_venceu then 2000 else 0 end
+    -- Depois dos 10 minutos (hora extra) segundos e abates contam duas vezes
+    select (p_abates + p_abates_extra) * 10 + (p_segundos + greatest(p_segundos - 600, 0)) * 5 + p_chefes * 500
+           + case when p_venceu then 2000 else 0 end
 $function$;
 
-CREATE OR REPLACE FUNCTION public.iara_registrar_partida(p_tipo text, p_nome text, p_segundos integer, p_abates integer, p_nivel integer, p_chefes integer, p_personagem integer, p_venceu boolean)
+CREATE OR REPLACE FUNCTION public.iara_registrar_partida(p_tipo text, p_nome text, p_segundos integer, p_abates integer, p_nivel integer, p_chefes integer, p_personagem integer, p_venceu boolean, p_abates_extra integer DEFAULT 0)
  RETURNS integer
  LANGUAGE plpgsql
  SECURITY DEFINER
@@ -242,19 +253,20 @@ declare
     meus_segundos integer;
     meu_registro timestamptz;
 begin
-    -- Limites do jogo (code/src/survival/sv_rules.h): a partida dura 10 min (600 s) e tem 5 chefes.
-    -- Os abates têm folga larga: o ritmo normal é de 2 a 5 por segundo.
+    -- Limites do jogo (code/src/survival/sv_rules.h): 10 min (600 s), mais a hora extra, e 5 chefes.
+    -- Os abates têm folga larga: o ritmo normal é de 2 a 5 por segundo, e a hora extra dobra tudo.
     if p_tipo not in ('solo', 'dupla')
        or p_nome !~ '^[A-Za-z0-9 _-]{1,20}$'
-       or p_segundos not between 0 and 600
+       or p_segundos not between 0 and 7200
        or p_chefes not between 0 and 5
-       or p_abates < 0 or p_abates > (p_segundos + 1) * 30
+       or p_abates < 0 or p_abates > (p_segundos + 1) * 60
+       or p_abates_extra < 0 or p_abates_extra > p_abates or (p_segundos < 600 and p_abates_extra > 0)
        or p_nivel not between 0 and 1000
        or p_personagem not between 0 and 255 then
         return 0;
     end if;
 
-    novo_pontos := iara_pontos(p_segundos, p_abates, p_chefes, p_venceu);
+    novo_pontos := iara_pontos(p_segundos, p_abates, p_chefes, p_venceu, p_abates_extra);
 
     select * into atual from iara_ranking
     where tipo = p_tipo and nome_chave = lower(p_nome)
@@ -262,12 +274,12 @@ begin
 
     -- Mesmo critério de sv_ranking_better: pontos, depois abates, depois tempo
     if not found then
-        insert into iara_ranking (tipo, nome, segundos, abates, nivel, chefes, personagem, venceu, pontos)
-        values (p_tipo, p_nome, p_segundos, p_abates, p_nivel, p_chefes, p_personagem, p_venceu, novo_pontos);
+        insert into iara_ranking (tipo, nome, segundos, abates, nivel, chefes, personagem, venceu, pontos, abates_extra)
+        values (p_tipo, p_nome, p_segundos, p_abates, p_nivel, p_chefes, p_personagem, p_venceu, novo_pontos, p_abates_extra);
     elsif (novo_pontos, p_abates, p_segundos) > (atual.pontos, atual.abates, atual.segundos) then
         update iara_ranking
         set nome = p_nome, segundos = p_segundos, abates = p_abates, nivel = p_nivel, chefes = p_chefes,
-            personagem = p_personagem, venceu = p_venceu, pontos = novo_pontos, registrado_em = now()
+            personagem = p_personagem, venceu = p_venceu, pontos = novo_pontos, abates_extra = p_abates_extra, registrado_em = now()
         where tipo = p_tipo and nome_chave = lower(p_nome);
     end if;
 
@@ -281,12 +293,12 @@ begin
 end $function$;
 
 CREATE OR REPLACE FUNCTION public.iara_ler_ranking(p_tipo text, p_limite integer DEFAULT 200)
- RETURNS TABLE(nome text, segundos integer, abates integer, nivel integer, chefes integer, personagem integer, venceu boolean, pontos integer)
+ RETURNS TABLE(nome text, segundos integer, abates integer, nivel integer, chefes integer, personagem integer, venceu boolean, pontos integer, abates_extra integer)
  LANGUAGE sql
  STABLE SECURITY DEFINER
  SET search_path TO 'public'
 AS $function$
-    select r.nome, r.segundos, r.abates, r.nivel, r.chefes, r.personagem, r.venceu, r.pontos
+    select r.nome, r.segundos, r.abates, r.nivel, r.chefes, r.personagem, r.venceu, r.pontos, r.abates_extra
     from iara_ranking r
     where r.tipo = p_tipo
     order by r.pontos desc, r.abates desc, r.segundos desc, r.registrado_em asc
@@ -312,9 +324,9 @@ revoke all on function public.iara_liberar_save(text, text, text) from public, a
 grant execute on function public.iara_liberar_save(text, text, text) to anon;
 revoke all on function public.iara_apagar_save(text, text, text, text) from public, anon, authenticated, service_role;
 grant execute on function public.iara_apagar_save(text, text, text, text) to anon;
-revoke all on function public.iara_pontos(integer, integer, integer, boolean) from public, anon, authenticated, service_role;
-revoke all on function public.iara_registrar_partida(text, text, integer, integer, integer, integer, integer, boolean) from public, anon, authenticated, service_role;
-grant execute on function public.iara_registrar_partida(text, text, integer, integer, integer, integer, integer, boolean) to anon;
+revoke all on function public.iara_pontos(integer, integer, integer, boolean, integer) from public, anon, authenticated, service_role;
+revoke all on function public.iara_registrar_partida(text, text, integer, integer, integer, integer, integer, boolean, integer) from public, anon, authenticated, service_role;
+grant execute on function public.iara_registrar_partida(text, text, integer, integer, integer, integer, integer, boolean, integer) to anon;
 revoke all on function public.iara_ler_ranking(text, integer) from public, anon, authenticated, service_role;
 grant execute on function public.iara_ler_ranking(text, integer) to anon;
 
