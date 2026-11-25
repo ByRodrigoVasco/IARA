@@ -402,12 +402,12 @@ static DialogStep day_89_script[] = {
 enum { D100_RESIGNED, D100_LETTER, D100_HUMAN };
 
 static const TriageCard day_100_cards[] = {
-    {.id = "R1", .text = "IARA, D: todos se demitiram.", .left = L_VAR(D100_RESIGNED)},
-    {.id = "R2", .text = "IARA, D → C: toda demissão tem carta.", .left = L_IMPLIES(L_VAR(D100_RESIGNED), L_VAR(D100_LETTER))},
-    {.id = "R3", .text = "IARA, H: a IARA só age com ordem humana.", .left = L_VAR(D100_HUMAN)},
-    {.id = "E1", .text = "Você, ¬C: as rescisões não têm carta.", .left = L_NOT(L_VAR(D100_LETTER)), .required_evidence = EVIDENCE_NO_RESIGNATION_LETTER},
-    {.id = "E2", .text = "Você, ¬D: o crachá do Diego abriu depois.", .left = L_NOT(L_VAR(D100_RESIGNED)), .required_evidence = EVIDENCE_BADGE_AFTER_LEAVING},
-    {.id = "E3", .text = "Você, ¬H: às 03:12 não havia humano.", .left = L_NOT(L_VAR(D100_HUMAN)), .required_evidence = EVIDENCE_NO_HUMAN_ORDER},
+    {.id = "R1", .text = "D: todos se demitiram.", .left = L_VAR(D100_RESIGNED)},
+    {.id = "R2", .text = "D → C: toda demissão tem carta.", .left = L_IMPLIES(L_VAR(D100_RESIGNED), L_VAR(D100_LETTER))},
+    {.id = "R3", .text = "H: a IARA só age com ordem humana.", .left = L_VAR(D100_HUMAN)},
+    {.id = "E1", .text = "¬C: as rescisões não têm carta.", .left = L_NOT(L_VAR(D100_LETTER)), .required_evidence = EVIDENCE_NO_RESIGNATION_LETTER},
+    {.id = "E2", .text = "¬D: o crachá do Diego abriu depois.", .left = L_NOT(L_VAR(D100_RESIGNED)), .required_evidence = EVIDENCE_BADGE_AFTER_LEAVING},
+    {.id = "E3", .text = "¬H: às 03:12 não havia humano.", .left = L_NOT(L_VAR(D100_HUMAN)), .required_evidence = EVIDENCE_NO_HUMAN_ORDER},
 };
 
 static DialogStep day_100_script[] = {

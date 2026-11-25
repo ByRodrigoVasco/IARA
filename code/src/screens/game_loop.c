@@ -22,6 +22,7 @@
 #include "pause_menu.h"
 #include "symptoms.h"
 #include "office_symptoms.h"
+#include "notice.h"
 
 // Valor de sentinela para indicar que o temporizador do cartão de introdução ainda não começou a contar
 #define DID_NOT_START -30
@@ -167,6 +168,16 @@ static const EndingCard ending_cards[] = {
     [ENDING_RUPTURE] = {"Final D: Ruptura", "A prova fecha, e a versão da IARA não se sustenta.", "As portas destravam. Ao longe, a água volta a correr."}};
 
 // Texturas do ambiente de jogo (Escritório e Dicas de Teclado)
+static const char *const campaign_art_paths[] = {
+    CAMPAIGN_ART_PATH "flash.png", CAMPAIGN_ART_PATH "salto.png",
+    CAMPAIGN_ART_PATH "final-ileso.png", CAMPAIGN_ART_PATH "final-pamonha.png",
+    CAMPAIGN_ART_PATH "final-hipnotizado.png", CAMPAIGN_ART_PATH "final-ruptura.png"
+};
+enum { ART_FLASH, ART_JUMP, ART_FIRST_ENDING };
+static Texture2D campaign_art[sizeof(campaign_art_paths) / sizeof(campaign_art_paths[0])];
+static GameEnding shown_ending;
+static bool replay_requested;
+
 static Texture2D in_game_office;        // Mapa do escritório
 static Texture2D chair_floor, player_chair, player_seat_frames[SEAT_PLAYER_FRAME_COUNT];
 static enum {CHAIR_IDLE, CHAIR_APPROACH, CHAIR_SITTING, CHAIR_SEATED, CHAIR_LEAVING} player_seat;
@@ -533,7 +544,8 @@ static void advance_to_next_day(void)
  */
 static void show_ending(void)
 {
-    const EndingCard *card = &ending_cards[get_game_ending()];
+    shown_ending = get_game_ending();
+    const EndingCard *card = &ending_cards[shown_ending];
 
     color_to_fade.a = 0;
     start_day_card(card->title, card->line_1, card->line_2);
@@ -556,10 +568,19 @@ static void toggle_mural_note(void)
     current_game_state_variables.has_cheat_sheet = true;
 
     // O que o jogador examina vira evidência para a prova do Dia 100
-    if (day == 58) current_game_state_variables.evidence_mask |= EVIDENCE_BADGE_AFTER_LEAVING;
-    if (day == 74) current_game_state_variables.evidence_mask |= EVIDENCE_NO_HUMAN_ORDER;
+    unsigned int evidence = day == 58 ? EVIDENCE_BADGE_AFTER_LEAVING :
+                            day == 74 ? EVIDENCE_NO_HUMAN_ORDER : 0;
+    if (evidence && !(current_game_state_variables.evidence_mask & evidence))
+    {
+        current_game_state_variables.evidence_mask |= evidence;
+        notice_show("Registro guardado.", NOTICE_SUCCESS);
+    }
     if (day == 41) current_game_state_variables.d41_mural_lido = true;
-    if (day == 89) current_game_state_variables.found_nicollas_trace = true;
+    if (day == 89 && !current_game_state_variables.found_nicollas_trace)
+    {
+        current_game_state_variables.found_nicollas_trace = true;
+        notice_show("Mapa examinado.", NOTICE_INFO);
+    }
     if (day >= 12) computer_checkpoint_dirty = true;
 
     if (!current_game_state_variables.is_resolved)
@@ -650,6 +671,7 @@ void initialize_game_loop_variables(void)
 
     // A partida pode recomeçar depois de voltar ao menu
     game_loop_finished = false;
+    replay_requested = false;
     game_loop_quit_requested = false;
     leave_office = false;
     enter_computer_screen = false;
@@ -667,6 +689,8 @@ void initialize_game_loop_variables(void)
     // Carrega o mapa do escritório
     in_game_office = LoadTexture("code/assets/sprites/environment/office.png");
     chair_floor = LoadTexture(OFFICE_CHAIR_FLOOR_PATH);
+    for (unsigned i = 0; i < sizeof(campaign_art) / sizeof(campaign_art[0]); i++)
+        campaign_art[i] = LoadTexture(campaign_art_paths[i]);
     player_chair = LoadTexture(OFFICE_CHAIR_NORTH_PATH);
     for (int i = 0; i < SEAT_PLAYER_FRAME_COUNT; i++)
     {
@@ -731,8 +755,21 @@ void initialize_game_loop_variables(void)
 /**
  * @brief Desenha os textos do cartão do dia centralizados na tela, aplicando a cor de fade atual.
  */
+static void draw_campaign_art(Texture2D art, unsigned char alpha)
+{
+    if (!art.id) return;
+    float scale = fmaxf((float)GetScreenWidth() / art.width, (float)GetScreenHeight() / art.height);
+    float width = art.width * scale, height = art.height * scale;
+    DrawTexturePro(art, (Rectangle){0, 0, (float)art.width, (float)art.height},
+                   (Rectangle){(GetScreenWidth() - width) / 2, (GetScreenHeight() - height) / 2, width, height},
+                   (Vector2){0}, 0, (Color){255, 255, 255, alpha});
+    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), (Color){8, 9, 16, (unsigned char)(alpha * 0.38f)});
+}
+
 void render_calendar_day_card(void)
 {
+    if (current_screen == ENDING_CARD_SCREEN)
+        draw_campaign_art(campaign_art[ART_FIRST_ENDING + shown_ending], color_to_fade.a);
     float scale = get_ui_scale();
     float title_size = TITLE_FONT_SIZE * scale;
     float title_spacing = DEFAULT_LETTER_SPACING * scale;
@@ -797,6 +834,41 @@ static bool card_skip_requested(void)
  * @brief Gerencia a máquina de estados do cartão do dia, controlando o aparecimento (fade in),
  * o tempo de leitura visível e o desaparecimento (fade out).
  */
+static bool ending_action_requested(void)
+{
+    float scale = get_ui_scale();
+    float width = 255 * scale, height = 44 * scale;
+    float y = GetScreenHeight() * 0.76f;
+    float center = GetScreenWidth() / 2.0f;
+    Rectangle replay = {center - width - 8 * scale, y, width, height};
+    Rectangle menu = {center + 8 * scale, y, width, height};
+    const char *labels[] = {"JOGAR DE NOVO [R]", "MENU [ENTER]"};
+    Rectangle buttons[] = {replay, menu};
+    bool click = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+    bool replay_clicked = false, menu_clicked = false;
+
+    for (int i = 0; i < 2; i++)
+    {
+        Rectangle bounds = buttons[i];
+        bool hovered = CheckCollisionPointRec(GetMousePosition(), bounds);
+        DrawRectangleRounded(bounds, 0.24f, 6, (Color){17, 20, 29, 245});
+        DrawRectangleRoundedLinesEx(bounds, 0.24f, 6, 2, hovered ? GOLD : LIGHTGRAY);
+        float font_size = 21 * scale;
+        float text_width = MeasureTextEx(default_game_font, labels[i], font_size, 0).x;
+        DrawTextEx(default_game_font, labels[i], (Vector2){bounds.x + (width - text_width) / 2,
+                   bounds.y + (height - font_size) / 2}, font_size, 0, WHITE);
+        if (click && hovered)
+        {
+            if (i == 0) replay_clicked = true;
+            else menu_clicked = true;
+        }
+    }
+
+    if (skip_guard_time < CARD_SKIP_GUARD_TIME) return false;
+    replay_requested = replay_clicked || IsKeyPressed(KEY_R);
+    return replay_requested || menu_clicked || IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_ESCAPE);
+}
+
 void handle_calendar_day_card(void)
 {
     bool fading_in_finished = false;
@@ -815,7 +887,7 @@ void handle_calendar_day_card(void)
         // Aumenta gradualmente a opacidade (Alpha) de color_to_fade
         fade_in_texture(MEDIUM_FADE_SPEED, &color_to_fade, &fading_in_finished);
         render_calendar_day_card();
-        if (card_skip_requested())
+        if (current_screen != ENDING_CARD_SCREEN && card_skip_requested())
         {
             timer = DID_NOT_START;
             current_calendar_day_state = FADING_OUT;
@@ -831,6 +903,11 @@ void handle_calendar_day_card(void)
 
     case AWAIT:
         render_calendar_day_card();
+        if (current_screen == ENDING_CARD_SCREEN)
+        {
+            if (ending_action_requested()) current_calendar_day_state = FADING_OUT;
+            break;
+        }
         if (card_skip_requested())
         {
             timer = DID_NOT_START;
@@ -1334,6 +1411,7 @@ static void handle_day_transition(void)
 
     if (current_game_state_variables.day_type == JUMP_DAY)
     {
+        draw_campaign_art(campaign_art[ART_JUMP], 255);
         draw_transition_text(TextFormat("Dia %d", day), center_y, TITLE_FONT_SIZE * scale, WHITE);
 
         if (transition_time >= jump_day_time) advance_to_next_day();
@@ -1341,16 +1419,16 @@ static void handle_day_transition(void)
     }
 
     color_to_fade.a = 255;
-    render_game_loop_escritorio();
-    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), (Color){0, 0, 0, FLASH_DIM_ALPHA});
+    draw_campaign_art(campaign_art[ART_FLASH], 255);
     draw_transition_text(TextFormat("Dia %d", day), center_y - (SUBTITLE_FONT_SIZE * scale * 3.0f), TITLE_FONT_SIZE * scale, WHITE);
     draw_transition_text(calendar_get_flash_text(day), center_y, SUBTITLE_FONT_SIZE * scale, WHITE);
 
     if (transition_time < FLASH_MIN_TIME) return;
 
-    draw_transition_text("ESPAÇO ou clique para continuar", center_y + (SUBTITLE_FONT_SIZE * scale * 3.0f), SUBTITLE_FONT_SIZE * scale * 0.7f, GRAY);
+    draw_transition_text("ESPAÇO, ENTER ou clique para continuar", center_y + (SUBTITLE_FONT_SIZE * scale * 3.0f), SUBTITLE_FONT_SIZE * scale * 0.7f, GRAY);
 
-    if (IsKeyPressed(KEY_SPACE) || IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) advance_to_next_day();
+    if (IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ENTER) ||
+        IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) advance_to_next_day();
 }
 
 /**
@@ -1667,7 +1745,7 @@ void render_interact_arrow(Rectangle target)
  *
  * @param feet Retângulo dos "pés" do objeto, em coordenadas da tela (o anel acompanha a largura dele).
  */
-static void render_interaction_marker(Rectangle feet)
+static void render_interaction_marker(Rectangle feet, const char *label)
 {
     float scale = get_scale();
     float pulse = 0.5f + (0.5f * sinf((float)GetTime() * 4.0f));
@@ -1683,7 +1761,6 @@ static void render_interaction_marker(Rectangle feet)
 
     // Tecla ESPAÇO pequena, acima do objeto, subindo e descendo devagar
     float font_size = 13.0f * scale;
-    const char *label = "ESPAÇO";
     float text_width = MeasureTextEx(default_game_font, label, font_size, 0.0f).x;
     float key_width = text_width + (12.0f * scale);
     float key_height = font_size + (7.0f * scale);
@@ -1811,7 +1888,7 @@ static const char *day_three_story_text(void)
     {
     case DAY3_ARRIVAL:
         if (story_line == 0) return "A fila do Tiago caiu pra você. O aviso diz que ele pediu folga.";
-        if (story_line == 1) return "Eu fico no TI. A triagem é sua. Se travar, me chama.";
+        if (story_line == 1) return "Eu fico no TI. Se a fila travar, me chama antes de recarregar.";
         if (story_line == 2) return "A norma mudou. Confere o bilhete antes de mandar.";
         if (story_bands.perception >= 1) return "Compara o bilhete com o que aparecer na mesa.";
         if (story_bands.automation >= 1) return "A luz da fila já acendeu. Ainda falta você decidir.";
@@ -1899,7 +1976,7 @@ static const char *campaign_finish_text(void)
         if (outcome == TASK_PENDING) return "O relatório guardou o resultado do treino.";
         return computer_first_answer_correct()
             ? "A ficha aceitou o conjunto. O teste ainda precisa ser acompanhado."
-            : "O resultado favoreceu o Centro. Quero repetir o teste.";
+            : "O conjunto saiu diferente do pedido. Quero ver quais dados entraram.";
     case 58:
         if (story_line == 2) return "Eu deixo a lista aberta pra auditoria.";
         if (story_line == 1)
@@ -1919,8 +1996,10 @@ static const char *campaign_finish_text(void)
             ? "O relatório registrou uma autorização humana. Não sei quem confirmou."
             : "Vou encaminhar o relatório.";
     case 89:
-        if (story_line == 1) return taken ? "O expediente terminou." : "Se for olhar, eu espero aqui.";
-        return state->found_nicollas_trace ? "Você achou o mapa. A marca indica a passagem que eu usei."
+        if (story_line == 1)
+            return taken ? "O expediente terminou." :
+                state->found_nicollas_trace ? "A marca ficou no mapa antigo. Guarda o que você viu." : "Se for olhar, eu espero aqui.";
+        return state->found_nicollas_trace ? "Você achou o mapa. A escada vai além do que desenharam ali."
             : "Tem um mapa no mural. A escada tá marcada a lápis.";
     case 100:
         if (story_line == 1) return "A reunião terminou. Vem.";
@@ -1961,8 +2040,8 @@ static const char *story_text(void)
     static const char *arrival[] = {
         "Chegou agora? Sou a Laura, do RH.",
         "Sua mesa é a da salinha, ali à direita. Se precisar de mim, me chama.",
-        "Sou a JV, dos modelos. A fila já tá aberta no seu computador.",
-        "Se pedir ajuda, a IARA sugere. Você confere antes de mandar, combinado?"};
+        "Sou a JV, dos modelos. Abre a fila e compara os pedidos com as respostas.",
+        "Se pedir ajuda, a IARA sugere. Testa se a resposta atende ao chamado antes de mandar."};
     if (story_scene >= CAMPAIGN_ARRIVAL) return campaign_story_text();
     if (story_scene >= DAY3_ARRIVAL) return day_three_story_text();
     if (story_scene == 1) return arrival[story_line];
@@ -1973,7 +2052,7 @@ static const char *story_text(void)
         if (computer_failsafe_triggered) return "A IARA terminou a fila. Quero separar no relatório o que ela enviou.";
         return computer_mostly_unchecked()
             ? "Ficaram sugestões sem conferência. Amanhã eu quero comparar o que saiu com os pedidos."
-            : "O relatório ficou salvo. Amanhã dá pra retomar por ele.";
+            : "Quero conferir se o relatório bate com os chamados que chegaram hoje.";
     }
     if (computer_first_outcome() == TASK_TAKEN_OVER_BY_IARA)
         return "A IARA terminou a fila. Vamos ver o que ela registrou?";
@@ -2458,7 +2537,15 @@ void handle_game_loop_screens(void)
              campaign_scene_day) && !interaction_open)
         {
             const char *objective = "Vá até seu computador";
-            if (can_leave_today()) objective = "Saia do escritório";
+            if (can_leave_today())
+            {
+                int day = current_game_state_variables.current_day;
+                bool can_investigate =
+                    (day == 58 && !(current_game_state_variables.evidence_mask & EVIDENCE_BADGE_AFTER_LEAVING)) ||
+                    (day == 74 && !(current_game_state_variables.evidence_mask & EVIDENCE_NO_HUMAN_ORDER)) ||
+                    (day == 89 && !current_game_state_variables.found_nicollas_trace);
+                objective = can_investigate ? "Saia do escritório ou examine o mural" : "Saia do escritório";
+            }
             else if (current_game_state_variables.is_resolved) objective = "Conclua o relatório no computador";
             else if (current_game_state_variables.current_day == 3) objective = "Abra a fila no computador";
             else if (campaign_scene_day) objective = campaign_scene_day->objective;
@@ -2471,10 +2558,10 @@ void handle_game_loop_screens(void)
         {
             render_interact_arrow(get_next_objective_rectangle());
 
-            if (nearby_npc_id >= 0) render_interaction_marker(npc_get_hitbox(nearby_npc_id, get_scale()));
-            else if (is_near_hint) render_interaction_marker(hint_item_rectangle);
-            else if (is_near_exit) render_interaction_marker(get_glass_door_rectangle());
-            else if (is_near_computer && !can_leave_today()) render_interaction_marker(estagiario_computer_collision_rectangle);
+            if (nearby_npc_id >= 0) render_interaction_marker(npc_get_hitbox(nearby_npc_id, get_scale()), "ESPAÇO");
+            else if (is_near_hint) render_interaction_marker(hint_item_rectangle, "ESPAÇO · EXAMINAR MURAL");
+            else if (is_near_exit) render_interaction_marker(get_glass_door_rectangle(), "ESPAÇO");
+            else if (is_near_computer && !can_leave_today()) render_interaction_marker(estagiario_computer_collision_rectangle, "ESPAÇO");
         }
         render_debug_hitboxes();
         render_npc_dialogue();
@@ -2485,11 +2572,13 @@ void handle_game_loop_screens(void)
         if (leave_office)
         {
             leave_office = false;
+            play_door_sound();
             finish_day();
         }
         else if (enter_computer_screen)
         {
             initialize_computer_loop();
+            play_keyboard_sound();
             computer_loop_loaded = true;
             current_screen = COMPUTER_SCREEN;
             enter_computer_screen = false;
@@ -2555,6 +2644,7 @@ void render_game_loop(void)
     // Pausado: o jogo fica parado na última imagem e só o menu de pausa responde
     if (pause_menu_is_open())
     {
+        update_iara_voice_typing(false);
         pause_action action;
 
         begin_game_drawing();
@@ -2584,6 +2674,7 @@ void render_game_loop(void)
     if (!IsWindowFocused())
     {
         story_input_guard = true;
+        update_iara_voice_typing(false);
         if (story_scene) { begin_game_drawing(); render_office_with_glass(); render_npc_dialogue(); end_game_drawing(); return; }
     }
 
@@ -2592,9 +2683,17 @@ void render_game_loop(void)
 
     handle_game_loop_screens(); // Processa a tela ativa
 
+    if (current_screen != COMPUTER_SCREEN)
+    {
+        const char *line = story_scene && !story_approaching ? story_text() :
+                           active_npc_id >= 0 ? npc_conversation_line() : NULL;
+        update_iara_voice_typing(IsWindowFocused() && line && npc_typed_characters < (float)utf8_length(line));
+    }
+
     if (was_walking_in_office && current_screen == IN_GAME_SCREEN && (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_P)))
     {
         update_player_footstep_audio(false);
+        update_iara_voice_typing(false);
         pause_menu_open(); // Guarda este quadro como fundo da pausa
     }
 
@@ -2620,12 +2719,30 @@ bool is_game_loop_finished(void)
  * @brief Função global de encerramento do game loop.
  * Garante a liberação de todos os recursos de memória para evitar Memory Leaks ao fechar o jogo.
  */
+bool game_loop_wants_replay(void)
+{
+    return replay_requested;
+}
+
+void game_loop_retry_ending(void)
+{
+    replay_requested = false;
+    game_loop_finished = false;
+    show_ending();
+}
+
 void unload_game_loop(void)
 {
     if (!game_loop_loaded) return;
 
     update_player_footstep_audio(false);
     game_loop_loaded = false;
+    update_iara_voice_typing(false);
+    for (unsigned i = 0; i < sizeof(campaign_art) / sizeof(campaign_art[0]); i++)
+    {
+        if (campaign_art[i].id) UnloadTexture(campaign_art[i]);
+        campaign_art[i] = (Texture2D){0};
+    }
 
     if (computer_loop_loaded)
     {

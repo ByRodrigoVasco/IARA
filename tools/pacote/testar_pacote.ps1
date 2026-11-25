@@ -27,8 +27,10 @@ function Abrir-Jogo($exe, $cwd, $segundos) {
     $inicio.FileName = $exe
     $inicio.WorkingDirectory = $cwd
     $inicio.UseShellExecute = $false
+    $inicio.RedirectStandardOutput = $true
     $inicio.EnvironmentVariables["PATH"] = "$env:SystemRoot\System32;$env:SystemRoot"
     $processo = [System.Diagnostics.Process]::Start($inicio)
+    Add-Member -InputObject $processo -NotePropertyName LogDoJogo -NotePropertyValue ($processo.StandardOutput.ReadToEndAsync())
     Start-Sleep -Seconds $segundos
     return $processo
 }
@@ -39,8 +41,8 @@ function Fechar-Jogo($processo) {
     return $processo.WaitForExit(10000)
 }
 
-$pasta = Join-Path $env:TEMP ("IARA teste m" + [char]0x00E1 + "quina limpa")
-if (Test-Path $pasta) { Remove-Item -Recurse -Force $pasta }
+$temporario = (Resolve-Path -LiteralPath $env:TEMP).Path
+$pasta = Join-Path $temporario ("IARA teste m" + [char]0x00E1 + "quina limpa " + [guid]::NewGuid().ToString("N"))
 Expand-Archive -Path $zip -DestinationPath $pasta
 
 $exe = Join-Path $pasta "iara.exe"
@@ -76,52 +78,95 @@ Checar "PKG-06" "Saiu sem erro" ($jogo.HasExited -and $jogo.ExitCode -eq 0)
 Add-Type @"
 using System; using System.Runtime.InteropServices;
 public class JanelaDoJogo {
-    [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint m, IntPtr w, IntPtr l);
+    [DllImport("user32.dll", SetLastError = true)] public static extern bool PostMessage(IntPtr h, uint m, IntPtr w, IntPtr l);
     [DllImport("user32.dll")] public static extern uint MapVirtualKey(uint c, uint t);
 }
 "@
 
 function Teclar($janela, $vk) {
     $scan = [JanelaDoJogo]::MapVirtualKey($vk, 0)
-    [JanelaDoJogo]::PostMessage($janela, 0x100, [IntPtr]$vk, [IntPtr](1 -bor ($scan -shl 16))) | Out-Null
-    Start-Sleep -Milliseconds 150
+    if (![JanelaDoJogo]::PostMessage($janela, 0x100, [IntPtr]$vk, [IntPtr](1 -bor ($scan -shl 16)))) {
+        throw "Falha ao enviar a tecla $vk para o jogo. Win32: $([Runtime.InteropServices.Marshal]::GetLastWin32Error())"
+    }
+    Start-Sleep -Milliseconds 250
     [JanelaDoJogo]::PostMessage($janela, 0x101, [IntPtr]$vk, [IntPtr](1 -bor ($scan -shl 16) -bor 0xC0000000L)) | Out-Null
-    Start-Sleep -Milliseconds 350
+    Start-Sleep -Milliseconds 500
 }
 
-Remove-Item -Force $save -ErrorAction SilentlyContinue
-# Folga para a abertura terminar: num executavel recem-gerado, o inicio pode demorar mais
-$jogo = Abrir-Jogo $exe $pasta 15
-$jogo.Refresh()
-if ($jogo.MainWindowHandle -ne [IntPtr]::Zero) {
-    Teclar $jogo.MainWindowHandle 0x53   # S: CREDITOS
-    Teclar $jogo.MainWindowHandle 0x53   # S: CONFIGURACOES
-    Teclar $jogo.MainWindowHandle 0x53   # S: SAIR
-    Teclar $jogo.MainWindowHandle 0x0D   # ENTER
+$slot = Join-Path $saves "normal/Pacote"
+$save = Join-Path $slot "progresso.save"
+New-Item -ItemType Directory -Path $slot -Force | Out-Null
+
+function Obter-JanelaDoJogo($jogo) {
+    $jogo.Refresh()
+    if ($jogo.HasExited -or $jogo.MainWindowHandle -eq [IntPtr]::Zero) {
+        throw "O jogo fechou ou a janela ainda nao foi criada."
+    }
+    return $jogo.MainWindowHandle
 }
-$fechou = $jogo.WaitForExit(10000)
-if (-not $fechou) { $jogo.Kill() }
-Checar "PKG-10" "Opcao SAIR do menu fecha sem erro" ($fechou -and $jogo.ExitCode -eq 0)
-Checar "PKG-11" "Opcao SAIR do menu salva o progresso" (Test-Path $save)
 
-# Save corrompido nao pode travar
-Set-Content -Path $save -Value "lixo"
-$jogo = Abrir-Jogo $exe $pasta 4
-Checar "PKG-07" "Abre com save corrompido" (-not $jogo.HasExited)
-if (-not $jogo.HasExited) { Fechar-Jogo $jogo | Out-Null }
-
-# Pasta sem permissao de gravacao: o jogo roda, so nao salva
-Remove-Item -Force $save -ErrorAction SilentlyContinue
-$usuario = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-& icacls $pasta /deny "${usuario}:(WD,AD)" | Out-Null
-$jogo = Abrir-Jogo $exe $pasta 4
-Checar "PKG-08" "Abre em pasta sem permissao de gravacao" (-not $jogo.HasExited)
-if (-not $jogo.HasExited) {
-    Checar "PKG-09" "Fecha sem travar quando nao consegue salvar" ((Fechar-Jogo $jogo) -and $jogo.ExitCode -eq 0)
+function Abrir-MenuDeTeste($jogo) {
+    $janela = Obter-JanelaDoJogo $jogo
+    Teclar $janela 0x50 # P pula a abertura e nao executa opcoes do menu
+    Start-Sleep -Seconds 2
+    return $janela
 }
-& icacls $pasta /remove:d $usuario | Out-Null
 
-Remove-Item -Recurse -Force $pasta
+function Abrir-CampanhaDeTeste($jogo) {
+    $janela = Abrir-MenuDeTeste $jogo
+    Teclar $janela 0x0D # INICIAR
+    Teclar $janela 0x0D # modo normal
+    Teclar $janela 0x0D # Pacote ja selecionado por ser o primeiro save existente
+    Start-Sleep -Seconds 5
+}
+
+function Fechar-InstanciaDeTeste($jogo) {
+    if (!$jogo.HasExited) { $jogo.Kill(); $jogo.WaitForExit() }
+}
+
+try {
+    $jogo = Abrir-Jogo $exe $pasta 10
+    $janela = Abrir-MenuDeTeste $jogo
+    Teclar $janela 0x57 # W volta de INICIAR para SAIR
+    Teclar $janela 0x0D # abre a confirmacao
+    Teclar $janela 0x44 # D escolhe SAIR
+    Teclar $janela 0x0D
+    $fechou = $jogo.WaitForExit(10000)
+    Checar "PKG-10" "Sai pelo menu sem erro" ($fechou -and $jogo.ExitCode -eq 0)
+    Fechar-InstanciaDeTeste $jogo
+
+    $jogo = Abrir-Jogo $exe $pasta 10
+    Abrir-CampanhaDeTeste $jogo
+    $fechou = !$jogo.HasExited -and (Fechar-Jogo $jogo)
+    Checar "PKG-11" "Fechar a campanha grava o progresso no slot" ($fechou -and (Test-Path -LiteralPath $save))
+    Fechar-InstanciaDeTeste $jogo
+
+    Set-Content -LiteralPath $save -Value "lixo"
+    $jogo = Abrir-Jogo $exe $pasta 10
+    Abrir-CampanhaDeTeste $jogo
+    $fechou = !$jogo.HasExited -and (Fechar-Jogo $jogo)
+    Checar "PKG-07" "Recupera apos save corrompido e volta a gravar" ($fechou -and
+        (Select-String -LiteralPath $save -Pattern '^checksum=[0-9a-f]{8}$' -Quiet))
+    Fechar-InstanciaDeTeste $jogo
+
+    # Uma pasta no caminho do arquivo temporario reproduz a falha de escrita.
+    $hash = (Get-FileHash -LiteralPath $save).Hash
+    New-Item -ItemType Directory -Path "$save.tmp" | Out-Null
+    $jogo = Abrir-Jogo $exe $pasta 10
+    Abrir-CampanhaDeTeste $jogo
+    $fechou = !$jogo.HasExited -and (Fechar-Jogo $jogo)
+    $log = if ($fechou) { $jogo.LogDoJogo.Result } else { "" }
+    Checar "PKG-08" "Retoma o progresso quando a gravacao do save esta bloqueada" ($log -match 'SAVE: "Pacote" retomado')
+    Checar "PKG-09" "Fecha sem erro e preserva o save bloqueado" ($fechou -and
+        $jogo.ExitCode -eq 0 -and $log -match 'SAVE: .*gravar "Pacote":' -and
+        (Get-FileHash -LiteralPath $save).Hash -eq $hash)
+}
+finally {
+    Fechar-InstanciaDeTeste $jogo
+    if ([IO.Path]::GetDirectoryName((Resolve-Path -LiteralPath $pasta).Path) -eq $temporario) {
+        Remove-Item -LiteralPath $pasta -Recurse -Force
+    }
+}
 
 Write-Host ""
 if ($falhas -eq 0) { Write-Host " Todos os casos passaram." -ForegroundColor Green; exit 0 }

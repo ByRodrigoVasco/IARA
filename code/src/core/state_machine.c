@@ -31,16 +31,18 @@ bool is_game_to_close = false;
 static bool campaign_state_ready = false;
 
 // Salva ao voltar ao menu e diz o que aconteceu: se der certo, o jogador vê; se falhar, sabe o que conferir.
-static void save_progress_with_notice(void)
+static bool save_progress_with_notice(void)
 {
     if (save_active_campaign_progress())
     {
         notice_show("Progresso salvo.", NOTICE_SUCCESS);
+        return true;
     }
     else
     {
         notice_show("Não consegui salvar o progresso. Confira se há espaço livre no disco e se a pasta do jogo permite gravar arquivos.", NOTICE_ERROR);
     }
+    return false;
 }
 
 void handle_state_initialization(void)
@@ -137,6 +139,20 @@ bool save_active_campaign_progress(void)
 // -----------------------------------------------------------------------------
 // Menu e telas
 // -----------------------------------------------------------------------------
+
+static bool select_replay_save(void)
+{
+    for (int number = 1; number <= SAVE_SLOTS_MAX + 1; number++)
+    {
+        char name[SAVE_NAME_MAX + 1];
+        snprintf(name, sizeof(name), "Reprise %d", number);
+        if (save_slot_exists(SAVE_MODE_NORMAL, name)) continue;
+        if (!save_slot_create(SAVE_MODE_NORMAL, name)) return false;
+        active_save_set(SAVE_MODE_NORMAL, name);
+        return true;
+    }
+    return false;
+}
 
 int handle_menu_action(int screen)
 {
@@ -261,12 +277,27 @@ void handle_state_machine(void)
 
         if (is_game_loop_finished())
         {
-            // Quem sai da campanha leva o progresso para o save dela
-            save_progress_with_notice();
+            bool replay = game_loop_wants_replay();
+            bool saved = save_progress_with_notice();
+            if (replay && !saved)
+            {
+                game_loop_retry_ending();
+                break;
+            }
+            if (replay && !select_replay_save())
+            {
+                notice_show("Não foi possível criar um save para a nova partida.", NOTICE_ERROR);
+                game_loop_retry_ending();
+                break;
+            }
             campaign_state_ready = false;
-            active_save_clear();
-
             unload_game_loop();
+            if (replay)
+            {
+                current_game_state_variables.current_screen = begin_loading_active_save();
+                break;
+            }
+            active_save_clear();
             initialize_menu_variables();
             current_game_state_variables.current_screen = MENU_SCREEN;
         }

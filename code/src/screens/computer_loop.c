@@ -1733,7 +1733,8 @@ static const char *get_ticket_report_line(int ticket)
 
     if ((result->outcome == TASK_SENT_UNCHECKED || result->outcome == TASK_TAKEN_OVER_BY_IARA) && !result->answer_is_correct)
     {
-        return step->wrong_result;
+        return TextFormat("%s %s", result->outcome == TASK_SENT_UNCHECKED
+                          ? "Sem conferência." : "IARA assumiu.", step->wrong_result);
     }
 
     switch (result->outcome)
@@ -2272,6 +2273,9 @@ static const char *get_board_row_text(const DialogStep *step, const TriageCard *
         return "(evidência não encontrada)";
     }
 
+    if (step->board_mode == BOARD_REFUTATION)
+        return TextFormat("%s · %s", item->required_evidence ? "Registro" : "IARA", item->text);
+
     if (step->board_mode != BOARD_TRUTH_TABLE) return item->text;
 
     char values[MAX_LINE_LEN] = "";
@@ -2351,7 +2355,8 @@ static void render_ticket_triage(DialogStep *step, float top)
         Rectangle second_bounds = {first_bounds.x + mark_width + spacing, y, mark_width, row_height};
         bool locked = item->required_evidence != 0 && !(current_game_state_variables.evidence_mask & item->required_evidence);
 
-        draw_text_band(get_board_row_text(step, item), text_band, BUTTON_FILL_COLOR);
+        Color row_fill = item->required_evidence && !locked ? IARA_BOX_LIGHT_COLOR : BUTTON_FILL_COLOR;
+        draw_text_band(get_board_row_text(step, item), text_band, row_fill);
 
         if (draw_choice_button(first_bounds, step->choice_labels[1], triage_choices[card] == 1, can_choose && !locked)) triage_choices[card] = 1;
         if (draw_choice_button(second_bounds, step->choice_labels[0], triage_choices[card] == 0, can_choose && !locked)) triage_choices[card] = 0;
@@ -2398,7 +2403,11 @@ static void render_ticket_triage(DialogStep *step, float top)
     draw_button(send_bounds, step->submit_label, get_board_button_font_size(step->submit_label, send_bounds), BUTTON_FILL_COLOR, step_can_click && all_chosen, &send_clicked);
 
     if (ask_clicked) ask_iara();
-    else if (send_clicked) submit_triage();
+    else if (send_clicked)
+    {
+        play_keyboard_sound();
+        submit_triage();
+    }
 }
 
 // Mensagem ou decisão sem resposta certa: o efeito só entra quando o dia for concluído.

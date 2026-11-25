@@ -51,6 +51,7 @@ unsigned int middle_screen_y = 0;
 #include "menu.c"
 static bool scene_test_input = false;
 static bool scene_test_key(int key) { return scene_test_input ? key == KEY_SPACE : IsKeyPressed(key); }
+#undef IsKeyPressed
 #define IsKeyPressed(key) scene_test_key(key)
 #define IsWindowFocused() true
 #include "game_loop.c"

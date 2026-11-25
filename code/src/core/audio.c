@@ -17,6 +17,8 @@ static Sound jump_stinger = {0};          // Som curto na entrada de um salto pu
 static AudioContext audio_context = AUDIO_CONTEXT_OFFICE;
 static float jump_progress_value = 0.0f; // Quanto do bloco de salto puro já passou
 static float layer_weight[AUDIO_LAYER_COUNT] = {0}; // Peso atual de cada camada; anda até o alvo a cada quadro
+static Sound door_sound = {0};
+static Sound keyboard_sound = {0};
 static Sound mouse_click_sound = {0};
 static Sound iara_voice_sound = {0};
 static Sound player_footsteps_sound = {0};
@@ -37,6 +39,8 @@ static float clamp_volume(float volume)
 // Os efeitos não têm mistura própria: o volume deles é o escolhido pelo jogador.
 static void apply_effects_volume(void)
 {
+    if (door_sound.stream.buffer != NULL) SetSoundVolume(door_sound, effects_volume);
+    if (keyboard_sound.stream.buffer != NULL) SetSoundVolume(keyboard_sound, effects_volume);
     if (mouse_click_sound.stream.buffer != NULL) SetSoundVolume(mouse_click_sound, effects_volume);
     if (iara_voice_sound.stream.buffer != NULL) SetSoundVolume(iara_voice_sound, effects_volume);
     if (player_footsteps_sound.stream.buffer != NULL) SetSoundVolume(player_footsteps_sound, effects_volume);
@@ -57,6 +61,8 @@ bool initialize_audio(void)
     quiz_music = LoadMusicStream(QUIZ_MUSIC_PATH);
     flash_stinger = LoadSound(FLASH_STINGER_PATH);
     jump_stinger = LoadSound(JUMP_STINGER_PATH);
+    door_sound = LoadSound(DOOR_SOUND_PATH);
+    keyboard_sound = LoadSound(KEYBOARD_SOUND_PATH);
     mouse_click_sound = LoadSound(MOUSE_CLICK_SOUND_PATH);
     iara_voice_sound = LoadSound(IARA_VOICE_SOUND_PATH);
     player_footsteps_sound = LoadSound(PLAYER_FOOTSTEPS_SOUND_PATH);
@@ -298,6 +304,16 @@ void play_click_sound(void)
     PlaySound(mouse_click_sound);
 }
 
+void play_door_sound(void)
+{
+    if (door_sound.stream.buffer != NULL) PlaySound(door_sound);
+}
+
+void play_keyboard_sound(void)
+{
+    if (keyboard_sound.stream.buffer != NULL) PlaySound(keyboard_sound);
+}
+
 void update_player_footstep_audio(bool is_walking)
 {
     if (!IsAudioDeviceReady() || player_footsteps_sound.stream.buffer == NULL) return;
@@ -348,6 +364,8 @@ void unload_audio(void)
     if (quiz_music.ctxData != NULL) UnloadMusicStream(quiz_music);
     if (flash_stinger.stream.buffer != NULL) UnloadSound(flash_stinger);
     if (jump_stinger.stream.buffer != NULL) UnloadSound(jump_stinger);
+    if (door_sound.stream.buffer != NULL) UnloadSound(door_sound);
+    if (keyboard_sound.stream.buffer != NULL) UnloadSound(keyboard_sound);
     if (mouse_click_sound.stream.buffer != NULL) UnloadSound(mouse_click_sound);
     if (iara_voice_sound.stream.buffer != NULL) UnloadSound(iara_voice_sound);
     if (player_footsteps_sound.stream.buffer != NULL) UnloadSound(player_footsteps_sound);
@@ -358,6 +376,8 @@ void unload_audio(void)
     quiz_music = (Music){0};
     flash_stinger = (Sound){0};
     jump_stinger = (Sound){0};
+    door_sound = (Sound){0};
+    keyboard_sound = (Sound){0};
     mouse_click_sound = (Sound){0};
     iara_voice_sound = (Sound){0};
     player_footsteps_sound = (Sound){0};

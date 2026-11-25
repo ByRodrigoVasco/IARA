@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "raylib.h"
 #include "game_state.h"
@@ -339,12 +340,17 @@ static void verify_campaign_scenes(void)
                 reload_campaign();
                 assert(!story_scene && current_screen == DAY_END_CARD_SCREEN);
             }
-            if (day == 58 && route == SOLVED)
+            unsigned int evidence = day == 58 ? EVIDENCE_BADGE_AFTER_LEAVING :
+                                    day == 74 ? EVIDENCE_NO_HUMAN_ORDER : 0;
+            assert(!(current_game_state_variables.evidence_mask & evidence));
+            if (evidence && route == SOLVED)
             {
-                assert(!(current_game_state_variables.evidence_mask & EVIDENCE_BADGE_AFTER_LEAVING));
                 toggle_mural_note();
                 toggle_mural_note();
-                assert(current_game_state_variables.evidence_mask & EVIDENCE_BADGE_AFTER_LEAVING);
+                assert(current_game_state_variables.evidence_mask & evidence);
+                assert(!current_game_state_variables.user_investigated);
+                reload_campaign();
+                assert(!story_scene && (current_game_state_variables.evidence_mask & evidence));
             }
             if (day == 89 && route == SOLVED)
             {
@@ -373,6 +379,9 @@ static void verify_campaign_scenes(void)
 
 int main(void)
 {
+#ifdef _WIN32
+    _set_error_mode(_OUT_TO_STDERR);
+#endif
     SetTraceLogLevel(LOG_WARNING);
     InitWindow(1280, 720, "IARA - cutscenes regression");
     SetTargetFPS(120);
