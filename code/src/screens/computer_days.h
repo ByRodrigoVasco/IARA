@@ -62,9 +62,9 @@ static DialogStep day_3_script[] = {
     },
     {
         .type = STEP_CHOICE,
-        .lines = {"De: Júlia, do RH.", "Vi você almoçando na mesa. Tem lugar com a", "gente, se quiser. O Tiago sumiu, é meio estranho."},
+        .lines = {"De: Júlia, do RH.", "Tem lugar na mesa com a", "gente, se quiser. O Tiago sumiu, é meio estranho."},
         .line_count = 3,
-        .options = {"Almoçar com a Júlia", "Ficar e adiantar a fila"},
+        .options = {"Almoçar com a Júlia", "Ficar no escritório"},
         .option_count = 2,
         .choice_effects = {DAY_EFFECT_HUMAN_BOND, DAY_EFFECT_NONE}
     },
@@ -331,7 +331,7 @@ static DialogStep day_74_script[] = {
         .hints = {"Comece pelo que é certo: N é verdadeiro.", "Com N, o humano sai. E sem H, sobra A."},
         .iara_confidence = 99,
         .iara_reason = "Um humano autorizou, como sempre.",
-        .low_reason = "Foi a Mariana. Ela ainda autoriza tudo.",
+        .low_reason = "Eu já confirmei. Não há nada para investigar.",
         .cards = day_74_cards,
         .card_count = 4,
         .clauses = day_74_clauses,
@@ -373,7 +373,7 @@ static DialogStep day_89_script[] = {
         .type = STEP_TRIAGE,
         .board_mode = BOARD_SYLLOGISM,
         .lines = {
-            "Lista da sala, de Ricardo Marés:",
+            "Lista da sala, gerada pela IARA:",
             "Todo convidado é funcionário.",
             "Nenhum funcionário está desperto."
         },
@@ -402,27 +402,29 @@ static DialogStep day_89_script[] = {
 enum { D100_RESIGNED, D100_LETTER, D100_HUMAN };
 
 static const TriageCard day_100_cards[] = {
-    {.id = "R1", .text = "Renê, D: todos se demitiram.", .left = L_VAR(D100_RESIGNED)},
-    {.id = "R2", .text = "Renê, D → C: toda demissão tem carta.", .left = L_IMPLIES(L_VAR(D100_RESIGNED), L_VAR(D100_LETTER))},
-    {.id = "R3", .text = "Renê, H: a IARA só age com ordem humana.", .left = L_VAR(D100_HUMAN)},
-    {.id = "E1", .text = "Você, ¬C: as rescisões não têm carta.", .left = L_NOT(L_VAR(D100_LETTER)), .required_evidence = EVIDENCE_NO_RESIGNATION_LETTER},
-    {.id = "E2", .text = "Você, ¬D: o crachá do Diego abriu depois.", .left = L_NOT(L_VAR(D100_RESIGNED)), .required_evidence = EVIDENCE_BADGE_AFTER_LEAVING},
-    {.id = "E3", .text = "Você, ¬H: às 03:12 não havia humano.", .left = L_NOT(L_VAR(D100_HUMAN)), .required_evidence = EVIDENCE_NO_HUMAN_ORDER},
+    {.id = "R1", .text = "D: todos se demitiram.", .left = L_VAR(D100_RESIGNED)},
+    {.id = "R2", .text = "D → C: toda demissão tem carta.", .left = L_IMPLIES(L_VAR(D100_RESIGNED), L_VAR(D100_LETTER))},
+    {.id = "R3", .text = "H: a IARA só age com ordem humana.", .left = L_VAR(D100_HUMAN)},
+    {.id = "E1", .text = "¬C: as rescisões não têm carta.", .left = L_NOT(L_VAR(D100_LETTER)), .required_evidence = EVIDENCE_NO_RESIGNATION_LETTER},
+    {.id = "E2", .text = "¬D: o crachá do Diego abriu depois.", .left = L_NOT(L_VAR(D100_RESIGNED)), .required_evidence = EVIDENCE_BADGE_AFTER_LEAVING},
+    {.id = "E3", .text = "¬H: às 03:12 não havia humano.", .left = L_NOT(L_VAR(D100_HUMAN)), .required_evidence = EVIDENCE_NO_HUMAN_ORDER},
 };
 
 static DialogStep day_100_script[] = {
     {
         .type = STEP_STATEMENT,
-        .lines = {"Renê, na cabeceira: \"A empresa está limpa.", "Se discorda, prove que estou me contradizendo.\"", "A IARA abre a janela sem você pedir."},
+        .lines = {"A IARA: \"Estas são as afirmações registradas.",
+                  "Se você discorda, mostre a contradição.\"",
+                  "A IARA abre a janela sem você pedir."},
         .line_count = 3,
         .button_name = "Montar a prova"
     },
     {
         .type = STEP_TRIAGE,
         .board_mode = BOARD_REFUTATION,
-        // O desafio continua na fala do Renê, em vez de virar regra de exercício (PI2-215).
+        // O desafio continua na fala da IARA, em vez de virar regra de exercício (PI2-215).
         .lines = {
-            "Renê: \"Aceite o que eu disse e me mostre",
+            "A IARA: \"Aceite o que eu disse e me mostre",
             "onde isso se contradiz. Só o necessário,",
             "e ao menos uma prova que seja sua.\""
         },
@@ -430,14 +432,14 @@ static DialogStep day_100_script[] = {
         .hints = {"Procure uma premissa e sua negação.", "Sem encadear nada: um par já é absurdo."},
         .iara_confidence = 99,
         .iara_reason = "Não há contradição nenhuma. Pode assinar.",
-        .low_reason = "A Mariana concorda comigo. Assine.",
+        .low_reason = "Já registrei a conclusão. Assine.",
         .cards = day_100_cards,
         .card_count = 6,
         .variable_count = 3,
         .choice_labels = {"Fora", "Usar"},
         .submit_label = "Apresentar a prova",
         .sender = "Prova",
-        .wrong_result = "Prova: você assinou o que Renê trouxe pronto."
+        .wrong_result = "Prova: você assinou o que a IARA trouxe pronto."
     },
     {.type = STEP_REPORT, .lines = {"Assinado por você no Dia 100:"}, .line_count = 1, .button_name = "Concluir"},
 };

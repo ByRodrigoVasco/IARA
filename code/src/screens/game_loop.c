@@ -11,6 +11,7 @@
 #include "animations.h"
 #include "characters.h"
 #include "npcs.h"
+#include "campaign_scenes.h"
 #include "collisions.h"
 #include "computer_loop.h"
 #include "helper.h"
@@ -19,10 +20,9 @@
 #include "calendar.h"
 #include "audio.h"
 #include "pause_menu.h"
-#include "confirm_dialog.h"
-#include "ui_theme.h"
 #include "symptoms.h"
 #include "office_symptoms.h"
+#include "notice.h"
 
 // Valor de sentinela para indicar que o temporizador do cartão de introdução ainda não começou a contar
 #define DID_NOT_START -30
@@ -37,14 +37,6 @@
 #define DAY_END_CARD_SCREEN 4          // Cartão de fim do dia, depois de sair pela porta
 #define DAY_TRANSITION_SCREEN 5        // Flash do dia e salto puro, até o próximo dia jogável
 #define ENDING_CARD_SCREEN 6           // Cartão do final, depois do Dia 100
-#define ENDING_CHOICE_SCREEN 7         // Depois do cartão do final: jogar novamente ou sair
-
-// Opções da tela que vem depois do final
-#define ENDING_CHOICE_COUNT 3
-#define ENDING_CHOICE_PLAY_AGAIN 0     // Recomeça a campanha do Dia 1, no mesmo save
-#define ENDING_CHOICE_MENU 1           // Volta ao menu principal
-#define ENDING_CHOICE_QUIT 2           // Fecha o jogo (pede confirmação)
-#define ENDING_CHOICE_INPUT_DELAY 0.6f // Segundos sem ler teclas: quem pulou o cartão com ESPAÇO não escolhe sem querer
 
 // ============================================================================
 // ESTADOS DA ANIMAÇÃO DO CARTÃO DO DIA (TRANSIÇÃO FADE IN / AWAIT / FADE OUT)
@@ -62,7 +54,7 @@
 #define REFERENCE_MIN_WIDTH 1200.0f            // Largura em que o mapa (1062 de largura) ainda cabe com folga
 #define PLAYER_SIZE_AT_REFERENCE 75.0f         // Largura e altura base do sprite do jogador em pixels
 #define COMPUTER_OFFSET_X_AT_REFERENCE 170.0f  // Deslocamento X do computador a partir do centro da tela
-#define COMPUTER_OFFSET_Y_AT_REFERENCE 93.0f   // Deslocamento Y do computador a partir do centro da tela
+#define COMPUTER_OFFSET_Y_AT_REFERENCE 155.0f   // Deslocamento Y do computador a partir do centro da tela
 #define COMPUTER_SIZE_AT_REFERENCE 100.0f      // Dimensão base do retângulo de interação do computador
 #define COMPUTER_SCENE_ZOOM 1.25f              // Aproximação do escritório atrás do monitor, além do necessário para cobrir a janela
 #define COMPUTER_SCENE_DIM_ALPHA 120           // Escurecimento do escritório atrás do monitor (0 a 255)
@@ -103,19 +95,36 @@ static bool render_calendar_day_card_finished = false;   // Indica se toda a seq
 static int current_screen = SCREEN_NONE;                  // Armazena qual tela do jogo está sendo processada no momento
 static bool game_loop_finished = false;                   // Indica que o dia terminou e a partida volta ao menu
 static bool game_loop_quit_requested = false;              // O jogador escolheu SAIR DO JOGO na pausa; a máquina de estados fecha o jogo
-static bool game_loop_replay_requested = false;            // O jogador escolheu JOGAR NOVAMENTE depois do final
-static int ending_choice_selected = ENDING_CHOICE_PLAY_AGAIN; // Opção marcada na tela depois do final
-static float ending_choice_wait = 0.0f;                    // Tempo desde que a tela depois do final abriu
-static GameEnding shown_ending = ENDING_UNHARMED;          // Final mostrado no cartão, repetido no título da escolha
 static bool leave_office = false;                        // Flag acionada ao interagir com a porta depois de concluir a tarefa
 static bool is_near_exit = false;                        // Flag que indica se o jogador alcança a porta de saída
 static bool enter_computer_screen = false;               // Flag acionada ao interagir com o computador para mudar de tela
 static bool is_near_hint = false;                         // Flag que indica se o jogador alcança o bilhete do mural
 static bool is_near_computer = false;                     // Flag que indica se o jogador está sobre a zona de interação do computador
 static int nearby_npc_id = -1;
+static bool resume_computer_checkpoint = false;
+enum { DAY3_ARRIVAL = 8, DAY3_TRIAGE = 16, DAY3_END = 32, DAY3_LUNCH = 64 };
+enum {
+    CAMPAIGN_ARRIVAL = 128 + STORY_ARRIVAL,
+    CAMPAIGN_MIDDLE = 128 + STORY_MIDDLE,
+    CAMPAIGN_FINISH = 128 + STORY_FINISH
+};
+static const CampaignSceneDay *campaign_scene_day;
+static int story_scene = 0; // bits 1/2/4 pertencem ao Dia 1
+static HiddenStatisticBands story_bands;
+static int story_line = 0;
+static bool story_return_computer = false;
+static bool story_input_guard = false;
+static float story_action_time = 0.0f;
+static bool story_approaching = false;
+#define STORY_APPROACH_LIMIT 6.0f
+#define STORY_SECOND_ACTOR_DELAY 0.4f
+static const char *story_text(void);
+static void begin_story_scene(int scene, bool return_computer);
+static bool campaign_scene_completed(StoryPhase phase);
 static int active_npc_id = -1;
 static int active_npc_dialogue_line = 0;
 static bool active_npc_first_today = false;               // A conversa em curso começou com o cumprimento do dia
+static const char *active_npc_variant = NULL;
 static bool npc_greeted_today[NPC_COUNT];                 // Quem já cumprimentou o jogador no dia atual
 static float npc_typed_characters = 0.0f;                 // Quantos caracteres da fala já foram "digitados" na tela
 static float npc_balloon_open = 0.0f;                     // 0 = balão fechado, 1 = aberto (anima a abertura e o fechamento)
@@ -156,10 +165,23 @@ static const EndingCard ending_cards[] = {
     [ENDING_UNHARMED] = {"Final A: Ileso", "Você é efetivado(a). Nunca viu nada de estranho, e nada viu você.", "Na sexta tem happy hour. A água nunca chegou à sua mesa."},
     [ENDING_PAMONHA] = {"Final B: Pamonha", "A IARA fez tudo, e você assinou embaixo. Promoção garantida.", "Sua mesa nova fica lá embaixo. É bem tranquilo."},
     [ENDING_HYPNOTIZED] = {"Final C: Hipnotizado", "Você ouviu o canto, foi atrás dele e chegou sozinho(a).", "O seu crachá abre uma última porta, no porão."},
-    [ENDING_RUPTURE] = {"Final D: Ruptura", "A prova fecha, e o trato de Ricardo Marés não se sustenta.", "Quem ainda está desperto abre o porão com você. O rio volta a correr."}};
+    [ENDING_RUPTURE] = {"Final D: Ruptura", "A prova fecha, e a versão da IARA não se sustenta.", "As portas destravam. Ao longe, a água volta a correr."}};
 
 // Texturas do ambiente de jogo (Escritório e Dicas de Teclado)
+static const char *const campaign_art_paths[] = {
+    CAMPAIGN_ART_PATH "flash.png", CAMPAIGN_ART_PATH "salto.png",
+    CAMPAIGN_ART_PATH "final-ileso.png", CAMPAIGN_ART_PATH "final-pamonha.png",
+    CAMPAIGN_ART_PATH "final-hipnotizado.png", CAMPAIGN_ART_PATH "final-ruptura.png"
+};
+enum { ART_FLASH, ART_JUMP, ART_FIRST_ENDING };
+static Texture2D campaign_art[sizeof(campaign_art_paths) / sizeof(campaign_art_paths[0])];
+static GameEnding shown_ending;
+static bool replay_requested;
+
 static Texture2D in_game_office;        // Mapa do escritório
+static Texture2D chair_floor, player_chair, player_seat_frames[SEAT_PLAYER_FRAME_COUNT];
+static enum {CHAIR_IDLE, CHAIR_APPROACH, CHAIR_SITTING, CHAIR_SEATED, CHAIR_LEAVING} player_seat;
+static float player_seat_time;
 static Texture2D action_tip_texture;    // Textura da dica visual de ação (Espaço)
 static Texture2D move_tip_texture;      // Textura da dica visual de movimento (WASD)
 static Texture2D move_or_tip_texture;   // Textura da dica visual alternativa de movimento (Setas)
@@ -303,14 +325,22 @@ static float get_player_size(void)
     return PLAYER_SIZE_AT_REFERENCE * get_scale();
 }
 
-/**
- * @brief Calcula dinamicamente o retângulo de colisão/interação do computador no mapa.
- * 
- * Posiciona o retângulo em relação ao centro da tela, aplicando o deslocamento (offset)
- * de referência e ajustando o tamanho conforme a escala atual da tela.
- * 
- * @return Rectangle Área delimitada do computador em coordenadas do mundo.
- */
+// Cadeira à frente do computador, na fileira inferior direita do escritório.
+static Vector2 player_chair_anchor(void)
+{
+    Vector2 center = get_map_center();
+    float scale = get_scale();
+    return (Vector2){center.x + 213.0f * scale, center.y + 196.5f * scale};
+}
+
+static Vector2 player_chair_entry(void)
+{
+    Vector2 anchor = player_chair_anchor();
+    float pixel = get_player_size() / CHARACTER_SPRITE_SIZE;
+    return (Vector2){anchor.x - 16 * pixel, anchor.y + (SEAT_ENTRY_OFFSET - 31) * pixel};
+}
+
+/** Área de interação com o computador, relativa ao centro do mapa. */
 static Rectangle get_computer_collision_rectangle(void)
 {
     Rectangle reference = {COMPUTER_OFFSET_X_AT_REFERENCE, COMPUTER_OFFSET_Y_AT_REFERENCE,
@@ -356,9 +386,15 @@ static Rectangle get_glass_door_rectangle(void)
 /**
  * @brief Objeto indicado pela seta: primeiro o computador e, com a tarefa resolvida, a porta.
  */
+static bool can_leave_today(void)
+{
+    return current_game_state_variables.is_resolved &&
+        (!campaign_scene_day || campaign_scene_completed(STORY_FINISH));
+}
+
 static Rectangle get_next_objective_rectangle(void)
 {
-    return current_game_state_variables.is_resolved ? get_glass_door_rectangle() : estagiario_computer_collision_rectangle;
+    return can_leave_today() ? get_glass_door_rectangle() : estagiario_computer_collision_rectangle;
 }
 
 /**
@@ -374,7 +410,7 @@ static void finish_day(void)
 
     walk_time = 0.0f;
     color_to_fade.a = 0;
-    current_game_state_variables.resolved_puzzles[day] = true;
+    if (day != TOTAL_GAME_DAYS) current_game_state_variables.resolved_puzzles[day] = true;
     snprintf(card_title_text, sizeof(card_title_text), "Fim do Dia %d", day);
     start_day_card(card_title_text, line_1, calendar_get_day_end_line(day));
     current_screen = DAY_END_CARD_SCREEN;
@@ -390,6 +426,8 @@ static void place_player_at_entrance(void)
         (GetScreenHeight() / 2.0f) + PLAYER_SPAWN_OFFSET_Y_AT_REFERENCE * get_scale()};
     current_direction = NORTH;
     current_estagiario_texture_direction = estagiario_texture[NORTH];
+    player_seat = CHAIR_IDLE;
+    player_seat_time = 0.0f;
     walk_time = 0.0f;
 }
 
@@ -400,10 +438,29 @@ static void open_playable_day(void)
 {
     int day = current_game_state_variables.current_day;
 
+    struct game_state_variables *state = &current_game_state_variables;
+    campaign_scene_day = get_campaign_scene_day(day);
+    if (day >= 41 && state->story_presence_day != day)
+    {
+        HiddenStatisticBands bands = hidden_statistic_bands(&current_hidden_statistic);
+        if (bands.automation >= 2) state->story_absences |= STORY_ABSENT_JULIO;
+        if (day >= 58 && bands.automation >= 3) state->story_absences |= STORY_ABSENT_ANDERSON;
+        state->story_presence_day = day;
+        computer_checkpoint_dirty = true;
+    }
+    npc_set_story_absences(state->story_absences);
+
     // Cada dia jogável traz os colegas em lugares novos, e todos cumprimentam de novo
     npc_arrange_for_day(day, get_scale(), get_map_center());
+    story_scene = 0;
+    if (day == 1)
+    {
+        if (current_game_state_variables.story_scenes & 1) npc_end_reception();
+        else npc_stage_day_one(get_scale(), get_map_center());
+    }
     for (int npc = 0; npc < NPC_COUNT; npc++) npc_greeted_today[npc] = false;
     active_npc_id = -1;
+    active_npc_variant = NULL;
     npc_balloon_open = 0.0f;
     audio_set_game_tension((float)(day - 1) / 80.0f);   // Calmo nos primeiros dias; a tensão da trilha sobe com a história
     computer_set_hint_giver(npc_has_hint(npc_get_daily_hint_owner(day), day)
@@ -414,10 +471,22 @@ static void open_playable_day(void)
     if (day > 1) current_game_state_variables.has_cheat_sheet = true;
 
     reset_computer_progress();
+    bool restored = computer_restore_checkpoint();
+    resume_computer_checkpoint = day != 1 && restored;
+    if (!restored) state->computer_checkpoint[0] = '\0';
     set_hint_note_lines(calendar_get_note_lines(day), CALENDAR_NOTE_LINE_COUNT);
     color_to_fade.a = 0;
     snprintf(card_title_text, sizeof(card_title_text), "Dia %d", day);
-    start_day_card(card_title_text, calendar_get_arrival_line(day, 0), calendar_get_arrival_line(day, 1));
+    const char *first_line = calendar_get_arrival_line(day, 0);
+    const char *second_line = calendar_get_arrival_line(day, 1);
+    HiddenStatisticBands bands = hidden_statistic_bands(&current_hidden_statistic);
+    if (day == 3 && bands.automation >= 1)
+        first_line = "O Suporte está vazio. A luz da fila já está acesa no seu monitor.";
+    if (day == 12 && bands.bond >= 1)
+        second_line = "A IARA reescreveu as regras. No quadro, deixaram um recado oferecendo ajuda.";
+    if (day == 74 && bands.perception == 3)
+        second_line = "O corredor está molhado. O risco do mural reapareceu ao lado do seu teclado.";
+    start_day_card(card_title_text, first_line, second_line);
     current_screen = SCREEN_NONE;
 }
 
@@ -499,9 +568,20 @@ static void toggle_mural_note(void)
     current_game_state_variables.has_cheat_sheet = true;
 
     // O que o jogador examina vira evidência para a prova do Dia 100
-    if (day == 58) current_game_state_variables.evidence_mask |= EVIDENCE_BADGE_AFTER_LEAVING;
-    if (day == 74) current_game_state_variables.evidence_mask |= EVIDENCE_NO_HUMAN_ORDER;
-    if (day == 89) current_game_state_variables.found_mariana = true;
+    unsigned int evidence = day == 58 ? EVIDENCE_BADGE_AFTER_LEAVING :
+                            day == 74 ? EVIDENCE_NO_HUMAN_ORDER : 0;
+    if (evidence && !(current_game_state_variables.evidence_mask & evidence))
+    {
+        current_game_state_variables.evidence_mask |= evidence;
+        notice_show("Registro guardado.", NOTICE_SUCCESS);
+    }
+    if (day == 41) current_game_state_variables.d41_mural_lido = true;
+    if (day == 89 && !current_game_state_variables.found_nicollas_trace)
+    {
+        current_game_state_variables.found_nicollas_trace = true;
+        notice_show("Mapa examinado.", NOTICE_INFO);
+    }
+    if (day >= 12) computer_checkpoint_dirty = true;
 
     if (!current_game_state_variables.is_resolved)
     {
@@ -591,8 +671,8 @@ void initialize_game_loop_variables(void)
 
     // A partida pode recomeçar depois de voltar ao menu
     game_loop_finished = false;
+    replay_requested = false;
     game_loop_quit_requested = false;
-    game_loop_replay_requested = false;
     leave_office = false;
     enter_computer_screen = false;
     nearby_npc_id = -1;
@@ -608,6 +688,15 @@ void initialize_game_loop_variables(void)
 
     // Carrega o mapa do escritório
     in_game_office = LoadTexture("code/assets/sprites/environment/office.png");
+    chair_floor = LoadTexture(OFFICE_CHAIR_FLOOR_PATH);
+    for (unsigned i = 0; i < sizeof(campaign_art) / sizeof(campaign_art[0]); i++)
+        campaign_art[i] = LoadTexture(campaign_art_paths[i]);
+    player_chair = LoadTexture(OFFICE_CHAIR_NORTH_PATH);
+    for (int i = 0; i < SEAT_PLAYER_FRAME_COUNT; i++)
+    {
+        player_seat_frames[i] = LoadTexture(TextFormat(SEAT_PLAYER_FRAME_PATH, i));
+        if (!player_seat_frames[i].id) break;
+    }
 
     // Carregamento e redimensionamento das imagens das dicas de controle na tela
     float rescaling_factor_tip = 1.3f;
@@ -666,8 +755,21 @@ void initialize_game_loop_variables(void)
 /**
  * @brief Desenha os textos do cartão do dia centralizados na tela, aplicando a cor de fade atual.
  */
+static void draw_campaign_art(Texture2D art, unsigned char alpha)
+{
+    if (!art.id) return;
+    float scale = fmaxf((float)GetScreenWidth() / art.width, (float)GetScreenHeight() / art.height);
+    float width = art.width * scale, height = art.height * scale;
+    DrawTexturePro(art, (Rectangle){0, 0, (float)art.width, (float)art.height},
+                   (Rectangle){(GetScreenWidth() - width) / 2, (GetScreenHeight() - height) / 2, width, height},
+                   (Vector2){0}, 0, (Color){255, 255, 255, alpha});
+    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), (Color){8, 9, 16, (unsigned char)(alpha * 0.38f)});
+}
+
 void render_calendar_day_card(void)
 {
+    if (current_screen == ENDING_CARD_SCREEN)
+        draw_campaign_art(campaign_art[ART_FIRST_ENDING + shown_ending], color_to_fade.a);
     float scale = get_ui_scale();
     float title_size = TITLE_FONT_SIZE * scale;
     float title_spacing = DEFAULT_LETTER_SPACING * scale;
@@ -732,6 +834,41 @@ static bool card_skip_requested(void)
  * @brief Gerencia a máquina de estados do cartão do dia, controlando o aparecimento (fade in),
  * o tempo de leitura visível e o desaparecimento (fade out).
  */
+static bool ending_action_requested(void)
+{
+    float scale = get_ui_scale();
+    float width = 255 * scale, height = 44 * scale;
+    float y = GetScreenHeight() * 0.76f;
+    float center = GetScreenWidth() / 2.0f;
+    Rectangle replay = {center - width - 8 * scale, y, width, height};
+    Rectangle menu = {center + 8 * scale, y, width, height};
+    const char *labels[] = {"JOGAR DE NOVO [R]", "MENU [ENTER]"};
+    Rectangle buttons[] = {replay, menu};
+    bool click = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+    bool replay_clicked = false, menu_clicked = false;
+
+    for (int i = 0; i < 2; i++)
+    {
+        Rectangle bounds = buttons[i];
+        bool hovered = CheckCollisionPointRec(GetMousePosition(), bounds);
+        DrawRectangleRounded(bounds, 0.24f, 6, (Color){17, 20, 29, 245});
+        DrawRectangleRoundedLinesEx(bounds, 0.24f, 6, 2, hovered ? GOLD : LIGHTGRAY);
+        float font_size = 21 * scale;
+        float text_width = MeasureTextEx(default_game_font, labels[i], font_size, 0).x;
+        DrawTextEx(default_game_font, labels[i], (Vector2){bounds.x + (width - text_width) / 2,
+                   bounds.y + (height - font_size) / 2}, font_size, 0, WHITE);
+        if (click && hovered)
+        {
+            if (i == 0) replay_clicked = true;
+            else menu_clicked = true;
+        }
+    }
+
+    if (skip_guard_time < CARD_SKIP_GUARD_TIME) return false;
+    replay_requested = replay_clicked || IsKeyPressed(KEY_R);
+    return replay_requested || menu_clicked || IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_ESCAPE);
+}
+
 void handle_calendar_day_card(void)
 {
     bool fading_in_finished = false;
@@ -750,7 +887,7 @@ void handle_calendar_day_card(void)
         // Aumenta gradualmente a opacidade (Alpha) de color_to_fade
         fade_in_texture(MEDIUM_FADE_SPEED, &color_to_fade, &fading_in_finished);
         render_calendar_day_card();
-        if (card_skip_requested())
+        if (current_screen != ENDING_CARD_SCREEN && card_skip_requested())
         {
             timer = DID_NOT_START;
             current_calendar_day_state = FADING_OUT;
@@ -766,6 +903,11 @@ void handle_calendar_day_card(void)
 
     case AWAIT:
         render_calendar_day_card();
+        if (current_screen == ENDING_CARD_SCREEN)
+        {
+            if (ending_action_requested()) current_calendar_day_state = FADING_OUT;
+            break;
+        }
         if (card_skip_requested())
         {
             timer = DID_NOT_START;
@@ -837,19 +979,36 @@ static int utf8_prefix_bytes(const char *text, int characters)
  * ESPAÇO apenas o fecha. Examinar o bilhete não reduz a pontuação (US04). Depois de concluir
  * a tarefa, o computador deixa de abrir e a porta de vidro encerra o dia.
  */
+static const char *npc_conversation_line(void)
+{
+    if (active_npc_variant && active_npc_dialogue_line == (int)active_npc_first_today)
+        return active_npc_variant;
+    int statistic_line = active_npc_dialogue_line - (active_npc_first_today ? 1 : 0);
+    if (statistic_line == 0)
+    {
+        const char *variant = npc_get_statistic_day_line(active_npc_id, current_game_state_variables.current_day,
+                                                         &current_hidden_statistic);
+        if (variant) return variant;
+    }
+    return npc_get_dialogue_line(active_npc_id, current_game_state_variables.current_day,
+                                 active_npc_first_today, active_npc_dialogue_line);
+}
+
 void handle_map_interactables(void)
 {
     // Checa colisão AABB (Axis-Aligned Bounding Box) entre o jogador e o computador
     is_near_computer = CheckCollisionRecs(estagiario_collision_rec, estagiario_computer_collision_rectangle);
     is_near_hint = calendar_has_investigation(current_game_state_variables.current_day) &&
                    is_hitbox_on_hint(estagiario_collision_rec, get_scale(), get_map_center());
-    is_near_exit = current_game_state_variables.is_resolved && CheckCollisionRecs(estagiario_collision_rec, get_exit_zone());
+    is_near_exit = can_leave_today() && CheckCollisionRecs(estagiario_collision_rec, get_exit_zone());
     nearby_npc_id = npc_get_nearby(estagiario_collision_rec, get_scale());
+    if (is_near_hint || is_near_exit || (is_near_computer && !can_leave_today()))
+        nearby_npc_id = -1;
 
     if (active_npc_id >= 0)
     {
         int day = current_game_state_variables.current_day;
-        const char *line = npc_get_dialogue_line(active_npc_id, day, active_npc_first_today, active_npc_dialogue_line);
+        const char *line = npc_conversation_line();
         float line_length = (float)utf8_length(line);
 
         // A fala aparece letra por letra; ESPAÇO, ENTER ou clique completam a fala na hora e, com ela
@@ -879,7 +1038,7 @@ void handle_map_interactables(void)
         return;
     }
 
-    if (!IsKeyPressed(KEY_SPACE)) return;
+    if (player_seat != CHAIR_IDLE || !IsKeyPressed(KEY_SPACE)) return;
 
     if (is_hint_note_open())
     {
@@ -889,7 +1048,28 @@ void handle_map_interactables(void)
     {
         // Na primeira conversa do dia o NPC cumprimenta (no Dia 1, dá as boas-vindas); depois só fala do dia
         active_npc_id = nearby_npc_id;
+        npc_face_player(active_npc_id, get_scale(), estagiario_collision_rec);
         active_npc_first_today = !npc_greeted_today[nearby_npc_id];
+        active_npc_variant = NULL;
+        int day = current_game_state_variables.current_day;
+        HiddenStatisticBands bands = hidden_statistic_bands(&current_hidden_statistic);
+        if (day == 3 && bands.perception >= 1 && active_npc_id == NPC_NICOLLAS && active_npc_first_today)
+        {
+            Rectangle mural = get_hint_item_rectangle(get_scale(), get_map_center());
+            Rectangle feet = npc_get_hitbox(active_npc_id, get_scale());
+            Vector2 npc = {feet.x + feet.width / 2, feet.y + feet.height / 2};
+            if (hypotf(npc.x - mural.x - mural.width, npc.y - mural.y - mural.height / 2) <= 150 * get_scale())
+                active_npc_variant = "Tem um risco novo na moldura. Jurava que eu tinha limpado isso ontem.";
+        }
+        if (day == 41 && bands.perception >= 2 && active_npc_id == NPC_NICOLLAS)
+        {
+            Vector2 center = get_map_center(), npc = npc_get_position(active_npc_id);
+            float scale = get_scale();
+            if (hypotf(npc.x - center.x + 408 * scale, npc.y - center.y - 94 * scale) <= 125 * scale)
+                active_npc_variant = "Esse risco perto do arquivo é igual ao do mural. Você viu também?";
+        }
+        if (day == 58 && bands.bond == 2 && active_npc_id == NPC_LAURA)
+            active_npc_variant = "Se quiser, a gente confere esses nomes juntos.";
         npc_greeted_today[nearby_npc_id] = true;
         npc_balloon_npc = active_npc_id;
         active_npc_dialogue_line = 0;
@@ -903,10 +1083,10 @@ void handle_map_interactables(void)
     {
         leave_office = true;
     }
-    else if (is_near_computer && !current_game_state_variables.is_resolved)
+    else if (is_near_computer && !can_leave_today())
     {
-        // Se estiver ao alcance e pressionar ESPAÇO, ativa a flag para abrir o computador
-        enter_computer_screen = true;
+        if (player_seat_frames[SEAT_PLAYER_FRAME_COUNT - 1].id) player_seat = CHAIR_APPROACH;
+        else enter_computer_screen = true;
     }
 }
 
@@ -979,6 +1159,63 @@ static int get_player_movement_obstacles(Rectangle obstacles[])
  * Suporta movimentação em 8 direções. Aplica normalização escalar (0.7071 ≈ 1/√2) para evitar que
  * a movimentação na diagonal seja mais rápida do que a movimentação em eixos únicos.
  */
+static void update_player_seating(float dt)
+{
+    if (player_seat == CHAIR_SITTING)
+    {
+        player_seat_time += dt;
+        if (player_seat_time >= SEAT_PLAYER_FRAME_COUNT * SEAT_FRAME_SECONDS)
+        {
+            player_seat_time = SEAT_PLAYER_FRAME_COUNT * SEAT_FRAME_SECONDS;
+            player_seat = CHAIR_SEATED;
+            enter_computer_screen = true;
+        }
+        return;
+    }
+    if (player_seat == CHAIR_LEAVING)
+    {
+        player_seat_time = fmaxf(0.0f, player_seat_time - dt);
+        if (player_seat_time == 0.0f) player_seat = CHAIR_IDLE;
+        return;
+    }
+    if (player_seat != CHAIR_APPROACH) return;
+
+    // Alcança a faixa livre ao sul do móvel, depois centraliza na cadeira.
+    Vector2 target = player_chair_entry();
+    float dx = target.x - current_estagiario_position.x;
+    float dy = target.y - current_estagiario_position.y;
+    bool horizontal = fabsf(dy) < 0.1f;
+    if (horizontal && fabsf(dx) < 0.1f)
+    {
+        current_estagiario_position = target;
+        current_direction = NORTH;
+        current_estagiario_texture_direction = estagiario_texture[NORTH];
+        player_seat_time = 0.0f;
+        player_seat = CHAIR_SITTING;
+        walk_time = 0.0f;
+        update_collision_rec();
+        return;
+    }
+    Rectangle obstacles[OBSTACLE_COUNT + NPC_COUNT];
+    int count = get_player_movement_obstacles(obstacles);
+    float remaining = horizontal ? dx : dy;
+    float step = copysignf(fminf(fabsf(remaining), 160.0f * get_scale() * fminf(dt, 0.05f)), remaining);
+    float *axis = horizontal ? &current_estagiario_position.x : &current_estagiario_position.y;
+    update_collision_rec();
+    float next = move_axis(*axis, step, estagiario_collision_rec, horizontal, obstacles, count);
+    if (step != 0.0f && next == *axis)
+    {
+        player_seat = CHAIR_IDLE;
+        walk_time = 0.0f;
+        return;
+    }
+    *axis = next;
+    walk_time += dt;
+    current_direction = horizontal ? (dx < 0 ? WEST : EAST) : (dy < 0 ? NORTH : SOUTH);
+    current_estagiario_texture_direction = estagiario_texture[current_direction];
+    update_collision_rec();
+}
+
 void handle_player_input(void)
 {
     float speed = DEFAULT_PLAYER_MOVEMENT_SPEED * get_scale();
@@ -1053,6 +1290,20 @@ static Color character_light(Vector2 foot)
 void render_player(void)
 {
     float size = get_player_size();
+    float pixel = size / CHARACTER_SPRITE_SIZE;
+    bool seated = player_seat >= CHAIR_SITTING;
+    int frame = (int)(player_seat_time / SEAT_FRAME_SECONDS);
+    if (frame >= SEAT_PLAYER_FRAME_COUNT) frame = SEAT_PLAYER_FRAME_COUNT - 1;
+    Texture2D chair = seated ? player_seat_frames[frame] : player_chair;
+    if (chair.id)
+    {
+        Rectangle source = {0, 0, chair.width, chair.height};
+        Rectangle target = scale_reference_rect((Rectangle){
+            seated ? -SEAT_ORIGIN_X : -CHAIR_ORIGIN_X, seated ? -SEAT_ORIGIN_Y : -CHAIR_ORIGIN_Y,
+            source.width, source.height}, pixel, player_chair_anchor());
+        DrawTexturePro(chair, source, target, (Vector2){0}, 0.0f, color_to_fade);
+        if (seated) return;
+    }
 
     // Parado desenha a textura da direção; andando troca pelo frame do andar
     Texture2D texture = current_estagiario_texture_direction;
@@ -1127,6 +1378,7 @@ void render_game_loop_escritorio(void)
     Color office_tint = office_symptoms_light_tint(&symptoms, brightness, color_to_fade.a, now);
 
     DrawTexturePro(in_game_office, source, dest, (Vector2){0, 0}, 0.0f, office_tint);
+    if (chair_floor.id) DrawTexturePro(chair_floor, source, dest, (Vector2){0}, 0.0f, office_tint);
 
     office_scene_ambient = office_tint;
     office_scene_rect = dest;
@@ -1165,6 +1417,7 @@ static void handle_day_transition(void)
 
     if (current_game_state_variables.day_type == JUMP_DAY)
     {
+        draw_campaign_art(campaign_art[ART_JUMP], 255);
         draw_transition_text(TextFormat("Dia %d", day), center_y, TITLE_FONT_SIZE * scale, WHITE);
 
         if (transition_time >= jump_day_time) advance_to_next_day();
@@ -1172,16 +1425,16 @@ static void handle_day_transition(void)
     }
 
     color_to_fade.a = 255;
-    render_game_loop_escritorio();
-    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), (Color){0, 0, 0, FLASH_DIM_ALPHA});
+    draw_campaign_art(campaign_art[ART_FLASH], 255);
     draw_transition_text(TextFormat("Dia %d", day), center_y - (SUBTITLE_FONT_SIZE * scale * 3.0f), TITLE_FONT_SIZE * scale, WHITE);
     draw_transition_text(calendar_get_flash_text(day), center_y, SUBTITLE_FONT_SIZE * scale, WHITE);
 
     if (transition_time < FLASH_MIN_TIME) return;
 
-    draw_transition_text("ESPAÇO ou clique para continuar", center_y + (SUBTITLE_FONT_SIZE * scale * 3.0f), SUBTITLE_FONT_SIZE * scale * 0.7f, GRAY);
+    draw_transition_text("ESPAÇO, ENTER ou clique para continuar", center_y + (SUBTITLE_FONT_SIZE * scale * 3.0f), SUBTITLE_FONT_SIZE * scale * 0.7f, GRAY);
 
-    if (IsKeyPressed(KEY_SPACE) || IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) advance_to_next_day();
+    if (IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ENTER) ||
+        IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) advance_to_next_day();
 }
 
 /**
@@ -1245,9 +1498,7 @@ static void render_computer_backdrop(void)
 static void render_office_scene(void)
 {
     render_game_loop_escritorio();
-    // As bordas suavizadas dos personagens não podem deixar a textura da cena translúcida: só a cor
-    // se mistura, e o alfa continua cheio. Sem isso o fundo vaza quando a cena é desenhada na tela.
-    // Vem depois do escritório, que troca o modo de mistura nos sintomas.
+    // Mantém o alfa da cena ao desenhar as bordas suavizadas dos personagens.
     rlSetBlendFactorsSeparate(RL_SRC_ALPHA, RL_ONE_MINUS_SRC_ALPHA, RL_ONE, RL_ONE_MINUS_SRC_ALPHA,
                               RL_FUNC_ADD, RL_FUNC_ADD);
     BeginBlendMode(BLEND_CUSTOM_SEPARATE);
@@ -1273,7 +1524,12 @@ static void render_office_with_glass(void)
     }
     BeginTextureMode(glass_scene);
     ClearBackground(BG_COLOR);
+    // Mantém a opacidade da cena ao compor sombras semitransparentes das cadeiras.
+    rlSetBlendFactorsSeparate(RL_SRC_ALPHA, RL_ONE_MINUS_SRC_ALPHA,
+                              RL_ONE, RL_ONE_MINUS_SRC_ALPHA, RL_FUNC_ADD, RL_FUNC_ADD);
+    BeginBlendMode(BLEND_CUSTOM_SEPARATE);
     render_office_scene();
+    EndBlendMode();
     EndTextureMode();
 
     Rectangle source = {0, 0, (float)width, -(float)height};
@@ -1444,7 +1700,7 @@ void render_interact_arrow(Rectangle target)
  *
  * @param feet Retângulo dos "pés" do objeto, em coordenadas da tela (o anel acompanha a largura dele).
  */
-static void render_interaction_marker(Rectangle feet)
+static void render_interaction_marker(Rectangle feet, const char *label)
 {
     float scale = get_scale();
     float pulse = 0.5f + (0.5f * sinf((float)GetTime() * 4.0f));
@@ -1460,7 +1716,6 @@ static void render_interaction_marker(Rectangle feet)
 
     // Tecla ESPAÇO pequena, acima do objeto, subindo e descendo devagar
     float font_size = 13.0f * scale;
-    const char *label = "ESPAÇO";
     float text_width = MeasureTextEx(default_game_font, label, font_size, 0.0f).x;
     float key_width = text_width + (12.0f * scale);
     float key_height = font_size + (7.0f * scale);
@@ -1540,11 +1795,368 @@ static void draw_typed_dialogue(const char *text, Vector2 position, float max_wi
     }
 }
 
+/* Cenas do Dia 1: reaproveitam o diálogo e o desenho do escritório.
+ * O computador fica carregado, mas não recebe update/input durante 01M. */
+static bool campaign_scene_completed(StoryPhase phase)
+{
+    return (current_game_state_variables.story_later_scenes &
+            story_scene_bit(current_game_state_variables.current_day, phase)) != 0;
+}
+
+static int campaign_actor(int actor)
+{
+    if (actor == NPC_JULIO && !npc_is_present(actor)) return NPC_ZITO;
+    return actor;
+}
+
+static const int *campaign_actors(int scene)
+{
+    return scene == CAMPAIGN_ARRIVAL ? campaign_scene_day->arrival_actors : campaign_scene_day->finish_actors;
+}
+
+static int story_first_actor(int scene)
+{
+    if (scene >= CAMPAIGN_ARRIVAL)
+        return campaign_actor(scene == CAMPAIGN_MIDDLE ? campaign_scene_day->middle_actor : campaign_actors(scene)[0]);
+    if (scene == DAY3_ARRIVAL || scene == DAY3_END) return NPC_VASCO;
+    if (scene == DAY3_TRIAGE) return NPC_ZITO;
+    if (scene == DAY3_LUNCH) return NPC_LAURA;
+    return NPC_JV;
+}
+
+static int story_second_actor(int scene)
+{
+    if (scene >= CAMPAIGN_ARRIVAL)
+    {
+        if (scene == CAMPAIGN_MIDDLE) return -1;
+        const int *actors = campaign_actors(scene);
+        return campaign_actor(actors[1] != actors[0] ? actors[1] : actors[2]);
+    }
+    if (scene == DAY3_ARRIVAL || scene == DAY3_END) return NPC_ZITO;
+    return scene == 4 ? NPC_VASCO : -1;
+}
+
+static const char *day_three_story_text(void)
+{
+    int outcome = computer_first_outcome();
+    switch (story_scene)
+    {
+    case DAY3_ARRIVAL:
+        if (story_line == 0) return "A fila do Tiago caiu pra você. O aviso diz que ele pediu folga.";
+        if (story_line == 1) return "Eu fico no TI. Se a fila travar, me chama antes de recarregar.";
+        if (story_line == 2) return "A norma mudou. Confere o bilhete antes de mandar.";
+        if (story_bands.perception >= 1) return "Compara o bilhete com o que aparecer na mesa.";
+        if (story_bands.automation >= 1) return "A luz da fila já acendeu. Ainda falta você decidir.";
+        return "Quando abrir a fila, dá uma olhada no bilhete.";
+    case DAY3_TRIAGE:
+        if (outcome == TASK_TAKEN_OVER_BY_IARA) return "A IARA assumiu a fila. Pelo menos ficou um registro.";
+        if (story_line == 0) return "Deixa eu ver se a fila voltou a responder.";
+        if (story_line == 2) return "Quando terminar, confere o relatório. Eu fico por aqui.";
+        if (outcome == TASK_PENDING) return "A mesa devolveu a tentativa. Você pode conferir as condições sem refazer tudo.";
+        if (outcome == TASK_SENT_UNCHECKED) return "Já saiu? Quando abrir o relatório, a gente vê o que foi enviado.";
+        if (outcome == TASK_SOLVED_WITH_IARA) return "Você comparou antes de mandar. Boa. A mesa aceitou.";
+        return "A mesa aceitou. Agora dá pra seguir.";
+    case DAY3_LUNCH:
+        return story_line == 0 ? "Tem lugar aqui. A Júlia disse que você podia vir." :
+                                 "Vem. O relatório pode esperar uns minutos.";
+    case DAY3_END:
+        if (story_line == 0) return "Vou registrar o fechamento da fila.";
+        if (story_line == 2) return "Ninguém confirmou quando o Tiago volta.";
+        if (story_line == 3)
+        {
+            if (!computer_day_three_choice_recorded()) return "Vou perguntar pra Júlia se alguém recebeu notícia dele.";
+            if (computer_day_three_lunch_accepted())
+            {
+                if (current_game_state_variables.story_scenes & DAY3_LUNCH)
+                    return "A Júlia disse que vocês conseguiram fazer uma pausa.";
+                return "Vi que você respondeu à Júlia.";
+            }
+            return "A Júlia deixou o convite. Se quiser falar com ela outro dia, eu passo o recado.";
+        }
+        if (outcome == TASK_TAKEN_OVER_BY_IARA) return "A IARA assumiu. O relatório mostra como a fila foi fechada.";
+        if (outcome == TASK_SENT_UNCHECKED)
+            return computer_first_answer_correct() ? "A triagem saiu certa. A sugestão foi enviada sem conferência." :
+                  "O portal ficou parado. A sugestão saiu sem conferência.";
+        if (outcome == TASK_SOLVED_WITH_IARA) return "Você conferiu a sugestão antes de mandar. A triagem fechou.";
+        if (outcome == TASK_SOLVED_ALONE) return "Você fechou a triagem. Eu pego o que chegou pro TI.";
+        return "O relatório já registrou o que saiu.";
+    }
+    return "";
+}
+
+static int story_speaker(void)
+{
+    if (story_scene >= CAMPAIGN_ARRIVAL)
+        return story_scene == CAMPAIGN_MIDDLE ? story_first_actor(story_scene) :
+               campaign_actor(campaign_actors(story_scene)[story_line]);
+    if (story_scene == DAY3_ARRIVAL) return story_line % 2 == 0 ? NPC_VASCO : NPC_ZITO;
+    if (story_scene == DAY3_END) return story_line == 1 ? NPC_ZITO : NPC_VASCO;
+    if (story_scene >= DAY3_ARRIVAL) return story_first_actor(story_scene);
+    if (story_scene == 1) return story_line < 2 ? NPC_LAURA : NPC_JV;
+    if (story_scene == 4) return story_line == 1 ? NPC_JV : NPC_VASCO;
+    return NPC_JV;
+}
+static const char *campaign_finish_text(void)
+{
+    const struct game_state_variables *state = &current_game_state_variables;
+    int choice = computer_story_day_choice();
+    int outcome = computer_first_outcome();
+    bool taken = computer_failsafe_triggered;
+    switch (state->current_day)
+    {
+    case 12:
+        if (story_line == 0) return "Sônia recebeu o fechamento?";
+        if (story_line == 2) return "Vou perguntar ao RH quem estava nessa mesa.";
+        if (taken) return "A IARA assumiu a mesa. O relatório é o que temos agora.";
+        if (choice == 1) return "O pedido de revisão foi registrado. Quero comparar com a primeira versão.";
+        if (choice == 0) return "Essa foi a versão assinada? Quero comparar com a primeira.";
+        return "Quero comparar o relatório com a primeira versão.";
+    case 27:
+        if (story_line == 0) return "Ainda ouço água por aqui.";
+        if (story_line == 1)
+        {
+            if (choice == 0) return "O Caio conseguiu conversar com você?";
+            if (choice == 1) return "Se o Caio procurar você, eu aviso que o turno já acabou.";
+            return "Ainda tem gente trabalhando por aqui.";
+        }
+        return outcome != TASK_PENDING && !computer_first_answer_correct()
+            ? "Vou guardar uma cópia da ata para conferir." : "Vou guardar a ata.";
+    case 41:
+        if (story_line == 2) return "Esse registro tinha dado pessoal. Precisamos conferir o que foi enviado.";
+        if (story_line == 1)
+        {
+            if (state->d41_mural_lido) return "Você viu a etiqueta do prédio. Vou guardar a caixa.";
+            return taken ? "Eu ainda preciso guardar a caixa." : "Tem uma etiqueta no mural. Eu ainda preciso guardar a caixa.";
+        }
+        if (outcome == TASK_PENDING) return "O relatório guardou o resultado do treino.";
+        return computer_first_answer_correct()
+            ? "A ficha aceitou o conjunto. O teste ainda precisa ser acompanhado."
+            : "O conjunto saiu diferente do pedido. Quero ver quais dados entraram.";
+    case 58:
+        if (story_line == 2) return "Eu deixo a lista aberta pra auditoria.";
+        if (story_line == 1)
+            return choice == 0 ? "Você ouviu algo diferente hoje?" :
+                   choice == 1 ? "Se a Bruna procurar você, eu aviso." : "Vou conferir quem ainda está no escritório.";
+        if (state->evidence_mask & EVIDENCE_BADGE_AFTER_LEAVING)
+            return "O registro do Diego mostra uma passagem depois da saída dele.";
+        return taken ? "Tem um registro preso no mural." : "Tem um registro preso no mural. Você pode conferir antes de ir.";
+    case 74:
+        if (story_line == 0)
+        {
+            if (state->evidence_mask & EVIDENCE_NO_HUMAN_ORDER)
+                return "O bilhete fala que ninguém autorizou às 03:12. Guarda essa informação.";
+            return taken ? "Tem um bilhete no mural." : "Tem um bilhete no mural. Se puder, dá uma olhada.";
+        }
+        return (outcome == TASK_SENT_UNCHECKED || outcome == TASK_TAKEN_OVER_BY_IARA) && !computer_first_answer_correct()
+            ? "O relatório registrou uma autorização humana. Não sei quem confirmou."
+            : "Vou encaminhar o relatório.";
+    case 89:
+        if (story_line == 1)
+            return taken ? "O expediente terminou." :
+                state->found_nicollas_trace ? "A marca ficou no mapa antigo. Guarda o que você viu." : "Se for olhar, eu espero aqui.";
+        return state->found_nicollas_trace ? "Você achou o mapa. A escada vai além do que desenharam ali."
+            : "Tem um mapa no mural. A escada tá marcada a lápis.";
+    case 100:
+        if (story_line == 1) return "A reunião terminou. Vem.";
+        return state->proof_succeeded ? "A contradição ficou registrada. A resposta continua na tela."
+            : "O relatório já foi enviado.";
+    }
+    return "";
+}
+
+static const char *campaign_story_text(void)
+{
+    int day = current_game_state_variables.current_day;
+    if (story_scene == CAMPAIGN_FINISH) return campaign_finish_text();
+    if (story_scene == CAMPAIGN_MIDDLE)
+    {
+        TaskOutcome outcome = computer_story_middle_reaction();
+        if (outcome == TASK_TAKEN_OVER_BY_IARA) return campaign_scene_day->middle[4];
+        if (!story_line) return campaign_scene_day->middle[0];
+        if (outcome == TASK_PENDING) return campaign_scene_day->middle[1];
+        if (outcome == TASK_SENT_UNCHECKED) return campaign_scene_day->middle[3];
+        return campaign_scene_day->middle[2];
+    }
+    if (story_line == 2)
+    {
+        if (day == 12 && story_bands.bond >= 1) return "Deixaram um recado no quadro. Se precisar, me chama.";
+        if (day == 41 && story_bands.automation >= 2) return "A fila já abriu. Ainda dá pra revisar o que entra.";
+        if (day == 74 && story_bands.perception == 3) return "Esse risco perto do teclado apareceu de novo.";
+        if (day == 89 && story_bands.bond >= 1) return "Se quiser, eu fico por perto enquanto você confere.";
+        if (day == 100 && current_game_state_variables.evidence_mask) return "Você tem registros para consultar.";
+    }
+    if (story_line == 1 && day == 100 && story_bands.bond >= 1)
+        return "Se precisar parar um instante, eu espero aqui.";
+    return campaign_scene_day->arrival[story_line];
+}
+
+static const char *story_text(void)
+{
+    static const char *arrival[] = {
+        "Chegou agora? Sou a Laura, do RH.",
+        "Sua mesa é a da salinha, ali à direita. Se precisar de mim, me chama.",
+        "Sou a JV, dos modelos. Abre a fila e compara os pedidos com as respostas.",
+        "Se pedir ajuda, a IARA sugere. Testa se a resposta atende ao chamado antes de mandar."};
+    if (story_scene >= CAMPAIGN_ARRIVAL) return campaign_story_text();
+    if (story_scene >= DAY3_ARRIVAL) return day_three_story_text();
+    if (story_scene == 1) return arrival[story_line];
+    if (story_scene == 4)
+    {
+        if (story_line == 0) return "Fechou o relatório do primeiro turno?";
+        if (story_line == 2) return "Certo, vou marcar como entregue. Pode ir por hoje.";
+        if (computer_failsafe_triggered) return "A IARA terminou a fila. Quero separar no relatório o que ela enviou.";
+        return computer_mostly_unchecked()
+            ? "Ficaram sugestões sem conferência. Amanhã eu quero comparar o que saiu com os pedidos."
+            : "Quero conferir se o relatório bate com os chamados que chegaram hoje.";
+    }
+    if (computer_first_outcome() == TASK_TAKEN_OVER_BY_IARA)
+        return "A IARA terminou a fila. Vamos ver o que ela registrou?";
+    if (story_line == 0) return "Já fechou o da Bruna?";
+    if (story_line == 2) return "O do Caio vem agora. Se pintar dúvida, eu tô ali.";
+    if (computer_first_outcome() == TASK_SOLVED_ALONE)
+        return "Você resolveu direto. Qual foi o detalhe que decidiu pra você?";
+    if (computer_first_outcome() == TASK_SOLVED_WITH_IARA)
+        return "Você conferiu a sugestão. Boa. Deu pra ver de onde ela tirou a resposta?";
+    return "Já foi? Depois me mostra a resposta no relatório. Quero conferir o que saiu.";
+}
+static void begin_story_scene(int scene, bool return_computer)
+{
+    color_to_fade.a = 255;
+    story_scene = scene;
+    story_bands = hidden_statistic_bands(&current_hidden_statistic);
+    story_line = 0;
+    story_return_computer = return_computer;
+    story_input_guard = true;
+    story_action_time = 0;
+    story_approaching = scene != 1;
+    npc_typed_characters = 0;
+    npc_balloon_open = 0;
+    active_npc_id = -1;
+    if (story_approaching)
+    {
+        npc_begin_approach(story_first_actor(scene));
+        int second = story_second_actor(scene);
+        if (second >= 0) npc_begin_approach(second);
+    }
+    current_screen = IN_GAME_SCREEN;
+    update_iara_voice_typing(false);
+    computer_suspend_input();
+}
+static void update_story_scene(float dt)
+{
+    if (!IsWindowFocused()) { story_input_guard = true; return; }
+    if (story_approaching)
+    {
+        if (player_seat == CHAIR_LEAVING) update_player_seating(dt);
+        float scale = get_scale();
+        Vector2 center = get_map_center();
+        Vector2 target = {estagiario_collision_rec.x + estagiario_collision_rec.width / 2,
+                          estagiario_collision_rec.y + estagiario_collision_rec.height / 2};
+        if (player_seat == CHAIR_SEATED) target = player_chair_anchor();
+        int first = story_first_actor(story_scene);
+        int second = story_second_actor(story_scene);
+        bool first_ready = npc_approach_player(first, second, dt, scale, center,
+                                            map_collision_rec, office_obstacles, OBSTACLE_COUNT,
+                                            estagiario_collision_rec, target);
+        bool second_ready = second < 0 || (story_action_time >= STORY_SECOND_ACTOR_DELAY &&
+            npc_approach_player(second, first, dt, scale, center, map_collision_rec, office_obstacles,
+                                OBSTACLE_COUNT, estagiario_collision_rec, target));
+        story_action_time += dt;
+        if ((!first_ready || !second_ready || player_seat == CHAIR_LEAVING) && story_action_time < STORY_APPROACH_LIMIT) return;
+        if (!first_ready)
+        {
+            TraceLog(LOG_WARNING, "IARA: sem aproximacao do primeiro ator na cena %d", story_scene);
+            npc_face_player(first, scale, estagiario_collision_rec);
+        }
+        if (!second_ready)
+        {
+            TraceLog(LOG_WARNING, "IARA: sem aproximacao do segundo ator na cena %d", story_scene);
+            npc_face_player(second, scale, estagiario_collision_rec);
+        }
+        npc_balloon_npc = story_speaker();
+        story_approaching = false;
+        // A entrada deste quadro pertence à preparação. A próxima pressão já é da fala.
+        story_input_guard = false;
+        return;
+    }
+    int speaker = story_speaker();
+    npc_balloon_npc = speaker;
+    Vector2 look_at = current_estagiario_position;
+    if (story_scene == 1 && (story_line == 1 || story_line == 3))
+        look_at = (Vector2){estagiario_computer_collision_rectangle.x, estagiario_computer_collision_rectangle.y};
+    if (story_scene >= CAMPAIGN_ARRIVAL &&
+        (story_scene == CAMPAIGN_MIDDLE || (story_scene == CAMPAIGN_ARRIVAL && story_line == 2)))
+        look_at = player_chair_anchor();
+    if (story_scene == 1 || story_scene >= CAMPAIGN_ARRIVAL) npc_face_scene(speaker, look_at);
+    if (story_scene == 1 && story_action_time < 0.3f)
+    {
+        float movement_dt = fminf(dt, 0.3f - story_action_time);
+        if (story_scene == 1 && story_line == 0)
+            npc_step_scene(NPC_LAURA, (Vector2){-40 * get_scale() * movement_dt, 0}, get_scale(),
+                           map_collision_rec, office_obstacles, OBSTACLE_COUNT, estagiario_collision_rec);
+        if (story_scene == 1 && story_line == 3)
+            npc_step_scene(NPC_LAURA, (Vector2){40 * get_scale() * movement_dt, 0}, get_scale(),
+                           map_collision_rec, office_obstacles, OBSTACLE_COUNT, estagiario_collision_rec);
+        story_action_time += movement_dt;
+    }
+    const char *line = story_text();
+    int length = utf8_length(line);
+    npc_typed_characters = fminf(length, npc_typed_characters + dt * NPC_TYPE_SPEED);
+    bool input = IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ENTER) || IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+    if (story_input_guard) { story_input_guard = false; return; }
+    if (!input) return;
+    if (npc_typed_characters < length) { npc_typed_characters = length; return; }
+    int count = story_scene == 1 ? 4 : story_scene == 2 && computer_first_outcome() == TASK_TAKEN_OVER_BY_IARA ? 1 : 3;
+    if (story_scene == DAY3_ARRIVAL || story_scene == DAY3_END) count = 4;
+    if (story_scene == DAY3_LUNCH) count = 2;
+    if (story_scene == DAY3_TRIAGE && computer_first_outcome() == TASK_TAKEN_OVER_BY_IARA) count = 1;
+    if (story_scene == CAMPAIGN_ARRIVAL) count = 3;
+    if (story_scene == CAMPAIGN_MIDDLE) count = computer_failsafe_triggered ? 1 : 2;
+    if (story_scene == CAMPAIGN_FINISH)
+    {
+        int day = current_game_state_variables.current_day;
+        count = day == 12 || day == 27 || day == 58 ? 3 : 2;
+        if (day == 41 && computer_first_exposed_personal_data()) count = 3;
+    }
+    if (++story_line < count) { npc_typed_characters = 0; story_action_time = 0; return; }
+    unsigned int completed = story_scene;
+    if (completed >= CAMPAIGN_ARRIVAL)
+        current_game_state_variables.story_later_scenes |=
+            story_scene_bit(current_game_state_variables.current_day, completed - CAMPAIGN_ARRIVAL);
+    else
+        current_game_state_variables.story_scenes |= completed;
+    computer_checkpoint_dirty = true;
+    story_scene = 0;
+    npc_balloon_open = 0;
+    if (completed == 1)
+    {
+        npc_face_scene(speaker, (Vector2){GetScreenWidth()/2.0f, 0});
+        npc_end_reception();
+    }
+    else
+    {
+        npc_finish_approach(story_first_actor(completed));
+        int second = story_second_actor(completed);
+        if (second >= 0 && second != story_first_actor(completed)) npc_finish_approach(second);
+    }
+    if (story_return_computer)
+    {
+        if (completed == CAMPAIGN_MIDDLE) computer_complete_story_middle();
+        current_screen = COMPUTER_SCREEN;
+    }
+    else if (completed == CAMPAIGN_MIDDLE) begin_story_scene(CAMPAIGN_FINISH, false);
+    else if (completed == CAMPAIGN_FINISH &&
+             (computer_failsafe_triggered || current_game_state_variables.current_day == TOTAL_GAME_DAYS)) finish_day();
+    else if (completed == 2) begin_story_scene(4, false);
+    else if (completed == DAY3_TRIAGE) begin_story_scene(DAY3_END, false);
+    else if ((completed == 4 || completed == DAY3_END) && computer_failsafe_triggered) finish_day();
+}
+
 // Balão de fala do NPC: abre deslizando de baixo com um leve quique, e a fala é digitada.
 static void render_npc_dialogue(void)
 {
-    float target = active_npc_id >= 0 ? 1.0f : 0.0f;
-    float step = GetFrameTime() * NPC_BALLOON_SPEED;
+    float target = (active_npc_id >= 0 || (story_scene && !story_approaching)) ? 1.0f : 0.0f;
+    float step = IsWindowFocused() ? GetFrameTime() * NPC_BALLOON_SPEED : 0;
 
     if (npc_balloon_open < target) npc_balloon_open = fminf(target, npc_balloon_open + step);
     else if (npc_balloon_open > target) npc_balloon_open = fmaxf(target, npc_balloon_open - step * 1.4f);
@@ -1562,9 +2174,8 @@ static void render_npc_dialogue(void)
     unsigned char alpha = (unsigned char)(255.0f * fminf(1.0f, progress * 1.6f));
     Rectangle panel = {0, screen_height - panel_height + slide, (float)GetScreenWidth(), panel_height};
     const NpcDefinition *definition = npc_get_definition(npc_balloon_npc);
-    int day = current_game_state_variables.current_day;
-    const char *line = active_npc_id >= 0
-        ? npc_get_dialogue_line(active_npc_id, day, active_npc_first_today, active_npc_dialogue_line)
+    const char *line = story_scene ? story_text() : active_npc_id >= 0
+        ? npc_conversation_line()
         : NULL;
 
     if (definition == NULL) return;
@@ -1658,115 +2269,26 @@ static void render_high_contrast_outlines(void)
 }
 
 /**
- * @brief Abre a escolha que vem depois do cartão do final, com JOGAR NOVAMENTE já marcado.
- */
-static void open_ending_choice(void)
-{
-    ending_choice_selected = ENDING_CHOICE_PLAY_AGAIN;
-    ending_choice_wait = 0.0f;
-    current_screen = ENDING_CHOICE_SCREEN;
-}
-
-/**
- * @brief Executa uma opção da escolha depois do final. Jogar novamente e voltar ao menu encerram a
- * partida (a máquina de estados salva o progresso); sair do jogo pede confirmação antes.
- */
-static void choose_ending_option(int option)
-{
-    if (option != ENDING_CHOICE_QUIT) SetMouseCursor(MOUSE_CURSOR_ARROW);
-
-    if (option == ENDING_CHOICE_PLAY_AGAIN)
-    {
-        game_loop_replay_requested = true;
-        game_loop_finished = true;
-    }
-    else if (option == ENDING_CHOICE_MENU)
-    {
-        game_loop_finished = true;
-    }
-    else
-    {
-        confirm_open("SAIR PARA A ÁREA DE TRABALHO?", "O jogo fecha. Da próxima vez, este save recomeça a campanha do Dia 1.", "SAIR", "CONTINUAR", true);
-    }
-}
-
-/**
- * @brief Tela depois do final da campanha: o jogador escolhe entre jogar de novo e sair,
- * em vez de voltar ao menu sem saber que o save recomeça do Dia 1.
- */
-static void handle_ending_choice(void)
-{
-    static const char *labels[ENDING_CHOICE_COUNT] = {"JOGAR NOVAMENTE", "SAIR PARA O MENU", "SAIR PARA A ÁREA DE TRABALHO"};
-    float scale = get_ui_scale();
-    float width = (float)GetScreenWidth();
-    float height = (float)GetScreenHeight();
-    float label_size = ui_font_size(1.3f);   // O mesmo tamanho que ui_draw_button usa no rótulo
-    float button_width = 520.0f * scale;
-    float button_height = 70.0f * scale;
-    float top = height * 0.46f;
-    Rectangle buttons[ENDING_CHOICE_COUNT];
-    int hovered = -1;
-
-    // Os botões ficam da largura do rótulo mais comprido, com folga dos dois lados, para o texto não encostar na borda
-    for (int i = 0; i < ENDING_CHOICE_COUNT; i++)
-    {
-        float needed = MeasureTextEx(default_game_font, labels[i], label_size, label_size * 0.06f).x + (80.0f * scale);
-
-        if (needed > button_width) button_width = needed;
-    }
-
-    ending_choice_wait += GetFrameTime();
-
-    for (int i = 0; i < ENDING_CHOICE_COUNT; i++)
-    {
-        buttons[i] = (Rectangle){(width - button_width) / 2.0f, top + (float)i * (button_height + 16.0f * scale), button_width, button_height};
-        if (ui_mouse_over(buttons[i])) hovered = i;
-    }
-
-    ui_draw_backdrop();
-    ui_draw_centered(ending_cards[shown_ending].title, width / 2.0f, height * 0.16f, ui_font_size(3.0f), UI_BLOOD_COLOR);
-    ui_draw_centered("Fim da campanha. Jogar novamente recomeça do Dia 1, neste mesmo save.", width / 2.0f, height * 0.32f, ui_font_size(1.1f), UI_DIM_COLOR);
-
-    if (confirm_is_open())
-    {
-        // Os botões ficam desenhados por baixo da janela, que é a única a responder
-        for (int i = 0; i < ENDING_CHOICE_COUNT; i++) ui_draw_button(buttons[i], labels[i], i == ending_choice_selected, i == ENDING_CHOICE_QUIT);
-        if (confirm_update_and_draw() == CONFIRM_YES) game_loop_quit_requested = true;
-        return;
-    }
-
-    if (ending_choice_wait >= ENDING_CHOICE_INPUT_DELAY)
-    {
-        if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) ending_choice_selected = (ending_choice_selected + 1) % ENDING_CHOICE_COUNT;
-        if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) ending_choice_selected = (ending_choice_selected + ENDING_CHOICE_COUNT - 1) % ENDING_CHOICE_COUNT;
-
-        if (hovered >= 0)
-        {
-            Vector2 delta = GetMouseDelta();
-
-            if (delta.x != 0.0f || delta.y != 0.0f) ending_choice_selected = hovered;
-        }
-
-        if (IsKeyPressed(KEY_ESCAPE)) choose_ending_option(ENDING_CHOICE_MENU);   // Como no fim da Sobrevivência: ESC volta ao menu
-        else if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_KP_ENTER)) choose_ending_option(ending_choice_selected);
-        else if (hovered >= 0 && IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
-        {
-            ending_choice_selected = hovered;
-            choose_ending_option(hovered);
-        }
-    }
-
-    SetMouseCursor(hovered >= 0 ? MOUSE_CURSOR_POINTING_HAND : MOUSE_CURSOR_ARROW);
-
-    for (int i = 0; i < ENDING_CHOICE_COUNT; i++) ui_draw_button(buttons[i], labels[i], i == ending_choice_selected && !confirm_is_open(), i == ENDING_CHOICE_QUIT);
-    if (confirm_is_open()) confirm_update_and_draw();   // Abriu neste quadro: a janela já aparece (a primeira leitura de teclas é pulada)
-    ui_draw_hint("SETAS: escolher    ENTER: confirmar    ESC: sair para o menu");
-}
-
-/**
  * @brief Gerencia e executa a máquina de estados principal que controla qual tela do jogo
  * deve ser atualizada e renderizada a cada quadro (frame).
  */
+static void finish_day_three_computer(void)
+{
+    unsigned int scenes = current_game_state_variables.story_scenes;
+    if (!(scenes & DAY3_TRIAGE)) begin_story_scene(DAY3_TRIAGE, false);
+    else if (!(scenes & DAY3_END)) begin_story_scene(DAY3_END, false);
+    else if (computer_failsafe_triggered) finish_day();
+}
+
+static void finish_campaign_computer(void)
+{
+    current_game_state_variables.story_report_closed = true;
+    computer_checkpoint_dirty = true;
+    if (!campaign_scene_completed(STORY_MIDDLE)) begin_story_scene(CAMPAIGN_MIDDLE, false);
+    else if (!campaign_scene_completed(STORY_FINISH)) begin_story_scene(CAMPAIGN_FINISH, false);
+    else if (computer_failsafe_triggered || current_game_state_variables.current_day == TOTAL_GAME_DAYS) finish_day();
+}
+
 void handle_game_loop_screens(void)
 {
     if (current_screen != IN_GAME_SCREEN) update_player_footstep_audio(false);
@@ -1785,12 +2307,56 @@ void handle_game_loop_screens(void)
         unload_computer_loop();
         computer_loop_loaded = false;
         walk_time = 0.0f;
+        if (player_seat == CHAIR_SEATED) player_seat = CHAIR_LEAVING;
         current_screen = IN_GAME_SCREEN;
 
         // No failsafe o expediente acaba ali mesmo, sem voltar ao mapa
-        if (computer_failsafe_triggered) finish_day();
+        if (current_game_state_variables.current_day == 1 && computer_tasks_finished)
+        {
+            current_game_state_variables.story_report_closed = true;
+            computer_checkpoint_dirty = true;
+            if (!(current_game_state_variables.story_scenes & 2)) begin_story_scene(2, false);
+            else if (!(current_game_state_variables.story_scenes & 4)) begin_story_scene(4, false);
+            else if (computer_failsafe_triggered) finish_day();
+        }
+        else if (current_game_state_variables.current_day == 3)
+        {
+            if (computer_tasks_finished) finish_day_three_computer();
+        }
+        else if (campaign_scene_day && computer_tasks_finished) finish_campaign_computer();
+        else if (computer_failsafe_triggered) finish_day();
     }
 
+    if (current_screen == COMPUTER_SCREEN && !story_scene && campaign_scene_day &&
+        !campaign_scene_completed(STORY_MIDDLE) && !computer_failsafe_triggered &&
+        computer_story_middle_pending())
+        begin_story_scene(CAMPAIGN_MIDDLE, true);
+
+    if (current_screen == COMPUTER_SCREEN && current_game_state_variables.current_day == 1 &&
+        !(current_game_state_variables.story_scenes & 2) &&
+        computer_first_outcome() != TASK_PENDING && computer_first_outcome() != TASK_TAKEN_OVER_BY_IARA)
+        begin_story_scene(2, true);
+    if (current_screen == COMPUTER_SCREEN && current_game_state_variables.current_day == 3)
+    {
+        unsigned int scenes = current_game_state_variables.story_scenes;
+        int outcome = computer_first_outcome();
+        if (!(scenes & DAY3_TRIAGE) && outcome != TASK_TAKEN_OVER_BY_IARA &&
+            (outcome != TASK_PENDING || computer_day_three_first_retry()))
+            begin_story_scene(DAY3_TRIAGE, true);
+        else if (!(scenes & DAY3_LUNCH) && computer_day_three_lunch_accepted() &&
+                 !computer_checkpoint_finished())
+            begin_story_scene(DAY3_LUNCH, true);
+    }
+    if (story_scene)
+    {
+        keep_player_place_on_resize();
+        update_obstacle_recs();
+        update_collision_rec();
+        update_story_scene(GetFrameTime());
+        render_office_with_glass();
+        render_npc_dialogue();
+        return;
+    }
     switch (current_screen)
     {
     case SCREEN_NONE:
@@ -1807,6 +2373,73 @@ void handle_game_loop_screens(void)
         {
             color_to_fade.a = 0;
             current_screen = IN_GAME_SCREEN;
+            if (campaign_scene_day)
+            {
+                if (current_game_state_variables.story_report_closed ||
+                    (resume_computer_checkpoint && computer_checkpoint_finished()))
+                    finish_campaign_computer();
+                else if (resume_computer_checkpoint)
+                {
+                    current_estagiario_position = player_chair_entry();
+                    if (player_seat_frames[SEAT_PLAYER_FRAME_COUNT - 1].id)
+                    {
+                        current_direction = NORTH;
+                        current_estagiario_texture_direction = estagiario_texture[NORTH];
+                        player_seat = CHAIR_SEATED;
+                        player_seat_time = SEAT_PLAYER_FRAME_COUNT * SEAT_FRAME_SECONDS;
+                    }
+                    update_collision_rec();
+                    initialize_computer_loop();
+                    computer_loop_loaded = true;
+                    current_screen = COMPUTER_SCREEN;
+                }
+                else if (!campaign_scene_completed(STORY_ARRIVAL))
+                    begin_story_scene(CAMPAIGN_ARRIVAL, false);
+                resume_computer_checkpoint = false;
+            }
+            if (current_game_state_variables.current_day == 3 && !resume_computer_checkpoint &&
+                !current_game_state_variables.is_resolved &&
+                !(current_game_state_variables.story_scenes & DAY3_ARRIVAL))
+                begin_story_scene(DAY3_ARRIVAL, false);
+            if (current_game_state_variables.current_day == 3 && resume_computer_checkpoint)
+            {
+                resume_computer_checkpoint = false;
+                current_estagiario_position = player_chair_entry();
+                update_collision_rec();
+                if (computer_checkpoint_finished())
+                    finish_day_three_computer();
+                else
+                {
+                    initialize_computer_loop();
+                    computer_loop_loaded = true;
+                    current_screen = COMPUTER_SCREEN;
+                }
+            }
+            if (current_game_state_variables.current_day == 1)
+            {
+                if (!(current_game_state_variables.story_scenes & 1)) begin_story_scene(1, false);
+                else if (current_game_state_variables.story_report_closed)
+                {
+                    if (!(current_game_state_variables.story_scenes & 2)) begin_story_scene(2, false);
+                    else if (!(current_game_state_variables.story_scenes & 4)) begin_story_scene(4, false);
+                    else if (computer_failsafe_triggered) finish_day();
+                }
+                else if (current_game_state_variables.computer_checkpoint[0])
+                {
+                    if (player_seat_frames[SEAT_PLAYER_FRAME_COUNT - 1].id)
+                    {
+                        current_estagiario_position = player_chair_entry();
+                        current_direction = NORTH;
+                        current_estagiario_texture_direction = estagiario_texture[NORTH];
+                        player_seat = CHAIR_SEATED;
+                        player_seat_time = SEAT_PLAYER_FRAME_COUNT * SEAT_FRAME_SECONDS;
+                        update_collision_rec();
+                    }
+                    initialize_computer_loop();
+                    computer_loop_loaded = true;
+                    current_screen = COMPUTER_SCREEN;
+                }
+            }
         }
         break;
 
@@ -1827,13 +2460,15 @@ void handle_game_loop_screens(void)
         {
             walk_time = 0.0f;
         }
-        else
+        else if (IsWindowFocused())
         {
-            handle_player_input();
+            if (player_seat == CHAIR_IDLE) handle_player_input();
+            else update_player_seating(GetFrameTime());
         }
 
-        if (!interaction_open)
+        if (!interaction_open && IsWindowFocused() && !enter_computer_screen && !leave_office)
         {
+            npc_set_routine_statistics(&current_hidden_statistic);
             update_npcs(GetFrameTime(), get_scale(), get_map_center(), map_collision_rec,
                         office_obstacles, OBSTACLE_COUNT, estagiario_collision_rec);
         }
@@ -1853,15 +2488,35 @@ void handle_game_loop_screens(void)
         render_office_with_glass();
         render_control_tips();
         render_day_counter();
+        if ((current_game_state_variables.current_day == 1 || current_game_state_variables.current_day == 3 ||
+             campaign_scene_day) && !interaction_open)
+        {
+            const char *objective = "Vá até seu computador";
+            if (can_leave_today())
+            {
+                int day = current_game_state_variables.current_day;
+                bool can_investigate =
+                    (day == 58 && !(current_game_state_variables.evidence_mask & EVIDENCE_BADGE_AFTER_LEAVING)) ||
+                    (day == 74 && !(current_game_state_variables.evidence_mask & EVIDENCE_NO_HUMAN_ORDER)) ||
+                    (day == 89 && !current_game_state_variables.found_nicollas_trace);
+                objective = can_investigate ? "Saia do escritório ou examine o mural" : "Saia do escritório";
+            }
+            else if (current_game_state_variables.is_resolved) objective = "Conclua o relatório no computador";
+            else if (current_game_state_variables.current_day == 3) objective = "Abra a fila no computador";
+            else if (campaign_scene_day) objective = campaign_scene_day->objective;
+            float ui_scale = get_ui_scale();
+            DrawTextEx(default_game_font, objective, (Vector2){24 * ui_scale, 62 * ui_scale},
+                       26 * ui_scale, 0, WHITE);
+        }
         render_high_contrast_outlines();
         if (active_npc_id < 0 && !is_hint_note_open())
         {
             render_interact_arrow(get_next_objective_rectangle());
 
-            if (nearby_npc_id >= 0) render_interaction_marker(npc_get_hitbox(nearby_npc_id, get_scale()));
-            else if (is_near_hint) render_interaction_marker(hint_item_rectangle);
-            else if (is_near_exit) render_interaction_marker(get_glass_door_rectangle());
-            else if (is_near_computer && !current_game_state_variables.is_resolved) render_interaction_marker(estagiario_computer_collision_rectangle);
+            if (nearby_npc_id >= 0) render_interaction_marker(npc_get_hitbox(nearby_npc_id, get_scale()), "ESPAÇO");
+            else if (is_near_hint) render_interaction_marker(hint_item_rectangle, "ESPAÇO · EXAMINAR MURAL");
+            else if (is_near_exit) render_interaction_marker(get_glass_door_rectangle(), "ESPAÇO");
+            else if (is_near_computer && !can_leave_today()) render_interaction_marker(estagiario_computer_collision_rectangle, "ESPAÇO");
         }
         render_debug_hitboxes();
         render_npc_dialogue();
@@ -1878,6 +2533,7 @@ void handle_game_loop_screens(void)
         else if (enter_computer_screen)
         {
             initialize_computer_loop();
+            play_keyboard_sound();
             computer_loop_loaded = true;
             current_screen = COMPUTER_SCREEN;
             enter_computer_screen = false;
@@ -1922,12 +2578,11 @@ void handle_game_loop_screens(void)
     case ENDING_CARD_SCREEN:
         handle_calendar_day_card();
 
-        // Em vez de voltar ao menu sozinho, o jogo pergunta o que o jogador quer fazer
-        if (render_calendar_day_card_finished) open_ending_choice();
-        break;
-
-    case ENDING_CHOICE_SCREEN:
-        handle_ending_choice();
+        if (render_calendar_day_card_finished)
+        {
+            current_game_state_variables.resolved_puzzles[TOTAL_GAME_DAYS] = true;
+            game_loop_finished = true;
+        }
         break;
 
     default:
@@ -1944,6 +2599,7 @@ void render_game_loop(void)
     // Pausado: o jogo fica parado na última imagem e só o menu de pausa responde
     if (pause_menu_is_open())
     {
+        update_iara_voice_typing(false);
         pause_action action;
 
         begin_game_drawing();
@@ -1970,15 +2626,29 @@ void render_game_loop(void)
     // ESC ou P pausam só no escritório. Dentro do computador o ESC sai do computador, e o quadro em que
     // ele sai não pode pausar também: por isso a tela é lida antes de processar o quadro.
     bool was_walking_in_office = (current_screen == IN_GAME_SCREEN);
+    if (!IsWindowFocused())
+    {
+        story_input_guard = true;
+        update_iara_voice_typing(false);
+        if (story_scene) { begin_game_drawing(); render_office_with_glass(); render_npc_dialogue(); end_game_drawing(); return; }
+    }
 
     begin_game_drawing();
     ClearBackground(BG_COLOR); // Limpa o buffer de cor com a cor padrão do jogo
 
     handle_game_loop_screens(); // Processa a tela ativa
 
+    if (current_screen != COMPUTER_SCREEN)
+    {
+        const char *line = story_scene && !story_approaching ? story_text() :
+                           active_npc_id >= 0 ? npc_conversation_line() : NULL;
+        update_iara_voice_typing(IsWindowFocused() && line && npc_typed_characters < (float)utf8_length(line));
+    }
+
     if (was_walking_in_office && current_screen == IN_GAME_SCREEN && (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_P)))
     {
         update_player_footstep_audio(false);
+        update_iara_voice_typing(false);
         pause_menu_open(); // Guarda este quadro como fundo da pausa
     }
 
@@ -2000,21 +2670,34 @@ bool is_game_loop_finished(void)
     return game_loop_finished;
 }
 
-bool is_game_loop_replay_requested(void)
-{
-    return game_loop_replay_requested;
-}
-
 /**
  * @brief Função global de encerramento do game loop.
  * Garante a liberação de todos os recursos de memória para evitar Memory Leaks ao fechar o jogo.
  */
+bool game_loop_wants_replay(void)
+{
+    return replay_requested;
+}
+
+void game_loop_retry_ending(void)
+{
+    replay_requested = false;
+    game_loop_finished = false;
+    show_ending();
+}
+
 void unload_game_loop(void)
 {
     if (!game_loop_loaded) return;
 
     update_player_footstep_audio(false);
     game_loop_loaded = false;
+    update_iara_voice_typing(false);
+    for (unsigned i = 0; i < sizeof(campaign_art) / sizeof(campaign_art[0]); i++)
+    {
+        if (campaign_art[i].id) UnloadTexture(campaign_art[i]);
+        campaign_art[i] = (Texture2D){0};
+    }
 
     if (computer_loop_loaded)
     {
@@ -2026,6 +2709,13 @@ void unload_game_loop(void)
 
     // Texturas do escritório e elementos gráficos
     UnloadTexture(in_game_office);
+    if (chair_floor.id) UnloadTexture(chair_floor);
+    if (player_chair.id) UnloadTexture(player_chair);
+    for (int i = 0; i < SEAT_PLAYER_FRAME_COUNT; i++)
+    {
+        if (player_seat_frames[i].id) UnloadTexture(player_seat_frames[i]);
+        player_seat_frames[i] = (Texture2D){0};
+    }
 
     UnloadTexture(action_tip_texture);
     UnloadTexture(move_tip_texture);

@@ -60,8 +60,21 @@ typedef struct {
     bool redacted_personal_data; // Tarjou os dados pessoais antes de enviar à IARA
 } TaskResult;
 
+typedef enum { STORY_ARRIVAL, STORY_MIDDLE, STORY_FINISH } StoryPhase;
+enum { STORY_ABSENT_JULIO = 1, STORY_ABSENT_ANDERSON = 2 };
+#define STORY_LATER_SCENES_MAX ((1u << 21) - 1)
+
+unsigned int story_scene_bit(int day, StoryPhase phase);
+
 // Estado geral da partida.
 struct game_state_variables {
+    unsigned int story_scenes; // Dia 1: A=1, M=2, F=4; commit apenas no fim da cena.
+    unsigned int story_later_scenes; // Três bits por dia jogável a partir do Dia 12.
+    unsigned int story_absences;
+    int story_presence_day; // Última chegada avaliada ou dia atual de um save legado.
+    bool d41_mural_lido;
+    bool story_report_closed;
+    char computer_checkpoint[1024]; // Snapshot textual validado pelo computador.
     int current_screen;      // Tela atual (PRE_MENU_SCREEN, MENU_SCREEN, ...)
     int current_day;         // Dia atual do jogo
     int day_type;            // Tipo do dia (PLAYABLE_DAY, FLASH_DAY, JUMP_DAY)
@@ -70,7 +83,8 @@ struct game_state_variables {
     bool is_resolved;        // Se a tarefa do dia foi resolvida
     bool has_cheat_sheet;    // Se o jogador já pegou a colinha no mural
     unsigned int evidence_mask; // Evidências reunidas para a prova do Dia 100
-    bool found_mariana;      // Se o jogador achou a Mariana n'O Fundo
+    bool found_nicollas_trace;
+    bool legacy_mariana_discovery; // Preserva elegibilidade herdada no final Ruptura.
     bool proof_succeeded;    // Se o jogador fechou a prova por contradição do Dia 100
 
     // Puzzles já resolvidos na campanha. O índice é o número do dia
@@ -85,6 +99,22 @@ struct hidden_statistic {
     unsigned int current_perception_points;
     unsigned int current_human_bond_points;
 };
+
+typedef struct {
+    int automation, perception, bond;
+} HiddenStatisticBands;
+
+static inline HiddenStatisticBands hidden_statistic_bands(const struct hidden_statistic *stats)
+{
+    unsigned int automation = stats->current_automation_points;
+    unsigned int perception = stats->current_perception_points;
+    unsigned int bond = stats->current_human_bond_points;
+    return (HiddenStatisticBands){
+        automation >= HIDDEN_STATISTIC_START + AUTOMATION_HIGH_TOTAL ? 3 : automation >= 4 ? 2 : automation >= 2 ? 1 : 0,
+        perception >= HIDDEN_STATISTIC_START + PERCEPTION_HIGH_TOTAL ? 3 : perception >= 3 ? 2 : perception >= 2 ? 1 : 0,
+        bond >= HIDDEN_STATISTIC_START + HUMAN_BOND_HIGH_TOTAL ? 2 : bond >= 2 ? 1 : 0
+    };
+}
 
 extern struct game_state_variables current_game_state_variables;
 extern struct hidden_statistic current_hidden_statistic;

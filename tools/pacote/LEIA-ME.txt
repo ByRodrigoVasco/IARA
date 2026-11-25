@@ -10,9 +10,11 @@ Nao precisa instalar nada, criar conta, ter internet nem ser administrador.
 
 CONTROLES
 - WASD ou setas: andar e navegar nos menus.
-- F11: liga e desliga a tela cheia. A janela maximizada fica em CONFIGURAÇÕES.
+- F11: liga e desliga a tela cheia. A janela maximizada fica em CONFIGURACOES.
 - CONFIGURACOES, no menu: alto contraste, brilho e tela cheia.
-- ESC: volta ao menu nos creditos e nas configuracoes, sai do computador e volta ao escritorio; nas outras telas, salva e fecha o jogo.
+- ESC: sai do computador ou abre a pausa no escritorio. No menu principal,
+  abre a confirmacao de saida. Na ajuda, nos creditos e nas configuracoes,
+  volta ao menu.
 - ESPACO: interage com o que estiver perto. No mural, voce pega a colinha,
   que fica colada no monitor do computador.
 - As demais teclas aparecem na tela durante o jogo.
@@ -22,9 +24,11 @@ O progresso fica em Documentos\IARA, criada pelo proprio jogo: um save por
 jogador, em saves\normal, saves\sobrevivencia e saves\dupla. As preferencias
 (iara.ini), os rankings e o log de desempenho ficam na mesma pasta. Assim o
 iara.exe pode ficar em qualquer lugar sem espalhar arquivos.
-Depois de INICIAR, o jogo pede o modo e o save. Para comecar do zero, apague
-a pasta Documentos\IARA. Se ela nao puder ser criada, os dados ficam ao lado
-do iara.exe; se nem ali der para gravar, o jogo funciona, mas nao salva.
+Depois de INICIAR, o jogo pede o modo e o save. Use NOVO SAVE para comecar
+outra partida. No final da campanha, JOGAR DE NOVO (R) grava o final e abre
+um novo save. Se houver erro ao gravar, corrija o problema e tente novamente
+na tela do final. Se Documentos\IARA nao puder ser usada, os dados ficam ao
+lado do iara.exe; se nem ali der para gravar, o jogo funciona, mas nao salva.
 
 SE ALGO DER ERRADO
 - O computador precisa de placa de video com suporte a OpenGL 3.3.

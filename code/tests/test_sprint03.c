@@ -30,6 +30,11 @@
 #include <stdbool.h>
 #include <string.h>
 #include <math.h>
+#ifdef _WIN32
+#include <direct.h>
+#else
+#include <unistd.h>
+#endif
 
 #include "raylib.h"
 
@@ -179,7 +184,7 @@ static void cabecalho(const char *id, const char *historia, const char *pre_cond
 /* Um quadro do jogo, como a main.c: o audio e a tela andam pela maquina de estados. */
 static void quadro(void)
 {
-    handle_state_machine();
+    test_frame();
     tecla_apertada = -1;
 }
 
@@ -313,7 +318,6 @@ static bool andar_ate(Chegada chegou, int alvo, int limite_de_passos, int *passo
         if (chegou(estagiario_collision_rec, alvo))
         {
             tecla_segurada = -1;
-            quadro();
             return true;
         }
 
@@ -341,19 +345,30 @@ static bool andar_ate(Chegada chegou, int alvo, int limite_de_passos, int *passo
 
 static bool chegou_ao_npc(Rectangle hitbox, int npc)
 {
-    return npc_get_nearby(hitbox, get_scale()) == npc;
+    float scale = get_scale();
+    if (calendar_has_investigation(current_game_state_variables.current_day) &&
+        is_hitbox_on_hint(hitbox, scale, get_map_center())) return false;
+    if (can_leave_today() && CheckCollisionRecs(hitbox, get_exit_zone())) return false;
+    if (!can_leave_today() && CheckCollisionRecs(hitbox, get_computer_collision_rectangle())) return false;
+
+    // O destino da caminhada fica alguns passos dentro da zona de conversa.
+    Rectangle zona = npc_get_interaction_zone(npc, scale);
+    float margem = 8.0f * scale;
+    zona = (Rectangle){zona.x + margem, zona.y + margem, zona.width - 2 * margem, zona.height - 2 * margem};
+    return CheckCollisionRecs(hitbox, zona) && npc_get_nearby(hitbox, scale) == npc;
 }
 
 static bool chegou_ao_computador(Rectangle hitbox, int ignorado)
 {
     (void)ignorado;
-    return CheckCollisionRecs(hitbox, get_computer_collision_rectangle()) && npc_get_nearby(hitbox, get_scale()) < 0;
+    return CheckCollisionRecs(hitbox, get_computer_collision_rectangle()) &&
+           !is_hitbox_on_hint(hitbox, get_scale(), get_map_center());
 }
 
 static bool chegou_a_porta(Rectangle hitbox, int ignorado)
 {
     (void)ignorado;
-    return CheckCollisionRecs(hitbox, get_exit_zone()) && npc_get_nearby(hitbox, get_scale()) < 0 &&
+    return CheckCollisionRecs(hitbox, get_exit_zone()) &&
            !is_hitbox_on_hint(hitbox, get_scale(), get_map_center());
 }
 
@@ -641,69 +656,63 @@ static void ct99_sprites_dos_npcs(void)
               obtido, npcs_completos == NPC_COUNT && carregou);
 }
 
-static void ct100_arte_das_telas(void)
+static Image foto_de_cartao(bool transicao)
 {
-    cabecalho("CT-100", "US17 / PI2-267 e PI2-268: arte do Flash do dia, do salto puro e dos 4 finais",
-              "partida retomada no Dia 1, escritorio a vista");
-    comecar_no_dia_1();
-
-    etapa("Passo 1: abre o Flash do Dia 2 e compara com o escritorio escurecido do Dia 2");
-    start_game_day(2);
-    current_screen = DAY_TRANSITION_SCREEN;
-    transition_time = 0.0f;
-    Image escritorio = foto_do_cenario();
     RenderTexture2D alvo = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
     BeginTextureMode(alvo);
     ClearBackground(BG_COLOR);
-    color_to_fade.a = 255;
-    render_game_loop_escritorio();
+    if (transicao) handle_day_transition();
+    else render_calendar_day_card();
     EndTextureMode();
-    Image so_o_escritorio = LoadImageFromTexture(alvo.texture);
-    ImageFlipVertical(&so_o_escritorio);
+
+    Image imagem = LoadImageFromTexture(alvo.texture);
     UnloadRenderTexture(alvo);
-    for (int i = 0; i < 90; i++) quadro();
-    bool flash_reusa_escritorio = pixels_diferentes(escritorio, so_o_escritorio) >= 0;
-    UnloadImage(escritorio);
-    UnloadImage(so_o_escritorio);
+    return imagem;
+}
 
-    etapa("Passo 2: procura arte propria de flash, salto e finais nas pastas de sprites e de fundo");
-    const char *pastas[] = {"code/assets/sprites", "code/assets/background"};
-    const char *temas[] = {"flash", "salto", "jump", "final", "ending"};
-    int achados = 0;
-    for (int p = 0; p < 2; p++)
+static bool cartao_desenha_arte(int arte, bool transicao)
+{
+    Texture2D original = campaign_art[arte];
+    if (!original.id) return false;
+
+    Image com_arte = foto_de_cartao(transicao);
+    campaign_art[arte] = (Texture2D){0};
+    Image sem_arte = foto_de_cartao(transicao);
+    campaign_art[arte] = original;
+
+    bool desenhou = pixels_diferentes(com_arte, sem_arte) > com_arte.width * com_arte.height / 5;
+    UnloadImage(com_arte);
+    UnloadImage(sem_arte);
+    return desenhou;
+}
+
+static void ct100_arte_das_telas(void)
+{
+    cabecalho("CT-100", "US17 / PI2-267 e PI2-268: arte do flash, salto e finais",
+              "texturas da campanha carregadas");
+    iniciar_partida_nova();
+    current_screen = DAY_TRANSITION_SCREEN;
+    start_game_day(2);
+    transition_time = 0;
+    bool flash = cartao_desenha_arte(ART_FLASH, true);
+    current_game_state_variables.day_type = JUMP_DAY;
+    jump_day_time = 1000.0f;
+    bool salto = cartao_desenha_arte(ART_JUMP, true);
+
+    current_screen = ENDING_CARD_SCREEN;
+    int finais = 0;
+    for (int final = ENDING_UNHARMED; final <= ENDING_RUPTURE; final++)
     {
-        FilePathList arquivos = LoadDirectoryFilesEx(pastas[p], ".png", true);
-        for (unsigned int i = 0; i < arquivos.count; i++)
-        {
-            const char *nome = GetFileName(arquivos.paths[i]);
-            if (strstr(arquivos.paths[i], "sobrevivencia") != NULL) continue;
-            for (int t = 0; t < 5; t++)
-            {
-                if (strstr(TextToLower(nome), temas[t]) != NULL) achados++;
-            }
-        }
-        UnloadDirectoryFiles(arquivos);
+        shown_ending = (GameEnding)final;
+        start_day_card(ending_cards[final].title, ending_cards[final].line_1, ending_cards[final].line_2);
+        color_to_fade.a = 255;
+        if (cartao_desenha_arte(ART_FIRST_ENDING + final, false)) finais++;
     }
 
-    etapa("Passo 3: abre o cartao de cada um dos 4 finais");
-    int finais_com_texto = 0;
-    for (int f = 0; f < 4; f++)
-    {
-        if (ending_cards[f].title != NULL && strlen(ending_cards[f].title) > 0) finais_com_texto++;
-    }
-    current_game_state_variables.found_mariana = false;
-    show_ending();
-    for (int i = 0; i < 90; i++) quadro();
-
-    char obtido[512];
-    snprintf(obtido, sizeof(obtido),
-             "o Flash usa o escritorio escurecido com texto%s; o salto e os %d finais sao so texto; "
-             "%d imagem(ns) de flash, salto ou final nas pastas de arte",
-             flash_reusa_escritorio ? "" : " (nao conferido)", finais_com_texto, achados);
-    registrar("CT-100", "Flash do dia, salto puro e os 4 finais tem arte propria (US17, PI2-267 e PI2-268)",
-              "sprites/imagens proprias para o Flash do dia ou o salto puro e para as telas dos 4 finais",
-              obtido, achados > 0);
-
+    registrar("CT-100", "Cada cartao exibe a arte correspondente",
+              "flash, salto e os quatro finais exibem arte",
+              TextFormat("flash: %s; salto: %s; finais: %d/4", flash ? "sim" : "nao", salto ? "sim" : "nao", finais),
+              flash && salto && finais == 4);
     iniciar_partida_nova();
 }
 
@@ -863,23 +872,33 @@ static void ct104_dica_do_npc(void)
 
         struct hidden_statistic antes = current_hidden_statistic;
         int passos = 0;
-        bool perto = andar_ate(chegou_ao_npc, npc, 1500, &passos);
+        int conversas_com_titular = 0;
         bool ouviu_a_dica = false;
 
-        if (perto) apertar(KEY_SPACE);
-        for (int k = 0; k < 30 && active_npc_id >= 0; k++)
+        // O NPC pode sair do alcance no quadro em que a tecla é processada.
+        for (int tentativa = 0; tentativa < 3 && !ouviu_a_dica; tentativa++)
         {
-            const char *fala = npc_get_dialogue_line(active_npc_id, dia, active_npc_first_today, active_npc_dialogue_line);
-            if (fala != NULL && strcmp(fala, npc_get_hint_line(dia, 0)) == 0) ouviu_a_dica = true;
-            quadros(3);
+            int passos_da_tentativa = 0;
+            bool perto = andar_ate(chegou_ao_npc, npc, 1500, &passos_da_tentativa);
+            passos += passos_da_tentativa;
+            if (!perto) break;
             apertar(KEY_SPACE);
-            quadros(3);
-            apertar(KEY_SPACE);
+            if (active_npc_id == npc) conversas_com_titular++;
+            for (int k = 0; k < 60 && active_npc_id >= 0; k++)
+            {
+                const char *fala = npc_conversation_line();
+                if (active_npc_id == npc && fala != NULL && strcmp(fala, npc_get_hint_line(dia, 0)) == 0)
+                    ouviu_a_dica = true;
+                quadros(3);
+                apertar(KEY_SPACE);
+            }
+            if (is_hint_note_open()) apertar(KEY_SPACE);
         }
 
         if (ouviu_a_dica) dias_com_dica++;
         if (memcmp(&antes, &current_hidden_statistic, sizeof(antes)) == 0) dias_sem_custo++;
-        etapa(TextFormat("      Dia %3d: %s, %d passos, dica %s", dia, npc_get_definition(npc)->name, passos,
+        etapa(TextFormat("      Dia %3d: %s, %d passos, %d conversa(s) com o titular, dica %s",
+                         dia, npc_get_definition(npc)->name, passos, conversas_com_titular,
                          ouviu_a_dica ? "ouvida" : "nao ouvida"));
     }
 
@@ -954,6 +973,59 @@ static void ct105_pesos(void)
 
 /* ------------------------------------------------------------------------ */
 
+static void ct106_jogar_de_novo(void)
+{
+    cabecalho("CT-106", "Jogar de novo pelo final", "campanha concluida no slot Fluxo");
+    iniciar_partida_nova();
+    save_slot_create(SAVE_MODE_NORMAL, "Reprise 1");
+    char caminho[512];
+    bool tem_save_original = active_save_path(caminho, sizeof(caminho));
+    char temporario[sizeof(caminho) + sizeof(".tmp")];
+    bool bloqueou_gravacao = false;
+    if (tem_save_original)
+    {
+        snprintf(temporario, sizeof(temporario), "%s.tmp", caminho);
+        bloqueou_gravacao = MakeDirectory(temporario) == 0 && DirectoryExists(temporario);
+    }
+    start_game_day(TOTAL_GAME_DAYS);
+    current_hidden_statistic.current_overall_points = 100;
+    show_ending();
+    current_calendar_day_state = AWAIT;
+    color_to_fade.a = 255;
+    skip_guard_time = CARD_SKIP_GUARD_TIME;
+    apertar(KEY_R);
+    quadros(60);
+    bool continuou_no_final = bloqueou_gravacao && current_screen == ENDING_CARD_SCREEN &&
+        current_game_state_variables.current_screen == PLAYING_SCREEN &&
+        strcmp(active_save_name(), "Fluxo") == 0 && !save_slot_exists(SAVE_MODE_NORMAL, "Reprise 2");
+    if (bloqueou_gravacao)
+    {
+#ifdef _WIN32
+        continuou_no_final &= _rmdir(temporario) == 0;
+#else
+        continuou_no_final &= rmdir(temporario) == 0;
+#endif
+    }
+    apertar(KEY_R);
+    bool carregou = esperar_tela(LOADING_SCREEN, 5.0) &&
+                    esperar_tela(PLAYING_SCREEN, 10.0);
+    bool partida_nova = carregou && strcmp(active_save_name(), "Reprise 2") == 0 &&
+        current_game_state_variables.current_day == 1 &&
+        current_hidden_statistic.current_overall_points == HIDDEN_STATISTIC_START;
+    bool guardou_final = tem_save_original && load_game_state(caminho) == SAVE_OK &&
+        current_game_state_variables.current_day == TOTAL_GAME_DAYS &&
+        current_game_state_variables.resolved_puzzles[TOTAL_GAME_DAYS] &&
+        current_hidden_statistic.current_overall_points == 100;
+
+    registrar("CT-106", "Rejogar aguarda a gravacao do final e depois cria outro save",
+              "falha de gravacao mantem o final; nova tentativa inicia o Dia 1 em outro save",
+              TextFormat("final mantido durante erro: %s; partida nova: %s; campanha anterior: %s",
+                         continuou_no_final ? "sim" : "nao",
+                         partida_nova ? "sim" : "nao", guardou_final ? "preservada" : "alterada"),
+              continuou_no_final && partida_nova && guardou_final);
+    iniciar_partida_nova();
+}
+
 typedef struct
 {
     const char *id;
@@ -967,6 +1039,7 @@ static const CasoDoBloco casos_do_bloco[] = {
     {"CT-100", ct100_arte_das_telas}, {"CT-101", ct101_sem_hud},
     {"CT-102", ct102_cenario_reage}, {"CT-103", ct103_tensao},
     {"CT-104", ct104_dica_do_npc},   {"CT-105", ct105_pesos},
+    {"CT-106", ct106_jogar_de_novo},
 };
 
 int main(int argc, char **argv)

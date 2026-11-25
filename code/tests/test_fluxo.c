@@ -14,6 +14,7 @@
  */
 
 #include <stdio.h>
+#include <assert.h>
 #include <stdbool.h>
 #include <string.h>
 #include <math.h>
@@ -48,7 +49,33 @@ unsigned int middle_screen_y = 0;
 #include "computer_loop.c"
 
 #include "menu.c"
+static bool scene_test_input = false;
+static bool scene_test_key(int key) { return scene_test_input ? key == KEY_SPACE : IsKeyPressed(key); }
+#undef IsKeyPressed
+#define IsKeyPressed(key) scene_test_key(key)
+#define IsWindowFocused() true
 #include "game_loop.c"
+#undef IsKeyPressed
+#undef IsWindowFocused
+
+/* As novas cenas têm testes próprios; o percurso legado também as avança
+ * pela mesma máquina, antes de continuar suas verificações de telas. */
+static void test_frame(void)
+{
+    handle_state_machine();
+    for (int guard = 0; story_scene && guard < 260; guard++)
+    {
+        scene_test_input = true;
+        story_input_guard = false;
+        if (!story_approaching) npc_typed_characters = 1000;
+        BeginDrawing();
+        update_story_scene(0.05f);
+        render_office_with_glass();
+        render_npc_dialogue();
+        EndDrawing();
+        scene_test_input = false;
+    }
+}
 #include "percurso_do_jogador.h"
 
 /* A raylib nao permite injetar teclas. A tela de creditos so volta ao menu
@@ -120,7 +147,7 @@ static void rodar_por(double segundos)
 
     while (GetTime() - inicio < segundos && !WindowShouldClose())
     {
-        handle_state_machine();
+        test_frame();
     }
 }
 
@@ -309,7 +336,7 @@ static bool esperar_tela(int tela, double limite_em_segundos)
 
     while (current_game_state_variables.current_screen != tela && GetTime() - inicio < limite_em_segundos && !WindowShouldClose())
     {
-        handle_state_machine();
+        test_frame();
     }
     return current_game_state_variables.current_screen == tela;
 }
@@ -327,7 +354,7 @@ static void iniciar_partida_nova(void)
 
     for (int quadro = 0; quadro < 5 && !WindowShouldClose(); quadro++)
     {
-        handle_state_machine();
+        test_frame();
     }
 }
 
@@ -375,7 +402,7 @@ static void testar_abertura(void)
 
     while (current_game_state_variables.current_screen == PRE_MENU_SCREEN && quadros_pulando < LIMITE_DE_QUADROS)
     {
-        handle_state_machine();
+        test_frame();
         quadros_pulando++;
     }
 
@@ -393,7 +420,7 @@ static void testar_abertura(void)
     while (current_game_state_variables.current_screen == PRE_MENU_SCREEN &&
            quadros < LIMITE_DE_QUADROS)
     {
-        handle_state_machine();
+        test_frame();
         quadros++;
     }
 
@@ -459,7 +486,7 @@ static void testar_creditos(void)
     /* O jogador aperta a tecla de voltar: o quadro seguinte da maquina de
      * estados descarrega a tela de creditos e devolve o menu. */
     creditos_tecla_de_voltar = true;
-    handle_state_machine();
+    test_frame();
     creditos_tecla_de_voltar = false;
 
     bool voltou_ao_menu = (current_game_state_variables.current_screen == MENU_SCREEN);
@@ -470,7 +497,7 @@ static void testar_creditos(void)
 
     /* Tela desconhecida tambem nao pode travar o jogo. */
     current_game_state_variables.current_screen = 99;
-    handle_state_machine();
+    test_frame();
     bool desconhecida_volta = (current_game_state_variables.current_screen == MENU_SCREEN);
 
     rodar_por(0.8);
@@ -489,11 +516,11 @@ static void testar_sobrevivencia(void)
 
     navegar_menu_ate(INICIAR);
     confirm_menu_option();
-    handle_state_machine();                                   /* escolha do modo */
+    test_frame();                                   /* escolha do modo */
     mode_select_choose(SAVE_MODE_SURVIVAL);
-    handle_state_machine();                                   /* escolha do save */
+    test_frame();                                   /* escolha do save */
     save_select_choose_existing("Fluxo");
-    handle_state_machine();                                   /* tela de carregamento */
+    test_frame();                                   /* tela de carregamento */
     esperar_tela(SURVIVAL_SCREEN, 20.0);
     rodar_por(0.5);
 
@@ -510,7 +537,7 @@ static void testar_sobrevivencia(void)
     /* ESC no inicio do modo devolve o jogador ao menu principal. */
     screen = SCREEN_HUB;
     leave_to_menu = true;
-    handle_state_machine();
+    test_frame();
 
     checar("CT-78", "A partida roda com a tela real e sair do modo devolve o menu",
            partida_rodando && current_game_state_variables.current_screen == MENU_SCREEN);
@@ -533,18 +560,18 @@ static void testar_modo_e_saves(void)
 
     navegar_menu_ate(INICIAR);
     confirm_menu_option();
-    handle_state_machine();
+    test_frame();
     rodar_por(0.4);
     checar("CT-79", "INICIAR abre a escolha do modo, em vez de comecar a partida", current_game_state_variables.current_screen == MODE_SELECT_SCREEN);
 
     mode_select_go_back();
-    handle_state_machine();
+    test_frame();
     bool voltou_ao_menu = (current_game_state_variables.current_screen == MENU_SCREEN);
     navegar_menu_ate(INICIAR);
     confirm_menu_option();
-    handle_state_machine();
+    test_frame();
     mode_select_choose(SAVE_MODE_NORMAL);
-    handle_state_machine();
+    test_frame();
     rodar_por(0.4);
     checar("CT-80", "VOLTAR leva ao menu, e escolher o modo normal abre a escolha do save", voltou_ao_menu && current_game_state_variables.current_screen == SAVE_SELECT_SCREEN);
 
@@ -554,7 +581,7 @@ static void testar_modo_e_saves(void)
 
     /* Um nome novo cria a pasta do save e abre o carregamento. */
     checar("CT-82", "um nome novo cria o save na pasta do modo", save_select_create_named("Ana Teste") == SAVE_NAME_OK && DirectoryExists(RAIZ_DOS_SAVES_DE_TESTE "/normal/Ana Teste"));
-    handle_state_machine();
+    test_frame();
     esperar_tela(PLAYING_SCREEN, 20.0);
     checar("CT-83", "o save novo carrega e leva ao jogo", current_game_state_variables.current_screen == PLAYING_SCREEN && is_loading_finished());
 
@@ -564,11 +591,11 @@ static void testar_modo_e_saves(void)
     initialize_menu_variables();
     navegar_menu_ate(INICIAR);
     confirm_menu_option();
-    handle_state_machine();
+    test_frame();
     mode_select_choose(SAVE_MODE_SURVIVAL);
-    handle_state_machine();
+    test_frame();
     save_select_create_named("Carga");
-    handle_state_machine();
+    test_frame();
     {
         int valores_diferentes = 0;
 
@@ -580,7 +607,7 @@ static void testar_modo_e_saves(void)
             if (percentual + 0.001f < anterior) subiu_sempre = false;
             if (percentual > anterior + 0.5f) valores_diferentes++;
             anterior = percentual;
-            handle_state_machine();
+            test_frame();
         }
         checar("CT-88", "a tela de carregamento mostra a porcentagem subindo aos poucos e leva ao jogo",
                viu_carregando && subiu_sempre && valores_diferentes >= 4 && current_game_state_variables.current_screen == SURVIVAL_SCREEN && is_loading_finished() && loading_percent() >= 100.0f);
@@ -631,11 +658,11 @@ static void testar_iniciar(void)
 
     navegar_menu_ate(INICIAR);
     confirm_menu_option();
-    handle_state_machine();                                   /* escolha do modo */
+    test_frame();                                   /* escolha do modo */
     mode_select_choose(SAVE_MODE_NORMAL);
-    handle_state_machine();                                   /* escolha do save */
+    test_frame();                                   /* escolha do save */
     save_select_choose_existing("Fluxo");
-    handle_state_machine();                                   /* tela de carregamento */
+    test_frame();                                   /* tela de carregamento */
     esperar_tela(PLAYING_SCREEN, 20.0);
 
     checar("CT-30", "Escolher INICIAR, o modo e o save comeca a partida",
@@ -653,7 +680,7 @@ static void testar_cartao_do_dia(void)
            GetTime() - inicio < SEGUNDOS_ATE_O_ESCRITORIO &&
            !WindowShouldClose())
     {
-        handle_state_machine();
+        test_frame();
     }
 
     bool chegou = (current_screen == IN_GAME_SCREEN);
@@ -665,7 +692,7 @@ static void testar_cartao_do_dia(void)
     /* Deixa o escritorio aparecer por completo antes de andar. */
     for (int quadro = 0; quadro < 30 && !WindowShouldClose(); quadro++)
     {
-        handle_state_machine();
+        test_frame();
     }
 }
 
@@ -740,7 +767,7 @@ static void testar_computador(void)
            GetTime() - inicio < 5.0 &&
            !WindowShouldClose())
     {
-        handle_state_machine();
+        test_frame();
     }
 
     checar("CT-33", "Interagir com o computador abre a tela do quiz",
@@ -1068,7 +1095,7 @@ static void testar_fim_do_dia(void)
 
     while (current_screen != IN_GAME_SCREEN && GetTime() - inicio < 5.0 && !WindowShouldClose())
     {
-        handle_state_machine();
+        test_frame();
     }
 
     Vector2 antes = current_estagiario_position;
@@ -1117,7 +1144,7 @@ static void testar_fim_do_dia(void)
 
     while (current_screen != DAY_TRANSITION_SCREEN && GetTime() - inicio < 20.0 && !WindowShouldClose())
     {
-        handle_state_machine();
+        test_frame();
     }
 
     printf("           caminho do computador ate a porta: %d passos\n", passos);
@@ -1156,7 +1183,7 @@ static void rodar_ate_a_tela(int tela, double limite)
 
     while (current_screen != tela && GetTime() - inicio < limite && !WindowShouldClose())
     {
-        handle_state_machine();
+        test_frame();
     }
 }
 
@@ -1401,9 +1428,10 @@ static void jogar_o_computador(int opcao_das_conversas)
 
     while (current_step_index < REPORT_STEP && !WindowShouldClose())
     {
-        DialogStep *passo = &dialog_sequence[current_step_index];
-
         rodar_por(0.3);
+        // A cena intermediária pode avançar a tarefa durante o quadro anterior.
+        if (current_step_index >= REPORT_STEP) break;
+        DialogStep *passo = &dialog_sequence[current_step_index];
 
         if (passo->type == STEP_STATEMENT)
         {
@@ -1478,15 +1506,17 @@ static void testar_campanha(void)
             else
             {
                 dias_de_salto++;
-                while (current_game_state_variables.current_day == dia && !WindowShouldClose()) handle_state_machine();
+                while (current_game_state_variables.current_day == dia && !WindowShouldClose()) test_frame();
             }
             continue;
         }
 
-        if (current_screen == SCREEN_NONE) handle_state_machine();
+        if (current_screen == SCREEN_NONE) test_frame();
 
-        /* Pula o cartao de chegada e joga o dia. */
-        current_screen = IN_GAME_SCREEN;
+        /* Avança o cartão e percorre as cenas de chegada antes do expediente. */
+        assert(current_screen == CALENDAR_DAY_CARD_SCREEN);
+        render_calendar_day_card_finished = true;
+        test_frame();
         dias_jogados++;
 
         /* Investiga todo dia que tem o que investigar: e o que abre as evidencias. */
@@ -1504,7 +1534,7 @@ static void testar_campanha(void)
         enter_computer_screen = true;
         rodar_ate_a_tela(COMPUTER_SCREEN, 5.0);
         jogar_o_computador((dia == 12) ? 1 : 0);
-        rodar_ate_a_tela(IN_GAME_SCREEN, 5.0);
+        rodar_ate_a_tela(dia == TOTAL_GAME_DAYS ? DAY_END_CARD_SCREEN : IN_GAME_SCREEN, 5.0);
 
         if (dia == 89)
         {
@@ -1515,7 +1545,7 @@ static void testar_campanha(void)
         leave_office = true;
         rodar_ate_a_tela(DAY_END_CARD_SCREEN, 5.0);
         render_calendar_day_card_finished = true;
-        handle_state_machine();
+        test_frame();
     }
 
     GameEnding final_da_partida = get_game_ending();
@@ -1533,29 +1563,25 @@ static void testar_campanha(void)
 
     checar("CT-71", "Campanha passa pelos 100 dias em ordem: 9 jogaveis, 14 flashes e o resto em salto",
            dias_jogados == 9 && flashes_vistos == 14 && dias_de_salto == 100 - 9 - 14 && dias_em_ordem &&
-           current_game_state_variables.resolved_puzzles[TOTAL_GAME_DAYS]);
-    checar("CT-72", "Investigar, conversar e fechar a prova leva ao Final D, com as 3 evidencias e a Mariana",
+           current_screen == ENDING_CARD_SCREEN &&
+           current_game_state_variables.story_later_scenes == STORY_LATER_SCENES_MAX);
+    checar("CT-72", "Investigar, conversar e fechar a prova leva ao Final D, com as 3 evidencias e a pista de Nicollas",
            current_screen == ENDING_CARD_SCREEN && final_da_partida == ENDING_RUPTURE &&
-           current_game_state_variables.found_mariana && current_game_state_variables.proof_succeeded &&
+           current_game_state_variables.found_nicollas_trace && current_game_state_variables.proof_succeeded &&
            current_game_state_variables.evidence_mask == (EVIDENCE_NO_RESIGNATION_LETTER | EVIDENCE_BADGE_AFTER_LEAVING | EVIDENCE_NO_HUMAN_ORDER));
 
-    /* Depois do final o jogo pergunta o que fazer; SAIR PARA O MENU volta ao menu e INICIAR comeca outra partida do Dia 1. */
+    /* Do final de volta ao menu; INICIAR comeca outra partida do Dia 1. */
     render_calendar_day_card_finished = true;
-    handle_state_machine();
+    test_frame();
 
-    bool abriu_a_escolha = current_screen == ENDING_CHOICE_SCREEN && current_game_state_variables.current_screen == PLAYING_SCREEN;
-
-    choose_ending_option(ENDING_CHOICE_MENU);
-    handle_state_machine();
-
-    bool voltou_ao_menu = abriu_a_escolha && current_game_state_variables.current_screen == MENU_SCREEN;
+    bool voltou_ao_menu = current_game_state_variables.current_screen == MENU_SCREEN;
 
     unload_menu();
     iniciar_partida_nova();   /* o save tem a campanha terminada: carregar esse save recomeca do Dia 1 */
 
-    checar("CT-73", "Depois do final, SAIR PARA O MENU volta ao menu e INICIAR recomeca do Dia 1 sem herdar nada",
+    checar("CT-73", "Depois do final, o jogo volta ao menu e INICIAR recomeca do Dia 1 sem herdar nada",
            voltou_ao_menu && current_game_state_variables.current_day == 1 &&
-           current_game_state_variables.evidence_mask == 0 && !current_game_state_variables.found_mariana &&
+           current_game_state_variables.evidence_mask == 0 && !current_game_state_variables.found_nicollas_trace &&
            current_hidden_statistic.current_perception_points == HIDDEN_STATISTIC_START);
 
     /* Retomar um save: o jogo volta no dia em que parou, seja qual for o tipo dele (CA4). */
@@ -1742,48 +1768,28 @@ static void gravar_evidencia_com_npcs(const char *arquivo)
     UnloadRenderTexture(alvo);
 }
 
-/* Leva a partida do save "Fluxo" ate a escolha que vem depois do cartao do final. */
-static void chegar_na_escolha_do_final(void)
-{
-    iniciar_partida_nova();
-    start_game_day(TOTAL_GAME_DAYS);
-    current_game_state_variables.resolved_puzzles[TOTAL_GAME_DAYS] = true;
-    current_game_state_variables.evidence_mask = EVIDENCE_NO_RESIGNATION_LETTER;
-    current_hidden_statistic.current_perception_points = HIDDEN_STATISTIC_START + 3;
-    show_ending();
-    render_calendar_day_card_finished = true;
-    handle_state_machine();
-}
-
 /* PI2-318: no fim da campanha e no fim de uma partida da Sobrevivencia, o jogador escolhe entre jogar de novo e sair. */
 static void testar_escolha_depois_do_final(void)
 {
     titulo("Escolha no fim da partida (CT-106 e CT-107)");
-    etapa("depois do cartao do final, JOGAR NOVAMENTE recomeca do Dia 1 no mesmo save e SAIR pede confirmacao");
+    etapa("JOGAR DE NOVO guarda o final e cria outro save para o Dia 1");
 
-    chegar_na_escolha_do_final();
-
-    bool abriu_a_escolha = current_screen == ENDING_CHOICE_SCREEN && ending_choice_selected == ENDING_CHOICE_PLAY_AGAIN &&
-                           !is_game_loop_finished();
-
-    /* Os primeiros quadros nao leem teclas: quem pulou o cartao com ESPACO nao escolhe sem querer. */
-    rodar_por(0.2);
-    bool esperou_antes_de_ler = current_screen == ENDING_CHOICE_SCREEN && !is_game_loop_finished();
-
-    /* SAIR PARA A AREA DE TRABALHO so abre a confirmacao: nada fecha sem o jogador confirmar. */
-    choose_ending_option(ENDING_CHOICE_QUIT);
-    bool sair_pede_confirmacao = confirm_is_open() && !is_game_loop_finished() && !is_game_loop_quit_requested();
-    confirm_close();
-
-    choose_ending_option(ENDING_CHOICE_PLAY_AGAIN);
+    iniciar_partida_nova();
+    start_game_day(TOTAL_GAME_DAYS);
+    current_game_state_variables.evidence_mask = EVIDENCE_NO_RESIGNATION_LETTER;
+    current_hidden_statistic.current_perception_points = HIDDEN_STATISTIC_START + 3;
+    show_ending();
+    replay_requested = true;
+    render_calendar_day_card_finished = true;
     handle_state_machine();
     bool foi_para_o_carregamento = current_game_state_variables.current_screen == LOADING_SCREEN;
+    bool criou_outro_save = active_save_is_set() && strcmp(active_save_name(), "Fluxo") != 0 &&
+                           strncmp(active_save_name(), "Reprise ", 8) == 0;
     bool voltou_a_partida = esperar_tela(PLAYING_SCREEN, 20.0);
     rodar_por(0.2);
 
-    checar("CT-106", "Depois do final, JOGAR NOVAMENTE recomeca do Dia 1 no mesmo save, sem herdar nada, e SAIR pede confirmacao",
-           abriu_a_escolha && esperou_antes_de_ler && sair_pede_confirmacao && foi_para_o_carregamento && voltou_a_partida &&
-           active_save_is_set() && strcmp(active_save_name(), "Fluxo") == 0 &&
+    checar("CT-106", "Depois do final, JOGAR DE NOVO cria outro save e comeca no Dia 1 sem herdar progresso",
+           criou_outro_save && foi_para_o_carregamento && voltou_a_partida &&
            current_game_state_variables.current_day == 1 && !current_game_state_variables.resolved_puzzles[TOTAL_GAME_DAYS] &&
            current_game_state_variables.evidence_mask == 0 &&
            current_hidden_statistic.current_perception_points == HIDDEN_STATISTIC_START);
@@ -1872,15 +1878,17 @@ static void testar_ignorar_npcs(void)
             }
             else
             {
-                while (current_game_state_variables.current_day == dia && !WindowShouldClose()) handle_state_machine();
+                while (current_game_state_variables.current_day == dia && !WindowShouldClose()) test_frame();
             }
             continue;
         }
 
-        if (current_screen == SCREEN_NONE) handle_state_machine();
+        if (current_screen == SCREEN_NONE) test_frame();
 
-        /* Pula o cartao de chegada: o jogador esta na porta de entrada. */
-        current_screen = IN_GAME_SCREEN;
+        /* Avança o cartão e as cenas obrigatórias sem abrir conversas opcionais. */
+        assert(current_screen == CALENDAR_DAY_CARD_SCREEN);
+        render_calendar_day_card_finished = true;
+        test_frame();
         dias_jogados++;
 
         bool desenhar = (dias_jogados == 1);
@@ -1917,6 +1925,18 @@ static void testar_ignorar_npcs(void)
         enter_computer_screen = true;
         rodar_ate_a_tela(COMPUTER_SCREEN, 5.0);
         jogar_o_computador(0);
+        if (dia == TOTAL_GAME_DAYS)
+        {
+            rodar_ate_a_tela(DAY_END_CARD_SCREEN, 5.0);
+            if (current_screen == DAY_END_CARD_SCREEN)
+            {
+                render_calendar_day_card_finished = true;
+                test_frame();
+            }
+            if (current_screen == ENDING_CARD_SCREEN) dias_concluidos++;
+            else dia_com_falha = dia;
+            break;
+        }
         rodar_ate_a_tela(IN_GAME_SCREEN, 5.0);
 
         /* 2. Do computador ate a porta, de novo sem conversar. */
@@ -1947,11 +1967,11 @@ static void testar_ignorar_npcs(void)
         leave_office = true;
         rodar_ate_a_tela(DAY_END_CARD_SCREEN, 5.0);
         render_calendar_day_card_finished = true;
-        handle_state_machine();
+        test_frame();
 
-        /* O dia conta como concluido se foi salvo e o jogo seguiu: para o proximo dia ou, no ultimo, para o final. */
+        /* A saída dos dias anteriores grava o expediente e avança o calendário. */
         if (current_game_state_variables.resolved_puzzles[dia] &&
-            (current_game_state_variables.current_day > dia || current_screen == ENDING_CARD_SCREEN))
+            current_game_state_variables.current_day > dia)
         {
             dias_concluidos++;
         }
@@ -2435,7 +2455,7 @@ int main(void)
 
     for (int quadro = 0; quadro < 5; quadro++)
     {
-        handle_state_machine();
+        test_frame();
     }
 
     bool continua_nas_configuracoes = (current_game_state_variables.current_screen == SETTINGS_SCREEN);

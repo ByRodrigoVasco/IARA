@@ -300,3 +300,14 @@ Fotos e sprites ficam em [`docs/assets/`](docs/assets).
 | ![](docs/assets/team/luan-arruda.png) | ![](docs/assets/sprites/luan-arruda.png) | Luan Arruda | Design e integração | [luan-arruda](https://github.com/luan-arruda) | [luan-arruda-548a9534b](https://www.linkedin.com/in/luan-arruda-548a9534b) | las9@cesar.school |
 | ![](docs/assets/team/nicolas-mauricio.png) | ![](docs/assets/sprites/nicolas-mauricio.png) | Nicolas Mauricio | Gestão ágil | [nicollasfr](https://github.com/nicollasfr) | [nicollasmfranca](https://www.linkedin.com/in/nicollasmfranca/) | nmcf@cesar.school |
 | ![](docs/assets/team/rodrigo-vasco.png) | ![](docs/assets/sprites/rodrigo-vasco.png) | Rodrigo Vasco | Engenharia de software | [ByRodrigoVasco](https://github.com/ByRodrigoVasco) | [rodrigo-vlm](https://www.linkedin.com/in/rodrigo-vlm/) | rvlm@cesar.school |
+
+
+### Cutscenes do Dia 1
+
+A primeira leva do [roteiro de encenação](docs/fds/roteiro-encenacao-cutscenes.md) inclui recepção, reação ao primeiro chamado e encerramento, com variantes de método e failsafe. Espaço, Enter ou clique completam a fala e, em uma nova entrada, avançam. A pausa continua disponível nas cenas. O computador fica suspenso durante a intervenção e retoma o próximo chamado. O save v2 mantém o progresso e as cenas concluídas do Dia 1, e aceita saves v1.
+
+Após a recepção, os sete colegas alternam entre a mesa e atividades curtas no escritório. Antes das falas de 01M e 01F, os participantes se aproximam do Estagiário. As rotinas e as aproximações usam os corredores do mapa e a posição real de cada ator.
+
+Use `tools/tests/run_tests.ps1 -Somente test_npcs,test_story,test_save,test_fluxo` para verificar as rotinas, aproximações, diálogos e progresso do Dia 1.
+
+Nos dias jogáveis, as rotinas usam sorteios que consideram a função do NPC e as faixas acumuladas de Automação, Percepção e Vínculo Humano. O trabalho sentado tem blocos próprios, com pausas, visitas e inspeções de durações diferentes. Todos os personagens usam 24 FPS de animação para sentar e levantar.

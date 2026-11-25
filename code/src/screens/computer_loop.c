@@ -220,6 +220,9 @@ static float iara_suggestion_typing_time = 0.0f;
 static bool iara_suggestion_typing_started = false;
 static int unchecked_sends = 0;             // Vezes que enviou sem conferir hoje
 static TaskResult ticket_results[MAX_TICKETS];
+static int story_day_choice = -1;
+typedef enum { STORY_NEXT_NONE, STORY_NEXT_FEEDBACK, STORY_NEXT_SENT } StoryNext;
+static StoryNext story_next;
 static unsigned int day_choice_effects = 0; // O que as escolhas do dia vão mudar quando ele for concluído
 static bool step_can_click = true;          // false enquanto o passo está entrando
 
@@ -660,6 +663,7 @@ static bool is_computer_shutting_down(void)
 // Sai do computador sem mexer no roteiro: ao voltar, o jogador continua de onde parou.
 static void leave_computer(void)
 {
+    if (current_game_state_variables.current_day == 3 && current_step_index == REPORT_STEP) return;
     if (!computer_tasks_finished) computer_leaving = true;
 }
 
@@ -910,7 +914,8 @@ static void draw_taskbar(void)
 
     bool exit_clicked = false;
 
-    draw_button(get_taskbar_exit_rect(), EXIT_BUTTON_TEXT, font_size, BUTTON_FILL_COLOR, !is_computer_shutting_down(), &exit_clicked);
+    draw_button(get_taskbar_exit_rect(), EXIT_BUTTON_TEXT, font_size, BUTTON_FILL_COLOR, !is_computer_shutting_down() &&
+                !(current_game_state_variables.current_day == 3 && current_step_index == REPORT_STEP), &exit_clicked);
 
     if (exit_clicked) leave_computer();
 
@@ -1046,6 +1051,14 @@ static void draw_computer_cursor(void)
     }
 }
 
+bool computer_checkpoint_dirty = false;
+void computer_suspend_input(void)
+{
+    computer_mouse_captured = false;
+    EnableCursor();
+}
+bool computer_restore_checkpoint(void);
+
 // Volta ao começo do roteiro do dia atual. Abrir o computador não faz isso: só um dia novo.
 void reset_computer_progress(void)
 {
@@ -1053,11 +1066,15 @@ void reset_computer_progress(void)
     current_wrong_answers = 0;
     unchecked_sends = 0;
     day_choice_effects = 0;
+    story_day_choice = -1;
+    story_next = STORY_NEXT_NONE;
+    manual_page_step = 0;
     select_day_script(current_game_state_variables.current_day);
 
     // Cada dia abre uma conversa nova, mas quem delega muito já começa com uma IARA pior
     int delegated_days = (int)current_hidden_statistic.current_automation_points - HIDDEN_STATISTIC_START;
 
+    if (delegated_days < 0) delegated_days = 0;
     if (delegated_days > IARA_MEMORY_DELEGATION_LIMIT) delegated_days = IARA_MEMORY_DELEGATION_LIMIT;
 
     iara_memory = IARA_MEMORY_MAX - delegated_days;
@@ -1197,7 +1214,7 @@ static IaraSuggestion get_iara_suggestion(int step_index, IaraMemoryLevel level)
     if (suggestion.confidence > IARA_CONFIDENCE_MAX) suggestion.confidence = IARA_CONFIDENCE_MAX;
 
     if (level == IARA_MEMORY_MEDIUM) snprintf(suggestion.aside, MAX_LINE_LEN, "Como você me disse antes, %s.", previous_sender);
-    if (is_low) snprintf(suggestion.aside, MAX_LINE_LEN, "Como a Mariana me pediu.");
+    if (is_low) snprintf(suggestion.aside, MAX_LINE_LEN, "Como consta no meu registro.");
 
     // A triagem é conferida na própria mesa, sem afirmações
     if (step->type == STEP_TRIAGE) return suggestion;
@@ -1219,7 +1236,7 @@ static IaraSuggestion get_iara_suggestion(int step_index, IaraMemoryLevel level)
     // Sem memória, sobra mais o que conferir: a afirmação extra é sempre falsa
     if (level != IARA_MEMORY_FULL)
     {
-        if (is_low) snprintf(suggestion.claims[suggestion.claim_count], MAX_LINE_LEN, "A Mariana pediu este chamado.");
+        if (is_low) snprintf(suggestion.claims[suggestion.claim_count], MAX_LINE_LEN, "O sistema pediu este chamado.");
         else snprintf(suggestion.claims[suggestion.claim_count], MAX_LINE_LEN, "Quem pediu isto foi %s.", previous_sender);
 
         suggestion.claim_is_true[suggestion.claim_count] = false;
@@ -1441,6 +1458,15 @@ static void decide_personal_data(bool redact)
     current_ticket_view = TICKET_SUGGESTION;
 }
 
+static bool needs_story_middle(void)
+{
+    const struct game_state_variables *state = &current_game_state_variables;
+    if (current_step_index != FIRST_TICKET_STEP) return false;
+    unsigned int arrival = story_scene_bit(state->current_day, STORY_ARRIVAL);
+    unsigned int middle = story_scene_bit(state->current_day, STORY_MIDDLE);
+    return (state->story_later_scenes & arrival) && !(state->story_later_scenes & middle);
+}
+
 // Imprudência: a sugestão vira a resposta. Sem aviso na hora: o resultado aparece no relatório.
 static void send_without_checking(void)
 {
@@ -1449,7 +1475,8 @@ static void send_without_checking(void)
     spend_iara_memory(IARA_COST_UNCHECKED);
     unchecked_sends++;
     current_wrong_answers = 0;
-    advance_step();
+    if (needs_story_middle()) story_next = STORY_NEXT_SENT;
+    else advance_step();
 }
 
 // Conferir: nos chamados, abre o manual; na triagem, a IARA deixa a mesa preenchida para corrigir.
@@ -1516,6 +1543,7 @@ static void submit_triage(void)
 // Guarda o efeito da opção escolhida e segue o roteiro.
 static void choose_day_option(const DialogStep *step, int option)
 {
+    story_day_choice = option;
     play_keyboard_sound();
     day_choice_effects |= step->choice_effects[option];
     advance_step();
@@ -1544,13 +1572,26 @@ static void take_over_remaining_tickets(void)
     }
 
     computer_failsafe_triggered = true;
-    current_step_index = REPORT_STEP - 1;
-    advance_step();
+    // Dia 3: a escolha de Júlia permanece disponível após a tomada da mesa.
+    // Outros dias mantêm a conclusão direta no relatório.
+    if (current_game_state_variables.current_day == 3 &&
+        current_step_index + 1 < REPORT_STEP && dialog_sequence[current_step_index + 1].type == STEP_CHOICE)
+        advance_step();
+    else
+    {
+        current_step_index = REPORT_STEP - 1;
+        advance_step();
+    }
 }
 
 // Depois da resposta: o acerto avança, o erro abre outra tentativa e o 3º erro seguido aciona o failsafe.
 static void continue_after_answer(void)
 {
+    if (current_wrong_answers < FAILSAFE_WRONG_ANSWERS && needs_story_middle())
+    {
+        story_next = STORY_NEXT_FEEDBACK;
+        return;
+    }
     if (current_wrong_answers == 0)
     {
         if (!ticket_asked_iara)
@@ -1590,7 +1631,8 @@ static const char *get_ticket_report_line(int ticket)
 
     if ((result->outcome == TASK_SENT_UNCHECKED || result->outcome == TASK_TAKEN_OVER_BY_IARA) && !result->answer_is_correct)
     {
-        return step->wrong_result;
+        return TextFormat("%s %s", result->outcome == TASK_SENT_UNCHECKED
+                          ? "Sem conferência." : "IARA assumiu.", step->wrong_result);
     }
 
     switch (result->outcome)
@@ -2129,6 +2171,9 @@ static const char *get_board_row_text(const DialogStep *step, const TriageCard *
         return "(evidência não encontrada)";
     }
 
+    if (step->board_mode == BOARD_REFUTATION)
+        return TextFormat("%s · %s", item->required_evidence ? "Registro" : "IARA", item->text);
+
     if (step->board_mode != BOARD_TRUTH_TABLE) return item->text;
 
     char values[MAX_LINE_LEN] = "";
@@ -2208,7 +2253,8 @@ static void render_ticket_triage(DialogStep *step, float top)
         Rectangle second_bounds = {first_bounds.x + mark_width + spacing, y, mark_width, row_height};
         bool locked = item->required_evidence != 0 && !(current_game_state_variables.evidence_mask & item->required_evidence);
 
-        draw_text_band(get_board_row_text(step, item), text_band, BUTTON_FILL_COLOR);
+        Color row_fill = item->required_evidence && !locked ? IARA_BOX_LIGHT_COLOR : BUTTON_FILL_COLOR;
+        draw_text_band(get_board_row_text(step, item), text_band, row_fill);
 
         if (draw_choice_button(first_bounds, step->choice_labels[1], triage_choices[card] == 1, can_choose && !locked)) triage_choices[card] = 1;
         if (draw_choice_button(second_bounds, step->choice_labels[0], triage_choices[card] == 0, can_choose && !locked)) triage_choices[card] = 0;
@@ -2255,7 +2301,11 @@ static void render_ticket_triage(DialogStep *step, float top)
     draw_button(send_bounds, step->submit_label, get_board_button_font_size(step->submit_label, send_bounds), BUTTON_FILL_COLOR, step_can_click && all_chosen, &send_clicked);
 
     if (ask_clicked) ask_iara();
-    else if (send_clicked) submit_triage();
+    else if (send_clicked)
+    {
+        play_keyboard_sound();
+        submit_triage();
+    }
 }
 
 // Mensagem ou decisão sem resposta certa: o efeito só entra quando o dia for concluído.
@@ -2297,7 +2347,21 @@ static void render_report(DialogStep *step, float top)
 {
     float win_h = quiz_area_rect.height;
     float row_step = (win_h * OPTION_BUTTON_HEIGHT_RATIO) + (win_h * OPTION_SPACING_RATIO);
-    float y = draw_text_box(step->lines, step->line_count, top, QUESTION_BOX_COLOR, NULL) + (win_h * QUIZ_BUTTONS_TOP_GAP_RATIO);
+    char (*report_lines)[MAX_LINE_LEN] = step->lines;
+    int report_line_count = step->line_count;
+    char choice_report[][MAX_LINE_LEN] = {
+        "O pedido de revisão foi registrado.",
+        "A conciliação foi assinada.",
+        "A IARA assumiu a tarefa."
+    };
+    if (current_game_state_variables.current_day == 12)
+    {
+        if (computer_failsafe_triggered) report_lines = &choice_report[2];
+        else if (day_choice_effects & DAY_EFFECT_NO_LETTER) report_lines = &choice_report[0];
+        else if (day_choice_effects & DAY_EFFECT_AUTOMATION) report_lines = &choice_report[1];
+        if (report_lines != step->lines) report_line_count = 1;
+    }
+    float y = draw_text_box(report_lines, report_line_count, top, QUESTION_BOX_COLOR, NULL) + (win_h * QUIZ_BUTTONS_TOP_GAP_RATIO);
 
     for (int ticket = 0; ticket < TICKET_COUNT; ticket++)
     {
@@ -2359,7 +2423,14 @@ void render_current_step(void)
     {
     case STEP_STATEMENT:
     {
-        float box_bottom = draw_text_box(step->lines, step->line_count, top, QUESTION_BOX_COLOR, NULL);
+        static const char open_queue[][MAX_LINE_LEN] = {
+            "O arquivo chegou para o treino.",
+            "Já deixei a fila aberta na sua mesa."
+        };
+        bool queue_ready = current_game_state_variables.current_day == 41 && current_step_index == 0 &&
+                           hidden_statistic_bands(&current_hidden_statistic).automation >= 2;
+        float box_bottom = draw_text_box(queue_ready ? open_queue : step->lines,
+                                         queue_ready ? 2 : step->line_count, top, QUESTION_BOX_COLOR, NULL);
 
         if (draw_action_button(step->button_name, box_bottom + (quiz_area_rect.height * QUIZ_BUTTONS_TOP_GAP_RATIO)))
         {
@@ -2451,6 +2522,7 @@ void handle_computer_loop(void)
 
     // O post-it fica na frente do monitor e do ponteiro: não apaga junto com a tela
     draw_stuck_cheat_sheet();
+    computer_store_checkpoint();
 
     if (is_computer_shutting_down() && screen_power <= 0.0f && computer_scene_progress <= 0.0f)
     {
@@ -2463,4 +2535,141 @@ void unload_computer_loop(void)
 {
     UnloadTexture(correct_icon_texture);
     UnloadTexture(wrong_icon_texture);
+}
+
+
+int computer_first_outcome(void) { return ticket_results[0].outcome; }
+
+bool computer_story_middle_pending(void) { return story_next != STORY_NEXT_NONE; }
+
+TaskOutcome computer_story_middle_reaction(void)
+{
+    if (story_next == STORY_NEXT_FEEDBACK && !current_wrong_answers)
+        return ticket_checked ? TASK_SOLVED_WITH_IARA : TASK_SOLVED_ALONE;
+    return ticket_results[0].outcome;
+}
+
+void computer_complete_story_middle(void)
+{
+    StoryNext next = story_next;
+    story_next = STORY_NEXT_NONE;
+    if (next == STORY_NEXT_FEEDBACK) continue_after_answer();
+    if (next == STORY_NEXT_SENT) advance_step();
+    computer_store_checkpoint();
+}
+bool computer_checkpoint_finished(void) { return current_step_index >= TOTAL_STEPS; }
+int computer_story_day_choice(void) { return story_day_choice; }
+bool computer_day_three_first_retry(void)
+{
+    return current_step_index == FIRST_TICKET_STEP &&
+           current_wrong_answers == 1 && !current_quiz_answered;
+}
+bool computer_day_three_choice_recorded(void)
+{
+    return current_step_index >= REPORT_STEP && ticket_results[0].outcome != TASK_PENDING;
+}
+bool computer_day_three_lunch_accepted(void)
+{
+    return computer_day_three_choice_recorded() && (day_choice_effects & DAY_EFFECT_HUMAN_BOND);
+}
+bool computer_first_answer_correct(void) { return ticket_results[0].answer_is_correct; }
+bool computer_first_exposed_personal_data(void) { return ticket_results[0].exposed_personal_data; }
+bool computer_mostly_unchecked(void)
+{
+    int count = 0;
+    for (int i = 0; i < TICKET_COUNT; i++) count += ticket_results[i].outcome == TASK_SENT_UNCHECKED;
+    return count * 2 > TICKET_COUNT;
+}
+
+/* Fixed count/version: bounded integers, no raw structs or pointers in saves. */
+#define LEGACY_CHECKPOINT_VALUES (17 + MAX_TICKETS * 5 + MAX_TRIAGE_CARDS + MAX_CLAIMS)
+#define CHECKPOINT_VALUES (LEGACY_CHECKPOINT_VALUES + 3)
+void computer_store_checkpoint(void)
+{
+    if (current_game_state_variables.day_type != PLAYABLE_DAY) return;
+    char previous[1024];
+    snprintf(previous, sizeof(previous), "%s", current_game_state_variables.computer_checkpoint);
+    int values[CHECKPOINT_VALUES] = {current_game_state_variables.current_day, current_step_index, iara_memory, current_wrong_answers,
+        unchecked_sends, computer_failsafe_triggered, current_ticket_view, ticket_memory_level,
+        ticket_asked_iara, ticket_checked, ticket_caught_error, ticket_exposed_data,
+        ticket_redacted_data, current_quiz_answered, current_quiz_selected,
+        triage_wrong_cards, (int)day_choice_effects};
+    int n = 17;
+    for (int i = 0; i < MAX_TICKETS; i++)
+    {
+        values[n++] = ticket_results[i].outcome;
+        values[n++] = ticket_results[i].answer_is_correct;
+        values[n++] = ticket_results[i].caught_iara_error;
+        values[n++] = ticket_results[i].exposed_personal_data;
+        values[n++] = ticket_results[i].redacted_personal_data;
+    }
+    for (int i = 0; i < MAX_TRIAGE_CARDS; i++) values[n++] = triage_choices[i];
+    for (int i = 0; i < MAX_CLAIMS; i++) values[n++] = claim_marks[i];
+    values[n++] = story_day_choice;
+    values[n++] = manual_page_step;
+    values[n++] = story_next;
+    char *out = current_game_state_variables.computer_checkpoint;
+    size_t used = 0, size = sizeof(current_game_state_variables.computer_checkpoint);
+    for (int i = 0; i < n; i++)
+    {
+        int written = snprintf(out + used, size - used, "%s%d", i ? "," : "", values[i]);
+        if (written < 0 || (size_t)written >= size - used) { out[0] = 0; return; }
+        used += (size_t)written;
+    }
+    if (strcmp(previous, out) != 0) computer_checkpoint_dirty = true;
+}
+
+bool computer_restore_checkpoint(void)
+{
+    const char *p = current_game_state_variables.computer_checkpoint;
+    if (!*p) return false;
+    int v[CHECKPOINT_VALUES];
+    int count = 0;
+    for (; count < CHECKPOINT_VALUES && *p; count++)
+    {
+        char *end;
+        long value = strtol(p, &end, 10);
+        if (end == p || value < -1 || value > 1000 || (*end && (*end != ',' || !end[1]))) return false;
+        v[count] = (int)value;
+        p = *end ? end + 1 : end;
+    }
+    if (*p || (count != LEGACY_CHECKPOINT_VALUES && count != CHECKPOINT_VALUES)) return false;
+    if (v[0] != current_game_state_variables.current_day || v[1] < 0 || v[1] > TOTAL_STEPS || v[2] < 0 || v[2] > IARA_MEMORY_MAX ||
+        v[3] < 0 || v[3] > 3 || v[4] < 0 || v[5] < 0 || v[5] > 1 ||
+        v[6] < 0 || v[6] > TICKET_CHECKING || v[7] < 0 || v[7] > IARA_MEMORY_LOW ||
+        v[14] < -1 || v[14] >= MAX_OPTIONS || v[15] < 0 || v[15] > MAX_TRIAGE_CARDS || v[16] < 0 || v[16] > 15) return false;
+    for (int i = 8; i <= 13; i++) if (v[i] < 0 || v[i] > 1) return false;
+    int n = 17;
+    for (int i = 0; i < MAX_TICKETS; i++)
+    {
+        if (v[n] < 0 || v[n] > TASK_TAKEN_OVER_BY_IARA) return false;
+        for (int j = 1; j < 5; j++) if (v[n+j] < 0 || v[n+j] > 1) return false;
+        n += 5;
+    }
+    for (int i = n; i < LEGACY_CHECKPOINT_VALUES; i++) if (v[i] < -1 || v[i] > 2) return false;
+    if (count == CHECKPOINT_VALUES &&
+        (v[LEGACY_CHECKPOINT_VALUES] >= MAX_OPTIONS ||
+         v[LEGACY_CHECKPOINT_VALUES + 1] < 0 || v[LEGACY_CHECKPOINT_VALUES + 1] >= TOTAL_STEPS ||
+         v[LEGACY_CHECKPOINT_VALUES + 2] < STORY_NEXT_NONE ||
+         v[LEGACY_CHECKPOINT_VALUES + 2] > STORY_NEXT_SENT ||
+         (v[LEGACY_CHECKPOINT_VALUES + 2] != STORY_NEXT_NONE && v[1] != FIRST_TICKET_STEP))) return false;
+    current_step_index = v[1]; iara_memory = v[2]; current_wrong_answers = v[3];
+    unchecked_sends = v[4]; computer_failsafe_triggered = v[5];
+    reset_step_state();
+    current_ticket_view = v[6]; ticket_memory_level = v[7]; ticket_asked_iara = v[8];
+    ticket_checked = v[9]; ticket_caught_error = v[10]; ticket_exposed_data = v[11];
+    ticket_redacted_data = v[12]; current_quiz_answered = v[13]; current_quiz_selected = v[14];
+    triage_wrong_cards = v[15]; day_choice_effects = (unsigned int)v[16];
+    n = 17;
+    for (int i = 0; i < MAX_TICKETS; i++)
+    {
+        ticket_results[i] = (TaskResult){v[n], v[n+1], v[n+2], v[n+3], v[n+4]}; n += 5;
+    }
+    for (int i = 0; i < MAX_TRIAGE_CARDS; i++) triage_choices[i] = v[n++];
+    for (int i = 0; i < MAX_CLAIMS; i++) claim_marks[i] = v[n++];
+    story_day_choice = count == CHECKPOINT_VALUES ? v[n] : -1;
+    manual_page_step = count == CHECKPOINT_VALUES ? v[n + 1]
+        : ticket_memory_level == IARA_MEMORY_FULL && current_step_index < TOTAL_STEPS ? current_step_index : FIRST_TICKET_STEP;
+    story_next = count == CHECKPOINT_VALUES ? v[n + 2] : STORY_NEXT_NONE;
+    return true;
 }

@@ -86,6 +86,22 @@ extern unsigned int middle_screen_y;
 
 
 #define ENVIRONMENT_SPRITES_PATH       SPRITES_PATH "environment/"
+#define OFFICE_CHAIR_FLOOR_PATH        ENVIRONMENT_SPRITES_PATH "office-chair-floor.png"
+#define OFFICE_CHAIR_NORTH_PATH        ENVIRONMENT_SPRITES_PATH "office-chair-north.png"
+#define OFFICE_CHAIR_SOUTH_PATH        ENVIRONMENT_SPRITES_PATH "office-chair-south.png"
+#define SEAT_NPC_FRAME_PATH            PERSONAGENS_PATH "%s/pull-sit-south/frame_%03d.png"
+#define SEAT_PLAYER_FRAME_PATH         PERSONAGENS_PATH "Estagiarios/pull-sit-nort/frame_%03d.png"
+#define SEAT_NPC_FRAME_COUNT           30
+#define SEAT_PLAYER_FRAME_COUNT        26
+#define SEAT_ANIMATION_FPS              24.0f
+#define SEAT_FRAME_SECONDS             (1.0f / SEAT_ANIMATION_FPS)
+#define SEAT_DESK_EDGE_Y               46
+#define SEAT_ORIGIN_X                  40
+#define SEAT_ORIGIN_Y                  49
+#define SEAT_ENTRY_OFFSET              17
+#define CHAIR_ORIGIN_X                 12
+#define CHAIR_ORIGIN_Y                 22
+#define CHARACTER_SPRITE_SIZE          32.0f
 #define ACTION_BUTTONS_SPRITES_PATH    ENVIRONMENT_SPRITES_PATH "action.png"
 #define MOVE_BUTTONS_SPRITES_PATH      ENVIRONMENT_SPRITES_PATH "move.png"
 #define MOVE_OR_BUTTONS_SPRITES_PATH   ENVIRONMENT_SPRITES_PATH "move-or.png"
@@ -102,8 +118,9 @@ extern unsigned int middle_screen_y;
 #define GAME_MUSIC_PATH SOUNDS_PATH "DEMO - GAME.mp3"
 #define CALM_MUSIC_PATH SOUNDS_PATH "SOM AMBIENTE.mp3"
 #define QUIZ_MUSIC_PATH SOUNDS_PATH "SOM AMBIENTE SUSPENSE.mp3"   // Tela do computador (quiz)
-#define FLASH_STINGER_PATH SOUNDS_PATH "TRANSIÇÃO 2.mp3"          // Entrada de um Flash do dia
-#define JUMP_STINGER_PATH SOUNDS_PATH "TRANSIÇÃO 1.mp3"           // Entrada de um bloco de salto puro
+#define FLASH_STINGER_PATH SOUNDS_PATH "TRANSICAO 2.mp3"          // Entrada de um Flash do dia
+#define JUMP_STINGER_PATH SOUNDS_PATH "TRANSICAO 1.mp3"           // Entrada de um bloco de salto puro
+#define CAMPAIGN_ART_PATH "code/assets/background/campanha/"
 #define MOUSE_CLICK_SOUND_PATH SOUNDS_PATH "CLICK MOUSE.mp3"
 #define IARA_VOICE_SOUND_PATH SOUNDS_PATH "ARI VOICE BLIP.mp3"
 #define PLAYER_FOOTSTEPS_SOUND_PATH SOUNDS_PATH "SOM DE PASSOS.mp3"

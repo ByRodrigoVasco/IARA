@@ -9,6 +9,13 @@ struct hidden_statistic current_hidden_statistic;
 
 void initialize_game_state_variables(void)
 {
+    current_game_state_variables.story_scenes = 0;
+    current_game_state_variables.story_later_scenes = 0;
+    current_game_state_variables.story_absences = 0;
+    current_game_state_variables.story_presence_day = 0;
+    current_game_state_variables.d41_mural_lido = false;
+    current_game_state_variables.story_report_closed = false;
+    current_game_state_variables.computer_checkpoint[0] = '\0';
     current_game_state_variables.current_day = 1;
     current_game_state_variables.day_type = PLAYABLE_DAY;
     current_game_state_variables.mode_type = false;
@@ -16,7 +23,8 @@ void initialize_game_state_variables(void)
     current_game_state_variables.is_resolved = false;
     current_game_state_variables.has_cheat_sheet = false;
     current_game_state_variables.evidence_mask = 0;
-    current_game_state_variables.found_mariana = false;
+    current_game_state_variables.found_nicollas_trace = false;
+    current_game_state_variables.legacy_mariana_discovery = false;
     current_game_state_variables.proof_succeeded = false;
 
     for (int day = 0; day <= TOTAL_GAME_DAYS; day++)
@@ -90,8 +98,19 @@ void resolve_day_tasks(const TaskResult *results, int count)
     if (investigated || caught_error) current_hidden_statistic.current_perception_points++;
 }
 
+unsigned int story_scene_bit(int day, StoryPhase phase)
+{
+    if (day < 12 || day > TOTAL_GAME_DAYS || calendar_get_day_type(day) != PLAYABLE_DAY) return 0;
+    unsigned int index = 0;
+    for (int d = 12; d < day; d++)
+        if (calendar_get_day_type(d) == PLAYABLE_DAY) index++;
+    return 1u << (3 * index + (unsigned int)phase);
+}
+
 void start_game_day(int day)
 {
+    current_game_state_variables.computer_checkpoint[0] = '\0';
+    current_game_state_variables.story_report_closed = false;
     current_game_state_variables.current_day = day;
     current_game_state_variables.day_type = calendar_get_day_type(day);
     current_game_state_variables.mode_type = MODE_MANUAL;
@@ -107,7 +126,8 @@ GameEnding get_game_ending(void)
 
     if (!perception_high) return automation_high ? ENDING_PAMONHA : ENDING_UNHARMED;
 
-    if (!automation_high && human_bond_high && current_game_state_variables.found_mariana && current_game_state_variables.proof_succeeded)
+    if (!automation_high && human_bond_high && (current_game_state_variables.found_nicollas_trace || current_game_state_variables.legacy_mariana_discovery) &&
+        current_game_state_variables.proof_succeeded)
     {
         return ENDING_RUPTURE;
     }
