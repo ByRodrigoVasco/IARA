@@ -19,6 +19,9 @@ typedef struct
     int wins;                   // Vezes que a IARA foi derrotada
     int best_seconds;           // Maior tempo de sobrevivência
     int kills;                  // Inimigos eliminados no total
+    int best_level;             // Maior nível alcançado em uma partida
+    int run_kills;              // Mais inimigos eliminados em uma partida
+    int run_bosses;             // Mais chefes derrotados em uma partida
     int character;              // Personagem escolhido (SvCharacterId)
     int character2;             // Dupla: personagem do jogador 2 (o save da dupla é um só para os dois)
 } SvMeta;

@@ -2,6 +2,7 @@
 #define SV_RANKING_H
 
 #include <stdbool.h>
+#include "sv_rules.h"
 
 /*
  * Ranking do Modo Sobrevivência. Cada jogador é um save (saves/sobrevivencia/<nome>/), com o seu
@@ -10,6 +11,7 @@
  * o ranking é um arquivo só (iara.ranking, na pasta do jogo) e não depende de internet.
  *
  * Ordem: pela PONTUAÇÃO da partida (sv_ranking_score), que junta abates, tempo, chefes e vitória.
+ * O que se faz depois dos 10 minutos (hora extra) vale o dobro: segundos e abates.
  * Os abates pesam mais que o tempo: quem só foge sem derrotar ninguém não passa na frente de quem
  * sobreviveu um pouco menos mas lutou mais. No empate de pontos, quem derrotou mais inimigos;
  * depois, quem sobreviveu mais tempo; persistindo o empate, quem chegou primeiro.
@@ -43,6 +45,7 @@ typedef struct
     int character;      // SvCharacterId usado
     bool won;           // Desligou a IARA
     long order;         // Ordem de chegada (desempate)
+    int extra_kills;    // Abates feitos depois dos 10 minutos (contam de novo)
 } SvRankEntry;
 
 void sv_ranking_clear(void);
@@ -64,6 +67,9 @@ bool sv_ranking_save(void);
  */
 int sv_ranking_add(const char *name, int seconds, int kills, int level, int bosses, int character, bool won, bool *new_record);
 
+/** @brief O mesmo, informando quantos dos abates foram feitos depois dos 10 minutos. */
+int sv_ranking_add_run(const char *name, int seconds, int kills, int level, int bosses, int character, bool won, int extra_kills, bool *new_record);
+
 /** @brief Posição do jogador (0 = primeiro lugar), ou -1 se ele não está no ranking. */
 int sv_ranking_find(const char *name);
 
@@ -75,7 +81,8 @@ const SvRankEntry *sv_ranking_get(int index);   // 0 = primeiro lugar
 
 /**
  * @brief Pontos de uma partida: abates × SV_SCORE_PER_KILL + segundos × SV_SCORE_PER_SECOND
- * + chefes × SV_SCORE_PER_BOSS + SV_SCORE_WIN_BONUS se venceu.
+ * + chefes × SV_SCORE_PER_BOSS + SV_SCORE_WIN_BONUS se venceu. Os segundos além de SV_RUN_SECONDS e
+ * os abates da hora extra são somados mais uma vez.
  */
 int sv_ranking_score(const SvRankEntry *e);
 
