@@ -7,7 +7,7 @@ Entregas da disciplina que já estão versionadas neste repositório.
 | Núcleo do jogo em C | Código-fonte em [`code/src`](../../code/src), renderizado com [raylib](https://www.raylib.com/) |
 | Como compilar e executar | Seção [Como compilar e executar](../../README.md#como-compilar-e-executar) do README principal |
 | Screencast do núcleo em C (Unidade 1) | [Vídeo no YouTube](https://www.youtube.com/watch?v=z4OrasORL4c) |
-| Screencast da Unidade 2 | _a incluir_ |
+| Screencast da Unidade 2 | [Vídeo no Google Drive](https://drive.google.com/file/d/1soQDTz9SJSCRORCqMzA3ldWT3vO0Zb2M/view) |
 | Regras em Haskell | Não cobrado na U2 |
 
 ## Screencast da Unidade 1
