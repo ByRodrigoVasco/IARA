@@ -238,6 +238,8 @@ typedef struct
     float colega_attack[SV_MAX_COLEGAS];
     float colega_walk[SV_MAX_COLEGAS];
     bool colega_moving[SV_MAX_COLEGAS];
+    Vector2 colega_vel[SV_MAX_COLEGAS];
+    Vector2 colega_leader;
     float colega_heal;
     float colega_heal_flash;
 } SvSeat;
@@ -271,8 +273,10 @@ typedef struct
     Vector2 colega_dir[SV_MAX_COLEGAS];   // Para onde cada um olha
     float colega_cd[SV_MAX_COLEGAS];      // Recarga de cada um
     float colega_attack[SV_MAX_COLEGAS];  // Tempo que falta da animação do golpe
-    float colega_walk[SV_MAX_COLEGAS];    // Relógio da caminhada
+    float colega_walk[SV_MAX_COLEGAS];    // Quadro da caminhada, avança com a distância andada
     bool colega_moving[SV_MAX_COLEGAS];
+    Vector2 colega_vel[SV_MAX_COLEGAS];   // Velocidade atual de cada um, suavizada
+    Vector2 colega_leader;                // Onde o jogador estava no quadro anterior
     float colega_heal;                    // Enfermeira: tempo até a próxima cura
     float colega_heal_flash;              // Brilho da cura, para o desenho
     float trail_timer;
