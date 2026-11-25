@@ -333,5 +333,3 @@ Nosso agradecimento aos professores que acompanharam o projeto. Eles também sã
 </table>
 
 > *Seção em construção.*
-
-**Créditos de arte.** Os móveis do Modo Sobrevivência (mesas, cadeiras, arquivos, estantes, cofre, caixas, lixeira, planta e longarina) foram recortados do pacote gratuito [Post Apoc Office](https://0-mem0ry.itch.io/), de **0_mem0ry**. A licença permite usar e modificar os assets em projetos comerciais e não comerciais, mas não permite revender ou redistribuir o pacote original; por isso o repositório guarda só os recortes usados no jogo.
