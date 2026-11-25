@@ -1262,6 +1262,19 @@ static void test_duo(void)
         check("SV-124", "quem caiu fica parado no chão", Vector2Distance(where, sv_duo_player(1)->pos) < 0.01f);
     }
 
+    // Com um caído, a dupla vira um jogo solo para quem está de pé: a câmera é dele e não há distância máxima
+    check("SV-147", "com um caído, a câmera (e o nascimento dos inimigos) segue quem está de pé",
+          sv_duo_focus_player() == 0 && Vector2Distance(sv_duo_focus(), sv_duo_player(0)->pos) < 0.01f);
+    {
+        Vector2 fallen = sv_duo_player(1)->pos;
+
+        sv_duo_player(0)->pos = Vector2Add(fallen, (Vector2){SV_DUO_LEASH_X + 300.0f, 0.0f});
+        clear_enemies();
+        step_duo(1, (Vector2){0, 0}, (Vector2){0, 0});
+        check("SV-148", "com um caído, quem está de pé pode se afastar além da distância máxima da dupla",
+              fabsf(sv_duo_player(0)->pos.x - fallen.x) > SV_DUO_LEASH_X + 200.0f && Vector2Distance(fallen, sv_duo_player(1)->pos) < 0.01f);
+    }
+
     // O parceiro chega perto e fica ao lado
     sv_duo_player(0)->pos = Vector2Add(sv_duo_player(1)->pos, (Vector2){20.0f, 0.0f});
     step_duo((int)(60 * SV_DUO_REVIVE_TIME * 0.5f), (Vector2){0, 0}, (Vector2){0, 0});
