@@ -31,7 +31,10 @@ int sv_ranking_score(const SvRankEntry *e)
     int seconds = e->seconds < 0 ? 0 : e->seconds;
     int bosses = e->bosses < 0 ? 0 : e->bosses;
 
-    return kills * SV_SCORE_PER_KILL + seconds * SV_SCORE_PER_SECOND + bosses * SV_SCORE_PER_BOSS + (e->won ? SV_SCORE_WIN_BONUS : 0);
+    int extra_kills = e->extra_kills < 0 ? 0 : e->extra_kills > kills ? kills : e->extra_kills;
+    int extra_seconds = seconds > (int)SV_RUN_SECONDS ? seconds - (int)SV_RUN_SECONDS : 0;
+
+    return (kills + extra_kills) * SV_SCORE_PER_KILL + (seconds + extra_seconds) * SV_SCORE_PER_SECOND + bosses * SV_SCORE_PER_BOSS + (e->won ? SV_SCORE_WIN_BONUS : 0);
 }
 
 bool sv_ranking_better(const SvRankEntry *a, const SvRankEntry *b)
@@ -162,6 +165,11 @@ static bool keep_best(const SvRankEntry *e)
 
 int sv_ranking_add(const char *name, int seconds, int kills, int level, int bosses, int character, bool won, bool *new_record)
 {
+    return sv_ranking_add_run(name, seconds, kills, level, bosses, character, won, 0, new_record);
+}
+
+int sv_ranking_add_run(const char *name, int seconds, int kills, int level, int bosses, int character, bool won, int extra_kills, bool *new_record)
+{
     SvRankEntry e = {0};
     bool record;
     int index;
@@ -173,6 +181,7 @@ int sv_ranking_add(const char *name, int seconds, int kills, int level, int boss
     e.bosses = bosses;
     e.character = character;
     e.won = won;
+    e.extra_kills = extra_kills < 0 ? 0 : extra_kills;
     e.order = next_order++;
 
     record = keep_best(&e) && sv_ranking_find(e.name) >= 0 && entries[sv_ranking_find(e.name)].order == e.order;
@@ -193,7 +202,7 @@ const SvRankEntry *sv_ranking_get(int index)
     return &entries[index];
 }
 
-// Arquivo de texto, uma partida por linha: nome|segundos|abates|nível|chefes|personagem|venceu|ordem
+// Arquivo de texto, uma partida por linha: nome|segundos|abates|nível|chefes|personagem|venceu|ordem|abates da hora extra
 bool sv_ranking_load(void)
 {
     FILE *file = fopen(ranking_path, "r");
@@ -210,7 +219,7 @@ bool sv_ranking_load(void)
         if (!bar) continue;
         *bar = '\0';
         sv_ranking_clean_name(line, e.name, sizeof(e.name));
-        if (sscanf(bar + 1, "%d|%d|%d|%d|%d|%d|%ld", &e.seconds, &e.kills, &e.level, &e.bosses, &e.character, &won, &e.order) != 7) continue;
+        if (sscanf(bar + 1, "%d|%d|%d|%d|%d|%d|%ld|%d", &e.seconds, &e.kills, &e.level, &e.bosses, &e.character, &won, &e.order, &e.extra_kills) < 7) continue;
         e.won = won != 0;
         keep_best(&e);   // Arquivo de uma versão antiga pode ter o mesmo nome várias vezes
 
@@ -233,7 +242,7 @@ bool sv_ranking_save(void)
     {
         const SvRankEntry *e = &entries[i];
 
-        fprintf(file, "%s|%d|%d|%d|%d|%d|%d|%ld\n", e->name, e->seconds, e->kills, e->level, e->bosses, e->character, e->won ? 1 : 0, e->order);
+        fprintf(file, "%s|%d|%d|%d|%d|%d|%d|%ld|%d\n", e->name, e->seconds, e->kills, e->level, e->bosses, e->character, e->won ? 1 : 0, e->order, e->extra_kills);
     }
     if (fclose(file) != 0) return false;
     remove(ranking_path);

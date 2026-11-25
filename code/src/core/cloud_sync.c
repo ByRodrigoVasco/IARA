@@ -92,6 +92,18 @@ bool cloud_sync_write_local(save_mode mode, const char *name, const char *conten
     return rename(temp, path) == 0;
 }
 
+int cloud_sync_open_save(save_mode mode, const char *name)
+{
+    char path[PATH_BYTES];
+    char *content = NULL;
+    int ticket;
+
+    if (save_slot_path(mode, name, path, sizeof(path))) content = read_whole_file(path);
+    ticket = cloud_open_save(save_mode_folder(mode), name, content);
+    free(content);
+    return ticket;
+}
+
 void cloud_sync_active_save(void)
 {
     char path[PATH_BYTES];
@@ -141,9 +153,9 @@ void cloud_sync_update(void)
     log_connection();
     if (!cloud_poll_notice(&notice)) return;
     if (notice.kind == CLOUD_NOTICE_LOST)
-        snprintf(text, sizeof(text), "Outro notebook assumiu o save \"%s\". O que for feito aqui não vai para a nuvem: saia e abra o save de novo.", notice.name);
+        snprintf(text, sizeof(text), "O save \"%s\" foi assumido ou apagado na nuvem. O jogo continua salvando neste dispositivo; ao abrir o save de novo, você escolhe qual fica.", notice.name);
     else
-        snprintf(text, sizeof(text), "Conflito no save \"%s\": a nuvem tem uma gravação mais nova, que foi mantida. Saia e abra o save de novo.", notice.name);
+        snprintf(text, sizeof(text), "A nuvem tem outra gravação do save \"%s\". O jogo continua salvando neste dispositivo; ao abrir o save de novo, você escolhe qual fica.", notice.name);
     TraceLog(LOG_WARNING, "NUVEM: %s", text);
     notice_show(text, NOTICE_ERROR);
 }

@@ -31,7 +31,7 @@ void sv_ranking_cloud_open(bool duo);
 void sv_ranking_cloud_update(void);
 
 /** @brief Manda uma partida sem trapaça para o ranking da nuvem. */
-void sv_ranking_cloud_submit(const char *name, int seconds, int kills, int level, int bosses, int character, bool won);
+void sv_ranking_cloud_submit(const char *name, int seconds, int kills, int level, int bosses, int character, bool won, int extra_kills);
 
 /** @brief Esquece o envio da partida anterior. */
 void sv_ranking_cloud_new_run(void);

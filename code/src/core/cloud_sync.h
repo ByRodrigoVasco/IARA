@@ -10,7 +10,7 @@
  * Com a nuvem desligada, nada aqui faz coisa alguma.
  */
 
-#define CLOUD_FOLDER "nuvem"   // Código do notebook e fila offline, na pasta de dados do jogo
+#define CLOUD_FOLDER "nuvem"   // Código do dispositivo, fila offline e sincronização, na pasta de dados
 
 /** @brief Liga a nuvem, se o build tem a URL e a chave. Chamar já dentro da pasta de dados. */
 void cloud_sync_start(void);
@@ -23,6 +23,9 @@ void cloud_sync_stop(void);
  * Um progresso local diferente, de antes da nuvem, fica guardado em "<arquivo>.anterior".
  */
 bool cloud_sync_write_local(save_mode mode, const char *name, const char *content);
+
+/** @brief Pede para abrir o save na nuvem, levando o que há neste dispositivo. Devolve o ticket. */
+int cloud_sync_open_save(save_mode mode, const char *name);
 
 /** @brief Manda para a nuvem o progresso do save ativo. Chamar depois de cada gravação local. */
 void cloud_sync_active_save(void);

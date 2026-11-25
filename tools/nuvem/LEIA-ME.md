@@ -85,15 +85,18 @@ delete from iara_ranking where nome_chave = 'zz teste';
 | Situação | O que acontece |
 |---|---|
 | Nos menus | No canto de cima, bolinha verde "online" ou vermelha "offline"; o motivo da queda vai para o `iara-desempenho.log` |
-| Escolher o save | A lista vem da nuvem e é atualizada a cada 10 s; um save aberto em outro dispositivo aparece como "Em uso em outro dispositivo" |
-| Sem conexão na escolha do save | Não dá para abrir, criar nem apagar; a tela oferece "Tentar de novo" |
+| Escolher o save | A lista junta os saves da nuvem (atualizada a cada 10 s) e os que só existem no dispositivo; um save aberto em outro aparece como "Em uso em outro dispositivo" |
+| Sem conexão na escolha do save | Valem os saves do dispositivo: dá para abrir, criar e apagar normalmente |
 | A rede cai durante a partida | O jogo segue; a gravação fica na fila e sobe quando a rede voltar |
 | Fechar o jogo sem rede | A fila fica no disco e sobe na próxima abertura |
-| Outro dispositivo assumiu o save, ou a nuvem tem gravação mais nova | O jogo avisa e para de subir aquele save; a gravação recusada fica em `nuvem\conflito-*.txt` |
+| Só um lado mudou desde a última sincronização | O jogo usa o mais novo, sem perguntar |
+| Os dois lados mudaram (ou o nome já existia na nuvem) | Ao abrir o save, o jogador escolhe **online** ou **local**; o outro fica em `nuvem\conflito-*.txt` |
+| Save apagado na nuvem que ainda está no dispositivo | Ao abrir, o jogo pergunta se envia o local de novo |
+| Apagar um save | Com a senha da organização sai da nuvem e do dispositivo; sem ela, só do dispositivo |
 | Modo normal (campanha) | Sobe quando o jogo grava: ao voltar ao menu e ao fechar |
 | Partida sem conexão | Vai para a fila do ranking; a tabela mostra o ranking deste computador, marcada como OFFLINE |
 | Partida com cheat | Não vai para o ranking |
-| Saves que já existiam no computador | Não aparecem na lista da nuvem. Se um save da nuvem tiver o mesmo nome, o progresso local vai para `<arquivo>.anterior` |
+| Saves que já existiam no computador | Aparecem na lista como "(neste dispositivo)" e sobem ao serem abertos |
 
 A pasta `Documentos\IARA\nuvem` guarda o código deste dispositivo (`notebook.id`) e a fila. **Não copie
 essa pasta de um dispositivo para outro**: dois dispositivos com o mesmo código conseguem abrir o mesmo save
@@ -107,7 +110,7 @@ ao mesmo tempo.
 | Trava de um save aberto | vence em 2 min; o jogo renova a cada 30 s |
 | Gravação mais velha que a do servidor | recusada (`conflito`) |
 | Conteúdo de um save | até 65536 caracteres |
-| Partida impossível (mais de 600 s, mais de 5 chefes, abates demais) | recusada (posição 0) |
+| Partida impossível (mais de 7200 s, mais de 5 chefes, abates demais) | recusada (posição 0) |
 | Apagar save | exige a senha e também tira o jogador do ranking |
 | Personagem no ranking | solo: o número do personagem; dupla: J1 + 16 × (J2 + 1) |
 

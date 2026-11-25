@@ -48,7 +48,7 @@ void sv_ranking_cloud_open(bool duo)
     if (cloud_enabled()) request_table();
 }
 
-void sv_ranking_cloud_submit(const char *name, int seconds, int kills, int level, int bosses, int character, bool won)
+void sv_ranking_cloud_submit(const char *name, int seconds, int kills, int level, int bosses, int character, bool won, int extra_kills)
 {
     cloud_match match = {0};
 
@@ -60,6 +60,7 @@ void sv_ranking_cloud_submit(const char *name, int seconds, int kills, int level
     match.bosses = bosses;
     match.character = character;
     match.won = won;
+    match.extra_kills = extra_kills;
     position = 0;
     send_ticket = cloud_register_match(table_type(), &match);
     send_state = send_ticket != 0 ? SV_SEND_WAITING : SV_SEND_NONE;
@@ -81,6 +82,7 @@ static void apply_table(const cloud_result *result)
         to->character = from->character % SV_CLOUD_CHARACTER_BASE;   // Na dupla, o do J1
         to->won = from->won;
         to->order = 0;
+        to->extra_kills = from->extra_kills;
     }
 }
 

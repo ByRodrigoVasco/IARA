@@ -320,23 +320,14 @@ static bool read_number(const char *text, const char *key, long *value)
     return true;
 }
 
-void save_slot_summary(save_mode mode, const char *name, char *buffer, size_t size)
+void save_content_summary(save_mode mode, const char *text, char *buffer, size_t size)
 {
-    char path[PATH_MAX_LENGTH];
     char content[2048];
-    FILE *file;
-    size_t length;
     long first = 0, second = 0;
 
     snprintf(buffer, size, "Sem progresso");
-    if (!save_slot_path(mode, name, path, sizeof(path))) return;
-
-    file = fopen(path, "rb");
-    if (file == NULL) return;
-    length = fread(content + 1, 1, sizeof(content) - 2, file);
-    fclose(file);
-    content[0] = '\n';
-    content[length + 1] = '\0';
+    if (text == NULL || text[0] == '\0') return;
+    snprintf(content, sizeof(content), "\n%s", text);
 
     if (mode == SAVE_MODE_NORMAL)
     {
@@ -346,6 +337,24 @@ void save_slot_summary(save_mode mode, const char *name, char *buffer, size_t si
     {
         if (read_number(content, "coins", &first) && read_number(content, "runs", &second)) snprintf(buffer, size, "%ld horas, %ld %s", first, second, second == 1 ? "partida" : "partidas");
     }
+}
+
+void save_slot_summary(save_mode mode, const char *name, char *buffer, size_t size)
+{
+    char path[PATH_MAX_LENGTH];
+    char content[2047];
+    FILE *file;
+    size_t length;
+
+    snprintf(buffer, size, "Sem progresso");
+    if (!save_slot_path(mode, name, path, sizeof(path))) return;
+
+    file = fopen(path, "rb");
+    if (file == NULL) return;
+    length = fread(content, 1, sizeof(content) - 1, file);
+    fclose(file);
+    content[length] = '\0';
+    save_content_summary(mode, content, buffer, size);
 }
 
 // -----------------------------------------------------------------------------

@@ -39,6 +39,17 @@ static const EnemyStats enemy_stats[EN_COUNT] = {
     [EN_MINI]         = {8.0f, 92.0f, 4.0f, 0.5f, 7.0f},
 };
 
+// Nível de força do inimigo (1 a 5): decide quem solta marmita e quem sempre solta o chip de XP
+static const int enemy_levels[EN_COUNT] = {
+    [EN_CHAMADO] = 1, [EN_MINI] = 1, [EN_NOTIFICACAO] = 2, [EN_ALUCINACAO] = 2,
+    [EN_ESVAZIADO] = 3, [EN_DADO] = 3, [EN_AUTORESPOSTA] = 3, [EN_CRACHA] = 3,
+    [EN_AFOGADO] = 4, [EN_ECO] = 5, [EN_AUDITOR] = 5};
+
+int sv_enemy_level(int type)
+{
+    return type >= 0 && type < EN_COUNT ? enemy_levels[type] : 1;
+}
+
 static const SvSpriteId enemy_sprites[EN_COUNT] = {
     SPR_en_chamado, SPR_en_notificacao, SPR_en_esvaziado, SPR_en_dado, SPR_en_alucinacao,
     SPR_en_autoresposta, SPR_en_cracha, SPR_en_afogado, SPR_en_auditor, SPR_en_eco, SPR_en_autorespostaMini};
@@ -141,7 +152,7 @@ static const WeaponDef weapon_defs[W_COUNT] = {
     // Aviso Prévio: dano, recarga, quantos aviões, raio do carimbo e alcance
     [W_AVISO]        = {{18, 18, 24, 24, 34}, {2.00f, 1.85f, 1.85f, 1.65f, 1.45f}, {1, 1, 2, 2, 3}, {36, 42, 42, 50, 58}, {480, 520, 520, 580, 640}},
     [W_CANECA]       = {{20, 20, 26, 26, 36}, {2.20f, 2.00f, 2.00f, 1.80f, 1.60f}, {1, 1, 2, 2, 3}, {40, 46, 46, 52, 58}, {0, 0, 0, 0, 0}},
-    [W_POSTITS]      = {{7, 7, 10, 10, 15}, {0.50f, 0.45f, 0.45f, 0.40f, 0.35f}, {0, 0, 0, 0, 0}, {54, 60, 60, 68, 76}, {0, 0, 0, 0, 0}},
+    [W_POSTITS]      = {{6, 6, 8, 8, 12}, {0.50f, 0.45f, 0.45f, 0.40f, 0.35f}, {0, 0, 0, 0, 0}, {48, 53, 53, 60, 67}, {0, 0, 0, 0, 0}},
     [W_NAOPERTURBE]  = {{4, 4, 6, 6, 10}, {0.55f, 0.50f, 0.50f, 0.45f, 0.40f}, {0, 0, 0, 0, 0}, {64, 72, 72, 84, 96}, {0, 0, 0, 0, 0}},
     [W_DEPLOY]       = {{28, 28, 36, 36, 48}, {2.60f, 2.40f, 2.40f, 2.10f, 1.80f}, {1, 1, 2, 2, 3}, {38, 42, 42, 46, 50}, {0, 0, 0, 0, 0}},
     [W_NOTA]         = {{11, 11, 15, 15, 21}, {2.60f, 2.40f, 2.40f, 2.10f, 1.80f}, {1, 1, 2, 2, 3}, {210, 230, 230, 260, 290}, {0, 0, 0, 0, 0}},
@@ -326,13 +337,13 @@ static void recompute_stats(void)
     const int *u = sv_meta.upgrades;
 
     p->max_hp = SV_BASE_HP + 10.0f * u[UPG_VIDA] + 12.0f * passive_level(P_SAUDE);
-    p->dmg_mult = 1.0f + 0.05f * u[UPG_DANO];
+    p->dmg_mult = SV_BASE_DAMAGE + 0.05f * u[UPG_DANO];
     p->speed_mult = 1.0f + 0.04f * u[UPG_VELOCIDADE] + 0.06f * passive_level(P_ERGONOMIA);
     p->cooldown_mult = (1.0f - 0.04f * u[UPG_RECARGA]) * (1.0f - 0.06f * passive_level(P_CAFE));
     if (p->cooldown_mult < 0.4f) p->cooldown_mult = 0.4f;
     p->area_mult = 1.0f + 0.05f * u[UPG_AREA] + 0.08f * passive_level(P_MANUAL);
     p->magnet_range = 45.0f * (1.0f + 0.15f * u[UPG_IMA] + 0.2f * passive_level(P_NETWORK));
-    p->xp_mult = 1.0f + 0.05f * u[UPG_XP] + 0.10f * passive_level(P_COLINHA);
+    p->xp_mult = SV_BASE_XP + 0.05f * u[UPG_XP] + 0.10f * passive_level(P_COLINHA);
     p->armor = (float)u[UPG_ARMADURA] + (float)passive_level(P_CRACHA);
     p->duration_mult = 1.0f + 0.10f * passive_level(P_HORAEXTRA);
     p->dmg_mult += 0.06f * passive_level(P_FOCO);
@@ -421,6 +432,34 @@ void sv_add_gem(Vector2 pos, int kind, float value)
     }
 }
 
+bool sv_run_won(void)
+{
+    return sv_run.phase == SV_WON || sv_run.iara_defeated;
+}
+
+float sv_extra_strength(void)
+{
+    return sv_run.endless ? sv_overtime_strength(sv_run.time - sv_run.endless_start) : 1.0f;
+}
+
+int sv_overtime_kills(void)
+{
+    return sv_run.overtime ? sv_run.kills - sv_run.kills_at_overtime : 0;
+}
+
+bool sv_game_continue(void)
+{
+    if (sv_run.phase != SV_WON || sv_run.endless) return false;
+    sv_run.iara_defeated = true;
+    sv_run.endless = true;
+    sv_run.endless_start = sv_run.time;
+    sv_run.spawn_accumulator = 0.0f;
+    sv_run.phase = SV_PLAYING;
+    sv_banner("HORA EXTRA: TUDO EM DOBRO", 4.0f);
+    sv_sfx(SND_horaExtra);
+    return true;
+}
+
 void sv_spawn_enemy_at(int type, Vector2 pos, bool fake)
 {
     float scale = sv_enemy_hp_scale(sv_run.time);
@@ -434,7 +473,7 @@ void sv_spawn_enemy_at(int type, Vector2 pos, bool fake)
         e->alive = true;
         e->type = type;
         e->pos = clamp_to_world(pos, 20.0f);
-        e->max_hp = enemy_stats[type].hp * scale;
+        e->max_hp = enemy_stats[type].hp * scale * sv_extra_strength();
         if (type == EN_AUDITOR) e->max_hp *= 1.0f;
         e->fake = fake;
         if (fake) e->max_hp = 1.0f;
@@ -559,7 +598,9 @@ static void kill_enemy(SvEnemy *e)
     if (e->fake) return;
 
     if (e->type == EN_CHAMADO) sv_sfx(SND_chamadoMorre);
-    sv_add_gem(e->pos, 0, (float)(enemy_stats[e->type].xp * 2)); // cada chip vale o dobro do XP do inimigo
+    // Cada chip vale o dobro do XP do inimigo; os mais fracos nem sempre soltam um
+    if (sv_enemy_level(e->type) >= SV_STRONG_ENEMY || (int)(sv_rand() * 100.0f) < SV_WEAK_CHIP_PERCENT)
+        sv_add_gem(e->pos, 0, (float)(enemy_stats[e->type].xp * 2) * (sv_run.endless ? SV_OVERTIME_MULT : 1.0f));
 
     if (e->type == EN_AUTORESPOSTA)
     {
@@ -576,7 +617,7 @@ static void kill_enemy(SvEnemy *e)
     {
         sv_add_gem(Vector2Add(e->pos, (Vector2){8, 4}), 1, 1.0f);
     }
-    else if ((int)(sv_rand() * 1000.0f) < 9 + 3 * passive_level(P_SORTE))
+    else if (sv_enemy_level(e->type) >= SV_STRONG_ENEMY && (int)(sv_rand() * 1000.0f) < sv_heal_drop_chance(sv_run.time, passive_level(P_SORTE)))
     {
         sv_add_gem(Vector2Add(e->pos, (Vector2){-8, 4}), 2, 25.0f);
     }
@@ -2018,7 +2059,7 @@ static void update_shots(float dt)
 static void update_enemies(float dt)
 {
     SvPlayer *p = &sv_run.player;
-    float danger_scale = 1.0f + sv_run.time / 600.0f * 0.8f;
+    float danger_scale = (1.0f + sv_run.time / 600.0f * 0.8f) * sv_extra_strength();
 
     if (sv_run.cheats[CHEAT_FREEZE]) return;   // Trapaça: inimigos parados
 
@@ -2286,7 +2327,7 @@ static void update_gems(float dt)
                 break;
             }
             case 1:
-                sv_run.coins++;
+                sv_run.coins += sv_run.endless ? (int)SV_OVERTIME_MULT : 1;
                 sv_sfx(SND_coletaMoeda);
                 break;
             case 2:
@@ -2308,25 +2349,47 @@ static void update_gems(float dt)
 // Nível e escolhas
 // -----------------------------------------------------------------------------
 
-#define LANTERNA_WEIGHT 4          // Peso da Lanterna no sorteio das cartas (as outras pesam 1)
+#define CARD_WEIGHT 10             // Peso de uma carta comum no sorteio (poder novo pesa conforme o tier)
+#define LANTERNA_WEIGHT 40         // Peso da Lanterna: no escuro ela faz falta
 
 static void check_level_up_duo(void);
 
 static int choice_weight(const SvChoice *c)
 {
-    return (c->kind == 2 || c->kind == 3) && c->id == P_LANTERNA ? LANTERNA_WEIGHT : 1;
+    if (c->kind == 0) return sv_weapon_weight(c->id);
+    return (c->kind == 2 || c->kind == 3) && c->id == P_LANTERNA ? LANTERNA_WEIGHT : CARD_WEIGHT;
+}
+
+static int max_int(int a, int b)
+{
+    return a > b ? a : b;
+}
+
+// O maior nível da partida (na dupla, o dos dois)
+static int run_level(void)
+{
+    if (sv_run.duo) return max_int(sv_duo_player(0)->level, sv_duo_player(1)->level);
+    return sv_run.player.level;
+}
+
+SvProgress sv_progress_saved(void)
+{
+    return (SvProgress){sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills, sv_meta.best_level, sv_meta.run_kills, sv_meta.run_bosses};
 }
 
 SvProgress sv_progress_now(void)
 {
-    SvProgress progress = {sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills};
+    SvProgress progress = sv_progress_saved();
 
     // O que a partida atual já garantiu: depois de paga (finished_flag) isso já está no save
     if (!finished_flag && !sv_run.cheated)
     {
         progress.kills += sv_run.kills;
         if ((int)sv_run.time > progress.best_seconds) progress.best_seconds = (int)sv_run.time;
-        if (sv_run.phase == SV_WON) progress.wins++;
+        if (sv_run_won()) progress.wins++;
+        progress.best_level = max_int(progress.best_level, run_level());
+        progress.run_kills = max_int(progress.run_kills, sv_run.kills);
+        progress.run_bosses = max_int(progress.run_bosses, sv_run.bosses_defeated);
     }
     return progress;
 }
@@ -2493,6 +2556,13 @@ int sv_choice_lines(const SvChoice *c, char lines[SV_CHOICE_LINES][96])
             next = weapon_effective(c->id, stat, to);
             now = from >= 1 ? weapon_effective(c->id, stat, from) : next;
             is_time = stat == WSTAT_COOLDOWN || (stat == WSTAT_EXTRA && weapon_infos[c->id].extra_is_time);
+
+            // O dano aparece com no máximo uma casa decimal
+            if (stat == WSTAT_DAMAGE)
+            {
+                now = roundf(now * 10.0f) / 10.0f;
+                next = roundf(next * 10.0f) / 10.0f;
+            }
 
             // Alcances, raios e contagens aparecem arredondados
             if (stat == WSTAT_AREA || stat == WSTAT_COUNT || (stat == WSTAT_EXTRA && !is_time && weapon_infos[c->id].extra_scaled))
@@ -2799,7 +2869,8 @@ static void update_music_and_ambient(void)
     sv_run.area = area_grid[row][col];
     sv_ambient_play(area_ambient[sv_run.area]);
 
-    if (sv_run.boss.active)
+    if (sv_run.endless) sv_music_play(MUS_HORAEXTRA);
+    else if (sv_run.boss.active)
     {
         static const SvMusic boss_tracks[BOSS_COUNT] = {MUS_IMPRESSORA, MUS_MODELO, MUS_DIEGO, MUS_RENE, MUS_IARA};
         SvMusic track = boss_tracks[sv_run.boss.id];
@@ -2977,6 +3048,7 @@ void sv_game_update_duo(float dt, Vector2 move, Vector2 move2)
     if (sv_run.time >= SV_RUN_SECONDS && !sv_run.overtime)
     {
         sv_run.overtime = true;
+        sv_run.kills_at_overtime = sv_run.kills;
         sv_sfx(SND_horaExtra);
     }
 
@@ -2994,9 +3066,9 @@ void sv_game_update_duo(float dt, Vector2 move, Vector2 move2)
     }
 
     // Nascimentos
-    sv_run.spawn_accumulator += sv_spawn_rate(sv_run.time) * dt * (sv_run.boss.active ? 0.25f : 1.0f) * (sv_run.cheats[CHEAT_NO_SPAWN] ? 0.0f : 1.0f) * (sv_run.duo ? SV_DUO_SPAWN_MULT : 1.0f);
-    budget = 6;
-    while (sv_run.spawn_accumulator >= 1.0f && budget-- > 0 && sv_run.enemy_count < SV_MAX_ENEMIES - 20)
+    sv_run.spawn_accumulator += sv_spawn_rate(sv_run.time) * dt * (sv_run.boss.active ? 0.25f : 1.0f) * (sv_run.cheats[CHEAT_NO_SPAWN] ? 0.0f : 1.0f) * (sv_run.duo ? SV_DUO_SPAWN_MULT : 1.0f) * (sv_run.endless ? SV_OVERTIME_MULT : 1.0f);
+    budget = sv_run.endless ? 12 : 6;
+    while (sv_run.spawn_accumulator >= 1.0f && budget-- > 0 && sv_run.enemy_count < SV_ENEMY_LIMIT * (sv_run.endless ? (int)SV_OVERTIME_MULT : 1))
     {
         sv_run.spawn_accumulator -= (float)spawn_event();
     }
@@ -3045,13 +3117,18 @@ int sv_game_finish(void)
     sv_duo_use(0);
     if (sv_run.cheated) return 0;   // Partida com trapaça não conta para o progresso do save
 
-    earned = sv_run.coins + (int)(sv_run.time / 10.0f) + sv_run.bosses_defeated * 30 + (sv_run.phase == SV_WON ? 300 : 0);
+    earned = sv_run.coins + (int)(sv_run.time / 10.0f) + sv_run.bosses_defeated * 30 + (sv_run_won() ? 300 : 0);
+    // Na hora extra, o bônus por tempo também vem em dobro
+    if (sv_run.endless) earned += (int)((sv_run.time - sv_run.endless_start) / 10.0f);
     if (sv_run.player.coin_mult > 0.0f) earned = (int)((float)earned * sv_run.player.coin_mult + 0.5f);
     sv_meta.coins += earned;
     sv_meta.runs++;
     sv_meta.kills += sv_run.kills;
-    if (sv_run.phase == SV_WON) sv_meta.wins++;
+    if (sv_run_won()) sv_meta.wins++;
     if ((int)sv_run.time > sv_meta.best_seconds) sv_meta.best_seconds = (int)sv_run.time;
+    sv_meta.best_level = max_int(sv_meta.best_level, run_level());
+    sv_meta.run_kills = max_int(sv_meta.run_kills, sv_run.kills);
+    sv_meta.run_bosses = max_int(sv_meta.run_bosses, sv_run.bosses_defeated);
     sv_meta_save(sv_meta_path());
 
     return earned;
@@ -3066,7 +3143,7 @@ bool sv_debug_mode = false;
 int sv_playable_character(int character)
 {
     if (character < 0 || character >= CH_COUNT) return CH_ESTAGIARIO;
-    if (sv_debug_mode || sv_character_unlocked(character, sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills)) return character;
+    if (sv_debug_mode || sv_character_unlocked(character, sv_progress_saved())) return character;
     return CH_ESTAGIARIO;
 }
 

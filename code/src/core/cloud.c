@@ -20,7 +20,7 @@
 #define MATCH_TICKETS 32
 #define PENDING_HEADER "IARA_PENDENTE 1\n"
 
-typedef enum { JOB_LIST, JOB_CREATE, JOB_OPEN, JOB_CLOSE, JOB_DELETE, JOB_RANKING } job_kind;
+typedef enum { JOB_LIST, JOB_CREATE, JOB_OPEN, JOB_RESOLVE, JOB_CLOSE, JOB_DELETE, JOB_RANKING } job_kind;
 
 typedef struct job
 {
@@ -31,6 +31,8 @@ typedef struct job
     char mode[MODE_BYTES];
     char name[CLOUD_NAME_MAX + 1];
     char password[PASSWORD_BYTES];
+    char *local;          // Abrir: o save deste dispositivo
+    bool keep_local;      // Decidir a divergência
 } job;
 
 typedef struct finished
@@ -40,13 +42,16 @@ typedef struct finished
     cloud_result result;
 } finished;
 
-// O save aberto neste notebook
+// O save aberto neste dispositivo
 typedef struct
 {
     bool set;
     bool lost;        // Outro notebook assumiu: nada mais sobe
     bool conflicted;  // Uma gravação foi recusada: nada mais sobe até abrir de novo
     bool stale;       // Houve falha de rede: conferir a versão do servidor antes de gravar
+    bool undecided;   // Divergência esperando a escolha do jogador: nada sobe
+    bool missing;     // O save não existe no servidor (apagado) enquanto a escolha não vem
+    char *held_local, *held_server;   // As duas gravações da divergência
     char mode[MODE_BYTES];
     char name[CLOUD_NAME_MAX + 1];
     int version;
@@ -191,7 +196,60 @@ static bool read_pending(const char *path, pending_save *pending)
     return pending->content != NULL;
 }
 
-// Guarda uma cópia da gravação que não vai subir, para ninguém perder o progresso
+// -----------------------------------------------------------------------------
+// Última sincronização de cada save
+// -----------------------------------------------------------------------------
+
+static unsigned long long content_hash(const char *content)
+{
+    unsigned long long hash = 1469598103934665603ULL;   // FNV-1a
+
+    for (; *content != '\0'; content++) hash = (hash ^ (unsigned char)*content) * 1099511628211ULL;
+    return hash;
+}
+
+static void link_path(char *out, size_t size, const char *mode, const char *name)
+{
+    snprintf(out, size, "%s/link-%s-%s.sync", cloud.folder, mode, name);
+}
+
+// Chamar com a trava
+static bool read_link(const char *mode, const char *name, int *version, unsigned long long *hash)
+{
+    char path[PATH_BYTES];
+    char *text;
+    bool ok;
+
+    link_path(path, sizeof(path), mode, name);
+    text = read_file(path);
+    if (text == NULL) return false;
+    ok = sscanf(text, "%d %llu", version, hash) == 2;
+    free(text);
+    return ok;
+}
+
+// Chamar com a trava: o servidor e este dispositivo têm "content" na versão "version"
+static void write_link(const char *mode, const char *name, int version, const char *content)
+{
+    char path[PATH_BYTES], line[64];
+
+    link_path(path, sizeof(path), mode, name);
+    snprintf(line, sizeof(line), "%d %llu\n", version, content_hash(content));
+    write_file(path, NULL, line);
+}
+
+// Chamar com a trava
+static void forget_files(const char *mode, const char *name)
+{
+    char path[PATH_BYTES];
+
+    pending_path(path, sizeof(path), mode, name);
+    remove(path);
+    link_path(path, sizeof(path), mode, name);
+    remove(path);
+}
+
+// Guarda uma cópia da gravação que não vai valer, para ninguém perder o progresso
 static void keep_conflict_copy(const char *mode, const char *name, const char *content)
 {
     char path[PATH_BYTES];
@@ -210,24 +268,14 @@ static void push_notice(cloud_notice_kind kind, const char *name)
     cloud.notice_count++;
 }
 
-// Chamar com a trava: o save aberto deixou de ser deste notebook, ou a gravação dele foi recusada
+// Chamar com a trava: o envio do save aberto para até ele ser aberto de novo. A gravação continua
+// na fila, e a próxima abertura pergunta qual vale.
 static void block_open_save(cloud_notice_kind kind)
 {
-    char path[PATH_BYTES];
-    pending_save pending;
-
     if (!cloud.save.set || cloud.save.lost || cloud.save.conflicted) return;
     if (kind == CLOUD_NOTICE_LOST) cloud.save.lost = true;
     else cloud.save.conflicted = true;
     push_notice(kind, cloud.save.name);
-
-    pending_path(path, sizeof(path), cloud.save.mode, cloud.save.name);
-    if (read_pending(path, &pending))
-    {
-        keep_conflict_copy(cloud.save.mode, cloud.save.name, pending.content);
-        free(pending.content);
-        remove(path);
-    }
 }
 
 // -----------------------------------------------------------------------------
@@ -274,8 +322,9 @@ static cloud_status call(const char *function, char *body, char **response, int 
 
     EnterCriticalSection(&cloud.lock);
     cloud.last_call = GetTickCount64();
-    // HTTP 400 é a recusa de um pedido, com o servidor funcionando
-    if (answered && (status == 200 || status == 400))
+    // HTTP 400 é a recusa de um pedido, com o servidor funcionando. 404 ao registrar uma partida da
+    // hora extra é um banco ainda sem o parâmetro novo (supabase.sql): a partida espera na fila.
+    if (answered && (status == 200 || status == 400 || (status == 404 && strcmp(function, "iara_registrar_partida") == 0)))
     {
         cloud.link = CLOUD_LINK_ONLINE;
         cloud.reason[0] = '\0';
@@ -419,8 +468,8 @@ static bool is_open_save(const char *mode, const char *name)
     return cloud.save.set && same_save(cloud.save.mode, cloud.save.name, mode, name);
 }
 
-// A gravação "sequence" chegou ao servidor na versão "version"
-static void pending_uploaded(const char *mode, const char *name, unsigned long long sequence, int version)
+// A gravação "sent" chegou ao servidor na versão "version"
+static void pending_uploaded(const char *mode, const char *name, const pending_save *sent, int version)
 {
     char path[PATH_BYTES];
     pending_save now;
@@ -429,7 +478,7 @@ static void pending_uploaded(const char *mode, const char *name, unsigned long l
     EnterCriticalSection(&cloud.lock);
     if (read_pending(path, &now))
     {
-        if (now.sequence == sequence) remove(path);
+        if (now.sequence == sent->sequence) remove(path);
         else
         {
             // O jogo gravou de novo enquanto esta subia: a mais nova passa a partir da versão atual
@@ -438,6 +487,7 @@ static void pending_uploaded(const char *mode, const char *name, unsigned long l
             cloud.flush_now = true;
         }
         free(now.content);
+        write_link(mode, name, version, sent->content);
     }
     if (is_open_save(mode, name))
     {
@@ -447,22 +497,11 @@ static void pending_uploaded(const char *mode, const char *name, unsigned long l
     LeaveCriticalSection(&cloud.lock);
 }
 
-// A gravação não pode subir: guarda a cópia, tira da fila e avisa
+// A gravação não pode subir agora: fica na fila. Com o save aberto, o jogador é avisado.
 static void pending_refused(const char *mode, const char *name, cloud_notice_kind kind)
 {
-    char path[PATH_BYTES];
-    pending_save now;
-
-    pending_path(path, sizeof(path), mode, name);
     EnterCriticalSection(&cloud.lock);
     if (is_open_save(mode, name)) block_open_save(kind);
-    else if (read_pending(path, &now))
-    {
-        keep_conflict_copy(mode, name, now.content);
-        free(now.content);
-        remove(path);
-        push_notice(kind, name);
-    }
     LeaveCriticalSection(&cloud.lock);
 }
 
@@ -478,25 +517,27 @@ static bool flush_save(const char *mode, const char *name)
 {
     char path[PATH_BYTES];
     pending_save pending;
-    bool open, direct, answered = true;
+    bool open, direct, linked, answered = true;
     cloud_status status;
-    int version = 0;
+    int version = 0, link_version = 0;
+    unsigned long long link_hash = 0;
 
     pending_path(path, sizeof(path), mode, name);
     EnterCriticalSection(&cloud.lock);
-    if (!read_pending(path, &pending))
+    open = is_open_save(mode, name);
+    if ((open && (cloud.save.undecided || cloud.save.lost || cloud.save.conflicted)) || !read_pending(path, &pending))
     {
         LeaveCriticalSection(&cloud.lock);
         return true;
     }
-    open = is_open_save(mode, name);
     direct = open && !cloud.save.stale;
+    linked = read_link(mode, name, &link_version, &link_hash);
     LeaveCriticalSection(&cloud.lock);
 
     if (direct)
     {
         status = remote_write(mode, name, pending.content, pending.base, &version);
-        if (status == CLOUD_OK) pending_uploaded(mode, name, pending.sequence, version);
+        if (status == CLOUD_OK) pending_uploaded(mode, name, &pending, version);
         else if (status == CLOUD_IN_USE) pending_refused(mode, name, CLOUD_NOTICE_LOST);
         else if (status == CLOUD_CONFLICT)
         {
@@ -513,30 +554,26 @@ static bool flush_save(const char *mode, const char *name)
     if (!direct)
     {
         // Antes de gravar, abre o save: assim uma gravação antiga não recria um save apagado nem
-        // passa por cima do que outro notebook fez
+        // passa por cima do que outro dispositivo fez
         char *content = NULL;
         int server_version = 0;
+        bool write = false, locked = false;
 
         status = remote_open(mode, name, &content, &server_version);
         if (status == CLOUD_OK)
         {
-            if (strcmp(content, pending.content) == 0) pending_uploaded(mode, name, pending.sequence, server_version);
+            locked = true;
+            if (strcmp(content, pending.content) == 0) pending_uploaded(mode, name, &pending, server_version);
             else if (server_version != pending.base) pending_refused(mode, name, CLOUD_NOTICE_CONFLICT);
-            else
-            {
-                status = remote_write(mode, name, pending.content, pending.base, &version);
-                if (status == CLOUD_OK) pending_uploaded(mode, name, pending.sequence, version);
-                else
-                {
-                    network_failed(mode, name);
-                    answered = status != CLOUD_OFFLINE;
-                }
-            }
+            else write = true;
             free(content);
-            // Um save que não está aberto aqui não pode ficar travado
-            if (!open) call_word("iara_liberar_save", save_body(mode, name, true));
         }
-        else if (status == CLOUD_NOT_FOUND) pending_refused(mode, name, CLOUD_NOTICE_LOST);
+        else if (status == CLOUD_NOT_FOUND)
+        {
+            // Save criado sem conexão: ainda não existe lá. Se já existiu, foi apagado.
+            if (!linked && pending.base == 0) write = locked = true;
+            else pending_refused(mode, name, CLOUD_NOTICE_LOST);
+        }
         else if (status == CLOUD_IN_USE)
         {
             if (open) pending_refused(mode, name, CLOUD_NOTICE_LOST);
@@ -546,6 +583,19 @@ static bool flush_save(const char *mode, const char *name)
             network_failed(mode, name);
             answered = status != CLOUD_OFFLINE;
         }
+
+        if (write)
+        {
+            status = remote_write(mode, name, pending.content, pending.base, &version);
+            if (status == CLOUD_OK) pending_uploaded(mode, name, &pending, version);
+            else
+            {
+                network_failed(mode, name);
+                answered = status != CLOUD_OFFLINE;
+            }
+        }
+        // Um save que não está aberto aqui não pode ficar travado
+        if (locked && !open) call_word("iara_liberar_save", save_body(mode, name, true));
     }
 
     free(pending.content);
@@ -558,7 +608,7 @@ static bool flush_save(const char *mode, const char *name)
 
 static void add_result(int ticket, const cloud_result *result);
 
-// Linha do arquivo: tipo|segundos|abates|nivel|chefes|personagem|venceu|nome
+// Linha do arquivo: tipo|segundos|abates|nivel|chefes|personagem|venceu|nome|abates da hora extra
 static bool flush_match(const char *file_name)
 {
     char path[PATH_BYTES], type[8], name[CLOUD_ROW_NAME_BYTES];
@@ -572,8 +622,8 @@ static bool flush_match(const char *file_name)
     snprintf(path, sizeof(path), "%s/%s", cloud.folder, file_name);
     text = read_file(path);
     if (text == NULL) return true;
-    if (sscanf(text, "%7[^|]|%d|%d|%d|%d|%d|%d|%63[^\n]", type, &match.seconds, &match.kills, &match.level,
-               &match.bosses, &match.character, &won, name) != 8)
+    if (sscanf(text, "%7[^|]|%d|%d|%d|%d|%d|%d|%63[^|\n]|%d", type, &match.seconds, &match.kills, &match.level,
+               &match.bosses, &match.character, &won, name, &match.extra_kills) < 8)
     {
         free(text);
         remove(path);
@@ -591,6 +641,8 @@ static bool flush_match(const char *file_name)
     cj_add_int(&writer, "p_chefes", match.bosses);
     cj_add_int(&writer, "p_personagem", match.character);
     cj_add_bool(&writer, "p_venceu", won != 0);
+    // Só quando há hora extra: assim as outras partidas entram mesmo num banco sem o parâmetro novo
+    if (match.extra_kills > 0) cj_add_int(&writer, "p_abates_extra", match.extra_kills);
     result.status = call("iara_registrar_partida", cj_end(&writer), &response, &http);
 
     if (result.status == CLOUD_OK)
@@ -664,6 +716,7 @@ void cloud_result_free(cloud_result *result)
 {
     if (result == NULL) return;
     free(result->content);
+    free(result->local_content);
     free(result->saves);
     free(result->rows);
     memset(result, 0, sizeof(*result));
@@ -693,10 +746,18 @@ static void add_result(int ticket, const cloud_result *result)
     LeaveCriticalSection(&cloud.lock);
 }
 
+// Chamar com a trava
+static void drop_held(void)
+{
+    free(cloud.save.held_local);
+    free(cloud.save.held_server);
+    cloud.save.held_local = cloud.save.held_server = NULL;
+}
+
 static void run_close(void)
 {
     char mode[MODE_BYTES], name[CLOUD_NAME_MAX + 1];
-    bool lost;
+    bool release;
 
     EnterCriticalSection(&cloud.lock);
     if (!cloud.save.set)
@@ -712,52 +773,157 @@ static void run_close(void)
     flush_save(mode, name);
 
     EnterCriticalSection(&cloud.lock);
-    lost = cloud.save.lost;
+    release = !cloud.save.lost && !cloud.save.missing;
+    drop_held();
     cloud.save.set = false;
     LeaveCriticalSection(&cloud.lock);
-    if (!lost) call_word("iara_liberar_save", save_body(mode, name, true));
+    if (release) call_word("iara_liberar_save", save_body(mode, name, true));
+}
+
+// Chamar com a trava
+static void set_open_save(const char *mode, const char *name, int version)
+{
+    drop_held();
+    memset(&cloud.save, 0, sizeof(cloud.save));
+    cloud.save.set = true;
+    snprintf(cloud.save.mode, sizeof(cloud.save.mode), "%s", mode);
+    snprintf(cloud.save.name, sizeof(cloud.save.name), "%s", name);
+    cloud.save.version = version;
+    cloud.save.next_renew = GetTickCount64() + renew_ms;
+}
+
+// Chamar com a trava: vale a gravação deste dispositivo, que sobe em seguida
+static void queue_local(const char *mode, const char *name, int base, const char *content)
+{
+    char path[PATH_BYTES];
+    pending_save next;
+
+    pending_path(path, sizeof(path), mode, name);
+    next.base = base;
+    next.sequence = ++cloud.next_sequence;
+    next.content = (char *)content;
+    write_pending(path, &next);
+    cloud.flush_now = true;
+}
+
+// Chamar com a trava: vale a gravação do servidor
+static void accept_server(const char *mode, const char *name, int version, const char *content)
+{
+    char path[PATH_BYTES];
+
+    pending_path(path, sizeof(path), mode, name);
+    remove(path);
+    write_link(mode, name, version, content);
 }
 
 static void run_open(const job *request, cloud_result *result)
 {
+    const char *mode = request->mode, *name = request->name;
     char path[PATH_BYTES];
-    pending_save pending;
-    int version = 0;
+    pending_save pending = {0};
+    const char *local;
+    char *server = NULL;
+    bool queued, linked, diverged = false, use_local = false;
+    int version = 0, link_version = 0;
+    unsigned long long link_hash = 0;
 
     run_close();
-    result->status = remote_open(request->mode, request->name, &result->content, &version);
-    if (result->status != CLOUD_OK) return;
+    result->status = remote_open(mode, name, &server, &version);
+    if (result->status != CLOUD_OK && result->status != CLOUD_NOT_FOUND) return;
 
-    pending_path(path, sizeof(path), request->mode, request->name);
+    pending_path(path, sizeof(path), mode, name);
     EnterCriticalSection(&cloud.lock);
-    if (read_pending(path, &pending))
+    queued = read_pending(path, &pending);
+    local = request->local != NULL && request->local[0] != '\0' ? request->local : queued ? pending.content : NULL;
+    if (local != NULL && local[0] == '\0') local = NULL;
+    linked = read_link(mode, name, &link_version, &link_hash);
+
+    if (result->status == CLOUD_NOT_FOUND)
     {
-        if (strcmp(pending.content, result->content) == 0)
+        if (local != NULL)
         {
-            remove(path);
-            free(pending.content);
+            set_open_save(mode, name, 0);
+            result->status = CLOUD_OK;
+            if (linked)   // Já esteve na nuvem e foi apagado: o jogador decide se envia de novo
+            {
+                diverged = true;
+                cloud.save.missing = result->cloud_missing = true;
+                server = _strdup("");
+            }
+            else use_local = true;   // Criado sem conexão: sobe agora
         }
-        else if (pending.base == version)
+    }
+    else
+    {
+        set_open_save(mode, name, version);
+        if (local == NULL || strcmp(local, server) == 0) accept_server(mode, name, version, server);
+        else if (version == 0) use_local = true;   // O servidor nunca teve progresso
+        else
         {
-            // A gravação da fila é mais nova que a do servidor: vale ela, e sobe em seguida
-            free(result->content);
-            result->content = pending.content;
-            cloud.flush_now = true;
+            // A fila partindo da versão atual prova que só este dispositivo mudou
+            bool server_changed = !(queued && pending.base == version) && !(linked && link_version == version);
+            bool local_changed = !linked || content_hash(local) != link_hash;
+
+            if (!server_changed) use_local = true;
+            else if (!local_changed) accept_server(mode, name, version, server);
+            else diverged = true;
+        }
+    }
+
+    if (result->status == CLOUD_OK)
+    {
+        if (use_local) queue_local(mode, name, version, local);
+        if (diverged)
+        {
+            cloud.save.undecided = true;
+            cloud.save.held_local = _strdup(local);
+            cloud.save.held_server = _strdup(server != NULL ? server : "");
+            result->status = CLOUD_DIVERGED;
+            result->local_content = _strdup(local);
+            result->content = server;
+            server = NULL;
         }
         else
         {
-            keep_conflict_copy(request->mode, request->name, pending.content);
-            free(pending.content);
-            remove(path);
-            result->local_discarded = true;
+            result->content = _strdup(use_local ? local : server);
         }
     }
-    memset(&cloud.save, 0, sizeof(cloud.save));
-    cloud.save.set = true;
-    snprintf(cloud.save.mode, sizeof(cloud.save.mode), "%s", request->mode);
-    snprintf(cloud.save.name, sizeof(cloud.save.name), "%s", request->name);
-    cloud.save.version = version;
-    cloud.save.next_renew = GetTickCount64() + renew_ms;
+    LeaveCriticalSection(&cloud.lock);
+    free(server);
+    if (queued) free(pending.content);
+}
+
+// O jogador escolheu qual gravação vale; a outra fica guardada em uma cópia
+static void run_resolve(const job *request, cloud_result *result)
+{
+    const char *mode = request->mode, *name = request->name;
+
+    EnterCriticalSection(&cloud.lock);
+    if (!is_open_save(mode, name) || !cloud.save.undecided || cloud.save.held_local == NULL || cloud.save.held_server == NULL ||
+        (!request->keep_local && cloud.save.missing))
+    {
+        result->status = CLOUD_SERVER_ERROR;
+    }
+    else
+    {
+        if (request->keep_local)
+        {
+            if (!cloud.save.missing) keep_conflict_copy(mode, name, cloud.save.held_server);
+            else forget_files(mode, name);   // Volta a ser um save novo para o servidor
+            queue_local(mode, name, cloud.save.version, cloud.save.held_local);
+            result->content = _strdup(cloud.save.held_local);
+        }
+        else
+        {
+            keep_conflict_copy(mode, name, cloud.save.held_local);
+            accept_server(mode, name, cloud.save.version, cloud.save.held_server);
+            result->content = _strdup(cloud.save.held_server);
+        }
+        cloud.save.undecided = cloud.save.missing = false;
+        cloud.save.next_renew = GetTickCount64() + renew_ms;
+        drop_held();
+        result->status = CLOUD_OK;
+    }
     LeaveCriticalSection(&cloud.lock);
 }
 
@@ -857,7 +1023,8 @@ static void run_ranking(const job *request, cloud_result *result)
                 {
                     int *field = strcmp(key, "segundos") == 0 ? &row.seconds : strcmp(key, "abates") == 0 ? &row.kills
                                : strcmp(key, "nivel") == 0 ? &row.level : strcmp(key, "chefes") == 0 ? &row.bosses
-                               : strcmp(key, "personagem") == 0 ? &row.character : NULL;
+                               : strcmp(key, "personagem") == 0 ? &row.character
+                               : strcmp(key, "abates_extra") == 0 ? &row.extra_kills : NULL;
 
                     if (field == NULL) cj_skip(&reader);
                     else
@@ -894,12 +1061,12 @@ static void run_job(job *request)
     case JOB_LIST:    run_list(request, &result); break;
     case JOB_CREATE:  result.status = call_word("iara_criar_save", save_body(request->mode, request->name, false)); break;
     case JOB_OPEN:    run_open(request, &result); break;
+    case JOB_RESOLVE: run_resolve(request, &result); break;
     case JOB_CLOSE:   run_close(); break;
     case JOB_RANKING: run_ranking(request, &result); break;
     case JOB_DELETE:
     {
         cj_writer writer;
-        char path[PATH_BYTES];
 
         cj_begin(&writer);
         cj_add_string(&writer, "p_modo", request->mode);
@@ -907,17 +1074,14 @@ static void run_job(job *request)
         cj_add_string(&writer, "p_maquina", cloud.machine);
         cj_add_string(&writer, "p_senha", request->password);
         result.status = call_word("iara_apagar_save", cj_end(&writer));
-        if (result.status == CLOUD_OK)
-        {
-            pending_path(path, sizeof(path), request->mode, request->name);
-            remove(path);
-        }
+        if (result.status == CLOUD_OK) cloud_forget_save(request->mode, request->name);
         break;
     }
     }
     if (request->ticket != 0) add_result(request->ticket, &result);
     else cloud_result_free(&result);
     SecureZeroMemory(request->password, sizeof(request->password));
+    free(request->local);
     free(request);
 }
 
@@ -933,7 +1097,7 @@ static void renew_open_save(void)
     char path[PATH_BYTES];
 
     EnterCriticalSection(&cloud.lock);
-    if (!cloud.save.set || cloud.save.lost || GetTickCount64() < cloud.save.next_renew)
+    if (!cloud.save.set || cloud.save.lost || cloud.save.missing || GetTickCount64() < cloud.save.next_renew)
     {
         LeaveCriticalSection(&cloud.lock);
         return;
@@ -1148,6 +1312,7 @@ void cloud_stop(unsigned timeout_ms)
             cloud_result_free(&done->result);
             free(done);
         }
+        drop_held();
         CloseHandle(cloud.thread);
         DeleteCriticalSection(&cloud.lock);
     }
@@ -1207,17 +1372,9 @@ void cloud_set_timing(unsigned renew, unsigned retry)
 }
 
 // Põe o pedido no fim da fila e acorda a thread
-static int submit(job_kind kind, const char *mode, const char *name, const char *password, int limit, bool wants_result)
+static int enqueue(job *request, bool wants_result)
 {
-    job *request = calloc(1, sizeof(*request));
     int ticket = 0;
-
-    if (request == NULL) return 0;
-    request->kind = kind;
-    request->limit = limit;
-    if (mode != NULL) snprintf(request->mode, sizeof(request->mode), "%s", mode);
-    if (name != NULL) snprintf(request->name, sizeof(request->name), "%s", name);
-    if (password != NULL) snprintf(request->password, sizeof(request->password), "%s", password);
 
     EnterCriticalSection(&cloud.lock);
     if (wants_result) ticket = request->ticket = ++cloud.next_ticket;
@@ -1227,6 +1384,27 @@ static int submit(job_kind kind, const char *mode, const char *name, const char 
     LeaveCriticalSection(&cloud.lock);
     WakeConditionVariable(&cloud.wake);
     return ticket;
+}
+
+static job *new_job(job_kind kind, const char *mode, const char *name)
+{
+    job *request = calloc(1, sizeof(*request));
+
+    if (request == NULL) return NULL;
+    request->kind = kind;
+    if (mode != NULL) snprintf(request->mode, sizeof(request->mode), "%s", mode);
+    if (name != NULL) snprintf(request->name, sizeof(request->name), "%s", name);
+    return request;
+}
+
+static int submit(job_kind kind, const char *mode, const char *name, const char *password, int limit, bool wants_result)
+{
+    job *request = new_job(kind, mode, name);
+
+    if (request == NULL) return 0;
+    request->limit = limit;
+    if (password != NULL) snprintf(request->password, sizeof(request->password), "%s", password);
+    return enqueue(request, wants_result);
 }
 
 int cloud_list_saves(const char *mode)
@@ -1239,9 +1417,34 @@ int cloud_create_save(const char *mode, const char *name)
     return cloud.enabled && valid_mode(mode) && valid_name(name) ? submit(JOB_CREATE, mode, name, NULL, 0, true) : 0;
 }
 
-int cloud_open_save(const char *mode, const char *name)
+int cloud_open_save(const char *mode, const char *name, const char *local)
 {
-    return cloud.enabled && valid_mode(mode) && valid_name(name) ? submit(JOB_OPEN, mode, name, NULL, 0, true) : 0;
+    job *request;
+
+    if (!cloud.enabled || !valid_mode(mode) || !valid_name(name) || (local != NULL && strlen(local) >= CLOUD_CONTENT_MAX)) return 0;
+    request = new_job(JOB_OPEN, mode, name);
+    if (request == NULL) return 0;
+    if (local != NULL) request->local = _strdup(local);
+    return enqueue(request, true);
+}
+
+int cloud_resolve_save(const char *mode, const char *name, bool keep_local)
+{
+    job *request;
+
+    if (!cloud.enabled || !valid_mode(mode) || !valid_name(name)) return 0;
+    request = new_job(JOB_RESOLVE, mode, name);
+    if (request == NULL) return 0;
+    request->keep_local = keep_local;
+    return enqueue(request, true);
+}
+
+void cloud_forget_save(const char *mode, const char *name)
+{
+    if (!cloud.enabled || !valid_mode(mode) || !valid_name(name)) return;
+    EnterCriticalSection(&cloud.lock);
+    forget_files(mode, name);
+    LeaveCriticalSection(&cloud.lock);
 }
 
 int cloud_delete_save(const char *mode, const char *name, const char *password)
@@ -1263,31 +1466,24 @@ void cloud_close_save(void)
 void cloud_store_save(const char *mode, const char *name, const char *content)
 {
     char path[PATH_BYTES];
-    pending_save old, next;
-    bool queued;
+    pending_save old;
+    int base = 0;
+    unsigned long long hash = 0;
 
     if (!cloud.enabled || !valid_mode(mode) || !valid_name(name) || content == NULL || strlen(content) >= CLOUD_CONTENT_MAX) return;
     pending_path(path, sizeof(path), mode, name);
 
     EnterCriticalSection(&cloud.lock);
-    if (is_open_save(mode, name) && (cloud.save.lost || cloud.save.conflicted))
+    // A versão de partida é a da fila, a do save aberto ou a da última sincronização (0 = nunca subiu).
+    // O servidor só aceita a gravação se ela ainda for a atual.
+    if (read_pending(path, &old))
     {
-        keep_conflict_copy(mode, name, content);
+        base = old.base;
+        free(old.content);
     }
-    else
-    {
-        queued = read_pending(path, &old);
-        // Sem fila e sem o save aberto, não há versão de partida: gravar poderia apagar o trabalho de outro
-        if (queued || is_open_save(mode, name))
-        {
-            next.base = queued ? old.base : cloud.save.version;
-            next.sequence = ++cloud.next_sequence;
-            next.content = (char *)content;
-            write_pending(path, &next);
-            cloud.flush_now = true;
-        }
-        if (queued) free(old.content);
-    }
+    else if (is_open_save(mode, name)) base = cloud.save.version;
+    else if (!read_link(mode, name, &base, &hash)) base = 0;
+    queue_local(mode, name, base, content);
     LeaveCriticalSection(&cloud.lock);
     WakeConditionVariable(&cloud.wake);
 }
@@ -1299,8 +1495,8 @@ int cloud_register_match(const char *type, const cloud_match *match)
     int ticket = 0;
 
     if (!cloud.enabled || !valid_type(type) || match == NULL || !valid_name(match->name)) return 0;
-    snprintf(line, sizeof(line), "%s|%d|%d|%d|%d|%d|%d|%s\n", type, match->seconds, match->kills, match->level,
-             match->bosses, match->character, match->won ? 1 : 0, match->name);
+    snprintf(line, sizeof(line), "%s|%d|%d|%d|%d|%d|%d|%s|%d\n", type, match->seconds, match->kills, match->level,
+             match->bosses, match->character, match->won ? 1 : 0, match->name, match->extra_kills);
 
     EnterCriticalSection(&cloud.lock);
     id = ++cloud.next_sequence;

@@ -49,7 +49,7 @@ static SvHazard *new_hazard(void)
 }
 
 // Os primeiros chefes batem mais leve, para o jogador sem upgrades chegar ao fim do ato
-static const float boss_damage_scale[BOSS_COUNT] = {0.65f, 0.7f, 0.55f, 0.95f, 1.1f};
+static const float boss_damage_scale[BOSS_COUNT] = {0.72f, 0.77f, 0.61f, 1.05f, 1.2f};
 
 static float boss_hit(float percent)
 {
@@ -218,6 +218,7 @@ bool sv_damage_boss(float amount)
         if (b->id == BOSS_IARA)
         {
             sv_run.phase = SV_WON;
+            sv_run.banner = 0.0f;   // O nome dela não fica por cima da tela de vitória
             sv_music_play(MUS_VITORIA);
         }
         else

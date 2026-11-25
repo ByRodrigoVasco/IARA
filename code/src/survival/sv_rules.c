@@ -1,8 +1,9 @@
 #include <math.h>
+#include <stddef.h>
 #include "sv_rules.h"
 
 static const float boss_time[BOSS_COUNT] = {180.0f, 285.0f, 390.0f, 495.0f, 600.0f};
-static const float boss_hp_table[BOSS_COUNT] = {700.0f, 1800.0f, 3200.0f, 7000.0f, 14000.0f};
+static const float boss_hp_table[BOSS_COUNT] = {770.0f, 1980.0f, 3520.0f, 7700.0f, 15400.0f};
 
 float sv_boss_spawn_time(SvBossId boss)
 {
@@ -81,11 +82,11 @@ static const SvCharacter characters[CH_COUNT] = {
                        0, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.10f, 1.0f, 0.0f, 1.0f, 0, false},
     [CH_LAURA] = {"Laura", "Laura", "Analista de qualidade", "Olho de Bug",
                   "15% de chance de acertar um golpe crítico, que causa o dobro de dano. Vida máxima -10.",
-                  "Sobreviva 3:00 em uma partida.",
+                  "Derrote o primeiro chefe.",
                   3, -10.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.15f, 1.0f, 0, false},
     [CH_ANDERSON] = {"Anderson", "Anderson", "Infraestrutura", "Servidor Estável",
                      "Vida máxima +60 e -2 de dano em cada golpe. Velocidade -5%.",
-                     "Elimine 500 inimigos no total.",
+                     "Elimine 1000 inimigos no total.",
                      W_VERA_ID, 60.0f, 2.0f, 0.95f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0, false},
     [CH_JULIO] = {"Julio", "Julio", "Desenvolvedor back-end", "Deploy Contínuo",
                   "Velocidade +18% e, enquanto anda, os poderes recarregam 12% mais rápido. Vida máxima -10.",
@@ -93,11 +94,11 @@ static const SvCharacter characters[CH_COUNT] = {
                   5, -10.0f, 0.0f, 1.18f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0, false, 0.12f},
     [CH_NICOLLAS] = {"Nicollas", "Nicollas", "Suporte técnico", "Plantão Estendido",
                      "Poderes recarregam 12% mais rápido e, a cada 20 inimigos derrotados, ela recupera 4 de vida. Vida máxima -10.",
-                     "Sobreviva 6:30 em uma partida.",
+                     "Sobreviva 7:30 em uma partida.",
                      9, -10.0f, 0.0f, 1.0f, 0.88f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0, false, 0.0f, 4.0f, 20},
     [CH_VASCO] = {"Vasco", "Vasco", "Líder de projeto", "Rede de Contatos",
                   "Alcance de coleta 80% maior e 15% a mais de XP. Se pegar o Colega de Plantão, ele vem com 1 colega a mais.",
-                  "Elimine 3000 inimigos no total.",
+                  "Elimine 6000 inimigos no total.",
                   4, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.80f, 1.15f, 1.0f, 0.0f, 1.0f, 0, false, 0.0f, 0.0f, 0, 1},
     [CH_ZITO] = {"Zito", "Zito", "Financeiro", "Bônus de Produtividade",
                  "Ganha 25% a mais de Banco de Horas ao fim da partida e os inimigos soltam mais moedas.",
@@ -109,11 +110,11 @@ static const SvCharacter characters[CH_COUNT] = {
                7, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.05f, 0.0f, 1.0f, 0, true},
     [CH_LUCAS] = {"Lucas", "Prof. Lucas", "Engenharia de Software", "Metodologia Ágil",
                   "Poderes recarregam 10% mais rápido e ganha 10% a mais de XP. Vida máxima -10.",
-                  "Sobreviva 8:30 em uma partida.",
+                  "Sobreviva 9:30 em uma partida.",
                   11, -10.0f, 0.0f, 1.0f, 0.90f, 1.0f, 1.0f, 1.10f, 1.0f, 0.0f, 1.0f, 0, false},
     [CH_BAUDEL] = {"Baudel", "Prof. Baudel", "Interface Humano-Computador", "Feedback Imediato",
                    "Enquanto anda, os poderes recarregam 12% mais rápido.",
-                   "Sobreviva 10:00 em uma partida.",
+                   "Sobreviva 11:00 em uma partida.",
                    W_CALOR_ID, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0, false, 0.12f},
     [CH_GUILHERME] = {"Guilherme", "Prof. Guilherme", "Lógica para Computação", "Tautologia",
                       "Sempre verdadeiro: vida máxima +20 e armadura +1.",
@@ -121,7 +122,7 @@ static const SvCharacter characters[CH_COUNT] = {
                       W_NEGACAO_ID, 20.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0, false},
     [CH_DANILO] = {"Danilo", "Prof. Danilo", "Programação Imperativa e Funcional", "Função Pura",
                    "Sem efeitos colaterais: a cada 20 s, o próximo golpe que você levar é anulado.",
-                   "Elimine 1500 inimigos no total.",
+                   "Elimine 3000 inimigos no total.",
                    W_RECURSAO_ID, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0, false,
                    0.0f, 0.0f, 0, 0, 20.0f},
 };
@@ -141,29 +142,89 @@ int sv_weapon_owner(int weapon)
     return -1;
 }
 
+// Poderes de conquista, do mais fácil para o mais difícil: Nova Conversa, Fibra Óptica e Aviso Prévio
+#define W_AVISO_ID 1
+#define W_NOVACONVERSA_ID 10
+#define W_FIBRA_ID 13
+static const int locked_powers[SV_LOCKED_POWERS] = {W_NOVACONVERSA_ID, W_FIBRA_ID, W_AVISO_ID};
+
+int sv_locked_power(int index)
+{
+    return index >= 0 && index < SV_LOCKED_POWERS ? locked_powers[index] : -1;
+}
+
+const char *sv_weapon_unlock_text(int weapon)
+{
+    switch (weapon)
+    {
+    case W_NOVACONVERSA_ID: return "Chegue ao nível 15 em uma partida.";
+    case W_FIBRA_ID: return "Elimine 900 inimigos em uma partida.";
+    case W_AVISO_ID: return "Derrote 4 chefes em uma partida.";
+    default: return NULL;
+    }
+}
+
 bool sv_weapon_unlocked(int weapon, SvProgress progress)
 {
     int owner = sv_weapon_owner(weapon);
 
-    return owner < 0 || sv_character_unlocked(owner, progress.runs, progress.wins, progress.best_seconds, progress.kills);
+    if (owner >= 0) return sv_character_unlocked(owner, progress);
+    switch (weapon)
+    {
+    case W_NOVACONVERSA_ID: return progress.best_level >= 15;
+    case W_FIBRA_ID: return progress.run_kills >= 900;
+    case W_AVISO_ID: return progress.run_bosses >= 4;
+    default: return true;
+    }
 }
 
-bool sv_character_unlocked(int id, int runs, int wins, int best_seconds, int kills)
+// Tiers, pela dificuldade de liberar e pela força (peso no sorteio: quanto maior, mais aparece):
+//   C (10): Grampeador, Caneca, Tabela-Verdade
+//   B  (8): Nova Conversa, Post-its, Vera Fischer, Deploy
+//   A  (6): Fibra Óptica, Colega de Plantão, Negação, Recursão, Prompt da IARA
+//   S  (4): Aviso Prévio, Nota Fiscal, Não Perturbe, Mapa de Calor, Modus Ponens
+int sv_weapon_weight(int weapon)
+{
+    //                           0  1  2  3  4  5  6  7   8  9 10 11 12 13 14 15 16
+    static const int weights[] = {10, 4, 10, 8, 4, 8, 4, 4, 10, 6, 8, 6, 8, 6, 4, 6, 6};
+
+    return weapon >= 0 && weapon < (int)(sizeof(weights) / sizeof(weights[0])) ? weights[weapon] : 10;
+}
+
+// De 0,4% no começo a 0,9% aos 10 minutos, mais 0,2% por nível de Sorte
+int sv_heal_drop_chance(float seconds, int luck)
+{
+    float progress = seconds / SV_RUN_SECONDS;
+
+    if (progress < 0.0f) progress = 0.0f;
+    if (progress > 1.0f) progress = 1.0f;
+    return 4 + (int)(5.0f * progress + 0.5f) + 2 * (luck > 0 ? luck : 0);
+}
+
+// O dobro, e 10% a mais sobre o minuto anterior a cada minuto completo
+float sv_overtime_strength(float seconds_in_overtime)
+{
+    int minutes = seconds_in_overtime > 0.0f ? (int)(seconds_in_overtime / 60.0f) : 0;
+
+    return SV_OVERTIME_MULT * powf(SV_OVERTIME_STEP, (float)minutes);
+}
+
+bool sv_character_unlocked(int id, SvProgress progress)
 {
     switch (id)
     {
     case CH_ESTAGIARIO: return true;
-    case CH_LAURA: return best_seconds >= 180;
-    case CH_ANDERSON: return kills >= 500;
-    case CH_JULIO: return runs >= 5;
-    case CH_NICOLLAS: return best_seconds >= 390;
-    case CH_VASCO: return kills >= 3000;
-    case CH_ZITO: return runs >= 15;
-    case CH_JV: return wins >= 1;
-    case CH_LUCAS: return best_seconds >= 510;
-    case CH_BAUDEL: return best_seconds >= 600;
-    case CH_GUILHERME: return runs >= 10;
-    case CH_DANILO: return kills >= 1500;
+    case CH_LAURA: return progress.run_bosses >= 1;
+    case CH_ANDERSON: return progress.kills >= 1000;
+    case CH_JULIO: return progress.runs >= 5;
+    case CH_NICOLLAS: return progress.best_seconds >= 450;
+    case CH_VASCO: return progress.kills >= 6000;
+    case CH_ZITO: return progress.runs >= 15;
+    case CH_JV: return progress.wins >= 1;
+    case CH_LUCAS: return progress.best_seconds >= 570;
+    case CH_BAUDEL: return progress.best_seconds >= 660;
+    case CH_GUILHERME: return progress.runs >= 10;
+    case CH_DANILO: return progress.kills >= 3000;
     default: return false;
     }
 }
