@@ -20,7 +20,9 @@
 
 ## A história
 
-Você é o estagiário recém-chegado à CISSA e vai trabalhar ao lado da **IARA**, a inteligência artificial da empresa. Ela responde rápido, com confiança, e quase sempre acerta. Os dias passam, o escritório vai mudando e algumas respostas deixam de fazer sentido. Para investigar o que está acontecendo, só há uma ferramenta confiável: a **lógica**. No caminho, o jogo ensina ao mesmo tempo ética em IA e lógica clássica.
+IARA é um jogo de terror num escritório. Você acabou de entrar como estagiário na CISSA e trabalha com a IARA, a inteligência artificial da empresa. Ela responde rápido e quase sempre acerta. Com o passar dos dias o escritório muda, algumas respostas param de fazer sentido e você precisa usar lógica para descobrir o que está acontecendo.
+
+A ideia é ensinar ética em IA e lógica clássica enquanto se joga.
 
 ## Como se joga
 
@@ -30,26 +32,26 @@ Você é o estagiário recém-chegado à CISSA e vai trabalhar ao lado da **IARA
 
 ### Modo História
 
-Ande pelo escritório, converse com os colegas e resolva os chamados no computador. Em cada um você escolhe:
+Você anda pelo escritório, conversa com os colegas e atende os chamados no computador. Em cada chamado dá para:
 
-- **resolver sozinho**;
-- **conferir** a sugestão da IARA;
-- **enviar sem conferir**.
+- resolver sozinho;
+- conferir a sugestão da IARA;
+- enviar sem conferir.
 
-São 100 dias de expediente, vividos em 9 dias jogáveis, com puzzles de lógica. As suas escolhas levam a um dos **4 finais**.
+A história passa por 100 dias, e você joga 9 deles. O que você escolhe define qual dos 4 finais vai ver.
 
 </td>
 <td width="50%" valign="top">
 
 ### Modo Sobrevivência
 
-Um **roguelike** de 10 minutos, sozinho ou em dupla:
+É um roguelike com partidas de 10 minutos, para uma ou duas pessoas:
 
-- você anda, e os **poderes atacam sozinhos**;
-- a cada nível, **escolha uma carta**: poder novo ou melhoria;
-- **cinco chefes** aparecem ao longo da partida;
-- o **Banco de Horas** compra melhorias permanentes;
-- objetivos cumpridos **liberam personagens e poderes**.
+- você só se movimenta, os poderes atacam sozinhos;
+- ao subir de nível, escolhe uma carta com um poder novo ou uma melhoria;
+- cinco chefes aparecem durante a partida;
+- o Banco de Horas ganho compra melhorias que ficam no save;
+- cumprir objetivos libera personagens e poderes.
 
 </td>
 </tr>
@@ -63,20 +65,20 @@ Um **roguelike** de 10 minutos, sozinho ou em dupla:
 
 </p>
 
-| Tecnologia | Para que é usada |
+| Tecnologia | Onde usamos |
 |---|---|
-| **C** e **raylib** | O jogo: loop, telas, desenho 2D, áudio e saves. A versão para terminal é C puro |
-| **PowerShell** | Testes e geração do executável |
-| **Supabase** | Banco de dados dos saves e rankings compartilhados |
-| **Vercel** | Hospedagem do ranking ao vivo e do manual do jogo |
-| **GitHub**, **Jira** e **Figma** | Versionamento, gestão das sprints e protótipos |
+| C e raylib | O jogo inteiro: telas, desenho 2D, áudio e saves. A versão para terminal usa só C |
+| PowerShell | Rodar os testes e gerar o executável |
+| Supabase | Banco dos saves e rankings compartilhados |
+| Vercel | Hospedagem do ranking ao vivo e do manual |
+| GitHub, Jira e Figma | Código, sprints e protótipos |
 
 ## Entregáveis
 
 ### Introdução: novidades da Unidade 2
 
-Na Unidade 1 o jogo era o núcleo em C: menu, máquina de estados, o escritório com colisões e um
-quiz jogável. Desde então entrou:
+Na Unidade 1 o jogo tinha o núcleo em C: menu, máquina de estados, o escritório com colisões e um
+quiz jogável. De lá para cá entrou:
 
 | Novidade | O que é |
 |---|---|
@@ -86,19 +88,19 @@ quiz jogável. Desde então entrou:
 | **Progressão e conquistas** | 12 personagens, cada um com o seu poder, liberados por objetivos, com notificação de conquista |
 | **Arte nova** | Personagens e Colegas de Plantão redesenhados em alta resolução, e o executável reduzido de cerca de 54 MB para 30 MB |
 | **Versão para terminal** | A campanha em texto, sem janela e sem raylib, para PIF |
-| **Eventos** | Saves e rankings compartilhados entre notebooks, opcional |
+| **Eventos** | Saves e rankings compartilhados entre dispositivos (opcional) |
 | **Saves por modo** | Save automático com vários slots, separados entre campanha, Sobrevivência e dupla |
 | **Configurações** | Volume da música e dos efeitos, brilho, tela cheia e janela maximizada, guardados entre sessões |
 | **Acessibilidade** | Alto contraste, pausa, tela de ajuda e confirmação antes de sair ou desistir |
 
-Tudo isso roda a partir de um `iara.exe` único, sem instalação nem conta. O detalhamento por sprint
-está em [Como o software evoluiu](docs/entregaveis/README.md#como-o-software-evoluiu).
+Tudo roda em um único `iara.exe`, sem instalar nada e sem criar conta. O que entrou em cada sprint está
+em [Como o software evoluiu](docs/entregaveis/README.md#como-o-software-evoluiu).
 
-Abaixo estão os atalhos para tudo o que foi entregue: histórias, protótipos, sprints, testes, o jogo no terminal, usabilidade, acessibilidade e lógica. A página **[Entregáveis](docs/entregaveis/README.md)** reúne os detalhes, a evolução do software, o uso de ponteiros e o bug tracker.
+A tabela abaixo leva direto ao que entregamos em cada matéria. A página [Entregáveis](docs/entregaveis/README.md) tem tudo com mais detalhe, além do uso de ponteiros e do bug tracker.
 
 ### Sumário dos entregáveis
 
-| Matéria | Destaques | Página |
+| Matéria | Atalhos | Página |
 |---|---|---|
 | **FDS** · Fundamentos de Desenvolvimento de Software | [Backlog](docs/fds/backlog-board/README.md) · [Diagramas](docs/fds/diagramas-atividade/README.md) · [Protótipos](docs/fds/prototipos-lofi/README.md) · [Sprint 01](docs/fds/sprint-01/README.md) · [02](docs/fds/sprint-02/README.md) · [03](docs/fds/sprint-03/README.md) · [Testes](docs/fds/testes/README.md) · [Bugs](docs/fds/testes/bugs.md) | [Abrir](docs/entregaveis/README.md#fds-fundamentos-de-desenvolvimento-de-software) |
 | **PIF** · Programação Imperativa e Funcional | [Núcleo em C](code/src) · [Jogo no terminal](code/terminal/LEIA-ME.md) · [Uso de ponteiros](docs/entregaveis/README.md#uso-de-ponteiros) · [Screencast U2](https://drive.google.com/file/d/1soQDTz9SJSCRORCqMzA3ldWT3vO0Zb2M/view) | [Abrir](docs/entregaveis/README.md#pif-programação-imperativa-e-funcional) |
@@ -109,13 +111,13 @@ Abaixo estão os atalhos para tudo o que foi entregue: histórias, protótipos, 
 
 ## Como instalar e rodar
 
-### Só quero jogar
+### Para jogar
 
-Baixe o `IARA-windows.zip` nas [Releases](https://github.com/ByRodrigoVasco/IARA/releases/latest), extraia e abra o `iara.exe`. Não precisa instalar nada.
+Baixe o `IARA-windows.zip` nas [Releases](https://github.com/ByRodrigoVasco/IARA/releases/latest), extraia e abra o `iara.exe`.
 
 ### Compilar o projeto (Windows)
 
-**1.** Instale o [MSYS2](https://www.msys2.org/) sem mudar a pasta (`C:\msys64`) e abra o **MSYS2 UCRT64**.
+**1.** Instale o [MSYS2](https://www.msys2.org/) na pasta padrão (`C:\msys64`) e abra o **MSYS2 UCRT64**.
 
 **2.** Instale as ferramentas:
 
@@ -153,7 +155,7 @@ No VS Code, `Ctrl + Shift + B` compila e abre o jogo.
 
 <br>
 
-O jogo também roda em texto, sem janela e sem raylib, com os 8 dias que têm mesa de triagem:
+Também dá para jogar no terminal, só em texto e sem raylib. Essa versão tem os 8 dias com mesa de triagem:
 
 ```bash
 gcc -O2 -std=c11 code/terminal/*.c code/src/game/logic.c -Icode/terminal -Icode/src/game -Icode/src/core -Icode/src/screens -o iara-terminal.exe
@@ -165,7 +167,7 @@ Detalhes em [`code/terminal/LEIA-ME.md`](code/terminal/LEIA-ME.md).
 </details>
 
 <details>
-<summary><b>Gerar o pacote para outras máquinas</b></summary>
+<summary><b>Gerar o pacote para outros dispositivos</b></summary>
 
 <br>
 
@@ -173,7 +175,7 @@ Detalhes em [`code/terminal/LEIA-ME.md`](code/terminal/LEIA-ME.md).
 powershell -ExecutionPolicy Bypass -File tools/pacote/empacotar.ps1
 ```
 
-Gera `build/IARA-windows.zip` e `build/release/iara.exe`, um arquivo só, com imagens, sons e bibliotecas dentro. Para testar o pacote fora do ambiente de desenvolvimento: `tools/pacote/testar_pacote.ps1` e o [roteiro de máquina limpa](docs/fds/testes/maquina-limpa.md).
+O script cria `build/IARA-windows.zip` e `build/release/iara.exe`. O executável já leva imagens, sons e bibliotecas. Para testar fora do ambiente de desenvolvimento, use `tools/pacote/testar_pacote.ps1` e siga o [roteiro de máquina limpa](docs/fds/testes/maquina-limpa.md).
 
 </details>
 
@@ -182,7 +184,7 @@ Gera `build/IARA-windows.zip` e `build/release/iara.exe`, um arquivo só, com im
 
 <br>
 
-Sem estes passos o jogo funciona normalmente, com tudo salvo no próprio computador.
+Só é preciso para compartilhar saves e ranking. Sem isso, o jogo salva tudo no próprio dispositivo.
 
 **Banco de dados (Supabase)**
 
@@ -209,7 +211,7 @@ Sem estes passos o jogo funciona normalmente, com tudo salvo no próprio computa
 
 **Manual do jogo (Vercel):** importe este repositório, escolha **Root Directory** `docs/tech-night`, preset **Other** e a branch a publicar ([detalhes](docs/tech-night/README.md)).
 
-O plano gratuito do Supabase pausa após cerca de 7 dias sem uso. O guia completo, com os testes do banco, está em [`tools/nuvem/LEIA-ME.md`](tools/nuvem/LEIA-ME.md).
+Atenção: o plano gratuito do Supabase pausa o projeto depois de uns 7 dias parado. O passo a passo completo, com os testes do banco, está em [`tools/nuvem/LEIA-ME.md`](tools/nuvem/LEIA-ME.md).
 
 </details>
 
@@ -217,14 +219,14 @@ O plano gratuito do Supabase pausa após cerca de 7 dias sem uso. O guia complet
 
 | Modo História | Modo Sobrevivência |
 |---|---|
-| 100 dias de expediente, com 9 dias jogáveis, Flashes do dia e saltos no calendário | Mapa com 14 áreas, 5 atos e 5 chefes |
-| Resolver, conferir ou enviar sem conferir: a escolha decide entre 4 finais | 12 personagens e 17 poderes, liberados por objetivos |
-| Puzzles de lógica proposicional ensinados pela história | Conquistas com notificação e som |
-| Dicas pelos NPCs e pelo mural, sem resposta pronta | Plano de Carreira com melhorias permanentes |
-| Escritório que muda com os dias e com as escolhas, sem HUD numérico | Sobrevivência em dupla no mesmo computador |
-| Save automático com vários slots | Velocidade x1, x2 ou x3 e ranking de partidas |
+| 100 dias de história, 9 deles jogáveis, com Flashes do dia e saltos no calendário | Mapa com 14 áreas, 5 atos e 5 chefes |
+| 4 finais, de acordo com as suas escolhas | 12 personagens e 17 poderes para liberar |
+| Puzzles de lógica proposicional explicados pela própria história | Conquistas com aviso na tela e som |
+| Dicas dos colegas e do mural, sem entregar a resposta | Plano de Carreira com melhorias permanentes |
+| O escritório muda com os dias e com as escolhas, sem números na tela | Modo em dupla no mesmo computador |
+| Save automático, com vários saves | Velocidade x1, x2 ou x3 e ranking |
 
-**Para todos os modos:** volume, brilho, alto contraste, tela cheia, pausa, ajuda e confirmação antes de sair. Opcional para eventos: saves e rankings compartilhados entre notebooks, com [ranking ao vivo](https://iara-ranking-ao-vivo.vercel.app/).
+Nos dois modos há ajuste de volume e brilho, alto contraste, tela cheia, pausa, ajuda e confirmação antes de sair. Em eventos, saves e rankings podem ser compartilhados entre dispositivos e aparecem no [ranking ao vivo](https://iara-ranking-ao-vivo.vercel.app/).
 
 <p align="center">
   <img src="docs/assets/personagens.png" alt="Os 12 personagens" width="800">
@@ -302,7 +304,7 @@ O plano gratuito do Supabase pausa após cerca de 7 dias sem uso. O guia complet
 
 ## Créditos e menções honrosas
 
-Aos professores que acompanharam o projeto e que também estão no jogo como personagens:
+Nosso agradecimento aos professores que acompanharam o projeto. Eles também são personagens do jogo.
 
 <table>
 <tr>
