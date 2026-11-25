@@ -1,6 +1,6 @@
 # Report da Sprint 03: testes de sistema e bug tracker
 
-Evidências de qualidade da Sprint 03 (Week 15e16 - Prep Apresentação, 07/11 a 20/11/2026) de [FDS](../README.md).
+Evidências de qualidade da Sprint 03 (Week 15e16 - Prep Apresentação, 07/11 a 20/11/2026) de [FDS](../../entregaveis/README.md#fds-fundamentos-de-desenvolvimento-de-software).
 
 | Recurso | Link |
 |---|---|
