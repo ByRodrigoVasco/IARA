@@ -15,6 +15,7 @@
 #include "save_select.h"
 #include "save_slots.h"
 #include "save.h"
+#include "cloud_sync.h"
 #include "loading.h"
 #include "screen_style.h"
 #include "state_machine.h"
@@ -128,6 +129,7 @@ bool save_active_campaign_progress(void)
     if (!campaign_state_ready || !active_save_is_set() || active_save_mode() != SAVE_MODE_NORMAL || !active_save_path(path, sizeof(path))) return false;
 
     status = save_game_state(path);
+    if (status == SAVE_OK) cloud_sync_active_save();
     if (status == SAVE_OK) TraceLog(LOG_INFO, "SAVE: progresso de \"%s\" gravado (dia %d)", active_save_name(), current_game_state_variables.current_day);
     else TraceLog(LOG_WARNING, "SAVE: não foi possível gravar \"%s\": %s", active_save_name(), save_result_to_string(status));
     return status == SAVE_OK;
@@ -269,6 +271,7 @@ void handle_state_machine(void)
             }
             else
             {
+                cloud_sync_close_save();
                 active_save_clear();
                 initialize_menu_variables();
                 current_game_state_variables.current_screen = MENU_SCREEN;
@@ -283,6 +286,7 @@ void handle_state_machine(void)
             save_mode mode = active_save_mode();   // Solo ou dupla: a troca volta para a lista do mesmo modo
 
             unload_survival();
+            cloud_sync_close_save();
             active_save_clear();
             if (switch_player)
             {

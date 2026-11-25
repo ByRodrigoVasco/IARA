@@ -167,6 +167,7 @@ $suite = @(
         Fonte = @(
             "code/tests/test_fluxo.c", "code/src/core/assets_fs.c",
             "code/src/core/state_machine.c", "code/src/core/game_state.c", "code/src/core/save.c", "code/src/core/save_slots.c",
+            "code/src/core/cloud.c", "code/src/core/cloud_json.c", "code/src/core/cloud_http.c", "code/src/core/cloud_sync.c",
             "code/src/screens/mode_select.c", "code/src/screens/save_select.c", "code/src/screens/loading.c", "code/src/ui/screen_style.c",
             "code/src/core/helper.c", "code/src/screens/pre_menu.c",
             "code/src/game/collisions.c", "code/src/game/characters.c", "code/src/game/npcs.c",
@@ -189,6 +190,7 @@ $suite = @(
         Fonte = @(
             "code/tests/test_sprint03.c", "code/src/core/assets_fs.c",
             "code/src/core/state_machine.c", "code/src/core/game_state.c", "code/src/core/save.c", "code/src/core/save_slots.c",
+            "code/src/core/cloud.c", "code/src/core/cloud_json.c", "code/src/core/cloud_http.c", "code/src/core/cloud_sync.c",
             "code/src/screens/mode_select.c", "code/src/screens/save_select.c", "code/src/screens/loading.c", "code/src/ui/screen_style.c",
             "code/src/core/helper.c", "code/src/screens/pre_menu.c",
             "code/src/game/collisions.c", "code/src/game/characters.c", "code/src/game/npcs.c",

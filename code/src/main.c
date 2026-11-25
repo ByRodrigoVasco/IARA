@@ -14,6 +14,7 @@
 #include "preferences.h"
 #include "assets_fs.h"
 #include "data_dir.h"
+#include "cloud_sync.h"
 
 unsigned int screen_width = 0;
 unsigned int screen_height = 0;
@@ -77,6 +78,10 @@ int main(void)
         }
     }
 
+    /* Saves e rankings compartilhados entre notebooks (cloud.h). Só o build com a URL e a chave liga
+     * a nuvem; a fila offline fica na pasta de dados, por isso vem depois da troca de pasta. */
+    cloud_sync_start();
+
     /* InitWindow(0, 0) faz a Raylib abrir em tela cheia, então iniciamos com um
      *  tamanho fixo (janela) e depois ajustamos ao tamanho do monitor.
      */
@@ -99,6 +104,7 @@ int main(void)
 
     if (!initialize_audio())
     {
+        cloud_sync_stop();
         CloseWindow();
         return 1;
     }
@@ -178,6 +184,7 @@ int main(void)
         double state_machine_start = GetTime();
 
         handle_state_machine();
+        cloud_sync_update();
 
         double now = GetTime();
         log_frame_spike((now - last_frame_time) * 1000.0, (now - state_machine_start) * 1000.0, screen_in_frame,
@@ -201,5 +208,8 @@ int main(void)
     unload_fonts();
     unload_audio();
     CloseWindow();
+
+    /* Depois de fechar a janela: envia o que falta e libera o save, sem a tela parada esperando a rede. */
+    cloud_sync_stop();
     return 0;
 }
