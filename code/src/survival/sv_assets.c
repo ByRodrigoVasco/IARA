@@ -76,7 +76,10 @@ float sv_load_sprites_step(void)
         SvSprite *sprite = &sv_sprites[sprites_next];
 
         sprite->texture = LoadTexture(TextFormat("%s%s.png", SV_SPRITE_PATH, info->file));
-        SetTextureFilter(sprite->texture, TEXTURE_FILTER_POINT);
+        // Uma tira mais alta que a tabela é arte em alta resolução: ocupa o mesmo espaço e é suavizada
+        sprite->detail = sprite->texture.height > info->frame_height ? sprite->texture.height / info->frame_height : 1;
+        if (sprite->detail > 1) set_character_filter(&sprite->texture);
+        else SetTextureFilter(sprite->texture, TEXTURE_FILTER_POINT);
         sprite->frame_width = info->frame_width;
         sprite->frame_height = info->frame_height;
         sprite->frames = info->frames;
@@ -119,7 +122,8 @@ void sv_draw(SvSpriteId id, int frame, Vector2 center, float scale, float rotati
     if (frame < 0) frame = 0;
     frame %= sprite->frames;
 
-    Rectangle source = {frame * w, 0, flip ? -w : w, h};
+    float k = (float)sprite->detail;
+    Rectangle source = {frame * w * k, 0, (flip ? -w : w) * k, h * k};
     Rectangle dest = {center.x, center.y, w * scale, h * scale};
 
     DrawTexturePro(sprite->texture, source, dest, (Vector2){w * scale / 2.0f, h * scale / 2.0f}, rotation, tint);
@@ -133,7 +137,8 @@ void sv_draw_glow(SvSpriteId id, int frame, Vector2 center, bool flip, Color tin
     if (!sprite->glow.id) return;
     if (frame < 0) frame = 0;
     frame %= sprite->frames;
-    DrawTexturePro(sprite->glow, (Rectangle){frame * w, 0, flip ? -w : w, h}, (Rectangle){center.x, center.y, w, h}, (Vector2){w / 2.0f, h / 2.0f}, 0.0f, tint);
+    float k = (float)sprite->detail;
+    DrawTexturePro(sprite->glow, (Rectangle){frame * w * k, 0, (flip ? -w : w) * k, h * k}, (Rectangle){center.x, center.y, w, h}, (Vector2){w / 2.0f, h / 2.0f}, 0.0f, tint);
 }
 
 void sv_draw_stretched(SvSpriteId id, int frame, Vector2 center, float width, float height, float rotation, Color tint)
@@ -143,7 +148,8 @@ void sv_draw_stretched(SvSpriteId id, int frame, Vector2 center, float width, fl
 
     frame %= sprite->frames;
 
-    Rectangle source = {frame * w, 0, w, h};
+    float k = (float)sprite->detail;
+    Rectangle source = {frame * w * k, 0, w * k, h * k};
     Rectangle dest = {center.x, center.y, width, height};
 
     DrawTexturePro(sprite->texture, source, dest, (Vector2){width / 2.0f, height / 2.0f}, rotation, tint);
@@ -174,10 +180,6 @@ static void read_walk_set(int character, Texture2D frames[DIRECTION_COUNT][WALK_
         if (!load_walk_frames(folder, d, frames[d]))
         {
             for (int f = 0; f < WALK_FRAME_COUNT; f++) frames[d][f] = (Texture2D){0};
-        }
-        for (int f = 0; f < WALK_FRAME_COUNT; f++)
-        {
-            if (frames[d][f].id) SetTextureFilter(frames[d][f], TEXTURE_FILTER_POINT);
         }
     }
 }
@@ -262,5 +264,6 @@ void sv_draw_player(int direction, int frame, Vector2 center, float scale, Color
     if (!texture.id) return;
     w = (float)texture.width;
     h = (float)texture.height;
+    scale *= CHARACTER_BASE_SIZE / w; // Arte maior que o pixel art ocupa o mesmo espaço no mundo
     DrawTexturePro(texture, (Rectangle){0, 0, w, h}, (Rectangle){center.x, center.y, w * scale, h * scale}, (Vector2){w * scale / 2.0f, h * scale / 2.0f}, 0.0f, tint);
 }
