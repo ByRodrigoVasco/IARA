@@ -13,6 +13,7 @@
          (build/release/iara_assets.pak). Fica de fora a arte de origem que so tools/sprites usa.
       2. Compila o jogo com IARA_EMBED_ASSETS e o tools/release/iara_pack.S, que poe o pacote dentro
          do executavel. Em tempo de execucao, code/src/core/assets_fs.c le os assets dali.
+         O tools/release/iara.rc (compilado com windres) poe o icone iara.ico no executavel.
       3. Liga o raylib e o runtime do gcc de forma estatica, otimiza (-O2), tira os simbolos de
          depuracao (-s) e esconde a janela de console (-mwindows).
 
@@ -106,6 +107,12 @@ foreach ($pasta in @("code\src", "code\src\core", "code\src\screens", "code\src\
     $fontes += @(Get-ChildItem (Join-Path $raiz $pasta) -Filter *.c -File | ForEach-Object { $_.FullName })
 }
 $fontes += (Join-Path $raiz "tools\release\iara_pack.S")
+
+# Icone do iara.exe no Explorer (tools/release/iara.rc aponta para o iara.ico)
+$icone = Join-Path $saida "iara_icone.o"
+& windres (Join-Path $raiz "tools\release\iara.rc") -O coff -o $icone --include-dir (Join-Path $raiz "tools\release")
+if ($LASTEXITCODE -ne 0) { throw "o windres nao conseguiu compilar o icone (tools/release/iara.rc)" }
+$fontes += $icone
 
 # O libraylib.a do MSYS2 chama o GLFW como DLL (por ponteiros __imp_glfw*). Para ligar o GLFW
 # estatico (libglfw3.a), cada ponteiro desses e definido aqui apontando para a funcao. A lista sai
