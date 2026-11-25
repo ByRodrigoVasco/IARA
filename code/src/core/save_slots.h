@@ -108,6 +108,9 @@ bool save_slot_has_progress(save_mode mode, const char *name);
 /** @brief Resumo do progresso para a lista ("Dia 12", "340 horas, 6 partidas"). "Sem progresso" se não houver. */
 void save_slot_summary(save_mode mode, const char *name, char *buffer, size_t size);
 
+/** @brief O mesmo resumo, a partir do conteúdo de um arquivo de progresso. */
+void save_content_summary(save_mode mode, const char *text, char *buffer, size_t size);
+
 /** @brief Escolhe o save que a partida atual usa. */
 void active_save_set(save_mode mode, const char *name);
 
