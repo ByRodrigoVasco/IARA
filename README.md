@@ -9,7 +9,7 @@ as inconsistências. Assim, a mecânica ensina ao mesmo tempo ética em IA e ló
   <img src="docs/assets/capa.png" alt="Capa do projeto IARA" width="800">
 </p>
 
-> **Entrega final (Unidade 2):** versão publicada em [v1.0.0](https://github.com/ByRodrigoVasco/IARA/releases/tag/v1.0.0), com o `IARA-windows.zip` pronto para baixar e jogar, reports das sprints [01](docs/fds/sprint-01/README.md), [02](docs/fds/sprint-02/README.md) e [03](docs/fds/sprint-03/README.md), [rastreabilidade das 16 histórias](docs/fds/sprint-03/README.md#rastreabilidade-das-histórias-pi2-330) e [bug tracker](docs/fds/testes/bugs.md).
+> **Entrega final (Unidade 2):** versão publicada nas [Releases do GitHub](https://github.com/ByRodrigoVasco/IARA/releases/latest), com o `IARA-windows.zip` pronto para baixar e jogar, reports das sprints [01](docs/fds/sprint-01/README.md), [02](docs/fds/sprint-02/README.md) e [03](docs/fds/sprint-03/README.md), [rastreabilidade das 16 histórias](docs/fds/sprint-03/README.md#rastreabilidade-das-histórias-pi2-330) e [bug tracker](docs/fds/testes/bugs.md).
 
 ## Novidades da Unidade 2
 
@@ -19,7 +19,7 @@ quiz jogável. Desde então entrou:
 | Novidade | O que é |
 |---|---|
 | **Campanha do Dia 1 ao Dia 100** | O expediente inteiro, com 9 dias jogáveis, Flashes do dia e saltos no calendário. Cada dia traz um conceito de lógica dentro do trabalho, e as escolhas levam a um dos 4 finais |
-| **Modo Sobrevivência** | Dez minutos num mapa de 15 áreas do escritório, com 5 atos, 5 chefes, Banco de Horas para comprar melhorias e ranking de partidas |
+| **Modo Sobrevivência** | Dez minutos num mapa de 14 áreas do escritório, com 5 atos, 5 chefes, Banco de Horas para comprar melhorias e ranking de partidas |
 | **Sobrevivência em dupla** | Duas pessoas no mesmo computador, com controles separados, XP dividida e ranking próprio |
 | **Progressão e conquistas** | 12 personagens, cada um com o seu poder, liberados por objetivos, com notificação de conquista |
 | **Arte nova** | Personagens e Colegas de Plantão redesenhados em alta resolução, e o executável reduzido de cerca de 54 MB para 30 MB |
@@ -43,7 +43,7 @@ está em [Como o software evoluiu](#como-o-software-evoluiu).
 - Save automático, com vários saves por modo.
 
 **Modo Sobrevivência**
-- Dez minutos num mapa de 15 áreas do escritório, com 5 atos e 5 chefes.
+- Dez minutos num mapa de 14 áreas do escritório, com 5 atos e 5 chefes.
 - Banco de Horas para comprar melhorias no Plano de Carreira, e ranking de partidas.
 - 12 personagens e 17 poderes. O poder de cada personagem só aparece nas cartas depois que ele é liberado, e cada liberação vira uma [conquista](#personagens-poderes-e-conquistas).
 - Velocidade do tempo em x1, x2 ou x3, a partida inteira.
@@ -72,13 +72,12 @@ está em [Como o software evoluiu](#como-o-software-evoluiu).
 
 ![C](https://img.shields.io/badge/c-%23A8B9CC.svg?style=for-the-badge&logo=c&logoColor=black)
 ![raylib](https://img.shields.io/badge/raylib-000000.svg?style=for-the-badge)
-![Haskell](https://img.shields.io/badge/haskell-%235D4F85.svg?style=for-the-badge&logo=haskell&logoColor=white)
 ![GitHub](https://img.shields.io/badge/github-%23181717.svg?style=for-the-badge&logo=github&logoColor=white)
 
 - **Motor e gameplay:** C, para o game loop, menus, gerenciamento de estado e persistência.
 - **Renderização:** [raylib](https://www.raylib.com/), biblioteca gráfica em C, 2D.
 - **Áudio:** raylib, com música em loop durante a navegação do menu, configurações e créditos, música de gameplay e efeitos para cliques e passos durante a movimentação. A trilha acompanha o momento da campanha: o ambiente do escritório (que fica mais tenso com os dias), uma faixa própria na tela do quiz, e a trilha abafada com um som curto de entrada nos cartões de Flash do dia e de salto puro. A troca entre faixas e entre telas é um fade suave de 0,8 s. A voz da IARA acompanha a digitação da sugestão e para quando o texto termina. O volume geral pode ser ajustado nas configurações e fica salvo nas preferências.
-- **Regras puras:** Haskell, para pontuação, validação de respostas e seleção de conteúdo.
+- **Versão para terminal:** C puro, sem raylib, lendo o mesmo roteiro e as mesmas regras de lógica do jogo gráfico.
 - **Versionamento:** GitHub, com o fluxo descrito no [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Links externos
@@ -87,7 +86,7 @@ Materiais hospedados fora do repositório:
 
 | Recurso | Descrição | Disciplina |
 |---|---|---|
-| [Release v1.0.0](https://github.com/ByRodrigoVasco/IARA/releases/tag/v1.0.0) | Versão publicada da Unidade 2, com o `IARA-windows.zip` gerado pelo `empacotar.ps1` | [FDS](docs/fds/README.md) e [PIF](docs/pif/README.md) |
+| [Releases](https://github.com/ByRodrigoVasco/IARA/releases/latest) | Versão publicada da Unidade 2, com o `IARA-windows.zip` gerado pelo `empacotar.ps1` | [FDS](docs/fds/README.md) e [PIF](docs/pif/README.md) |
 | [Jira](https://csprj-adsr-2p-e8.atlassian.net/jira/software/c/projects/PI2/boards/2/backlog) | Board e backlog do projeto | [FDS](docs/fds/README.md) |
 | [Figma](https://www.figma.com/design/DpnmgBif3vJcn336pefbpa/IARA---PROTOTIPO-FDS?node-id=0-1&t=vm69jod3fxAtJGjN-1) | Protótipos de baixa fidelidade | [FDS](docs/fds/README.md) e [IHC](docs/ihc/README.md) |
 | [Screencast do protótipo](https://youtu.be/qE2Gn79bmqw) | Vídeo de demonstração do protótipo lo-fi | [FDS](docs/fds/README.md) e [IHC](docs/ihc/README.md) |
@@ -138,6 +137,17 @@ Ou, no VS Code com a pasta `IARA` aberta, aperte `Ctrl + Shift + B`: ele compila
 
 O jogo abre em janela. Ele tem três modos de tela, sempre um só: **janela** de tamanho fixo (o padrão), **janela maximizada** e **tela cheia**. As caixas **Tela cheia** e **Janela maximizada**, em `CONFIGURAÇÕES` no menu, escolhem o modo, e **F11** alterna a tela cheia com a última janela. A mesma tela ajusta o brilho e o alto contraste, e as escolhas ficam salvas em `iara.ini`. **ESC** sai do computador e volta ao escritório; no escritório (ou com **P**) pausa o jogo, com CONTINUAR, SAIR PARA O MENU e SAIR PARA A ÁREA DE TRABALHO; nos créditos, nas configurações e na ajuda volta ao menu; e no menu pergunta se você quer mesmo sair. O progresso é salvo ao voltar ao menu e ao fechar o jogo, e a opção **AJUDA** do menu explica como jogar. Nos cartões de início e de fim de cada dia, **ESPAÇO**, **ENTER**, um clique ou o botão PULAR passam à frente. A auditoria de usabilidade está em `docs/fds/usabilidade-nielsen.md`.
 
+### Versão para terminal (PIF)
+
+O jogo também roda dentro do terminal, em texto, sem abrir janela e sem depender do raylib. No **MSYS2 UCRT64**, na pasta do projeto:
+
+```bash
+gcc -O2 -std=c11 code/terminal/*.c code/src/game/logic.c -Icode/terminal -Icode/src/game -Icode/src/core -Icode/src/screens -o iara-terminal.exe
+./iara-terminal.exe
+```
+
+São os **8 dias com mesa de triagem** (3, 12, 27, 41, 58, 74, 89 e 100), com os mesmos enunciados e fórmulas do jogo gráfico. A campanha gráfica tem 9 dias jogáveis porque inclui o Dia 1, de perguntas sobre IA. Detalhes em [`code/terminal/LEIA-ME.md`](code/terminal/LEIA-ME.md).
+
 ### Modos e saves
 
 `INICIAR` abre a escolha do **modo**: `MODO NORMAL` (a campanha), `MODO SOBREVIVÊNCIA` ou `SOBREVIVÊNCIA EM DUPLA`. Depois do modo vem a escolha do **save**: a lista dos saves daquele modo, `NOVO SAVE` para criar um com outro nome e **Del** (ou o botão `DEL: APAGAR`) para apagar o save escolhido, sempre com uma confirmação. Um nome de save não pode repetir outro do mesmo modo (sem diferenciar maiúsculas de minúsculas), e cada modo pode ter quantos saves quiser.
@@ -155,7 +165,7 @@ Quem já jogava antes disso não perde nada: o `iara.save` e o `iara.survival` a
 
 ### Modo Sobrevivência
 
-O `MODO SOBREVIVÊNCIA`, na escolha do modo depois de `INICIAR`, é separado da campanha: dez minutos de expediente em um mapa grande de 15 áreas do escritório, com cinco atos e cinco chefes, do Impressora de Rescisões à própria IARA. Mova o personagem com **WASD** ou as setas. Os poderes atacam sozinhos, e cada nível dá a escolha de um poder novo ou de um upgrade. **TAB** (ou o botão **TEMPO**) alterna a velocidade entre x1, x2 e x3, e **ESC** pausa.
+O `MODO SOBREVIVÊNCIA`, na escolha do modo depois de `INICIAR`, é separado da campanha: dez minutos de expediente em um mapa grande de 14 áreas do escritório, com cinco atos e cinco chefes, do Impressora de Rescisões à própria IARA. Mova o personagem com **WASD** ou as setas. Os poderes atacam sozinhos, e cada nível dá a escolha de um poder novo ou de um upgrade. **TAB** (ou o botão **TEMPO**) alterna a velocidade entre x1, x2 e x3, e **ESC** pausa.
 
 O Banco de Horas coletado na partida, mesmo que você perca, compra upgrades permanentes no `PLANO DE CARREIRA`. O progresso fica no save escolhido (`saves/sobrevivencia/<nome do save>/progresso.survival`). Sprites e sons vêm de `code/assets/sprites/sobrevivencia` e `code/assets/audio` (músicas e ambientes em OGG, efeitos em WAV), e o áudio segue as regras de mistura em `code/src/survival/sv_audio.h`.
 
@@ -164,6 +174,10 @@ Os 12 personagens e os 4 Colegas de Plantão são desenhados em alta resolução
 O ranking (`iara.ranking`) ordena os jogadores pela **pontuação** da melhor partida de cada um: **10 pontos por inimigo derrotado, 5 por segundo sobrevivido, 500 por chefe derrotado e 2000 de bônus por desligar a IARA**. Os abates pesam mais que o tempo, então quem só foge sem lutar não passa na frente de quem durou um pouco menos mas derrotou mais inimigos. No empate de pontos, fica na frente quem tem mais abates, depois quem sobreviveu mais tempo e, por fim, quem jogou primeiro. A pontuação é calculada na hora a partir do arquivo, então os pesos podem ser ajustados em `code/src/survival/sv_ranking.h` sem apagar o ranking da feira.
 
 #### Personagens, poderes e conquistas
+
+<p align="center">
+  <img src="docs/assets/personagens.png" alt="Os 12 personagens do Modo Sobrevivência" width="800">
+</p>
 
 Cada personagem, escolhido em `PERSONAGEM`, começa com um poder próprio. Enquanto o personagem não é liberado no save, o poder dele **não aparece nas cartas** de subir de nível. Ao cumprir o objetivo, mesmo no meio da partida, o jogo avisa a **conquista**, com o desenho do personagem, o objetivo e um som.
 
@@ -182,7 +196,17 @@ Cada personagem, escolhido em `PERSONAGEM`, começa com um poder próprio. Enqua
 | Prof. Baudel | Mapa de Calor | Sobreviva 10:00 em uma partida |
 | JV | Modus Ponens | Derrote a IARA uma vez |
 
+<p align="center">
+  <img src="docs/assets/conquista.png" alt="Notificação de conquista ao liberar a Laura" width="420">
+</p>
+
 Os poderes **Aviso Prévio**, **Caneca Arremessada**, **Tabela-Verdade**, **Nova Conversa** e **Fibra Óptica** não são de ninguém e valem desde a primeira partida. As regras ficam em `code/src/survival/sv_rules.c`.
+
+Quem pega o **Colega de Plantão** luta acompanhado, cada colega com uma função: Segurança, Suporte de TI, Enfermeira do RH e Entregador.
+
+<p align="center">
+  <img src="docs/assets/colegas.png" alt="Os quatro Colegas de Plantão" width="420">
+</p>
 
 #### Sobrevivência em dupla
 
@@ -199,8 +223,6 @@ Com o debug ligado, **F2** abre o menu de cheats e para a partida: dar ou tirar 
 Uma partida em que qualquer cheat foi usado **não conta para o progresso do save**: não dá Banco de Horas, não conta vitória nem recorde, e não libera conquista. A tela de fim avisa.
 
 O jogo também registra em `iara-desempenho.log` (ao lado do executável, ignorado pelo git) os quadros que passaram de 60 ms, com a hora e a tela. É o primeiro lugar para olhar quando alguém disser que o jogo travou.
-
-> **Versão para terminal (PIF):** pronta. O jogo também roda inteiro no terminal, em texto, sem abrir janela e sem depender do raylib: são os mesmos 8 dias e as mesmas fórmulas de lógica, lidos dos mesmos arquivos do jogo gráfico. Como compilar e jogar está em [`code/terminal/LEIA-ME.md`](code/terminal/LEIA-ME.md).
 
 ### Eventos: saves e rankings na nuvem
 
@@ -233,7 +255,7 @@ O primeiro comando gera `build/IARA-windows.zip`, com um `iara.exe` só: as imag
 | Disciplina | O que se espera no projeto |
 |---|---|
 | **FDS**<br>[Fundamentos de Desenvolvimento de Software](docs/fds/README.md) | • Histórias de usuário, backlog e board<br>• Diagramas de atividade<br>• Protótipos lo-fi e screencast<br>• Sprints com versionamento e testes<br>• `CONTRIBUTING.md` |
-| **PIF**<br>[Programação Imperativa e Funcional](docs/pif/README.md) | • Núcleo do jogo em C (menu, game loop, quiz jogável)<br>• Regras puras em Haskell |
+| **PIF**<br>[Programação Imperativa e Funcional](docs/pif/README.md) | • Núcleo do jogo em C (menu, game loop, quiz jogável)<br>• Versão para terminal em C |
 | **IHC**<br>[Interação Humano-Computador](docs/ihc/README.md) | • Personas<br>• Protótipo lo-fi e screencast<br>• Avaliação heurística (Nielsen)<br>• Critérios de usabilidade e acessibilidade |
 | **LMC**<br>[Lógica para Computação](docs/lmc/README.md) | • Especificação lógica das regras do jogo<br>• Puzzles de lógica clássica |
 
