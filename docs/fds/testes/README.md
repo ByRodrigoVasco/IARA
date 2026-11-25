@@ -20,6 +20,7 @@ simulando o uso real de um jogador.
 | **Atualização de 19/11/2026 (dupla)** | Branch `feature/sv-modo-dupla`, com SV-116 a SV-136 incluídos no `test_survival` (Sobrevivência em dupla: controles separados, XP dividida, cair e levantar, perigos dos chefes nos dois, save e ranking próprios). `test_survival` com 136 de 136 aprovados; os blocos 2 e 3 seguem com os mesmos resultados de antes. Execução em Linux (Xvfb), a confirmar no Windows antes do merge |
 | **Atualização de 16/11/2026** | Branch `feature/volume-trilha-efeitos`, com o CT-80 e o CT-81 incluídos (US20: PI2-279 e PI2-281). CT-43 passa a conferir os dois volumes. Bloco 2 com 35 de 35 e bloco 3 com 37 de 37 aprovados |
 | **Sprint 03 (20/11/2026)** | `develop` (`2386a1c`), com o bloco 4 (`test_sprint03`, CT-94 a CT-105) para as histórias da Sprint 03 que ainda não tinham caso de teste: **7 de 12 aprovados**, 5 falhas registradas como BUG-39 a BUG-43 (#101 a #105). Blocos 1 a 3, unidade e Sobrevivência: todos aprovados. [Report da Sprint 03](../sprint-03/README.md), com pré-condição, passos, esperado, obtido e o screencast de cada caso |
+| **Atualização de 24/11/2026 (dupla, XP)** | Branch `feature/coop-xp-menor`: na dupla cada chip de XP vale 50% do valor do solo (`SV_DUO_XP_MULT` em `sv_duo.h`): com 1,6 vez mais inimigos, cada jogador sobe de nível a cerca de 0,8 vez o ritmo do solo, em vez de 1,6 vez mais rápido. SV-146 incluído no `test_survival` (a executar com 50%; com 60%, 146 de 146 aprovados e a dupla de bots passou de nível 36 em 481 s para nível 19 em 358 s) |
 
 ## Como executar
 

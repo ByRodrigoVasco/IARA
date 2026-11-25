@@ -1195,6 +1195,35 @@ static void test_duo(void)
     step_duo(1, (Vector2){0, 0}, (Vector2){0, 0});
     check("SV-120", "um chip de XP pego por um sobe a barra dos dois", sv_duo_player(0)->xp > 0.0f && fabsf(sv_duo_player(0)->xp - sv_duo_player(1)->xp) < 0.001f);
 
+    // O chip vale menos na dupla: o mesmo chip rende SV_DUO_XP_MULT do valor para cada um.
+    // O chip é de 1: bem abaixo dos 9 de XP do nível 1, para ninguém subir de nível no meio da conta.
+    {
+        float solo_xp;
+
+        sv_duo_mode = false;
+        sv_game_start(14);
+        clear_enemies();
+        sv_run.player.xp = 0.0f;
+        sv_add_gem(sv_run.player.pos, 0, 1.0f);
+        sv_game_update(1.0f / 60.0f, (Vector2){0, 0});
+        solo_xp = sv_run.player.xp / sv_run.player.xp_mult;
+
+        start_duo(14);
+        clear_enemies();
+        sv_duo_player(0)->xp = 0.0f;
+        sv_duo_player(1)->xp = 0.0f;
+        sv_add_gem(sv_duo_player(0)->pos, 0, 1.0f);
+        step_duo(1, (Vector2){0, 0}, (Vector2){0, 0});
+        check("SV-146", "na dupla cada chip de XP vale menos que no solo, para os dois",
+              SV_DUO_XP_MULT < 1.0f && fabsf(solo_xp - 1.0f) < 0.001f &&
+              fabsf(sv_duo_player(0)->xp / sv_duo_player(0)->xp_mult - SV_DUO_XP_MULT) < 0.001f &&
+              fabsf(sv_duo_player(1)->xp / sv_duo_player(1)->xp_mult - SV_DUO_XP_MULT) < 0.001f);
+    }
+
+    // Os dois sobem de nível juntos: volta ao estado do SV-120
+    start_duo(14);
+    clear_enemies();
+
     sv_duo_player(0)->xp = (float)sv_duo_player(0)->xp_needed;
     sv_duo_player(1)->xp = (float)sv_duo_player(1)->xp_needed;
     step_duo(1, (Vector2){0, 0}, (Vector2){0, 0});

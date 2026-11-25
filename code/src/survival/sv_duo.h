@@ -29,6 +29,7 @@
 #define SV_DUO_SPAWN_MULT 1.6f       // Inimigos nascendo
 #define SV_DUO_ENEMY_HP_MULT 1.25f   // Vida dos inimigos
 #define SV_DUO_BOSS_HP_MULT 1.6f     // Vida dos chefes
+#define SV_DUO_XP_MULT 0.5f          // Valor de cada chip de XP: com 1,6x de inimigos, cada um sobe a 0,8x do ritmo do solo
 
 // Levantar o parceiro
 #define SV_DUO_REVIVE_TIME 3.0f      // Segundos ao lado de quem caiu
