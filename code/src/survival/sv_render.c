@@ -205,6 +205,25 @@ static void draw_bolt_path(Vector2 from, Vector2 to, unsigned seed, float spread
     }
 }
 
+// A palavra do carimbo do Aviso Prévio vai por cima dos inimigos e dos estouros, senão não se lê
+static void draw_stamp_words(void)
+{
+    for (int i = 0; i < SV_MAX_ZONES; i++)
+    {
+        const SvZone *z = &sv_run.zones[i];
+        float t, y;
+        unsigned char fade;
+
+        if (!z->alive || z->kind != ZK_AVISO) continue;
+        t = 1.0f - z->life / z->max_life;
+        fade = (unsigned char)(255.0f * (1.0f - t * t));
+        y = z->pos.y - 22.0f - 10.0f * t;
+        DrawRectangle((int)z->pos.x - 32, (int)y - 9, 64, 18, (Color){20, 6, 10, (unsigned char)(fade * 4 / 5)});
+        DrawRectangleLines((int)z->pos.x - 32, (int)y - 9, 64, 18, (Color){230, 50, 60, fade});
+        sv_text_centered("DEMITIDO", z->pos.x, y - 7.0f, 15.0f, (Color){255, 92, 96, fade});
+    }
+}
+
 static void draw_lightning(void)
 {
     for (int i = 0; i < SV_MAX_ZONES; i++)
@@ -324,13 +343,32 @@ static void draw_zones(void)
 
             progress = 1.0f - z->life / z->max_life;
             if (z->kind == ZK_FIBRA) sv_draw_stretched(SPR_fx_fibra, (int)(progress * 4.0f), center, length, z->radius * 2.0f + 10.0f, z->angle, WHITE);
-            else sv_draw_stretched(SPR_fx_ponteiro, (int)(progress * 4.0f), center, length, 13.0f, z->angle, WHITE);
             continue;
         }
 
         if (z->kind == ZK_CALOR)
         {
             draw_heatmap(z, 1.0f);
+            continue;
+        }
+
+        if (z->kind == ZK_AVISO)
+        {
+            // O carimbo: o anel vermelho se abre, os pedaços de papel voam e a palavra fica um instante
+            float t = 1.0f - z->life / z->max_life;
+            float open = 1.0f - (1.0f - t) * (1.0f - t);
+            unsigned char fade = (unsigned char)(255.0f * (1.0f - t * t));
+
+            DrawCircleV(z->pos, z->radius * open, (Color){200, 28, 40, (unsigned char)(fade / 5)});
+            DrawRing(z->pos, fmaxf(0.0f, z->radius * open - 3.0f), z->radius * open, 0.0f, 360.0f, 40, (Color){230, 50, 60, fade});
+            for (int k = 0; k < 10; k++)
+            {
+                float a = (float)k * 0.628f + z->pos.x * 0.07f;
+                float d = z->radius * (0.35f + 0.75f * open) * (k % 2 ? 1.0f : 0.72f);
+                Vector2 bit = {z->pos.x + cosf(a) * d, z->pos.y + sinf(a) * d};
+
+                DrawRectanglePro((Rectangle){bit.x, bit.y, 5.0f, 4.0f}, (Vector2){2.5f, 2.0f}, t * 540.0f + (float)k * 36.0f, (Color){240, 242, 236, fade});
+            }
             continue;
         }
 
@@ -762,6 +800,20 @@ static void draw_shots(void)
 
                 DrawRectanglePro((Rectangle){s->pos.x + stamp.x, s->pos.y + stamp.y, 5.0f, 4.0f}, (Vector2){2.5f, 2.0f}, s->spin, (Color){64, 176, 104, 255});
             }
+            continue;
+        }
+        if (s->kind == 4)
+        {
+            // Aviso prévio: o avião de papel, com um rastro tracejado
+            Vector2 dir = Vector2Normalize(s->vel);
+
+            for (int k = 1; k <= 3; k++)
+            {
+                Vector2 a = Vector2Subtract(s->pos, Vector2Scale(dir, 10.0f + 10.0f * (float)k));
+
+                DrawLineEx(a, Vector2Add(a, Vector2Scale(dir, 5.0f)), 1.5f, (Color){200, 210, 235, (unsigned char)(190 - 50 * k)});
+            }
+            sv_draw(SPR_fx_aviso, anim_frame(s->life, 10.0f) % 4, s->pos, 1.0f, atan2f(s->vel.y, s->vel.x) * RAD2DEG, false, WHITE);
             continue;
         }
         if (s->kind == 3)
@@ -1294,6 +1346,7 @@ void sv_render_game(void)
         if (sv_run.hazards[i].alive && sv_run.hazards[i].kind == HZ_PROJ) draw_hazard(&sv_run.hazards[i]);
     }
     draw_fx();
+    draw_stamp_words();
     if (sv_debug_mode) sv_debug_draw_world();
     EndMode2D();
 

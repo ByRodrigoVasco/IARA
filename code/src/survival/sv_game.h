@@ -41,7 +41,7 @@ typedef enum { CHEAT_GOD, CHEAT_NO_SPAWN, CHEAT_ONE_HIT, CHEAT_FREEZE, CHEAT_COU
 
 typedef enum
 {
-    W_GRAMPEADOR, W_PONTEIRO, W_CANECA, W_POSTITS, W_NAOPERTURBE, W_DEPLOY, W_NOTA, W_MODUS,
+    W_GRAMPEADOR, W_AVISO, W_CANECA, W_POSTITS, W_NAOPERTURBE, W_DEPLOY, W_NOTA, W_MODUS,
     W_TABELA, W_COLEGA, W_NOVACONVERSA, W_PROMPT, W_VERA, W_FIBRA, W_CALOR, W_NEGACAO, W_RECURSAO, W_COUNT
 } SvWeaponId;
 
@@ -84,19 +84,21 @@ typedef struct
     Vector2 pos, vel;
     float damage, radius, life;
     int pierce;
-    int kind;              // 0 grampo, 1 pacote de dados do Suporte de TI, 2 nota fiscal (vai e volta), 3 chamada recursiva
+    int kind;              // 0 grampo, 1 pacote de dados do Suporte de TI, 2 nota fiscal (vai e volta), 3 chamada recursiva, 4 aviso prévio
     float turn_time;       // Nota fiscal: quando a vida chega a este valor ela vira e volta para o jogador
     float speed;           // Nota fiscal: velocidade de ida e de volta
     float spin;            // Nota fiscal: ângulo atual do giro
     bool returning;        // Nota fiscal: já está voltando
     int depth;             // Recursão: quantas vezes ainda se divide ao acertar
     unsigned hit_ids[4];
+    unsigned target_id;    // Aviso prévio: o inimigo que o avião persegue (0 = nenhum, 0xB055 é o chefe)
+    float blast;           // Aviso prévio: raio do carimbo na chegada
     int owner;             // Dupla: quem disparou (0 ou 1). No solo é sempre 0
     bool alive;
 } SvShot;
 
 typedef enum { ZONE_CIRCLE, ZONE_RECT } SvZoneShape;
-typedef enum { ZK_CANECA, ZK_DEPLOY, ZK_PONTEIRO, ZK_PROMPT, ZK_VERA, ZK_FIBRA, ZK_CALOR, ZK_NEGACAO } SvZoneKind;
+typedef enum { ZK_CANECA, ZK_DEPLOY, ZK_AVISO, ZK_PROMPT, ZK_VERA, ZK_FIBRA, ZK_CALOR, ZK_NEGACAO } SvZoneKind;
 
 typedef struct
 {
