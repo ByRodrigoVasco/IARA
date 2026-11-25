@@ -30,7 +30,8 @@ as inconsistências. Assim, a mecânica ensina ao mesmo tempo ética em IA e ló
 - Configurações: volume da música e dos efeitos, brilho, alto contraste, tela cheia e janela maximizada.
 - Pausa, ajuda e confirmação antes de sair ou desistir.
 - Trilha sonora por momento do jogo e efeitos sonoros de ações e ambiente.
-- Um `iara.exe` só, sem instalação, conta ou internet.
+- Um `iara.exe` só, sem instalação nem conta, que funciona sem internet.
+- Versão para eventos, opcional: [saves e rankings compartilhados entre notebooks](#eventos-saves-e-rankings-na-nuvem) e [ranking ao vivo na web](https://github.com/ByRodrigoVasco/IARA-Ranking-ao-vivo).
 
 ## Como o software evoluiu
 
@@ -154,6 +155,21 @@ O jogo também registra em `iara-desempenho.log` (ao lado do executável, ignora
 
 > **Versão para terminal (PIF):** em desenvolvimento.
 
+### Eventos: saves e rankings na nuvem
+
+Para um evento com vários notebooks, o `iara.exe` pode ser gerado com a nuvem ligada ([Supabase](https://supabase.com/)). Sem ela, tudo continua local, como descrito acima.
+
+- Os saves dos três modos e os rankings solo e de duplas são os mesmos em todos os notebooks. As configurações (`iara.ini`) e o log continuam em cada um.
+- Um save aberto em um notebook fica **em uso** para os outros. A trava vence em 2 minutos sem contato, e uma gravação mais velha que a do servidor é recusada.
+- Escolher, criar e apagar save precisam de internet; apagar pede a senha da organização. Se a rede cair durante a partida, o que não subiu fica numa fila e sobe depois.
+- Os menus mostram a conexão (**online** ou **offline**), e o motivo de uma queda vai para o `iara-desempenho.log`.
+- Partidas com cheats não entram no ranking.
+- O [ranking ao vivo na web](https://github.com/ByRodrigoVasco/IARA-Ranking-ao-vivo) mostra os dois rankings para um telão ou para o celular.
+
+Como montar o banco, configurar o build e testar: [tools/nuvem/LEIA-ME.md](tools/nuvem/LEIA-ME.md). A URL e a chave ficam em `tools/nuvem/nuvem.local`, que não vai para o git.
+
+**Antes do evento:** o plano gratuito do Supabase pausa o projeto após cerca de 7 dias sem atividade.
+
 ### Gerar o pacote para outras máquinas
 
 ```powershell
@@ -161,7 +177,7 @@ powershell -ExecutionPolicy Bypass -File tools/pacote/empacotar.ps1
 powershell -ExecutionPolicy Bypass -File tools/pacote/testar_pacote.ps1
 ```
 
-O primeiro comando gera `build/IARA-windows.zip`, com um `iara.exe` só: as imagens, os sons e as bibliotecas (raylib, GLFW) estão dentro dele, e o jogo roda sem pastas nem DLLs ao lado. Para gerar só o executável, use `tools/release/build_release.ps1` (saída em `build/release/iara.exe`). Quem recebe só abre o `iara.exe`: não precisa de instalação, conta, internet nem administrador. O segundo testa o pacote fora do ambiente de desenvolvimento; o teste em máquina real segue o [roteiro de máquina limpa](docs/fds/testes/maquina-limpa.md).
+O primeiro comando gera `build/IARA-windows.zip`, com um `iara.exe` só: as imagens, os sons e as bibliotecas (raylib, GLFW) estão dentro dele, e o jogo roda sem pastas nem DLLs ao lado. Para gerar só o executável, use `tools/release/build_release.ps1` (saída em `build/release/iara.exe`). Quem recebe só abre o `iara.exe`: não precisa de instalação, conta, internet nem administrador (a versão com a [nuvem](#eventos-saves-e-rankings-na-nuvem) precisa de internet para escolher o save). O segundo testa o pacote fora do ambiente de desenvolvimento; o teste em máquina real segue o [roteiro de máquina limpa](docs/fds/testes/maquina-limpa.md).
 
 ## Entregas por disciplina
 
