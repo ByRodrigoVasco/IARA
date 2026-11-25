@@ -3,14 +3,15 @@
 Os BUG-01 a BUG-08 foram encontrados na execução dos testes de sistema de 22/10/2026
 (branch `develop`, commit `b366e7c`) e estão registrados como issue no repositório, com a
 label `bug`. Os BUG-09 a BUG-12 foram encontrados na revisão de 03/11/2026
-(branch `test/campanha-100-dias`) e também têm issue.
+(branch `test/campanha-100-dias`) e também têm issue. Os BUG-13 e BUG-14 foram encontrados em
+07/11/2026, ao cobrir a US03 (branch `test/us03-modo-automatico`), e têm as issues #80 e #81 (abertas depois, já fechadas).
+O BUG-15 foi relatado em 08/11/2026, durante o desenvolvimento do Modo Sobrevivência (branch `feature/modo-sobrevivencia`), e tem a issue #56. Os BUG-16 a BUG-18 saíram do teste à mão de 08/11/2026 e do retorno de um usuário final de 09/11/2026, na mesma branch, e têm as issues #57 a #59. Os BUG-30 a BUG-32 foram achados em 17/11/2026, ao revisar os textos e a janela do jogo,  e têm as issues #77 a #79. O BUG-33 saiu de um teste de campo em 20/11/2026 (issue #94), e os BUG-34 a BUG-38 da auditoria das branches ativas feita no mesmo dia (issues #95 a #99). Os BUG-39 a BUG-43 saíram dos testes de sistema da Sprint 03, também em 20/11/2026 (issues #101 a #105), e o BUG-44 da auditoria do PR #107 (issue #110).
 
 Os blocos abaixo repetem o conteúdo de cada um, para consulta sem sair do repositório.
 
 ## Status
 
-Atualizar a coluna Status conforme as issues forem corrigidas e fechadas. Conferido em 03/11/2026:
-do BUG-01 ao BUG-11 as correções estão na `develop` e as issues foram fechadas. Só o BUG-12 segue aberto.
+Atualizar a coluna Status conforme as issues forem corrigidas e fechadas. Conferido em 17/11/2026: do BUG-01 ao BUG-16 e do BUG-19 ao BUG-32 as correções estão na `develop` (o Modo Sobrevivência entrou pelo PR #76) e as issues foram fechadas, inclusive as dos BUG-30 a BUG-32 (PR #82). Conferido de novo em 20/11/2026, na Sprint 03: os testes CT-94 a CT-105 abriram os BUG-39 a BUG-43 (#101 a #105), e todas as issues de bug ganharam o label da sprint, um responsável e a rastreabilidade (história do Jira, teste e PR da correção). Os BUG-33 a BUG-38 (#94 a #99) e o BUG-44 (#110) foram abertos em 20/11 por Rodrigo. Os BUG-17 e BUG-18 seguem abertos, com gravidade baixa: são quadros lentos medidos no teste real, sem efeito na jogabilidade. O BUG-17 não voltou a acontecer, e o BUG-18 pede carregar a música e o ambiente da primeira fase na tela de carregamento. Conferido em 24/11/2026: os BUG-18, BUG-33, BUG-37, BUG-38, BUG-39, BUG-40 e BUG-41 foram corrigidos na branch `fix/bugtracker-sprint-03`, mesclada na `develop` (merge `aeefb3d`); as issues foram comentadas e fechadas em 24/11/2026. Seguem abertos o BUG-17 (sem reprodução), o BUG-42 (depende de arte), os BUG-34 e BUG-35 (o código dos cômodos não está em nenhuma branch) e os BUG-36 e BUG-44 (na `feature/cutscenes-comportamento-npcs`, que ainda não entra na `develop`). Detalhes em [Correções da branch `fix/bugtracker-sprint-03`](#correcoes-bugtracker-sprint-03).
 
 | ID | Problema | Gravidade | Issue | Status |
 |---|---|---|---|---|
@@ -25,7 +26,39 @@ do BUG-01 ao BUG-11 as correções estão na `develop` e as issues foram fechada
 | BUG-09 | Rótulos das mesas vazam dos botões | Média | [#43](https://github.com/ByRodrigoVasco/IARA/issues/43) | Corrigido na `develop`, issue fechada |
 | BUG-10 | Falha ao trocar o save pode perder o progresso | Média | [#44](https://github.com/ByRodrigoVasco/IARA/issues/44) | Corrigido na `develop`, issue fechada |
 | BUG-11 | Fundo do cartão do dia é carregado e nunca desenhado | Baixa | [#45](https://github.com/ByRodrigoVasco/IARA/issues/45) | Corrigido na `develop`, issue fechada |
-| BUG-12 | Menu não tem como começar uma partida nova | Média | [#46](https://github.com/ByRodrigoVasco/IARA/issues/46) | Aberto: falta decidir onde fica a opção |
+| BUG-12 | Menu não tem como começar uma partida nova | Média | [#46](https://github.com/ByRodrigoVasco/IARA/issues/46) | Corrigido na `develop` (PR #76), issue fechada |
+| BUG-13 | Suíte de testes deixou de compilar depois do áudio | Alta | [#80](https://github.com/ByRodrigoVasco/IARA/issues/80) | Corrigido na `develop` (PR #55), issue fechada |
+| BUG-14 | "Enviar sem conferir" esperava a IARA terminar de escrever | Média | [#81](https://github.com/ByRodrigoVasco/IARA/issues/81) | Corrigido na `develop` (PR #55), issue fechada |
+| BUG-15 | Carregamentos sem retorno visual e engasgos no menu | Média | [#56](https://github.com/ByRodrigoVasco/IARA/issues/56) | Corrigido na `develop` (PR #76), issue fechada |
+| BUG-16 | Telas de modo e de save em lista vertical, pouco organizadas | Baixa | [#57](https://github.com/ByRodrigoVasco/IARA/issues/57) | Corrigido na `develop` (PR #76), issue fechada |
+| BUG-17 | Quadro de 1,67 s no menu, sete segundos depois de abrir | Baixa | [#58](https://github.com/ByRodrigoVasco/IARA/issues/58) | Aberto, não reproduzido; o log de desempenho separa o tempo por etapa desde 24/11/2026 (`develop`, merge `aeefb3d`) |
+| BUG-18 | Troca de música e ambiente lê o arquivo na hora | Baixa | [#59](https://github.com/ByRodrigoVasco/IARA/issues/59) | Corrigido na `develop` (merge `aeefb3d`, 24/11/2026), issue fechada |
+| BUG-19 | ESC fecha o jogo na hora e a campanha não tem pausa | Média | [#64](https://github.com/ByRodrigoVasco/IARA/issues/64) | Corrigido na `develop`, issue fechada |
+| BUG-20 | O jogo não tem ajuda | Baixa | [#65](https://github.com/ByRodrigoVasco/IARA/issues/65) | Corrigido na `develop`, issue fechada |
+| BUG-21 | Falha ao salvar o progresso não é avisada | Média | [#66](https://github.com/ByRodrigoVasco/IARA/issues/66) | Corrigido na `develop`, issue fechada |
+| BUG-22 | O jogador anda enquanto um NPC fala | Média | [#67](https://github.com/ByRodrigoVasco/IARA/issues/67) | Corrigido na `develop`, issue fechada |
+| BUG-23 | Setas de interação grandes cobrem o mapa | Média | [#68](https://github.com/ByRodrigoVasco/IARA/issues/68) | Corrigido na `develop`, issue fechada |
+| BUG-24 | Zona de saída fica acima da faixa que o jogador alcança na porta | Média | [#69](https://github.com/ByRodrigoVasco/IARA/issues/69) | Corrigido na `develop`, issue fechada |
+| BUG-25 | Falas dos NPCs iguais em todos os dias, sem cumprimento nem dica própria | Média | [#70](https://github.com/ByRodrigoVasco/IARA/issues/70) | Corrigido na `develop`, issue fechada |
+| BUG-26 | Post-it do computador sob o ponteiro, sem fita; ícones, teclado, mouse e janela destoando | Baixa | [#71](https://github.com/ByRodrigoVasco/IARA/issues/71) | Corrigido na `develop`, issue fechada |
+| BUG-27 | Cartões de início e fim do dia sem como pular | Baixa | [#72](https://github.com/ByRodrigoVasco/IARA/issues/72) | Corrigido na `develop`, issue fechada |
+| BUG-28 | Trilha de suspense já no primeiro dia | Baixa | [#73](https://github.com/ByRodrigoVasco/IARA/issues/73) | Corrigido na `develop`, issue fechada |
+| BUG-29 | Tarja Preta (poder inicial do Zito) fraco e sem sentido para o personagem | Média | [#74](https://github.com/ByRodrigoVasco/IARA/issues/74) | Corrigido na `develop` (PR #76), issue fechada |
+| BUG-30 | Descrição das cartas de escolha passa por cima das linhas de mudança | Média | [#77](https://github.com/ByRodrigoVasco/IARA/issues/77) | Corrigido na `develop` (PR #82), issue fechada |
+| BUG-31 | Botão de velocidade (2x) no centro cobre o nome do chefe e o texto vaza do botão | Média | [#78](https://github.com/ByRodrigoVasco/IARA/issues/78) | Corrigido na `develop` (PR #82), issue fechada |
+| BUG-32 | Janela sem opção de maximizar e com tamanho solto | Média | [#79](https://github.com/ByRodrigoVasco/IARA/issues/79) | Corrigido na `develop` (PR #82), issue fechada |
+| BUG-33 | Personagem bloqueado escolhido com cheat volta com a aparência dele e a habilidade do Estagiário | Média | [#94](https://github.com/ByRodrigoVasco/IARA/issues/94) | Corrigido na `develop` (merge `aeefb3d`, 24/11/2026), issue fechada |
+| BUG-34 | Suíte não compila: `test_sistema` sem `rooms.c` | Média | [#95](https://github.com/ByRodrigoVasco/IARA/issues/95) | Aberto (`feat/historia-comodos`, recuperada no remoto em 25/11/2026) |
+| BUG-35 | `feat/historia-comodos` conflita com sintomas e cutscenes em `game_loop.c` | Média | [#96](https://github.com/ByRodrigoVasco/IARA/issues/96) | Aberto (`feat/historia-comodos` conflita com a `develop` em `game_loop.c`) |
+| BUG-36 | Commit leva 16 imagens de evidência regravadas pela suíte | Baixa | [#97](https://github.com/ByRodrigoVasco/IARA/issues/97) | Aberto (`feature/cutscenes-comportamento-npcs`) |
+| BUG-37 | Cheats do debug valem só para o jogador 1 na dupla | Baixa | [#98](https://github.com/ByRodrigoVasco/IARA/issues/98) | Corrigido na `develop` (merge `aeefb3d`, 24/11/2026), issue fechada |
+| BUG-38 | Análise estática aponta risco de estouro de vetor no quiz de triagem | Baixa | [#99](https://github.com/ByRodrigoVasco/IARA/issues/99) | Corrigido na `develop` (merge `aeefb3d`, 24/11/2026), issue fechada |
+| BUG-39 | Sair pela porta não toca o som de porta | Baixa | [#101](https://github.com/ByRodrigoVasco/IARA/issues/101) | Corrigido na `develop` (merge `aeefb3d`, 24/11/2026), issue fechada |
+| BUG-40 | Tela do quiz sem som de teclado | Baixa | [#102](https://github.com/ByRodrigoVasco/IARA/issues/102) | Reaberto em 24/11/2026: no Windows o CT-97 seguiu falhando, porque o `SOM DE TECLADO.ogg` estava em Opus, que a raylib não abre. Convertido para `SOM DE TECLADO.mp3` na branch `fix/som-de-teclado` |
+| BUG-41 | NPC começa a falar sem o som de fala (voice blip) | Baixa | [#103](https://github.com/ByRodrigoVasco/IARA/issues/103) | Corrigido na `develop` (merge `aeefb3d`, 24/11/2026), issue fechada |
+| BUG-42 | Flash do dia, salto puro e os 4 finais sem arte própria | Média | [#104](https://github.com/ByRodrigoVasco/IARA/issues/104) | Aberto; depende de arte nova |
+| BUG-43 | Escritório não reage às escolhas do jogador, só ao dia | Média | [#105](https://github.com/ByRodrigoVasco/IARA/issues/105) | Corrigido na `develop` (PR #107), issue fechada |
+| BUG-44 | Sintomas visuais duplicados e conflito entre o PR #107 e `feature/cutscenes-comportamento-npcs` | Média | [#110](https://github.com/ByRodrigoVasco/IARA/issues/110) | Aberto (integração das branches) |
 
 **Sobre o BUG-02:** os dois vazamentos descritos abaixo já não existem. Restava uma carga duplicada do menu ao abrir o jogo, removida. O CT-24 oscilava porque media sem desenhar quadros, e o driver de vídeo só devolve uma textura apagada depois de um quadro. Com quadros, 400 voltas ao menu cresceram 19 MB (cerca de 0,05 MB por volta, contra os 7 MB originais).
 
@@ -372,5 +405,386 @@ sem querer.
 
 **Em aberto:** decidir se a opção fica no menu ou em `CONFIGURAÇÕES`.
 
+**Correção (08/11/2026):** a decisão foi uma escolha em duas telas depois de `INICIAR`: primeiro o modo, depois
+o save. Cada modo aceita vários saves, cada um com nome único e na própria pasta (`saves/normal/<nome>/`).
+Criar um save novo começa do Dia 1 sem tocar nos outros, e um save pode ser apagado, com confirmação. Branch
+`feature/modo-sobrevivencia`, commit `ad1ec96`. O usuário testou o fluxo no jogo real em 08/11/2026 e aprovou.
+O visual das duas telas mudou depois, no BUG-16.
+
 **Onde:** `code/src/screens/menu.c` e `handle_menu_action()` em `code/src/core/state_machine.c`
-**Coberto por:** nenhum teste automatizado (achado por inspeção)
+**Coberto por:** CT-79 a CT-87 (fluxo) e SL-01 a SL-29 (saves em pastas); antes, nenhum teste automatizado (achado por inspeção)
+
+---
+
+<a id="bug-13"></a>
+
+## BUG-13 — Suíte de testes deixou de compilar depois do áudio
+
+**Labels:** `bug`, `testes`, `gravidade: alta`
+
+A PR #53 (áudio) fez `computer_loop.c`, `game_loop.c` e `state_machine.c` chamarem funções de
+`core/audio.c`, mas o `run_tests.ps1` não passou a compilar esse arquivo. Na `develop`, o
+`test_sistema`, o `test_conteudo` e o `test_fluxo` param no link com
+`undefined reference to update_iara_voice_typing`.
+
+**Correção:** `code/src/core/audio.c` entrou na lista de fontes desses três conjuntos. Sem
+placa de som, `IsAudioDeviceReady()` devolve `false` e as funções de áudio não fazem nada, então
+os testes rodam iguais.
+
+**Onde:** `tools/tests/run_tests.ps1`
+**Coberto por:** a própria execução da suíte
+
+---
+
+<a id="bug-14"></a>
+
+## BUG-14 — "Enviar sem conferir" esperava a IARA terminar de escrever
+
+**Labels:** `bug`, `ui`, `gravidade: média`
+
+Com a PR #53, a sugestão da IARA passou a aparecer letra por letra (45 por segundo), e os dois
+botões só eram liberados no fim. Numa sugestão comum, isso dá de 2 a 4 segundos de espera antes
+de poder delegar, o que contradiz a US03 (PI2-227): o modo automático deve resolver na hora.
+
+**Correção:** "Enviar sem conferir" fica liberado desde o início da digitação e encerra o
+chamado no mesmo clique. "Conferir" continua esperando o texto terminar, porque não dá para
+conferir o que ainda não foi lido. A diferença reforça o que o jogo já faz com o botão que cresce
+a cada envio: a imprudência é o caminho mais fácil.
+
+**Onde:** `render_ticket_suggestion()` em `code/src/screens/computer_loop.c`
+**Coberto por:** CT-78 cobre a lógica do envio. O clique durante a digitação é verificado à mão,
+porque a raylib não permite injetar o mouse
+
+---
+
+<a id="bug-15"></a>
+
+## BUG-15 — Carregamentos sem retorno visual e engasgos no menu
+
+**Labels:** `bug`, `desempenho`, `gravidade: média`
+
+Relatado em 08/11/2026: o jogo travava algumas vezes e demorava para carregar, até no menu, e durante o
+carregamento a tela ficava congelada, sem nenhum sinal de que algo acontecia.
+
+**Esperado:** quadros regulares no menu e nas telas de escolha, e uma tela de carregamento com a porcentagem
+sempre que a carga passar de um quadro.
+**Obtido:** o fundo do menu tinha 3334x2160 e levava cerca de 210 ms para decodificar. O menu carregava o escritório
+e o nome IARA que a abertura já tinha carregado (166 ms a mais), e as configurações recarregavam o escritório a
+cada abertura. A partida do Sobrevivência decodificava todas as imagens e os sons antes do primeiro quadro,
+com a tela parada.
+
+**Correção:** (1) tela de carregamento com a porcentagem, que só cresce, e a carga dividida em passos, com
+orçamento de 10 ms por quadro; (2) as imagens do menu carregam por trás da abertura, uma por quadro; (3) fundo do
+menu reduzido para 1112x720 (15 ms para decodificar); (4) cada imagem grande carrega uma vez só, com contagem de
+usos (`acquire_smooth_texture`); (5) o jogo grava em `iara-desempenho.log` os quadros acima de 60 ms. Medido com o
+jogo real: em 18 s de abertura e menu parado, os únicos quadros acima de 60 ms foram dois, perto de 1,4 s, quando a
+placa de vídeo usa pela primeira vez as imagens grandes.
+
+**Teste real (08/11/2026):** o usuário jogou cerca de 18 minutos no Sobrevivência e aprovou. Depois do carregamento,
+nenhum quadro passou de 60 ms durante a partida. Os quadros lentos que sobraram estão nos BUG-17 e BUG-18.
+
+**Onde:** `code/src/screens/loading.c`, `code/src/screens/menu.c`, `code/src/core/helper.c`, `code/src/core/state_machine.c`, `code/src/main.c`
+**Coberto por:** CT-88 (a porcentagem sobe) e CT-89 a CT-91 (imagens compartilhadas); os tempos foram medidos à parte, sem teste automatizado
+
+---
+
+<a id="bug-16"></a>
+
+## BUG-16 — Telas de modo e de save em lista vertical, pouco organizadas
+
+**Labels:** `bug`, `ui`, `gravidade: baixa`
+
+Retorno de um usuário final, repassado em 09/11/2026: a escolha do modo mostrava os dois modos um embaixo do outro,
+colados à esquerda, e a lista de saves era uma pilha de linhas sem separação, com o nome, o resumo e a data
+misturados numa linha só.
+
+**Esperado:** o modo no centro da tela, com os dois lado a lado e a opção de passar de um para o outro; os saves
+em cartões organizados.
+**Obtido:** lista vertical alinhada à esquerda nas duas telas.
+
+**Correção (09/11/2026):** a escolha de modo virou dois cartões lado a lado no centro, com esquerda e direita para
+passar de um para o outro, o cartão escolhido destacado e o botão `VOLTAR` embaixo. A lista de saves virou uma coluna
+centralizada de cartões, cada um com o nome, o resumo do progresso à esquerda e a data à direita; o save escolhido
+mostra o botão de apagar no canto, a barra de rolagem aparece quando nem todos cabem, e `VOLTAR` é um botão fixo
+embaixo. O mouse e o teclado seguem iguais. Branch `feature/modo-sobrevivencia`.
+
+**Onde:** `code/src/screens/mode_select.c`, `code/src/screens/save_select.c`, `code/src/ui/screen_style.c`
+**Coberto por:** CT-79 a CT-87 (fluxo) seguem passando; o visual foi conferido por captura de tela em 1600x900 e 1280x720
+
+---
+
+<a id="bug-17"></a>
+
+## BUG-17 — Quadro de 1,67 s no menu, sete segundos depois de abrir
+
+**Labels:** `bug`, `desempenho`, `gravidade: baixa`
+
+No teste real de 08/11/2026, `iara-desempenho.log` registrou um quadro de 1671 ms na tela do menu, 7,1 s depois
+de abrir o jogo. Não voltou nos 18 minutos seguintes, e o jogo não registrou erro.
+
+**Esperado:** nenhum quadro acima de 60 ms no menu.
+**Obtido:** um quadro de 1,67 s. Entre a abertura e o menu o jogo só carrega quatro imagens pequenas e não inicia o áudio,
+então a causa não está numa carga pesada do código. Pode ter sido um evento do Windows (arrastar ou focar a janela)
+ou a placa de vídeo, mas isso não foi confirmado.
+
+**Em aberto:** reproduzir. Se voltar, medir o tempo por etapa dentro do quadro (`handle_state_machine()` e `EndDrawing()`).
+
+**Atualização de 24/11/2026:** a medição por etapa já está no jogo (`main.c`, merge `aeefb3d` na `develop`). Cada linha do `iara-desempenho.log` traz o tempo dentro de `handle_state_machine()`, o tempo fora dele, se a janela estava em foco e se foi redimensionada ou minimizada. O bug segue aberto até reaparecer.
+
+**Onde:** abertura e menu (`code/src/screens/pre_menu.c`, `code/src/screens/menu.c`)
+**Coberto por:** nenhum teste; achado pelo log do jogo real
+
+---
+
+<a id="bug-18"></a>
+
+## BUG-18 — Troca de música e ambiente lê o arquivo na hora
+
+**Labels:** `bug`, `desempenho`, `gravidade: baixa`
+
+No mesmo teste real, três quadros passaram de 60 ms: 78 ms e 129 ms na tela de carregamento do Sobrevivência (abrir
+o dispositivo de áudio e carregar o lote de sons) e 130 ms no começo de uma partida, quando `sv_music_play()` e
+`sv_ambient_play()` carregam a música e o ambiente com `LoadMusicStream` no próprio quadro. Durante a partida, as
+trocas de música e de ambiente ficaram abaixo de 60 ms.
+
+**Esperado:** nenhum quadro acima de 60 ms ao começar a partida.
+**Obtido:** 130 ms no quadro em que a partida começa; nos dois quadros do carregamento a barra de progresso fica
+parada por um instante.
+
+**Em aberto:** carregar a música e o ambiente da primeira fase durante a tela de carregamento, e dividir o lote de
+sons em passos menores.
+
+**Correção (24/11/2026, merge `aeefb3d` na `develop`):** `sv_audio_prepare()` deixa a trilha do Ato I e o ambiente da área de partida abertos desde a tela de carregamento, e a partida começa sem ler o disco. Ao voltar ao início depois de uma partida, as duas faixas são preparadas de novo. O lote de sons já carregava um som por quadro. Falta medir no jogo real com o `iara-desempenho.log`.
+
+**Onde:** `code/src/survival/sv_audio.c` (`start_stream()`, `sv_audio_init_step()`)
+**Coberto por:** nenhum teste; achado pelo log do jogo real
+
+---
+
+<a id="bug-19"></a>
+
+## BUG-19 — ESC fecha o jogo na hora e a campanha não tem pausa
+
+**Labels:** `bug`, `ui`, `gravidade: média`
+
+Achado na auditoria de usabilidade de 09/11/2026 (`docs/fds/usabilidade-nielsen.md`, heurísticas 3 e 5). No menu
+principal e no escritório, o ESC encerrava o jogo sem perguntar, a opção SAIR fazia o mesmo, e no Modo Sobrevivência
+DESISTIR da partida valia na hora. A campanha também não tinha pausa nem como voltar ao menu antes do final.
+
+**Esperado:** nenhuma ação difícil de desfazer acontece com uma tecla só, e o jogador consegue parar o jogo e sair.
+**Obtido:** uma tecla errada fechava o jogo.
+
+**Correção (09/11/2026):** SAIR e ESC no menu abrem a pergunta "SAIR DO JOGO?", com o botão que cancela já escolhido.
+No escritório, ESC (ou P) abre a pausa, com CONTINUAR, COMO JOGAR, VOLTAR AO MENU (salva antes) e SAIR DO JOGO (pergunta).
+No Sobrevivência, DESISTIR também pergunta. Branches `feature/heuristicas-de-nielsen` (campanha) e
+`feature/modo-sobrevivencia`.
+
+**Onde:** `code/src/core/state_machine.c`, `code/src/screens/menu.c`, `code/src/screens/game_loop.c`, `code/src/ui/pause_menu.c`, `code/src/ui/confirm_dialog.c`, `code/src/survival/survival.c`
+**Coberto por:** UX-04 a UX-06 e UX-09 a UX-15
+
+---
+
+<a id="bug-20"></a>
+
+## BUG-20 — O jogo não tem ajuda
+
+**Labels:** `bug`, `ui`, `gravidade: baixa`
+
+Heurística 10. Os controles só apareciam como imagens no escritório, e nada explicava o objetivo, o computador, a
+pausa, os saves nem o Modo Sobrevivência.
+
+**Esperado:** uma ajuda curta, fácil de achar e focada no que o jogador faz.
+**Obtido:** nenhuma.
+
+**Correção (09/11/2026):** opção AJUDA no menu principal, COMO JOGAR na pausa da campanha e no início e na pausa do
+Sobrevivência, com uma página por modo e as teclas escritas no rodapé de cada tela.
+
+**Onde:** `code/src/screens/help.c`, `code/src/screens/menu.c`
+**Coberto por:** UX-07, UX-08, UX-14 e UX-16
+
+---
+
+<a id="bug-21"></a>
+
+## BUG-21 — Falha ao salvar o progresso não é avisada
+
+**Labels:** `bug`, `ui`, `gravidade: média`
+
+Heurísticas 1 e 9. Salvar era silencioso, e uma falha (disco cheio, pasta sem permissão) só ia para o log do console:
+o jogador perdia o progresso sem saber.
+
+**Esperado:** o jogo diz que salvou e, se não conseguiu, explica o que conferir.
+**Obtido:** nenhum aviso.
+
+**Correção (09/11/2026):** aviso "Progresso salvo." ao voltar ao menu, e aviso de erro de 7 s ("Não consegui salvar o
+progresso. Confira se há espaço livre no disco e se a pasta do jogo permite gravar arquivos.") quando a gravação
+falha. No Sobrevivência, `sv_meta_last_save_ok()` diz se a última gravação deu certo, e a tela avisa ao comprar, ao
+escolher personagem e ao fim da partida.
+
+**Onde:** `code/src/ui/notice.c`, `code/src/core/state_machine.c`, `code/src/survival/survival.c`, `code/src/survival/sv_meta.c`
+**Coberto por:** UX-01 a UX-03, SV-94 e SV-95
+
+---
+
+<a id="bug-22"></a>
+
+## BUG-22 a BUG-29 — Achados do teste com jogadores (09/11/2026)
+
+**Labels:** `bug`, `ui`
+
+Testando a campanha e o Sobrevivência com jogadores, saíram estes problemas. Cada um já foi corrigido.
+
+| ID | O que acontecia | Correção |
+|---|---|---|
+| BUG-22 | O jogador continuava andando enquanto um NPC falava | Durante a conversa o jogador fica parado até a fala acabar (`interaction_open` em `handle_game_loop_screens`) |
+| BUG-23 | As setas das interações eram enormes e cortavam a tela | Uma seta pequena acompanha o jogador e aponta o próximo objetivo; perto de algo, um anel no chão e uma tecla ESPAÇO discreta indicam a interação |
+| BUG-24 | A zona de saída ficava acima da faixa onde o jogador consegue chegar na porta | A zona vai do começo da porta até a soleira; a hitbox do jogador ficou mais estreita (36 em vez de 50) |
+| BUG-25 | Os NPCs repetiam a mesma fala todos os dias, a dica aparecia sobre a cabeça do dono e eles ficavam sempre nos mesmos lugares | Cada NPC tem cumprimento, fala e, no dia dele, a dica (uma por dia); a dica é avisada de leve no computador; os lugares mudam a cada dia jogável |
+| BUG-26 | O post-it ficava sob o ponteiro, e os ícones, o teclado, o mouse e a janela eram quadrados e destoavam | Pixel art desenhada em código: ícones, janela, teclado e mouse que reagem a teclas e cliques, onda de clique e o post-it colado, inclinado, com fita e por cima do ponteiro |
+| BUG-27 | Os cartões de início e fim do dia só passavam sozinhos | Botão PULAR (ou ESPAÇO, ENTER e clique) |
+| BUG-28 | A música de suspense tocava desde o primeiro dia | O ambiente calmo toca nos primeiros dias, e a trilha de tensão entra aos poucos com a história |
+| BUG-29 | A Tarja Preta, poder inicial do Zito, era fraca e não combinava com ele | Virou a Nota Fiscal: um bumerangue de papel que vai até o inimigo mais próximo, atravessa quem estiver no caminho e volta, ferindo nas duas passagens |
+
+**Onde:** `code/src/game/npcs.c`, `code/src/screens/game_loop.c`, `code/src/screens/computer_loop.c`, `code/src/ui/computer_art.c`, `code/src/ui/cheat_sheet.c`, `code/src/core/audio.c`, `code/src/survival/sv_game.c`
+**Coberto por:** UX-18 a UX-22, `test_npcs` e a atualização do CT-35 e do CT-54
+
+---
+
+## BUG-30 a BUG-32 — Textos do Sobrevivência e modos da janela (17/11/2026)
+
+**Labels:** `bug`, `ui`
+
+Revisando os textos do Modo Sobrevivência e a janela do jogo, saíram estes problemas. Cada um já foi corrigido.
+
+| ID | O que acontecia | Correção |
+|---|---|---|
+| BUG-30 | A descrição das cartas de escolha de nível tinha espaço para 3 linhas, mas Nota Fiscal, Colega de Plantão, Prompt da IARA e Vera Fischer escrevem 4 ou 5: as linhas extras ficavam por cima do separador e das linhas "atributo: de -> para". Títulos longos e mudanças longas também passavam da carta | A carta calcula o layout a partir do texto (`sv_levelup_layout`): quebra a descrição em linhas, reduz a fonte até tudo caber, encolhe o título até caber na largura e ficou mais alta (560 em vez de 500) |
+| BUG-31 | O botão de velocidade ficava no centro do HUD, em 150 px fixos: o texto "TEMPO  x3  [TAB]" passava das bordas e, com um chefe em campo, o botão cobria o nome e a barra de vida dele. O nome do chefe também encostava na linha do ato | O botão foi para o canto de baixo à direita, com a largura calculada pelo texto; o nome, a barra e os escudos do chefe desceram para depois do ato |
+| BUG-32 | A janela abria num tamanho padrão mas podia ser arrastada para qualquer tamanho, e só alternava com a tela cheia: não havia janela maximizada, e o tamanho fixo não era garantido | Três modos, sempre um só: janela de tamanho fixo (o padrão, sem bordas de arrastar), janela maximizada e tela cheia. Vêm das caixas Tela cheia e Janela maximizada em CONFIGURAÇÕES e do F11 (que alterna a tela cheia com a última janela) e ficam no `iara.ini` (`janela_maximizada` e `tela_cheia`) |
+
+**Onde:** `code/src/survival/sv_render.c`, `code/src/core/helper.c`, `code/src/core/preferences.c`, `code/src/screens/settings.c`, `code/src/main.c`
+**Coberto por:** UX-23 (todas as cartas de escolha), UX-24 (botão de velocidade em 5 tamanhos de janela), UX-25 e UX-26 (modos da janela e `iara.ini`)
+
+---
+
+## BUG-33 a BUG-38 e BUG-44 — Teste de campo e auditoria das branches ativas (20/11/2026)
+
+**Labels:** `bug`
+
+O BUG-33 veio de um usuário, num teste de campo. Os BUG-34 a BUG-38 saíram de uma auditoria em cópias separadas da `develop` e de cada branch ativa: compilação com avisos e análise estática, leitura do código novo, simulações de partidas inteiras sem janela e a simulação de mesclas. As causas abaixo eram **possíveis** quando os bugs foram abertos. Em 24/11/2026 os BUG-33, BUG-37 e BUG-38 foram corrigidos na `develop`, com a causa do BUG-33 confirmada (ver [Correções da branch `fix/bugtracker-sprint-03`](#correcoes-bugtracker-sprint-03)).
+
+| ID | O que acontece | Possível causa | Issue |
+|---|---|---|---|
+| BUG-33 | Com o cheat ligado, o jogador escolhe um personagem bloqueado. Ao desligar o cheat durante a partida e começar outra, a aparência é a do bloqueado e a habilidade é a do Estagiário (reproduzido sem janela, também na dupla) | A aparência vem de `sv_meta.character`, que guarda o bloqueado; a habilidade passa pela checagem de `sv_game.c:2181`, que devolve o Estagiário com o debug desligado | [#94](https://github.com/ByRodrigoVasco/IARA/issues/94) |
+| BUG-34 | Na `feat/historia-comodos`, o `test_sistema` não liga: `undefined reference to room_get` e `room_draw_animations` | O `rooms.c` entrou só na lista do `test_fluxo` em `run_tests.ps1`; o `test_sistema` inclui o `game_loop.c` direto | [#95](https://github.com/ByRodrigoVasco/IARA/issues/95) |
+| BUG-35 | Mesclar os cômodos com os sintomas ou com as cutscenes dá conflito em `game_loop.c`; resolver mal pode desenhar os sintomas em todos os cômodos | Duas branches mudaram a mesma região de `render_game_loop_escritorio`, e os cômodos a moveram para `draw_map_texture` | [#96](https://github.com/ByRodrigoVasco/IARA/issues/96) |
+| BUG-36 | A `feature/cutscenes-comportamento-npcs` leva 16 PNGs de `docs/fds/testes/evidencias/` no commit; um passou de 388 KB para 1,3 MB | A suíte regrava as imagens e elas entraram no commit, contra o CONTRIBUTING | [#97](https://github.com/ByRodrigoVasco/IARA/issues/97) |
+| BUG-37 | Na dupla, curar, subir de nível, Ctrl+Z e dar poder pelo F2 só valem para o jogador 1 | Os cheats usam `sv_run.player`, o jogador ativo; pode ser limite aceito do debug | [#98](https://github.com/ByRodrigoVasco/IARA/issues/98) |
+| BUG-38 | O `-fanalyzer` acusa escrita fora dos vetores de triagem em `computer_loop.c` (linhas 1380 e 1509); hoje são 4 cartas para 6 vagas, então não estoura | O número de cartas vem de um campo de dados sem limite no código; pode ser alarme falso | [#99](https://github.com/ByRodrigoVasco/IARA/issues/99) |
+| BUG-44 | O PR #107 (`feature/sintomas-visuais`) e a `feature/cutscenes-comportamento-npcs` conflitam em `game_loop.c` e na imagem `escritorio-em-jogo.png`, e as duas desenham sintomas das estatísticas ocultas de jeitos diferentes: se as duas entrarem, o escritório ganha os dois conjuntos de sinais | As duas partiram da mesma história (US10/RF11, BUG-43) sem dividir o trabalho; pode ser que a branch de cutscenes use os sintomas só nas falas, o que não foi verificado | [#110](https://github.com/ByRodrigoVasco/IARA/issues/110) |
+
+**Onde:** `code/src/survival/sv_game.c`, `code/src/survival/survival.c`, `tools/tests/run_tests.ps1`, `code/src/screens/game_loop.c`, `code/src/screens/computer_loop.c`
+**Coberto por:** quando abertos, nenhum teste (os BUG-33 e BUG-37 foram reproduzidos com programas descartáveis, sem janela). Desde 24/11/2026: SV-137 e SV-138 (BUG-33), SV-139 a SV-142 (BUG-37) e `gcc -fanalyzer` (BUG-38)
+
+---
+
+## BUG-39 a BUG-43 — Testes de sistema da Sprint 03 (20/11/2026)
+
+**Labels:** `bug`, `sprint-03`
+
+Achados pelo bloco 4 da suíte (`code/tests/test_sprint03.c`), executado na `develop` (`2386a1c`). O passo a passo de cada caso e o screencast estão no [report da Sprint 03](../sprint-03/README.md).
+
+<a id="bug-39"></a>
+<a id="bug-40"></a>
+<a id="bug-41"></a>
+<a id="bug-42"></a>
+<a id="bug-43"></a>
+
+| ID | Issue | História | Esperado | Obtido | Onde | Coberto por |
+|---|---|---|---|---|---|---|
+| BUG-39 | [#101](https://github.com/ByRodrigoVasco/IARA/issues/101) | PI2-263 (US16) | Som de porta ao sair pela porta de vidro | Nenhum som; `PORTA ABRINDO.mp3` existe mas não é carregado | `code/src/core/audio.c`, `finish_day()` em `game_loop.c` | CT-95 |
+| BUG-40 | [#102](https://github.com/ByRodrigoVasco/IARA/issues/102) | PI2-264 (US16) | Som de teclado ao interagir com o computador | Nenhum som; `SOM DE TECLADO.ogg` existe mas não é carregado | `code/src/core/audio.c`, `computer_loop.c` | CT-97 |
+| BUG-41 | [#103](https://github.com/ByRodrigoVasco/IARA/issues/103) | PI2-265 (US16) | Voice blip quando o NPC começa a falar | O blip só toca para a IARA no computador; o diálogo dos NPCs não chama o áudio | `handle_map_interactables()` e `render_npc_dialogue()` em `game_loop.c` | CT-98 |
+| BUG-42 | [#104](https://github.com/ByRodrigoVasco/IARA/issues/104) | PI2-267 e PI2-268 (US17) | Arte própria para o Flash ou o salto e para os 4 finais | Flash reaproveita o escritório; salto e finais são só texto | `handle_day_transition()` e `ending_cards` em `game_loop.c` | CT-100 |
+| BUG-43 | [#105](https://github.com/ByRodrigoVasco/IARA/issues/105) | PI2-237 (US10) | O escritório muda com as estatísticas ocultas | Telas idênticas para estatísticas opostas no mesmo dia; o cenário só muda com o dia | `render_game_loop_escritorio()` em `game_loop.c` (corrigido no PR #107) | CT-102 |
+
+**Correção dos BUG-39 a BUG-41 (24/11/2026, merge `aeefb3d` na `develop`):** os sons de porta, de teclado e de fala dos NPCs passaram a tocar. Detalhes em [Correções da branch `fix/bugtracker-sprint-03`](#correcoes-bugtracker-sprint-03). O BUG-42 segue aberto: pede arte nova.
+
+**Correção do BUG-43 (PR #107):** o escritório passa a mudar quando cada campo de `hidden_statistic` alcança um limiar (luz, monitores, quadro de valores, mural, luzes quentes, papéis no chão). Os limiares e o que muda estão em [Sintomas visuais](../sintomas-visuais.md).
+
+**Ajuste no CT-101:** o teste comparava as estatísticas zeradas com 999 pontos e 9 em cada eixo e exigia 0 pixels diferentes. Com os sintomas, esse par cai em faixas opostas e o escritório muda, como o CT-102 pede. Assim, os dois testes não podiam passar juntos. O CT-101 agora compara dois estados com números diferentes na mesma faixa (500 pontos contra 999 e 1 ponto de Percepção, abaixo de todos os limiares), no Dia 3, antes de o escritório escurecer: depois disso a lâmpada quebrada pisca com o tempo e duas fotos nunca seriam idênticas. Qualquer pixel diferente só pode vir de um número desenhado na tela.
+
+---
+
+<a id="correcoes-bugtracker-sprint-03"></a>
+
+## Correções da branch `fix/bugtracker-sprint-03` (23 e 24/11/2026)
+
+**Labels:** `bug`, `sprint-03`
+
+Branch aberta a partir da `develop` (`a2b8e07`) para fechar as issues de bug que dependem só da `develop`. Mesclada na `develop` em 24/11/2026 (merge `aeefb3d`, sem PR). Os BUG-36 e BUG-44 ficam na `feature/cutscenes-comportamento-npcs`, que ainda não vai para a `develop`. Os BUG-34 e BUG-35 dependem do código dos cômodos, que naquela data não estava em nenhuma branch do remoto. Em 25/11/2026 a `feat/historia-comodos` foi recuperada e voltou ao remoto, com os 4 commits originais até o `7a93e36`. O BUG-42 pede arte nova. O BUG-17 continua sem reprodução.
+
+| ID | Issue | Correção | Onde | Coberto por |
+|---|---|---|---|---|
+| BUG-18 | [#59](https://github.com/ByRodrigoVasco/IARA/issues/59) | A trilha do Ato I e o ambiente da área de partida ficam abertos (sem tocar) desde a tela de carregamento, com `sv_audio_prepare()`. Quando a partida pede essas faixas, elas entram sem ler o disco. Ao voltar ao início depois de uma partida, as duas são preparadas de novo para a próxima. O lote de sons já carregava um som por quadro | `sv_audio.c`, `sv_game.c` (`sv_start_ambient()`), `survival.c` | Medir no jogo real (`iara-desempenho.log`) |
+| BUG-33 | [#94](https://github.com/ByRodrigoVasco/IARA/issues/94) | Um valor só decide o personagem: `sv_playable_character()` devolve o escolhido, se estiver liberado (ou com o debug), ou o Estagiário. A habilidade (`setup_player`) e o save usam esse valor, e antes de cada partida (e ao abrir a tela de personagens) o `survival.c` confere o save de novo e recarrega a aparência quando ela muda | `sv_game.c`, `survival.c` | SV-137 e SV-138 |
+| BUG-37 | [#98](https://github.com/ByRodrigoVasco/IARA/issues/98) | Na dupla, curar (que também levanta quem caiu), subir de nível, Ctrl+Z e dar poder ou passivo valem para os dois jogadores. O jogador em cena continua o mesmo | `sv_game.c` (`sv_cheat_*`) | SV-139 a SV-142 |
+| BUG-38 | [#99](https://github.com/ByRodrigoVasco/IARA/issues/99) | `triage_card_count()` limita o número de cartas a `MAX_TRIAGE_CARDS` em todos os laços da mesa de triagem. O `gcc -fanalyzer` não acusa mais nada em `computer_loop.c` | `computer_loop.c` | `gcc -fanalyzer` |
+| BUG-39 | [#101](https://github.com/ByRodrigoVasco/IARA/issues/101) | `PORTA ABRINDO.mp3` é carregado com os outros efeitos e toca quando o jogador sai pela porta de vidro (`play_door_sound()`) | `audio.c`, `game_loop.c` | CT-95 |
+| BUG-40 | [#102](https://github.com/ByRodrigoVasco/IARA/issues/102) | `SOM DE TECLADO.mp3` é carregado e toca a cada resposta no computador: alternativa do chamado, envio da triagem, escolha da conversa e "enviar sem conferir" (`play_keyboard_sound()`) | `audio.c`, `computer_loop.c` | CT-97 |
+| BUG-41 | [#103](https://github.com/ByRodrigoVasco/IARA/issues/103) | Enquanto a fala do NPC aparece letra por letra, toca o blip de voz (o mesmo da IARA). Ele para quando a fala termina ou a conversa fecha | `game_loop.c` | CT-98 |
+
+**Travamento ao trocar de personagem (Sobrevivência):** sem issue própria. Cada movimento do cursor na tela de personagens lia do disco as 32 imagens do andar do personagem. Agora todos os personagens são carregados uma vez, na tela de carregamento (`sv_load_characters_step()` em `sv_assets.c`), e escolher, trocar (TAB) ou confirmar só aponta para os quadros já carregados.
+
+**BUG-17:** sem reprodução, não há o que corrigir. Para a próxima vez, cada linha do `iara-desempenho.log` passou a dizer quanto do quadro ficou dentro de `handle_state_machine()` (lógica, desenho e `EndDrawing`), quanto ficou fora, se a janela estava em foco e se foi redimensionada ou minimizada. Assim dá para separar uma carga do jogo de um evento do Windows.
+
+**Execução dos testes:** os 13 conjuntos e o executável do jogo compilam. Na máquina em que a correção foi feita, o Windows (Controle de Aplicativo) bloqueou a execução dos `.exe` recém-compilados, então os CT-95, CT-97, CT-98 e os SV-137 a SV-142 ainda precisam ser rodados na `develop`. Até lá, os resultados registrados no [README dos testes](README.md) continuam os da execução de 20/11/2026.
+
+**Issues:** as issues #59, #94, #98, #99, #101, #102 e #103 receberam o comentário com a correção e foram fechadas em 24/11/2026. As #58, #95 e #96 receberam um comentário com a situação e seguem abertas, junto com as #97, #104 e #110.
+
+---
+
+<a id="nuvem-saves-ranking"></a>
+
+## Branch `feat/nuvem-saves-ranking` (25/11/2026): saves e rankings na nuvem
+
+Funcionalidade nova, para eventos com vários notebooks. Não corrige nem abre bug com issue. Guia de montagem e comportamento: [tools/nuvem/LEIA-ME.md](../../../tools/nuvem/LEIA-ME.md).
+
+**Execução dos testes (25/11/2026):** 13 dos 14 conjuntos passaram. `test_cloud` (NV-01 a NV-43, com um servidor falso, sem rede) com 43 de 43; blocos 1 a 3 com 32 de 32, 37 de 37 e 58 de 58; `test_survival` com 148 de 148. A única falha é o CT-100 no bloco 4, o [BUG-42](#bug-42) já aberto, que depende de arte. A suíte foi repetida no fim, já com o indicador de conexão e os personagens da dupla, com o mesmo resultado. O executável de release compilou com a nuvem, e a leitura de saves e rankings no servidor real respondeu certo.
+
+**Depois da primeira entrega:**
+
+- Os menus mostram a conexão (bolinha verde "online" ou vermelha "offline"), e o motivo da queda vai para o `iara-desempenho.log`.
+- O ranking de duplas passou a levar os personagens dos dois jogadores no mesmo campo (J1 + 16 × (J2 + 1)), sem mudar o banco.
+- O ranking ao vivo na web ficou em um repositório próprio, [IARA-Ranking-ao-vivo](https://github.com/ByRodrigoVasco/IARA-Ranking-ao-vivo).
+
+**Conferido à mão (25/11/2026):** o save no servidor real, testado e aprovado por Rodrigo.
+
+**Ainda não verificado:**
+
+- O roteiro com dois notebooks ao mesmo tempo (trava, conflito e queda de rede) não tem resultado registrado.
+- Uma partida em dupla de verdade conferida na página do ranking (J1 e J2).
+
+**Limitações conhecidas:**
+
+- Sem conexão, não dá para abrir, criar nem apagar saves. (Resolvido em 25/11/2026: [BUG-46](#bug-45-a-47).)
+- A campanha só sobe quando o jogo grava (ao voltar ao menu e ao fechar).
+- No servidor, `iara_gravar_save` recria um save que não existe. O jogo confere antes de reenviar a fila depois de uma falha de rede, mas um notebook que ficou suspenso sem registrar falha pode recriar um save apagado nesse intervalo.
+- Saves que já existiam em um computador não são enviados para a nuvem. (Desde 25/11/2026 sobem ao serem abertos.)
+
+---
+
+<a id="bug-45-a-47"></a>
+
+## BUG-45 a BUG-47: exe único, progressão e hora extra (25/11/2026)
+
+| Bug | Descrição | Como estava | Situação |
+|---|---|---|---|
+| BUG-45 | O ranking online recusava partidas com mais de 600 s | A IARA só aparece aos 10:00, então vitórias não entravam no ranking compartilhado | Corrigido no jogo e no `tools/nuvem/supabase.sql` (limite de 7200 s). **Exige rodar o SQL novo no Supabase** |
+| BUG-46 | O executável com nuvem não abria nem criava save sem internet | Sem rede, o jogo parava na tela de saves | Corrigido: o save é local e sincroniza quando há conexão; se online e local divergirem, o jogador escolhe. Testes NV-44 a NV-58 |
+| BUG-47 | `tools/pacote/testar_pacote.ps1` apaga os saves da campanha em `Documentos\IARA` de quem o roda | O script remove `saves/normal/*/progresso.save` para testar o fluxo do menu | **Aberto.** Antes de rodar, copie a pasta `Documentos\IARA\saves` |
+
+**Execução dos testes (25/11/2026):** 13 dos 14 conjuntos passaram, com `test_cloud` em 60 de 60 e `test_survival` em 171 de 171. A única falha é o CT-100, o [BUG-42](#bug-42). No teste do pacote, PKG-10 e PKG-11 falham porque as teclas simuladas não chegam bem ao menu; precisam de conferência à mão.
+
+**Ainda não verificado:** a sincronização contra o banco real com a rede caindo, e dois dispositivos ao mesmo tempo.
+

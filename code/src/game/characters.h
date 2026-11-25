@@ -18,6 +18,18 @@
 // Conjunto de texturas de um personagem: uma por direção.
 typedef Texture2D char_textures[DIRECTION_COUNT];
 
+#define CHARACTER_BASE_SIZE 32   // Lado do pixel art original. Arte maior ocupa o mesmo espaço na tela
+
+/**
+ * @brief Escolhe o filtro de um quadro de personagem pelo tamanho do arquivo.
+ *
+ * Pixel art de 32x32 usa filtro de ponto. Arte maior é reduzida na tela, então ganha mipmaps e filtro
+ * trilinear para não perder pixels de forma irregular.
+ *
+ * @param texture Textura já carregada.
+ */
+void set_character_filter(Texture2D *texture);
+
 /**
  * @brief Carrega as 8 texturas direcionais do estagiário (jogador principal).
  *

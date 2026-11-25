@@ -1,6 +1,6 @@
 # Report da Sprint 01
 
-Evidências da Entrega 3 de [FDS](../README.md). Cada seção responde a um dos quatro critérios de avaliação.
+Evidências da Entrega 3 de [FDS](../../entregaveis/README.md#fds-fundamentos-de-desenvolvimento-de-software). Cada seção responde a um dos quatro critérios de avaliação.
 
 | Recurso | Link |
 |---|---|

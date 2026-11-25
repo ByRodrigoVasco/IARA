@@ -35,7 +35,7 @@ O vídeo fica em `Vídeos\Capturas`.
 
 1. Suba no YouTube como **Não listado**.
 2. Cole o link no card do Trello.
-3. Acrescente o link na tabela de entregas em [`docs/fds/README.md`](../README.md).
+3. Acrescente o link na tabela de entregas em [`docs/entregaveis/README.md`](../../entregaveis/README.md#fds-fundamentos-de-desenvolvimento-de-software).
 
 **Acabou.**
 

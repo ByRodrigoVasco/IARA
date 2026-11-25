@@ -44,11 +44,17 @@ if (Test-Path $pasta) { Remove-Item -Recurse -Force $pasta }
 Expand-Archive -Path $zip -DestinationPath $pasta
 
 $exe = Join-Path $pasta "iara.exe"
-$save = Join-Path $pasta "iara.save"
+# O executavel grava os dados em Documentos\IARA (code/src/core/data_dir.c), nao ao lado dele
+$dados = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "IARA"
+$saves = Join-Path $dados "saves"
 
 Write-Host ""
 Write-Host "Pasta do teste: $pasta"
 Write-Host ""
+
+# RNF04: executavel autocontido. O zip so traz o iara.exe e o LEIA-ME: sem DLLs nem pastas de assets
+$conteudo = @(Get-ChildItem $pasta | ForEach-Object { $_.Name } | Sort-Object)
+Checar "PKG-12" "O pacote e um executavel so (iara.exe e LEIA-ME, sem DLLs nem pastas)" (($conteudo -join ",") -eq "iara.exe,LEIA-ME.txt")
 
 # PI2-211: abre sozinho, sem MSYS2 no PATH e de outra pasta
 $jogo = Abrir-Jogo $exe $env:SystemRoot 6
@@ -69,7 +75,8 @@ if ($rodando) {
     Checar "PKG-04" "Fecha pelo X em ate 10s" (Fechar-Jogo $jogo)
 }
 
-Checar "PKG-05" "Save criado ao lado do executavel" (Test-Path $save)
+Checar "PKG-05" "Pasta de saves criada em Documentos\IARA, com os dois modos" ((Test-Path (Join-Path $saves "normal")) -and (Test-Path (Join-Path $saves "sobrevivencia")))
+Checar "PKG-13" "Nada gravado ao lado do executavel (so o iara.exe e o LEIA-ME)" ((@(Get-ChildItem $pasta | ForEach-Object { $_.Name } | Sort-Object) -join ",") -eq "iara.exe,LEIA-ME.txt")
 Checar "PKG-06" "Saiu sem erro" ($jogo.HasExited -and $jogo.ExitCode -eq 0)
 
 # Opcao SAIR do menu: as teclas vao so para a janela do jogo, nunca para o resto do sistema
@@ -89,29 +96,47 @@ function Teclar($janela, $vk) {
     Start-Sleep -Milliseconds 350
 }
 
-Remove-Item -Force $save -ErrorAction SilentlyContinue
+# O save da campanha virou slot: saves/normal/<nome do slot>/progresso.save. O nome do slot e
+# escolhido no jogo, entao o caminho nao e fixo e precisa ser procurado.
+function Save-Da-Campanha {
+    Get-ChildItem -Path (Join-Path $saves "normal") -Filter "progresso.save" -Recurse -File -ErrorAction SilentlyContinue |
+        Select-Object -First 1 -ExpandProperty FullName
+}
+
+function Limpar-Saves-Da-Campanha {
+    Get-ChildItem -Path (Join-Path $saves "normal") -Filter "progresso.save" -Recurse -File -ErrorAction SilentlyContinue |
+        Remove-Item -Force -ErrorAction SilentlyContinue
+}
+
+Limpar-Saves-Da-Campanha
 # Folga para a abertura terminar: num executavel recem-gerado, o inicio pode demorar mais
 $jogo = Abrir-Jogo $exe $pasta 15
 $jogo.Refresh()
+# Menu: INICIAR, CREDITOS, CONFIGURACOES, AJUDA, SAIR. Confirmar a saida abre uma janela que
+# comeca com CONTINUAR marcado, entao e preciso ir para a direita antes do ENTER final.
 if ($jogo.MainWindowHandle -ne [IntPtr]::Zero) {
     Teclar $jogo.MainWindowHandle 0x53   # S: CREDITOS
     Teclar $jogo.MainWindowHandle 0x53   # S: CONFIGURACOES
+    Teclar $jogo.MainWindowHandle 0x53   # S: AJUDA
     Teclar $jogo.MainWindowHandle 0x53   # S: SAIR
-    Teclar $jogo.MainWindowHandle 0x0D   # ENTER
+    Teclar $jogo.MainWindowHandle 0x0D   # ENTER: abre "SAIR DO JOGO?"
+    Teclar $jogo.MainWindowHandle 0x27   # DIREITA: troca CONTINUAR por SAIR
+    Teclar $jogo.MainWindowHandle 0x0D   # ENTER: confirma
 }
 $fechou = $jogo.WaitForExit(10000)
 if (-not $fechou) { $jogo.Kill() }
 Checar "PKG-10" "Opcao SAIR do menu fecha sem erro" ($fechou -and $jogo.ExitCode -eq 0)
-Checar "PKG-11" "Opcao SAIR do menu salva o progresso" (Test-Path $save)
+$save = Save-Da-Campanha
+Checar "PKG-11" "Opcao SAIR do menu salva o progresso" ($null -ne $save)
 
 # Save corrompido nao pode travar
-Set-Content -Path $save -Value "lixo"
+if ($null -ne $save) { Set-Content -Path $save -Value "lixo" }
 $jogo = Abrir-Jogo $exe $pasta 4
 Checar "PKG-07" "Abre com save corrompido" (-not $jogo.HasExited)
 if (-not $jogo.HasExited) { Fechar-Jogo $jogo | Out-Null }
 
 # Pasta sem permissao de gravacao: o jogo roda, so nao salva
-Remove-Item -Force $save -ErrorAction SilentlyContinue
+Limpar-Saves-Da-Campanha
 $usuario = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 & icacls $pasta /deny "${usuario}:(WD,AD)" | Out-Null
 $jogo = Abrir-Jogo $exe $pasta 4

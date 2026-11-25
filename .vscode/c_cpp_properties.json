@@ -8,6 +8,7 @@
         "${workspaceFolder}/code/src/screens",
         "${workspaceFolder}/code/src/ui",
         "${workspaceFolder}/code/src/game",
+        "${workspaceFolder}/code/src/survival",
         "C:/msys64/ucrt64/include"
       ],
       "compilerPath": "C:/msys64/ucrt64/bin/gcc.exe",

@@ -4,24 +4,19 @@
 #include <math.h>   // sinf() das ondas do papel de parede
 
 #include "raylib.h"
+#include "audio.h"
 #include "computer_loop.h"
 #include "game_state.h"
 #include "macros.h"
 #include "button.h"
 #include "fonts.h"
 #include "cheat_sheet.h"
+#include "computer_art.h"
 #include "logic.h"
 #include "logic_text.h"
+#include "roteiro.h"
 
-#define MAX_LINES 4
-#define MAX_LINE_LEN 64
-#define MAX_OPTIONS 4
-#define MAX_OPTION_LEN 256
-#define MAX_HINTS 2
-#define MAX_SOURCE_LINES 3
-#define MAX_AUTHORED_CLAIMS 2 // Afirmações escritas para cada chamado
-#define MAX_CLAIMS 3          // Sem memória, a IARA acrescenta mais uma
-#define MAX_TRIAGE_CARDS 6
+#define MAX_CLAIMS 3 // Sem memória, a IARA acrescenta mais uma
 #define DAY_ONE_TRIAGE_CARDS 4
 
 // O dia com mais chamados é o Dia 1.
@@ -35,8 +30,10 @@
 // Tempos dos chamados, em segundos.
 #define STEP_ARRIVAL_TIME 0.25f   // o novo chamado entra deslizando na janela
 #define BOSS_FIRST_DELAY 20.0f    // a chefia começa a cobrar
+#define HINT_NOTICE_DELAY 35.0f   // sem erro nenhum, o aviso da dica de um colega aparece depois disso
 #define BOSS_SECOND_DELAY 40.0f   // a chefia cobra com mais pressa
 #define BOSS_LAST_DAY 74          // neste dia, a chefia já não aparece mais
+#define IARA_TYPING_CHARACTERS_PER_SECOND 45.0f
 
 // Memória da IARA. Conferir gasta menos que enviar sem conferir, e resolver sozinho devolve um pouco.
 #define IARA_MEMORY_MAX 6
@@ -66,10 +63,12 @@
 #define CLAIM_REJECTED 2
 
 // Colinha colada no canto inferior esquerdo do monitor, sobre o último ícone do desktop.
-#define CHEAT_SHEET_HEIGHT_RATIO 0.30f       // altura do post-it (altura da tela do monitor)
+#define CHEAT_SHEET_HEIGHT_RATIO 0.27f       // altura do post-it (altura da tela do monitor)
 #define CHEAT_SHEET_ASPECT 1.15f             // largura / altura do post-it
 #define CHEAT_SHEET_GAP_RATIO 0.006f         // folga até a janela da IARA e a barra de tarefas (largura da tela)
 #define CHEAT_SHEET_MIN_MARGIN_RATIO 0.01f   // folga mínima até a borda da janela do jogo (largura da janela)
+#define CHEAT_SHEET_EDGE_OVERLAP_RATIO 0.14f    // quanto do post-it passa da borda de baixo do monitor (altura do post-it)
+#define CHEAT_SHEET_TILT_DEGREES -3.0f        // inclinação: colado meio torto
 
 // Tempos das animações da cena, em segundos.
 #define SCENE_ENTER_TIME 0.6f   // o monitor sobe e o escritório aproxima
@@ -163,6 +162,7 @@ bool computer_exit_finished = false;
 static bool computer_leaving = false; // O jogador saiu antes de concluir: o roteiro fica onde parou
 bool computer_failsafe_triggered = false;
 bool computer_mouse_capture_enabled = true;
+static const char *computer_hint_giver = NULL; // Quem tem a dica do dia (nome do NPC), para o aviso discreto na barra de tarefas
 float computer_scene_progress = 0.0f;
 
 static float screen_power = 0.0f;            // 0 = tela do monitor desligada, 1 = ligada
@@ -175,8 +175,6 @@ static Rectangle taskbar_rect;      // Barra de tarefas do desktop
 static Rectangle iara_window_rect;  // Janela da IARA dentro do desktop
 static Rectangle quiz_area_rect;    // Área útil da janela da IARA, onde o quiz é jogado
 static float quiz_font_size;        // Tamanho da fonte do quiz na janela atual
-
-static Texture2D window_texture;
 
 static Texture2D correct_icon_texture;
 static Texture2D wrong_icon_texture;
@@ -206,10 +204,6 @@ static int iara_memory = IARA_MEMORY_MAX;
 static IaraMemoryLevel ticket_memory_level = IARA_MEMORY_FULL; // Memória quando a IARA foi aberta neste chamado
 static int manual_page_step = 0;                               // Chamado cuja página do manual está aberta
 
-#define TRIAGE_NOT_CHOSEN -1
-#define TRIAGE_TO_QUEUE 0
-#define TRIAGE_TO_IT 1
-
 static int triage_choices[MAX_TRIAGE_CARDS];
 static int triage_wrong_cards = 0; // Destinos errados no último envio; o jogo não diz quais
 
@@ -222,119 +216,17 @@ static bool ticket_redacted_data = false;   // Tarjou os dados pessoais antes de
 static int claim_marks[MAX_CLAIMS];         // Marca do jogador em cada afirmação
 static float ticket_time = 0.0f;            // Segundos com o chamado aberto
 static float step_arrival = 1.0f;           // Entrada do passo, de 0 a 1
+static float iara_suggestion_typing_time = 0.0f;
+static bool iara_suggestion_typing_started = false;
 static int unchecked_sends = 0;             // Vezes que enviou sem conferir hoje
 static TaskResult ticket_results[MAX_TICKETS];
 static unsigned int day_choice_effects = 0; // O que as escolhas do dia vão mudar quando ele for concluído
 static bool step_can_click = true;          // false enquanto o passo está entrando
 
-// Tipo de passo do diálogo do computador:
-// STEP_STATEMENT = apenas texto com botão; STEP_QUIZ = chamado com opções;
-// STEP_TRIAGE = mesa em que o jogador decide cada linha, para os puzzles com símbolos lógicos;
-// STEP_CHOICE = mensagem ou decisão sem resposta certa; STEP_REPORT = relatório do dia.
-typedef enum {
-    STEP_STATEMENT,
-    STEP_QUIZ,
-    STEP_TRIAGE,
-    STEP_CHOICE,
-    STEP_REPORT
-} StepType;
-
-// Como cada mesa confere as escolhas do jogador. O gabarito sempre sai da lógica, não do roteiro.
-typedef enum {
-    BOARD_BY_NORM,     // Dia 1: a norma obriga ou não o destino de cada linha
-    BOARD_TRUTH_TABLE, // Cada linha traz os valores, e a escolha é o valor da fórmula
-    BOARD_EQUIVALENCE, // Cada linha traz duas fórmulas: iguais ou diferentes?
-    BOARD_ASSIGNMENT,  // As escolhas são os valores das variáveis, e as cláusulas precisam valer
-    BOARD_TRAINING,    // As escolhas montam o conjunto de treino da mini-IA
-    BOARD_SYLLOGISM,   // Cada linha é uma conclusão: segue das premissas?
-    BOARD_REFUTATION   // As escolhas montam o conjunto contraditório da prova final
-} BoardMode;
-
-// O que as escolhas de um STEP_CHOICE mudam quando o dia é concluído.
-#define DAY_EFFECT_NONE 0u
-#define DAY_EFFECT_AUTOMATION (1u << 0)
-#define DAY_EFFECT_PERCEPTION (1u << 1)
-#define DAY_EFFECT_HUMAN_BOND (1u << 2)
-#define DAY_EFFECT_NO_LETTER (1u << 3)
-
-// Registro do arquivo morto na mesa de treino.
-#define TRAINING_OUTSKIRTS (1u << 0)
-#define TRAINING_APPROVED (1u << 1)
-#define TRAINING_HAS_CPF (1u << 2)
-#define TRAINING_RULE_COUNT 3
-
-// Uma linha de mesa. O destino certo sai da norma, não fica escrito aqui.
-typedef struct {
-    const char *id;
-    const char *text;
-    bool is_urgent;
-    unsigned int values;                 // Valores das variáveis, em bits (BOARD_TRUTH_TABLE, BOARD_TRAINING)
-    const LogicExpression *left;         // Fórmula da linha (BOARD_EQUIVALENCE, BOARD_REFUTATION)
-    const LogicExpression *right;        // NULL compara com "sempre verdade"
-    CategoricalStatement conclusion;     // Conclusão a julgar (BOARD_SYLLOGISM)
-    unsigned int required_evidence;      // Evidência que o jogador precisa ter reunido (BOARD_REFUTATION)
-    int iara_choice;                     // O que a IARA marca nesta linha
-    int iara_low_choice;                 // O que ela marca sem memória
-} TriageCard;
-
-// Um passo do diálogo (texto simples ou pergunta do quiz).
-typedef struct {
-    StepType type;
-
-    // Pergunta ou Declaração
-    char lines[MAX_LINES][MAX_LINE_LEN];
-    int line_count;
-
-    // Opções de Resposta (usado apenas em STEP_QUIZ)
-    char options[MAX_OPTIONS][MAX_OPTION_LEN];
-    int option_count;
-    int correct_option; // Índice da resposta certa (0 a 3)
-    char hints[MAX_HINTS][MAX_LINE_LEN]; // Dicas depois do 1º e do 2º erro (usado apenas em STEP_QUIZ)
-    char *button_name;  // Nome do botão (usado apenas em STEP_STATEMENT)
-
-    // Sugestão da IARA e o trecho do manual que permite conferi-la (usados apenas em STEP_QUIZ).
-    // A IARA acerta a maioria dos chamados, senão o jogador aprenderia a nunca usá-la.
-    int iara_option;
-    int iara_confidence;
-    char iara_reason[MAX_LINE_LEN];
-    char source[MAX_SOURCE_LINES][MAX_LINE_LEN];
-    int source_count;
-    int manual_page;
-    char claims[MAX_AUTHORED_CLAIMS][MAX_LINE_LEN];
-    bool claim_is_true[MAX_AUTHORED_CLAIMS];
-
-    // O que a IARA diz quando está com pouca memória: sempre errado
-    int low_option;
-    char low_reason[MAX_LINE_LEN];
-    char low_claim[MAX_LINE_LEN];
-
-    // Mesa de triagem (usados apenas em STEP_TRIAGE)
-    const TriageCard *cards;
-    int card_count;
-    const LogicExpression *norm;
-    BoardMode board_mode;
-    const char *choice_labels[2];     // Rótulo de cada escolha, pelo valor dela
-    const char *submit_label;         // Botão de enviar a mesa
-    const char *variable_names;       // Letra de cada variável (BOARD_TRUTH_TABLE)
-    int variable_count;
-    const LogicExpression *const *clauses; // Cláusulas (BOARD_ASSIGNMENT)
-    int clause_count;
-    const CategoricalStatement *premises;  // Premissas (BOARD_SYLLOGISM)
-    int premise_count;
-
-    unsigned int choice_effects[2];   // Efeito de cada opção (usado apenas em STEP_CHOICE)
-
-    bool has_personal_data;           // Pede a tarja antes de enviar à IARA
-    char sender[MAX_LINE_LEN];        // Nome no relatório do dia
-    char wrong_result[MAX_LINE_LEN];  // O que acontece se a resposta enviada estiver errada
-} DialogStep;
-
 // Índice do passo atual no roteiro do dia.
 static int current_step_index = 0;
 
 // Norma da mesa de triagem: U -> TI.
-enum { TRIAGE_VARIABLE_URGENT, TRIAGE_VARIABLE_GOES_TO_IT };
-
 static const LogicExpression triage_urgent = {.operator = LOGIC_VARIABLE, .variable = TRIAGE_VARIABLE_URGENT};
 static const LogicExpression triage_goes_to_it = {.operator = LOGIC_VARIABLE, .variable = TRIAGE_VARIABLE_GOES_TO_IT};
 static const LogicExpression triage_norm = {.operator = LOGIC_IMPLIES, .left = &triage_urgent, .right = &triage_goes_to_it};
@@ -555,6 +447,15 @@ static DialogStep day_1_script[] = {
     },
 };
 
+// Quantas cartas da mesa de triagem valem. Os vetores das escolhas guardam MAX_TRIAGE_CARDS:
+// uma mesa com mais cartas que isso (dado mal preenchido) é cortada, em vez de escrever fora deles.
+static int triage_card_count(const DialogStep *step)
+{
+    if (step->card_count < 0) return 0;
+    if (step->card_count > MAX_TRIAGE_CARDS) return MAX_TRIAGE_CARDS;
+    return step->card_count;
+}
+
 #include "computer_days.h"
 
 // Roteiro de um dia jogável: telas de abertura, chamados, conversas opcionais e relatório.
@@ -612,9 +513,17 @@ static bool step_is_ticket(const DialogStep *step)
 // O relatório do dia é sempre o último passo.
 #define REPORT_STEP (TOTAL_STEPS - 1)
 
+static void reset_iara_suggestion_typing(void)
+{
+    iara_suggestion_typing_time = 0.0f;
+    iara_suggestion_typing_started = false;
+    update_iara_voice_typing(false);
+}
+
 // Prepara o estado para o passo que vai começar.
 static void reset_step_state(void)
 {
+    reset_iara_suggestion_typing();
     current_quiz_answered = false;
     current_quiz_selected = -1;
     current_ticket_view = TICKET_ANSWERING;
@@ -825,26 +734,10 @@ static void draw_desk(void)
     DrawRectangleRec((Rectangle){0, desk_y, window_w, window_h * 0.008f}, DESK_EDGE_COLOR);
 
     float key_w = window_h * 0.60f;
-    float key_h = window_h * 0.085f;
+    float key_h = window_h * 0.105f;
     Rectangle keyboard = {(window_w - key_w) / 2.0f, desk_y + (window_h * 0.03f), key_w, key_h};
 
-    DrawRectangleRec(keyboard, KEYBOARD_COLOR);
-    DrawRectangleLinesEx(keyboard, 2.0f, HARDWARE_OUTLINE_COLOR);
-
-    int columns = 16;
-    int rows = 3;
-    float inset = window_h * 0.004f;
-    float cell_w = (key_w - (inset * 2.0f)) / columns;
-    float cell_h = (key_h - (inset * 2.0f)) / rows;
-
-    for (int row = 0; row < rows; row++)
-    {
-        for (int column = 0; column < columns; column++)
-        {
-            DrawRectangleRec((Rectangle){keyboard.x + inset + (column * cell_w) + 1.0f, keyboard.y + inset + (row * cell_h) + 1.0f,
-                                         cell_w - 2.0f, cell_h - 2.0f}, KEY_COLOR);
-        }
-    }
+    computer_art_draw_keyboard(keyboard);
 
     Vector2 pointer = GetMousePosition();
     float travel_x = (pointer.x - screen_final_rect.x) / screen_final_rect.width;
@@ -855,17 +748,15 @@ static void draw_desk(void)
     if (travel_y < 0.0f) travel_y = 0.0f;
     if (travel_y > 1.0f) travel_y = 1.0f;
 
-    float mouse_w = window_h * 0.035f;
-    float mouse_h = window_h * 0.055f;
+    float mouse_w = window_h * 0.04f;
+    float mouse_h = window_h * 0.068f;
     Rectangle desk_mouse = {
-        keyboard.x + key_w + (window_h * 0.03f) + (travel_x * window_h * 0.02f),
+        keyboard.x + key_w + (window_h * 0.035f) + (travel_x * window_h * 0.02f),
         desk_y + (window_h * 0.03f) + (travel_y * window_h * 0.015f),
         mouse_w,
         mouse_h};
 
-    DrawRectangleRec(desk_mouse, DESK_MOUSE_COLOR);
-    DrawRectangleLinesEx(desk_mouse, 2.0f, HARDWARE_OUTLINE_COLOR);
-    DrawRectangleRec((Rectangle){desk_mouse.x + (mouse_w / 2.0f) - 1.0f, desk_mouse.y + 2.0f, 2.0f, mouse_h * 0.35f}, HARDWARE_OUTLINE_COLOR);
+    computer_art_draw_mouse(desk_mouse);
 }
 
 // Monitor: pé apoiado na mesa, moldura, marca e LED de ligado.
@@ -923,21 +814,19 @@ static void draw_wallpaper(void)
 static void draw_desktop_icons(void)
 {
     const char *names[] = {"Lixeira", "Chamados", "Ponto", "Manual"};
-    Color colors[] = {{120, 128, 136, 255}, {226, 190, 80, 255}, {100, 170, 220, 255}, {214, 214, 204, 255}};
 
     float column_w = screen_rect.width * DESKTOP_WINDOW_LEFT_RATIO;
     float icon = column_w * 0.42f;
-    float row_h = (taskbar_rect.y - screen_rect.y) / 4.0f;
+    float row_h = ((taskbar_rect.y - screen_rect.y) * 0.8f) / 4.0f; // os ícones ficam na parte de cima: a colinha ocupa o canto de baixo
     float font_size = column_w * 0.15f;
 
     for (int i = 0; i < 4; i++)
     {
         float center_x = screen_rect.x + (column_w / 2.0f);
         float top = screen_rect.y + (row_h * 0.15f) + (i * row_h);
-        Rectangle square = {center_x - (icon / 2.0f), top, icon, icon};
+        Rectangle square = {roundf(center_x - (icon / 2.0f)), roundf(top), roundf(icon), roundf(icon)};
 
-        DrawRectangleRec(square, colors[i]);
-        DrawRectangleLinesEx(square, 2.0f, BLACK);
+        computer_art_draw_icon((DesktopIcon)i, square);
         draw_text_centered(names[i], (Vector2){center_x, top + icon + (font_size * 0.7f)}, font_size, WHITE);
     }
 }
@@ -952,6 +841,22 @@ static const char *get_boss_message(void)
     if (ticket_time >= BOSS_FIRST_DELAY) return "Chefia: cadê os chamados?";
 
     return NULL;
+}
+
+// Aviso discreto de que um colega tem a dica do dia: aparece na barra de tarefas quando o jogador
+// erra ou demora, no mesmo lugar da cobrança da chefia (e à frente dela, porque ajuda mais).
+void computer_set_hint_giver(const char *npc_name)
+{
+    computer_hint_giver = npc_name;
+}
+
+static const char *get_hint_notification(void)
+{
+    if (computer_hint_giver == NULL) return NULL;
+    if (current_step_index >= TOTAL_STEPS || !step_is_ticket(&dialog_sequence[current_step_index])) return NULL;
+    if (current_wrong_answers == 0 && ticket_time < HINT_NOTICE_DELAY) return NULL;
+
+    return TextFormat("Nova mensagem: %s tem uma dica para você.", computer_hint_giver);
 }
 
 // Botão de sair da barra de tarefas, à esquerda do dia atual.
@@ -983,9 +888,21 @@ static void draw_taskbar(void)
     DrawRectangleRec(program, TASKBAR_PROGRAM_COLOR);
     draw_text_centered("IARA", (Vector2){program.x + (program.width / 2.0f), center_y}, font_size, WHITE);
 
+    const char *hint_notice = get_hint_notification();
     const char *boss_message = get_boss_message();
 
-    if (boss_message != NULL)
+    if (hint_notice != NULL)
+    {
+        // Notificação discreta, com um pontinho que pisca como o aviso de mensagem nova
+        float notice_x = program.x + program.width + (padding * 3.0f);
+        float dot = font_size * 0.32f;
+        unsigned char dot_alpha = (unsigned char)(150.0f + (105.0f * (0.5f + (0.5f * sinf((float)GetTime() * 4.0f)))));
+
+        DrawCircleV((Vector2){notice_x + dot, center_y}, dot, (Color){150, 210, 215, dot_alpha});
+        DrawTextEx(default_game_font, hint_notice, (Vector2){notice_x + (dot * 3.0f), center_y - (font_size / 2.0f)},
+                   font_size * 0.92f, font_size * QUIZ_LETTER_SPACING_RATIO, (Color){170, 220, 225, 255});
+    }
+    else if (boss_message != NULL)
     {
         DrawTextEx(default_game_font, boss_message, (Vector2){program.x + program.width + (padding * 3.0f), center_y - (font_size / 2.0f)},
                    font_size, font_size * QUIZ_LETTER_SPACING_RATIO, BOSS_TEXT_COLOR);
@@ -1044,19 +961,16 @@ static void draw_iara_memory(float center_y, float font_size, float letter_spaci
 // Janela da IARA: a arte da janela, o título e o progresso do quiz na barra de título.
 static void draw_iara_window(void)
 {
-    float art_margin = window_texture.width * WINDOW_ART_MARGIN_RATIO;
-    Rectangle art_source = {art_margin, art_margin, window_texture.width - (art_margin * 2.0f), window_texture.height - (art_margin * 2.0f)};
     float title_h = iara_window_rect.height * WINDOW_ART_TITLE_RATIO;
     float center_y = iara_window_rect.y + (title_h / 2.0f);
     float font_size = title_h * 0.72f;
     float letter_spacing = font_size * QUIZ_LETTER_SPACING_RATIO;
     float padding = iara_window_rect.width * 0.02f;
 
-    DrawRectangleRec((Rectangle){iara_window_rect.x + padding / 2.0f, iara_window_rect.y + padding / 2.0f, iara_window_rect.width, iara_window_rect.height}, WINDOW_SHADOW_COLOR);
-    DrawTexturePro(window_texture, art_source, iara_window_rect, (Vector2){0, 0}, 0.0f, WHITE);
+    computer_art_draw_window(iara_window_rect, title_h);
 
     DrawTextEx(default_game_font, "IARA - Chamados",
-               (Vector2){iara_window_rect.x + (iara_window_rect.width * WINDOW_ART_DOTS_WIDTH_RATIO), center_y - (font_size / 2.0f)},
+               (Vector2){iara_window_rect.x + computer_art_window_buttons_width(title_h) + (title_h * 0.35f), center_y - (font_size / 2.0f)},
                font_size, letter_spacing, WHITE);
 
     // Progresso: quantas perguntas já apareceram e quantas existem no roteiro
@@ -1159,12 +1073,10 @@ void reset_computer_progress(void)
 // Carrega as texturas e prepara a cena do computador para a animação de entrada.
 void initialize_computer_loop(void)
 {
-    window_texture = LoadTexture(COMPUTER_WINDOW_PNG_PATH);
+    computer_art_reset();
     correct_icon_texture = LoadTexture(COMPUTER_CORRECT_ICON);
     wrong_icon_texture = LoadTexture(COMPUTER_WRONG_ICON);
 
-    GenTextureMipmaps(&window_texture);
-    SetTextureFilter(window_texture, TEXTURE_FILTER_TRILINEAR);
     SetTextureFilter(correct_icon_texture, TEXTURE_FILTER_BILINEAR);
     SetTextureFilter(wrong_icon_texture, TEXTURE_FILTER_BILINEAR);
 
@@ -1192,27 +1104,30 @@ void render_computer_loop(void)
     draw_iara_window();
 }
 
-// Área da colinha: acima da barra de tarefas e à esquerda da janela da IARA. O que não
-// cabe no desktop avança sobre a moldura e para fora do monitor, como um post-it colado.
-static Rectangle get_cheat_sheet_rect(Rectangle iara_window, Rectangle taskbar, float screen_w, float screen_h, float window_w)
+// Área da colinha: colada na moldura de baixo do monitor, no canto da esquerda. Ela desce por cima da
+// barra de tarefas até a borda do monitor, e o que não cabe no desktop avança sobre a moldura.
+static Rectangle get_cheat_sheet_rect(Rectangle iara_window, Rectangle monitor, float screen_w, float screen_h, float window_w)
 {
     float gap = screen_w * CHEAT_SHEET_GAP_RATIO;
     float height = screen_h * CHEAT_SHEET_HEIGHT_RATIO;
     float right = iara_window.x - gap;
     float left = right - (height * CHEAT_SHEET_ASPECT);
     float min_left = window_w * CHEAT_SHEET_MIN_MARGIN_RATIO;
+    float bottom = monitor.y + monitor.height - (height * CHEAT_SHEET_EDGE_OVERLAP_RATIO);
 
     if (left < min_left) left = min_left;
 
-    return (Rectangle){left, taskbar.y - height - gap, right - left, height};
+    return (Rectangle){left, bottom - height, right - left, height};
 }
 
-// Depois de pega no mural, a colinha fica sempre à vista no monitor, nos dois modos.
+// Depois de pega no mural, a colinha fica sempre à vista no monitor, nos dois modos. Ela é um post-it
+// de verdade: levemente torto, preso por uma fita, e por cima da tela (o ponteiro passa por baixo dela).
 static void draw_stuck_cheat_sheet(void)
 {
     if (!current_game_state_variables.has_cheat_sheet) return;
 
-    draw_cheat_sheet(get_cheat_sheet_rect(iara_window_rect, taskbar_rect, screen_rect.width, screen_rect.height, (float)GetScreenWidth()));
+    draw_cheat_sheet_stuck(get_cheat_sheet_rect(iara_window_rect, monitor_rect, screen_rect.width, screen_rect.height, (float)GetScreenWidth()),
+                           CHEAT_SHEET_TILT_DEGREES);
 }
 
 // O que as escolhas do dia mudam, e a prova final. Entra uma vez só, junto com os pontos do dia.
@@ -1354,7 +1269,7 @@ static int count_violated_clauses(const DialogStep *step, const int *choices)
     bool values[LOGIC_MAX_VARIABLES] = {false};
     int violated = 0;
 
-    for (int card = 0; card < step->card_count; card++)
+    for (int card = 0; card < triage_card_count(step); card++)
     {
         values[card] = (choices[card] == 1);
     }
@@ -1372,7 +1287,7 @@ static int count_training_records(const DialogStep *step, const int *choices, un
 {
     int count = 0;
 
-    for (int card = 0; card < step->card_count; card++)
+    for (int card = 0; card < triage_card_count(step); card++)
     {
         unsigned int values = step->cards[card].values;
 
@@ -1417,7 +1332,7 @@ static bool refutation_holds(const DialogStep *step, const int *choices)
     int chosen_count = 0;
     bool has_evidence = false;
 
-    for (int card = 0; card < step->card_count; card++)
+    for (int card = 0; card < triage_card_count(step); card++)
     {
         if (choices[card] != 1) continue;
 
@@ -1461,7 +1376,7 @@ static int count_board_wrong(const DialogStep *step, const int *choices)
         return refutation_holds(step, choices) ? 0 : 1;
 
     default:
-        for (int card = 0; card < step->card_count; card++)
+        for (int card = 0; card < triage_card_count(step); card++)
         {
             if (choices[card] != get_triage_correct_choice(step, card)) wrong++;
         }
@@ -1483,7 +1398,7 @@ static bool iara_answer_is_correct(int step_index, IaraMemoryLevel level)
 
     if (step->type == STEP_QUIZ) return get_iara_suggestion(step_index, level).option == step->correct_option;
 
-    for (int card = 0; card < step->card_count; card++)
+    for (int card = 0; card < triage_card_count(step); card++)
     {
         choices[card] = get_triage_iara_choice(step, card, level);
     }
@@ -1500,6 +1415,7 @@ static void spend_iara_memory(int cost)
 // Abre a IARA no chamado atual. Se ele tem dados pessoais, antes pergunta sobre a tarja.
 static void ask_iara(void)
 {
+    reset_iara_suggestion_typing();
     ticket_asked_iara = true;
     ticket_memory_level = get_iara_memory_level();
     current_ticket_view = dialog_sequence[current_step_index].has_personal_data ? TICKET_PRIVACY : TICKET_SUGGESTION;
@@ -1509,6 +1425,7 @@ static void ask_iara(void)
 // e os dados pessoais voltam a passar pela decisão da tarja.
 static void start_new_conversation(void)
 {
+    reset_iara_suggestion_typing();
     iara_memory = IARA_MEMORY_MAX;
     current_ticket_view = TICKET_PASTE;
 }
@@ -1517,6 +1434,7 @@ static void start_new_conversation(void)
 // já foi enviado sem tarja não volta atrás.
 static void decide_personal_data(bool redact)
 {
+    reset_iara_suggestion_typing();
     if (!redact) ticket_exposed_data = true;
 
     ticket_redacted_data = redact && !ticket_exposed_data;
@@ -1526,6 +1444,7 @@ static void decide_personal_data(bool redact)
 // Imprudência: a sugestão vira a resposta. Sem aviso na hora: o resultado aparece no relatório.
 static void send_without_checking(void)
 {
+    play_keyboard_sound();
     record_ticket(TASK_SENT_UNCHECKED, iara_answer_is_correct(current_step_index, ticket_memory_level));
     spend_iara_memory(IARA_COST_UNCHECKED);
     unchecked_sends++;
@@ -1542,7 +1461,7 @@ static void start_checking(void)
 
     if (step->type == STEP_TRIAGE)
     {
-        for (int card = 0; card < step->card_count; card++)
+        for (int card = 0; card < triage_card_count(step); card++)
         {
             triage_choices[card] = get_triage_iara_choice(step, card, ticket_memory_level);
         }
@@ -1580,6 +1499,7 @@ static void finish_checking(void)
 // Envia a mesa. Diz quantas coisas estão erradas, nunca quais.
 static void submit_triage(void)
 {
+    play_keyboard_sound();
     DialogStep *step = &dialog_sequence[current_step_index];
 
     triage_wrong_cards = count_board_wrong(step, triage_choices);
@@ -1596,6 +1516,7 @@ static void submit_triage(void)
 // Guarda o efeito da opção escolhida e segue o roteiro.
 static void choose_day_option(const DialogStep *step, int option)
 {
+    play_keyboard_sound();
     day_choice_effects |= step->choice_effects[option];
     advance_step();
 }
@@ -1603,6 +1524,7 @@ static void choose_day_option(const DialogStep *step, int option)
 // Marca a alternativa escolhida e atualiza a contagem de erros seguidos.
 static void answer_current_question(int option)
 {
+    play_keyboard_sound();
     current_quiz_answered = true;
     current_quiz_selected = option;
     current_wrong_answers = (option == dialog_sequence[current_step_index].correct_option) ? 0 : current_wrong_answers + 1;
@@ -1726,8 +1648,9 @@ static float get_quiz_center_x(void)
     return quiz_area_rect.x + (quiz_area_rect.width / 2.0f) + (remaining * remaining * quiz_area_rect.width);
 }
 
-// Caixa de texto centralizada. Devolve onde ela termina, para ancorar o que vem abaixo.
-static float draw_text_box(const char (*lines)[MAX_LINE_LEN], int line_count, float top, Color fill, float *box_width)
+// Caixa de texto centralizada. visible_characters limita a revelação sem alterar o layout.
+static float draw_text_box_with_visible_characters(const char (*lines)[MAX_LINE_LEN], int line_count,
+                                                   float top, Color fill, int visible_characters, float *box_width)
 {
     float win_w = quiz_area_rect.width;
     float win_h = quiz_area_rect.height;
@@ -1760,18 +1683,57 @@ static float draw_text_box(const char (*lines)[MAX_LINE_LEN], int line_count, fl
     DrawRectangleLinesEx(box, 2.0f, BLACK);
 
     float y = box.y + padding_y;
+    int characters_remaining = visible_characters;
 
     for (int i = 0; i < line_count; i++)
     {
         float line_width = measure_logic_text(lines[i], font_size, letter_spacing).x;
 
-        draw_logic_text(lines[i], (Vector2){center_x - (line_width / 2.0f), y}, font_size, letter_spacing, QUESTION_TEXT_COLOR);
+        const char *visible_line = lines[i];
+        char partial_line[MAX_LINE_LEN];
+
+        if (characters_remaining >= 0)
+        {
+            int line_characters = GetCodepointCount(lines[i]);
+            if (characters_remaining < line_characters)
+            {
+                int bytes_to_copy = 0;
+                const char *cursor = lines[i];
+
+                for (int character = 0; character < characters_remaining && *cursor != '\0'; character++)
+                {
+                    int codepoint_bytes = 0;
+                    GetCodepointNext(cursor, &codepoint_bytes);
+                    if (codepoint_bytes <= 0 || bytes_to_copy + codepoint_bytes >= MAX_LINE_LEN) break;
+
+                    bytes_to_copy += codepoint_bytes;
+                    cursor += codepoint_bytes;
+                }
+
+                for (int byte = 0; byte < bytes_to_copy; byte++) partial_line[byte] = lines[i][byte];
+                partial_line[bytes_to_copy] = '\0';
+                visible_line = partial_line;
+                characters_remaining = 0;
+            }
+            else
+            {
+                characters_remaining -= line_characters;
+            }
+        }
+
+        draw_logic_text(visible_line, (Vector2){center_x - (line_width / 2.0f), y}, font_size, letter_spacing, QUESTION_TEXT_COLOR);
         y += font_size + line_spacing;
     }
 
     if (box_width != NULL) *box_width = width;
 
     return box.y + box.height;
+}
+
+// Mantém o desenho completo usado pelos demais diálogos.
+static float draw_text_box(const char (*lines)[MAX_LINE_LEN], int line_count, float top, Color fill, float *box_width)
+{
+    return draw_text_box_with_visible_characters(lines, line_count, top, fill, -1, box_width);
 }
 
 // Botão centralizado de ação: cresce se o texto não couber na largura padrão.
@@ -2001,7 +1963,7 @@ static void render_ticket_suggestion(DialogStep *step, float top)
         char chosen[MAX_LINE_LEN] = "";
         char left_out[MAX_LINE_LEN] = "";
 
-        for (int card = 0; card < step->card_count; card++)
+        for (int card = 0; card < triage_card_count(step); card++)
         {
             char *list = (get_triage_iara_choice(step, card, ticket_memory_level) == 1) ? chosen : left_out;
 
@@ -2023,10 +1985,26 @@ static void render_ticket_suggestion(DialogStep *step, float top)
 
     if (iara.aside[0] != '\0') snprintf(lines[line_count++], MAX_LINE_LEN, "%s", iara.aside);
 
+    int total_characters = 0;
+    for (int line = 0; line < line_count; line++) total_characters += GetCodepointCount(lines[line]);
+
+    if (!iara_suggestion_typing_started)
+    {
+        iara_suggestion_typing_started = true;
+        iara_suggestion_typing_time = 0.0f;
+    }
+
+    iara_suggestion_typing_time += GetFrameTime();
+    int visible_characters = (int)(iara_suggestion_typing_time * IARA_TYPING_CHARACTERS_PER_SECOND);
+    if (visible_characters > total_characters) visible_characters = total_characters;
+    bool typing_finished = (visible_characters >= total_characters);
+
     float win_w = quiz_area_rect.width;
     float win_h = quiz_area_rect.height;
     float box_bottom = draw_text_box(step->lines, step->line_count, top, QUESTION_BOX_COLOR, NULL);
-    float suggestion_bottom = draw_text_box(lines, line_count, box_bottom + (win_h * QUIZ_BUTTONS_TOP_GAP_RATIO), IARA_BOX_COLOR, NULL);
+    float suggestion_bottom = draw_text_box_with_visible_characters(
+        lines, line_count, box_bottom + (win_h * QUIZ_BUTTONS_TOP_GAP_RATIO), IARA_BOX_COLOR, visible_characters, NULL);
+    update_iara_voice_typing(visible_characters > 0 && !typing_finished && !computer_leaving);
     float y = suggestion_bottom + (win_h * QUIZ_BUTTONS_TOP_GAP_RATIO);
     float check_width = win_w * CHECK_BUTTON_WIDTH_RATIO;
     float gap = win_w * SUGGESTION_BUTTON_GAP_RATIO;
@@ -2038,11 +2016,20 @@ static void render_ticket_suggestion(DialogStep *step, float top)
     bool check_clicked = false;
     bool unchecked_clicked = false;
 
-    draw_button((Rectangle){x, y, check_width, height}, "Conferir", quiz_font_size, BUTTON_FILL_COLOR, step_can_click, &check_clicked);
+    // Conferir espera a IARA terminar de escrever: não dá para conferir o que ainda não foi lido.
+    // Enviar sem conferir não espera nada (US03): o modo automático resolve no mesmo instante.
+    draw_button((Rectangle){x, y, check_width, height}, "Conferir", quiz_font_size, BUTTON_FILL_COLOR, step_can_click && typing_finished, &check_clicked);
     draw_button((Rectangle){x + check_width + gap, y, unchecked_width, height}, "Enviar sem conferir", quiz_font_size, BUTTON_FILL_COLOR, step_can_click, &unchecked_clicked);
 
+    if (unchecked_clicked)
+    {
+        send_without_checking();
+        return;
+    }
+
+    if (!typing_finished) return;
+
     if (check_clicked) start_checking();
-    else if (unchecked_clicked) send_without_checking();
     else if (ticket_memory_level != IARA_MEMORY_FULL &&
              draw_action_button("Nova conversa", y + height + (win_h * OPTION_SPACING_RATIO)))
     {
@@ -2180,7 +2167,7 @@ static const char *get_board_result_text(const DialogStep *step)
     case BOARD_REFUTATION:
         return TextFormat("A prova não fecha. %s", get_wrong_answer_hint());
     default:
-        return TextFormat("Errados: %d de %d. %s", triage_wrong_cards, step->card_count, get_wrong_answer_hint());
+        return TextFormat("Errados: %d de %d. %s", triage_wrong_cards, triage_card_count(step), get_wrong_answer_hint());
     }
 }
 
@@ -2188,7 +2175,7 @@ static const char *get_board_result_text(const DialogStep *step)
 static float get_board_row_height(const DialogStep *step, float first_row_y, bool shows_mini_ia)
 {
     float win_h = quiz_area_rect.height;
-    int slots = step->card_count + (shows_mini_ia ? 3 : 2);
+    int slots = triage_card_count(step) + (shows_mini_ia ? 3 : 2);
     float available = (quiz_area_rect.y + win_h) - first_row_y - (win_h * CONTINUE_BUTTON_GAP_RATIO);
     float row_height = (available / slots) - (win_h * OPTION_SPACING_RATIO);
 
@@ -2213,7 +2200,7 @@ static void render_ticket_triage(DialogStep *step, float top)
 
     float row_height = get_board_row_height(step, y, shows_mini_ia);
 
-    for (int card = 0; card < step->card_count; card++)
+    for (int card = 0; card < triage_card_count(step); card++)
     {
         const TriageCard *item = &step->cards[card];
         Rectangle text_band = {left, y, row_width - ((mark_width + spacing) * 2.0f), row_height};
@@ -2455,13 +2442,15 @@ void handle_computer_loop(void)
 
     DrawRectangleRec(screen_rect, Fade(SCREEN_OFF_COLOR, 1.0f - screen_power));
 
-    // O post-it fica na frente do monitor: não apaga junto com a tela
-    draw_stuck_cheat_sheet();
-
     if (computer_mouse_captured)
     {
+        computer_art_update_click_ripples(screen_final_rect);
+        computer_art_draw_click_ripples(GetScreenHeight() / 900.0f);
         draw_computer_cursor();
     }
+
+    // O post-it fica na frente do monitor e do ponteiro: não apaga junto com a tela
+    draw_stuck_cheat_sheet();
 
     if (is_computer_shutting_down() && screen_power <= 0.0f && computer_scene_progress <= 0.0f)
     {
@@ -2472,7 +2461,6 @@ void handle_computer_loop(void)
 // Libera da memória as texturas usadas pela tela do computador.
 void unload_computer_loop(void)
 {
-    UnloadTexture(window_texture);
     UnloadTexture(correct_icon_texture);
     UnloadTexture(wrong_icon_texture);
 }

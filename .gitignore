@@ -39,6 +39,8 @@ save_*.txt
 .env
 .env.local
 *.local
+# URL e chave do Supabase usadas pelo build (tools/nuvem/LEIA-ME.md)
+tools/nuvem/nuvem.local
 
 # --- Editores / IDEs ---
 .idea/
@@ -81,3 +83,17 @@ desktop.ini
 !.githooks/
 !.vscode/
 *.local.md
+
+# --- Progresso do Modo Sobrevivencia ---
+iara.survival
+iara.survival.tmp
+
+# --- Ranking do Modo Sobrevivencia (um por computador, ex.: o da feira) ---
+iara.ranking
+iara.ranking.tmp
+teste.ranking
+iara_duplas.ranking
+iara_duplas.ranking.tmp
+
+# --- Registro de quadros que travaram (a pasta saves/ já está ignorada acima) ---
+iara-desempenho.log

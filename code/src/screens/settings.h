@@ -6,9 +6,15 @@
 // Linhas da tela de configurações, na ordem em que aparecem.
 #define SETTINGS_CONTRAST 0
 #define SETTINGS_BRIGHTNESS 1
-#define SETTINGS_FULLSCREEN 2
-#define SETTINGS_BACK 3
-#define SETTINGS_OPTION_COUNT 4
+#define SETTINGS_MUSIC_VOLUME 2
+#define SETTINGS_EFFECTS_VOLUME 3
+#define SETTINGS_FULLSCREEN 4
+#define SETTINGS_MAXIMIZED 5
+#define SETTINGS_BACK 6
+#define SETTINGS_OPTION_COUNT 7
+
+// Passo dos sliders de volume pelo teclado.
+#define VOLUME_STEP 0.1f
 
 /**
  * @brief Carrega o fundo da tela de configurações e seleciona a primeira linha.
@@ -23,9 +29,9 @@ void initialize_settings_screen(void);
 bool render_settings_screen(void);
 
 /**
- * @brief Aciona uma linha: alterna a caixa de seleção ou pede a volta ao menu.
+ * @brief Aciona uma caixa de seleção ou pede a volta ao menu. Os sliders são ajustados pela navegação.
  *
- * @param option Linha acionada (SETTINGS_CONTRAST, SETTINGS_FULLSCREEN ou SETTINGS_BACK).
+ * @param option Linha acionada.
  * @return true se a linha acionada foi a de voltar ao menu.
  */
 bool activate_settings_option(int option);

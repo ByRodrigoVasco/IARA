@@ -66,6 +66,11 @@ extern unsigned int middle_screen_y;
 #define PLAYING_SCREEN 2
 #define CREDITS_SCREEN 5
 #define SETTINGS_SCREEN 6
+#define SURVIVAL_SCREEN 7
+#define MODE_SELECT_SCREEN 8
+#define SAVE_SELECT_SCREEN 9
+#define LOADING_SCREEN 10
+#define HELP_SCREEN 11
 
 // TIPOS DE DIAS E TELAS DE GAME_LOOP
 #define NOT_YET_DEFINED 0
@@ -87,6 +92,23 @@ extern unsigned int middle_screen_y;
 
 // Icon de indicação de interação com o computador
 #define ARROW_DOWN_PNG_PATH  "code/assets/icons/arrow-down.png"
+
+// Ícone da janela e da barra de tarefas (gerado por tools/release/gerar_icone.py)
+#define IARA_ICON_PNG_PATH   "code/assets/icons/iara.png"
+
+// PATHS PARA ÁUDIO
+#define SOUNDS_PATH "code/assets/sounds/"
+#define MENU_MUSIC_PATH SOUNDS_PATH "DEMO -  MENU.mp3"
+#define GAME_MUSIC_PATH SOUNDS_PATH "DEMO - GAME.mp3"
+#define CALM_MUSIC_PATH SOUNDS_PATH "SOM AMBIENTE.mp3"
+#define QUIZ_MUSIC_PATH SOUNDS_PATH "SOM AMBIENTE SUSPENSE.mp3"   // Tela do computador (quiz)
+#define FLASH_STINGER_PATH SOUNDS_PATH "TRANSIÇÃO 2.mp3"          // Entrada de um Flash do dia
+#define JUMP_STINGER_PATH SOUNDS_PATH "TRANSIÇÃO 1.mp3"           // Entrada de um bloco de salto puro
+#define MOUSE_CLICK_SOUND_PATH SOUNDS_PATH "CLICK MOUSE.mp3"
+#define IARA_VOICE_SOUND_PATH SOUNDS_PATH "ARI VOICE BLIP.mp3"
+#define PLAYER_FOOTSTEPS_SOUND_PATH SOUNDS_PATH "SOM DE PASSOS.mp3"
+#define DOOR_SOUND_PATH SOUNDS_PATH "PORTA ABRINDO.mp3"             // Saída pela porta de vidro
+#define KEYBOARD_SOUND_PATH SOUNDS_PATH "SOM DE TECLADO.mp3"         // Respostas na tela do computador
 
 // PATHS PARA O COMPUTADOR
 #define COMPUTER_ASSETS_PATH           "code/assets/sprites/computer/"

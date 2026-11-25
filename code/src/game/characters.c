@@ -1,5 +1,6 @@
 #include "raylib.h"
 #include "characters.h"
+#include "assets_fs.h"
 #include "macros.h"
 
 void initialize_estagiario_1_textures(char_textures out)
@@ -12,6 +13,19 @@ void initialize_estagiario_1_textures(char_textures out)
     out[NORTHWEST] = LoadTexture(ESTAGIARIO_1_NORTHWEST_PATH);
     out[SOUTHWEST] = LoadTexture(ESTAGIARIO_1_SOUTHWEST_PATH);
     out[NORTHEAST] = LoadTexture(ESTAGIARIO_1_NORTHEAST_PATH);
+    for (int i = 0; i < DIRECTION_COUNT; i++) set_character_filter(&out[i]);
+}
+
+void set_character_filter(Texture2D *texture)
+{
+    if (texture->width <= CHARACTER_BASE_SIZE)
+    {
+        SetTextureFilter(*texture, TEXTURE_FILTER_POINT);
+        return;
+    }
+    GenTextureMipmaps(texture);
+    SetTextureFilter(*texture, TEXTURE_FILTER_TRILINEAR);
+    SetTextureWrap(*texture, TEXTURE_WRAP_CLAMP);
 }
 
 int get_walk_frame(float walk_time)
@@ -38,7 +52,7 @@ bool has_walk_frames(const char *character, int direction)
 {
     for (int i = 0; i < WALK_FRAME_COUNT; i++)
     {
-        if (!FileExists(TextFormat("%s%s/walk/%s-%d.png", PERSONAGENS_PATH, character, walk_file_name(direction), i))) return false;
+        if (!asset_exists(TextFormat("%s%s/walk/%s-%d.png", PERSONAGENS_PATH, character, walk_file_name(direction), i))) return false;
     }
     return true;
 }
@@ -55,6 +69,7 @@ bool load_walk_frames(const char *character, int direction, Texture2D frames[WAL
         // O oeste é o espelho do leste
         if (direction == WEST) ImageFlipHorizontal(&frame);
         frames[i] = LoadTextureFromImage(frame);
+        set_character_filter(&frames[i]);
         UnloadImage(frame);
     }
     return true;

@@ -1,20 +1,3 @@
 # FDS: Fundamentos de Desenvolvimento de Software
 
-Entregas da disciplina que já estão versionadas neste repositório.
-
-| Entrega | Artefato |
-|---|---|
-| Backlog e board (Entrega 01) | [Backlog e board](backlog-board/README.md), com o [board no Trello](https://trello.com/b/ifJwhbVe/iara-projeto-integrador-squad-8) |
-| Diagramas de atividade, um por história de usuário (Entrega 02) | [Diagramas de atividade](diagramas-atividade/README.md) |
-| Protótipos lo-fi (Entrega 02) | [Protótipos lo-fi](prototipos-lofi/README.md), elaborados no [Figma](https://www.figma.com/design/DpnmgBif3vJcn336pefbpa/IARA---PROTOTIPO-FDS?node-id=0-1&t=vm69jod3fxAtJGjN-1) |
-| Screencast do protótipo de baixa fidelidade (Entrega 02), compartilhado com [IHC](../ihc/README.md) | [Vídeo no YouTube](https://youtu.be/qE2Gn79bmqw) |
-| Testes de sistema | [Relatório dos testes](testes/README.md), com os [bugs encontrados](testes/bugs.md) e o [roteiro do screencast](testes/roteiro-screencast.md) |
-| Processo e versionamento | [CONTRIBUTING.md](../../CONTRIBUTING.md): fluxo de branches (GitFlow), padrão de commits e Pull Requests |
-| Report da Sprint 01 (Entrega 03) | [Report da Sprint 01](sprint-01/README.md): histórias implementadas, versionamento, testes, programação em pares e evidências |
-| Report da Sprint 02 | [Report da Sprint 02](sprint-02/README.md): histórias da Week 13e14, testes de sistema, [screencast dos testes](sprint-02/screencast-testes.mp4), bug tracker, programação em pares e prints do board |
-
-## Screencast do protótipo
-
-<a href="https://youtu.be/qE2Gn79bmqw">
-  <img src="screencast/Thumbnail da Screencast.png" width="700" alt="Screencast do protótipo de baixa fidelidade" />
-</a>
+As entregas desta matéria estão reunidas em **[Entregáveis](../entregaveis/README.md#fds-fundamentos-de-desenvolvimento-de-software)**.

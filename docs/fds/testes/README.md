@@ -13,6 +13,16 @@ simulando o uso real de um jogador.
 | **Atualização de 02/11/2026** | CT-06, CT-24 e CT-35 ampliados e CT-36 a CT-75 incluídos: **75 de 75 aprovados**. Os BUG-01 a BUG-08 estão corrigidos na branch. [Log da execução](evidencias/execucao-2026-11-02.txt) e [matriz de rastreabilidade](rastreabilidade.md) |
 | **Atualização de 03/11/2026** | Branch `test/campanha-100-dias`, com o CT-76 incluído: **76 de 76 aprovados**. BUG-09 a BUG-11 corrigidos e BUG-12 em aberto. [Log da execução](evidencias/execucao-2026-11-03.txt) |
 | **Screencast da Sprint 02** | Execução de 03/11/2026 sobre a `develop` (`63c2d01`), gravada: **76 de 76 aprovados**. [Vídeo](../sprint-02/screencast-testes.mp4) e [log](../sprint-02/execucao-screencast-2026-11-03.txt) |
+| **Atualização de 07/11/2026** | Branch `test/us03-modo-automatico`, com o CT-77 e o CT-78 incluídos (US03: PI2-226 a PI2-228). BUG-13 e BUG-14 corrigidos |
+| **Atualização de 09/11/2026** | Branch `test/us14-ignorar-npcs`, com o CT-79 incluído (US14: PI2-251). Bloco 3 com 28 de 28 aprovados |
+| **Atualização de 17/11/2026 (trilha)** | Branch `feat/trilha-por-momento`, com o CT-92 e o CT-93 incluídos (US15: PI2-231, PI2-259 e PI2-260). Bloco 2 com 37 de 37 aprovados |
+| **Atualização de 17/11/2026** | Branch `fix/textos-sobrepostos-e-modos-de-janela`, com UX-23 a UX-26 no bloco 3 (textos das cartas e do HUD do Sobrevivência, modos da janela). BUG-30 a BUG-32. Bloco 3 com 56 de 56 aprovados |
+| **Atualização de 19/11/2026 (dupla)** | Branch `feature/sv-modo-dupla`, com SV-116 a SV-136 incluídos no `test_survival` (Sobrevivência em dupla: controles separados, XP dividida, cair e levantar, perigos dos chefes nos dois, save e ranking próprios). `test_survival` com 136 de 136 aprovados; os blocos 2 e 3 seguem com os mesmos resultados de antes. Execução em Linux (Xvfb), a confirmar no Windows antes do merge |
+| **Atualização de 16/11/2026** | Branch `feature/volume-trilha-efeitos`, com o CT-80 e o CT-81 incluídos (US20: PI2-279 e PI2-281). CT-43 passa a conferir os dois volumes. Bloco 2 com 35 de 35 e bloco 3 com 37 de 37 aprovados |
+| **Sprint 03 (20/11/2026)** | `develop` (`2386a1c`), com o bloco 4 (`test_sprint03`, CT-94 a CT-105) para as histórias da Sprint 03 que ainda não tinham caso de teste: **7 de 12 aprovados**, 5 falhas registradas como BUG-39 a BUG-43 (#101 a #105). Blocos 1 a 3, unidade e Sobrevivência: todos aprovados. [Report da Sprint 03](../sprint-03/README.md), com pré-condição, passos, esperado, obtido e o screencast de cada caso |
+| **Atualização de 24/11/2026 (dupla, XP)** | Branch `feature/coop-xp-menor`: na dupla cada chip de XP vale 50% do valor do solo (`SV_DUO_XP_MULT` em `sv_duo.h`): com 1,6 vez mais inimigos, cada jogador sobe de nível a cerca de 0,8 vez o ritmo do solo, em vez de 1,6 vez mais rápido. SV-146 incluído no `test_survival` (a executar com 50%; com 60%, 146 de 146 aprovados e a dupla de bots passou de nível 36 em 481 s para nível 19 em 358 s) |
+| **Atualização de 24/11/2026 (dupla, câmera)** | Branch `feature/coop-xp-menor`: com um jogador caído, a câmera segue quem está de pé, como no solo, sem a distância máxima da dupla, e uma seta na borda da tela aponta para quem caiu. SV-147 e SV-148 incluídos no `test_survival`: 148 de 148 aprovados |
+| **Atualização de 25/11/2026 (nuvem)** | Branch `feat/nuvem-saves-ranking`, com o conjunto `test_cloud` (NV-01 a NV-43: leitura das respostas, fila offline, trava, conflito e estado da conexão, sem rede). 13 de 14 conjuntos aprovados; a falha é o CT-100 (BUG-42). [Detalhes e o que falta verificar](bugs.md#nuvem-saves-ranking) |
 
 ## Como executar
 
@@ -20,20 +30,22 @@ simulando o uso real de um jogador.
 powershell -ExecutionPolicy Bypass -File tools/tests/run_tests.ps1
 ```
 
-O script compila e roda os sete conjuntos de teste e devolve um resumo. O código
+O script compila e roda os conjuntos de teste (unidade, os blocos 1 a 4 de sistema e o Sobrevivência) e devolve um resumo. O código
 de saída é `0` quando tudo passa e `1` quando há falha, o que permite ligar a
 suíte a um CI mais adiante.
 
 O parâmetro `-Pausado` espera uma tecla entre um conjunto e o outro, para dar tempo
 de narrar durante a gravação do screencast.
 
+O bloco 4 também roda um caso só, para gravar o screencast dele: `build/tests/test_sprint03 CT-95`.
+
 ## O que foi testado
 
 A suíte monta o jogo de verdade — os mesmos módulos, os mesmos arquivos de mídia,
 a mesma máquina de estados — e o conduz como um jogador faria. Não há simulação de
 fachada: `test_sistema` (CT-01 a CT-16) inclui `game_loop.c` para alcançar o estado
-interno real da partida, `test_conteudo` (CT-17 a CT-24, CT-37, CT-41, CT-43, CT-47 a CT-52, CT-57, CT-58, CT-61 a CT-70 e CT-74) percorre os chamados e o menu, e
-`test_fluxo` (CT-25 a CT-36, CT-42 e CT-44 a CT-46, CT-53 a CT-56, CT-59, CT-60, CT-71 a CT-73, CT-75 e CT-76) monta o jogo inteiro menos a `main.c` e o percorre do
+interno real da partida, `test_conteudo` (CT-17 a CT-24, CT-37, CT-41, CT-43, CT-47 a CT-52, CT-57, CT-58, CT-61 a CT-70, CT-74, CT-77, CT-78, CT-81, CT-92 e CT-93) percorre os chamados e o menu, e
+`test_fluxo` (CT-25 a CT-36, CT-42 e CT-44 a CT-46, CT-53 a CT-56, CT-59, CT-60, CT-71 a CT-73, CT-75, CT-76, CT-79, CT-80, CT-106 e CT-107) monta o jogo inteiro menos a `main.c` e o percorre do
 começo ao fim com a janela à vista: abertura, menu, CRÉDITOS e a volta ao menu,
 INICIAR, cartão do dia, caminhada pelo escritório, tutorial, os cinco chamados (um deles conferindo a sugestão da IARA), o relatório do dia, a volta ao mapa e a saída pela porta, que encerra o dia. Depois repete o dia pelos outros caminhos: colinha do mural, tudo enviado sem conferir, failsafe e saída do computador no meio do dia. Junto rodam os testes de unidade
 `test_collisions`, `test_characters`, `test_save` e `test_hints`.
@@ -84,7 +96,7 @@ INICIAR, cartão do dia, caminhada pelo escritório, tutorial, os cinco chamados
 | CT-40 | Contornos seguem distinguíveis com protanopia e deuteranopia simuladas | OK |
 | CT-41 | Brilho respeita os limites e altera a imagem | OK |
 | CT-42 | Escolher CONFIGURAÇÕES abre a tela e ela permanece aberta | OK |
-| CT-43 | Preferências voltam do arquivo e arquivo inválido não quebra o jogo | OK |
+| CT-43 | Preferências voltam do arquivo (brilho, contraste e os volumes da trilha e dos efeitos) e arquivo inválido não quebra o jogo | OK |
 | CT-44 | Concluir o quiz devolve o jogador ao mapa, andando e com a tarefa resolvida | OK |
 | CT-45 | Jogador alcança a porta, encerra o dia e segue para o Flash do Dia 2, com o Dia 1 salvo | OK |
 | CT-46 | Flash do Dia 2 só avança ao toque e abre o Dia 3, com a tarefa nova e o jogador na porta | OK |
@@ -95,7 +107,7 @@ INICIAR, cartão do dia, caminhada pelo escritório, tutorial, os cinco chamados
 | CT-51 | Terceiro erro seguido aciona o failsafe: a IARA conclui o que falta e o jogador não trava | OK |
 | CT-52 | Colinha traz os 5 símbolos, começa fora do monitor e não altera a pontuação | OK |
 | CT-53 | Contador mostra Dia 1 de 100 e ler o mural dá a colinha e registra a investigação, sem somar pontos ainda | OK |
-| CT-54 | Colinha fica colada no canto inferior esquerdo do monitor, sem cobrir a janela da IARA | OK |
+| CT-54 | Colinha fica colada na moldura de baixo, no canto esquerdo do monitor, sem cobrir a janela da IARA | OK |
 | CT-55 | Enviar sem conferir devolve o jogador ao mapa e o fim do dia conta que a IARA resolveu | OK |
 | CT-56 | Failsafe passa pelo relatório e encerra o dia direto no cartão, e recomeçar não acumula pontos | OK |
 | CT-57 | Chamado com CPF pede a tarja, que vai ao relatório sem mudar os pontos, e a chefia só pressiona | OK |
@@ -114,10 +126,45 @@ INICIAR, cartão do dia, caminhada pelo escritório, tutorial, os cinco chamados
 | CT-70 | Os 4 finais saem das condições do GDD, sem sorte, em todas as combinações (CA6) | OK |
 | CT-71 | Campanha passa pelos 100 dias em ordem: 9 jogáveis, 14 flashes e o resto em salto | OK |
 | CT-72 | Investigar, conversar e fechar a prova leva ao Final D, com as 3 evidências e a Mariana | OK |
-| CT-73 | Depois do final, o jogo volta ao menu e INICIAR recomeça do Dia 1 sem herdar nada | OK |
+| CT-73 | Depois do final, SAIR PARA O MENU volta ao menu e INICIAR recomeça do Dia 1 sem herdar nada | OK |
 | CT-74 | Três erros em qualquer puzzle acionam o failsafe, vão ao relatório e não contam como prova | OK |
 | CT-75 | Save retoma no salto, no dia jogável com o roteiro certo e depois de um dia já encerrado (CA4) | OK |
 | CT-76 | Botões das mesas de todos os dias cabem, com o texto legível, em 7 tamanhos de janela | OK |
+| CT-77 | Todo chamado dos 9 dias jogáveis oferece resolver sozinho ou pedir à IARA, e o manual vale pontos (US03, PI2-226) | OK |
+| CT-78 | Modo automático resolve na hora, nunca trava nem aciona o failsafe e vale 0 em todos os dias, com e sem memória e com e sem tarja (US03, PI2-227 e PI2-228) | OK |
+| CT-79 | Sem falar com nenhum NPC, o jogador conclui os 9 dias jogáveis e chega ao final: anda desviando dos NPCs, e no computador e na porta nenhum NPC toma o ESPAÇO (US14, PI2-251) | OK |
+| CT-80 | Configurações escolhidas (contraste, brilho, música, efeitos e tela cheia) seguem valendo no menu, no cartão do dia, no escritório, no computador e ao reabrir a tela (US20, PI2-281) | OK |
+| CT-81 | Volume da trilha e dos efeitos são independentes, ficam entre 0 e 1, e um `iara.ini` antigo, com um volume só, continua valendo para os dois (US20, PI2-279) | OK |
+| CT-92 | A trilha tem uma mistura por momento: menu sozinho, escritório calmo ou tenso (a soma das duas faixas não muda com a tensão), faixa própria no quiz e trilha abafada no flash e no salto puro (US15, PI2-231 e PI2-259) | OK |
+| CT-93 | A troca de faixa é gradual nos dois sentidos, dura o tempo do fade (0,8 s) sem pulo nem passar do alvo, e o contexto da trilha é guardado (US15, PI2-260) | OK |
+| CT-94 | Passos tocam enquanto o jogador anda e param quando ele para (US16, PI2-262) | OK |
+| CT-95 | Sair pela porta de vidro toca o som de porta (US16, PI2-263) | FALHA ([BUG-39](bugs.md#bug-39)); corrigido na `develop` em 24/11/2026 (merge `aeefb3d`), a reexecutar |
+| CT-96 | O ambiente do escritório toca sem parar, inclusive por baixo da tela do quiz (US16, PI2-264) | OK |
+| CT-97 | Interagir com o computador na tela do quiz toca o som de teclado (US16, PI2-264) | FALHA ([BUG-40](bugs.md#bug-40)); corrigido na `develop` em 24/11/2026 (merge `aeefb3d`), a reexecutar |
+| CT-98 | Quando um NPC começa a falar toca um som curto de fala (US16, PI2-265) | FALHA ([BUG-41](bugs.md#bug-41)); corrigido na `develop` em 24/11/2026 (merge `aeefb3d`), a reexecutar |
+| CT-99 | Os sprites dos 7 NPCs seguem a pasta e os nomes de `load_walk_frames` e carregam no jogo (US17, PI2-269) | OK |
+| CT-100 | Flash do dia, salto puro e os 4 finais têm arte própria (US17, PI2-267 e PI2-268) | FALHA ([BUG-42](bugs.md#bug-42)) |
+| CT-101 | Nenhuma estatística oculta aparece como número na tela do escritório (US10, PI2-236) | OK |
+| CT-102 | O escritório reage às escolhas do jogador, não só ao dia (US10, PI2-237) | FALHA ([BUG-43](bugs.md#bug-43)) |
+| CT-103 | A tensão da trilha e o cenário sobem dia a dia, começando calmos, sem som de susto (US13) | OK |
+| CT-104 | Em todo dia jogável um NPC (nunca a IARA) dá a dica, e conversar não muda nenhum ponto (US04, PI2-202) | OK |
+| CT-105 | Manual com dica vale mais que manual sem dica, que vale mais que a IARA; os pontos acumulam e um dia isolado não muda o final (US11, PI2-168) | OK |
+| CT-106 | Depois do final da campanha, JOGAR NOVAMENTE recomeça do Dia 1 no mesmo save, sem herdar nada, e SAIR pede confirmação (PI2-318) | OK |
+| CT-107 | No fim de uma partida da Sobrevivência, MENU DA SOBREVIVÊNCIA volta ao início do modo, com JOGAR marcado, e SAIR PARA O MENU leva ao menu (PI2-318) | A executar |
+
+## Evidência da US14: ignorar os NPCs
+
+O CT-79 joga a campanha inteira sem nunca conversar com um NPC. Em cada um dos 9 dias
+jogáveis, o jogador anda da entrada até o computador e do computador até a porta
+desviando dos NPCs que barram a passagem, e para em um ponto onde nenhum NPC está
+perto: ali o ESPAÇO abre o computador ou a porta, e não um diálogo. Nenhuma conversa
+abre no caminho e todo dia termina salvo. As imagens são do Dia 1, geradas pela
+própria execução: no computador e na porta, com o Anderson oferecendo a dica do dia,
+ignorada.
+
+![Jogador no computador do Dia 1, com os NPCs no escritório](evidencias/us14-computador-sem-npc.png)
+
+![Jogador na porta do Dia 1, ignorando a dica do Anderson](evidencias/us14-porta-sem-npc.png)
 
 ## Evidência do percurso
 
@@ -207,6 +254,8 @@ estão em **[bugs.md](bugs.md)**.
 | [BUG-10](bugs.md#bug-10) | Falha ao trocar o save pode perder o progresso (corrigido) | Média | Inspeção, `test_save` |
 | [BUG-11](bugs.md#bug-11) | Fundo do cartão do dia é carregado e nunca desenhado (corrigido) | Baixa | Inspeção |
 | [BUG-12](bugs.md#bug-12) | Menu não tem como começar uma partida nova (aberto) | Média | Inspeção |
+| [BUG-13](bugs.md#bug-13) | Suíte de testes deixou de compilar depois do áudio (corrigido) | Alta | Execução da suíte |
+| [BUG-14](bugs.md#bug-14) | "Enviar sem conferir" esperava a IARA terminar de escrever (corrigido) | Média | Inspeção, US03 |
 
 Do BUG-01 ao BUG-11 estão corrigidos na `develop`, e o status de cada um fica em [bugs.md](bugs.md). Nenhum deles impedia jogar: o jogo abre, o menu funciona, o
 personagem anda, colide e chega ao computador, e o quiz vai até o fim.
@@ -227,3 +276,70 @@ devolve o jogador ao menu. **Haskell**: as regras puras de PIF ficam de fora.
 
 O roteiro para gravar o screencast desta execução está em
 [roteiro-screencast.md](roteiro-screencast.md).
+
+
+## PI2-224 — vidro e fachada inferior (02/11/2026)
+
+Os dois painéis inferiores e a porta de entrada permitem caminhar atrás do vidro.
+A personagem também entra parcialmente atrás dos trechos opacos da fachada,
+respeitando a mesma profundidade máxima dos vidros. O limite físico inferior
+coincide com a linha de baixo da porta (y=808 no asset, referência y=369,5), em toda
+a largura do mapa. Não é permitido afundar no rodapé ou na placa CISSA. As plantas
+e jardineiras têm bloqueio em toda a área visível, incluindo vasos e folhagem;
+as jardineiras inferiores ocupam também a parte inferior dos vasos, antes ausente.
+As salas da direita e os móveis mantêm seus bloqueios. A porta oferece passagem visual, sem transição para outro mapa.
+
+`collision_tile` distingue `TILE_SOLID` e `TILE_GLASS`; o vidro fornece somente
+sua base como retângulo bloqueante. `collides_with_tiles` oferece a consulta
+tipada e `collides_with_any`/`move_axis` preservam as assinaturas existentes.
+A superfície visível é definida em `glass_surface_reference`, separadamente
+da profundidade física em `glass_reference`. F1 mostra os bloqueios efetivos.
+
+A cena e a personagem são desenhadas em uma RenderTexture. Um shader GLSL 330
+aplica 12% de azul somente nas superfícies de vidro, sem deslocar pixels e sem
+usar tempo ou ondas. Os reflexos fixos reutilizam o asset; molduras, divisória
+da porta, rodapés, pilares e parede central são redesenhados à frente. Dicas de
+controle e seta ficam fora do efeito. A textura intermediária é recriada ao
+redimensionar e, junto do shader, é liberada ao sair do escritório ou encerrar o
+jogo. Se o shader não estiver disponível, reflexos e oclusão continuam.
+
+Validação: build completo sem diagnósticos do compilador; testes de unidade de
+colisão aprovados; testes gráficos VID-01 a VID-08 em 800×450, 1280×720,
+1366×768, 1920×1080 e 1024×768:
+
+| Caso | Verificação |
+|---|---|
+| VID-01 | Entrar atrás dos painéis, porta e pilares sem colidir com a fachada |
+| VID-02 | Movimento bloqueado ao tentar ultrapassar a base inferior |
+| VID-03 | Pixels alterados no vidro e preservados fora das superfícies |
+| VID-04 | Molduras redesenhadas sobre a parte sobreposta da personagem |
+| VID-05 | Quadros idênticos com a personagem parada, mesmo após decorrer tempo |
+| VID-06 | Varredura da fachada com passos verticais e diagonais sem ultrapassar a linha inferior da porta |
+| VID-07 | Plantas e jardineiras bloqueiam os quatro lados e a parte inferior dos vasos |
+| VID-08 | Personagem permanece visível no piso entre pilares e jardineiras, nos dois lados |
+
+A suíte completa manteve as falhas preexistentes CT-15 (fade in), CT-24
+(memória do menu) e CT-35 (layout do quiz). Na execução completa anterior, com sete casos do vidro, os testes
+de sistema somaram 39/42 aprovados. Após a correção visual, o bloco 1 foi
+executado novamente: 23/24 aprovados, com somente CT-15 reprovado; os oito
+casos VID passaram nas cinco resoluções. O VID-08 falhou antes da correção e
+passou depois, confirmando a regressão visual. Os três conjuntos de unidade passaram.
+
+Os recortes opacos da parede central começam na sua borda real, em y=808 no
+asset. A faixa de piso acima dela não é redesenhada sobre a personagem. Essa
+correção altera somente a oclusão visual; as colisões aprovadas permanecem iguais.
+
+![Personagem inteira no piso entre a jardineira e o pilar](evidencias/personagem-no-piso.png)
+
+![Personagem atrás do painel inferior direito](evidencias/vidro-inferior.png)
+
+![Personagem atrás do vidro da porta](evidencias/vidro-porta.png)
+
+![Limite de colisão alinhado à base da porta, destacado em vermelho](evidencias/parede-inferior.png)
+
+Para conferir manualmente, caminhe para baixo diante dos painéis, da porta e
+dos dois pilares inferiores. A personagem deve aparecer através do vidro e
+ficar parcialmente oculta pelas áreas opacas sem ultrapassar a base da porta;
+a fachada deve permanecer estática. Nenhuma planta ou jardineira pode ser atravessada. As superfícies,
+as bases físicas e a camada de primeiro plano devem ser revistas se `office.png`
+mudar. As salas de vidro da direita permanecem fora do escopo desta tarefa.

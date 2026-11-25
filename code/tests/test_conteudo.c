@@ -8,6 +8,7 @@
  */
 
 #include <stdio.h>
+#include <math.h>
 #include <string.h>
 #include <stdbool.h>
 
@@ -27,6 +28,7 @@ unsigned int middle_screen_y = 0;
 #include "settings.h"
 #include "preferences.h"
 #include "accessibility.h"
+#include "audio.h"
 
 #define LARGURA_JANELA 1280
 #define ALTURA_JANELA 720
@@ -36,6 +38,7 @@ unsigned int middle_screen_y = 0;
 #define CICLOS_DE_AQUECIMENTO 25   /* Voltas antes de comecar a medir */
 #define FOLGA_DE_MEMORIA_MB 16     /* Crescimento aceitavel em um trecho */
 
+#ifdef _WIN32
 /* Declaracoes minimas do Windows para medir a memoria do processo. Nao incluimos
  * windows.h porque ele define Rectangle, CloseWindow e LoadImage, que colidem
  * com os nomes da Raylib. K32GetProcessMemoryInfo vive na kernel32. */
@@ -67,6 +70,26 @@ static size_t memoria_em_uso_mb(void)
     /* Memoria privada: o working set varia com o que o Windows decide manter na RAM. */
     return contadores.PagefileUsage / (1024 * 1024);
 }
+#else
+/* Fora do Windows (Linux, usado para gravar o screencast em tela virtual), a
+ * memoria privada equivalente e o VmData de /proc/self/status. */
+static size_t memoria_em_uso_mb(void)
+{
+    FILE *arquivo = fopen("/proc/self/status", "r");
+    char linha[256];
+    size_t kb = 0;
+
+    if (arquivo == NULL) return 0;
+
+    while (fgets(linha, sizeof(linha), arquivo) != NULL)
+    {
+        if (sscanf(linha, "VmData: %zu kB", &kb) == 1) break;
+    }
+
+    fclose(arquivo);
+    return kb / 1024;
+}
+#endif
 
 static int total_casos = 0;
 static int casos_ok = 0;
@@ -738,6 +761,150 @@ static int contar_mesas_aceitas(const DialogStep *mesa)
     return aceitas;
 }
 
+/* ------------------------------------------------------------------------ */
+/* US03: manual ou automatico em cada tarefa jogavel (CT-77 e CT-78)          */
+/* ------------------------------------------------------------------------ */
+
+#define SO_SOZINHO 0      /* Resolve todo chamado sem abrir a IARA */
+#define SO_SEM_CONFERIR 1 /* Abre a IARA e envia toda sugestao como veio */
+
+/* Resolve a mesa sozinho com a primeira marcacao aceita. O treino e a prova nao
+ * tem destino por linha, entao a resposta sai da propria regra da mesa. */
+static void resolver_a_mesa_sozinho(void)
+{
+    DialogStep *mesa = chamado_atual();
+
+    for (int combinacao = 0; combinacao < (1 << mesa->card_count); combinacao++)
+    {
+        for (int c = 0; c < mesa->card_count; c++) triage_choices[c] = (combinacao >> c) & 1;
+
+        if (count_board_wrong(mesa, triage_choices) == 0) break;
+    }
+
+    submit_triage();
+    continue_after_answer();
+}
+
+/* Joga um dia inteiro usando sempre a mesma forma de resolver. Devolve false se algum
+ * chamado nao ofereceu as duas formas, se a IARA nao respondeu na hora ou se um
+ * chamado precisou de mais de uma acao para andar. */
+static bool jogar_o_dia_com_uma_forma(int dia, int forma, bool sem_memoria, bool tarjar)
+{
+    reiniciar_tarefa();
+    start_game_day(dia);
+    reset_computer_progress();
+    current_game_state_variables.evidence_mask = EVIDENCE_NO_RESIGNATION_LETTER | EVIDENCE_BADGE_AFTER_LEAVING | EVIDENCE_NO_HUMAN_ORDER;
+
+    if (sem_memoria) iara_memory = 0;
+
+    bool tudo_certo = true;
+    int passos = 0;
+
+    while (current_step_index < REPORT_STEP && passos++ <= TOTAL_STEPS)
+    {
+        DialogStep *passo = chamado_atual();
+        int antes = current_step_index;
+
+        if (!step_is_ticket(passo))
+        {
+            if (passo->type == STEP_CHOICE) choose_day_option(passo, 0);
+            else advance_step();
+            continue;
+        }
+
+        /* As duas formas a vista: as alternativas ou a mesa, e o botao "Perguntar a IARA". */
+        if (current_ticket_view != TICKET_ANSWERING || ticket_asked_iara || current_quiz_answered) tudo_certo = false;
+
+        if (forma == SO_SOZINHO)
+        {
+            if (passo->type == STEP_TRIAGE) resolver_a_mesa_sozinho();
+            else resolver_sozinho();
+        }
+        else
+        {
+            ask_iara();
+
+            /* Instantaneo: a sugestao aparece no mesmo clique, sem tela de espera. */
+            if (current_ticket_view != TICKET_SUGGESTION && current_ticket_view != TICKET_PRIVACY) tudo_certo = false;
+            if (current_ticket_view == TICKET_PRIVACY) decide_personal_data(tarjar);
+            if (current_ticket_view != TICKET_SUGGESTION) tudo_certo = false;
+
+            send_without_checking();
+        }
+
+        if (current_step_index != antes + 1 || current_wrong_answers != 0) tudo_certo = false;
+    }
+
+    return tudo_certo && current_step_index == REPORT_STEP && current_game_state_variables.is_resolved &&
+           !computer_failsafe_triggered;
+}
+
+static void testar_manual_ou_automatico(void)
+{
+    titulo("US03: manual ou automatico em todos os dias jogaveis (CT-77 e CT-78)");
+
+    bool manual_em_todos = true;
+    bool automatico_em_todos = true;
+    int dias = 0;
+    int partidas_automaticas = 0;
+
+    for (int s = 0; s < DAY_SCRIPT_COUNT; s++)
+    {
+        int dia = day_scripts[s].day;
+
+        /* Manual: o resultado depende do acerto, vale pontos e nao conta como Automacao. */
+        bool manual_ok = jogar_o_dia_com_uma_forma(dia, SO_SOZINHO, false, true);
+        int automacao_da_escolha = (day_choice_effects & DAY_EFFECT_AUTOMATION) ? 1 : 0;
+
+        manual_ok = manual_ok && current_game_state_variables.mode_type == MODE_MANUAL &&
+                    current_hidden_statistic.current_overall_points == HIDDEN_STATISTIC_START + (TICKET_COUNT * POINTS_SOLVED_ALONE) &&
+                    current_hidden_statistic.current_automation_points == HIDDEN_STATISTIC_START + automacao_da_escolha;
+
+        for (int i = 0; i < TICKET_COUNT; i++)
+        {
+            if (ticket_results[i].outcome != TASK_SOLVED_ALONE) manual_ok = false;
+        }
+
+        /* Automatico: com e sem memoria, tarjando ou nao. Nunca trava e nunca da recompensa. */
+        bool automatico_ok = true;
+
+        for (int variacao = 0; variacao < 4; variacao++)
+        {
+            bool sem_memoria = (variacao & 1) != 0;
+            bool tarjar = (variacao & 2) != 0;
+            bool rodou = jogar_o_dia_com_uma_forma(dia, SO_SEM_CONFERIR, sem_memoria, tarjar);
+
+            rodou = rodou && current_game_state_variables.mode_type == MODE_AUTOMATIC &&
+                    current_hidden_statistic.current_overall_points == HIDDEN_STATISTIC_START &&
+                    current_hidden_statistic.current_automation_points >= HIDDEN_STATISTIC_START + 1 &&
+                    unchecked_sends == TICKET_COUNT;
+
+            for (int i = 0; i < TICKET_COUNT; i++)
+            {
+                if (ticket_results[i].outcome != TASK_SENT_UNCHECKED) rodou = false;
+            }
+
+            if (!rodou) automatico_ok = false;
+            partidas_automaticas++;
+        }
+
+        printf("           Dia %3d: %d chamado(s), manual %s, automatico %s\n", dia, TICKET_COUNT,
+               manual_ok ? "ok" : "FALHOU", automatico_ok ? "ok nas 4 variacoes" : "FALHOU");
+
+        if (!manual_ok) manual_em_todos = false;
+        if (!automatico_ok) automatico_em_todos = false;
+        dias++;
+    }
+
+    checar("CT-77", "Todo chamado dos 9 dias jogaveis oferece resolver sozinho ou pedir a IARA, e o manual vale pontos",
+           manual_em_todos && dias == 9);
+    checar("CT-78", "Modo automatico resolve na hora, nunca trava nem aciona o failsafe e vale 0 em todos os dias",
+           automatico_em_todos && partidas_automaticas == 9 * 4);
+
+    select_day_script(1);
+    reiniciar_tarefa();
+}
+
 /* Calendario da campanha, gabaritos calculados e finais (CT-64 a CT-70). */
 static void testar_dias_seguintes(void)
 {
@@ -964,12 +1131,15 @@ static void testar_menu(void)
     checar("CT-21", "Menu abre em INICIAR, destravado",
            selected_menu_option == INICIAR && !is_menu_to_close && next_screen == NONE);
 
-    /* Descer quatro vezes deve voltar para INICIAR (lista circular). */
+    /* Descer cinco vezes deve voltar para INICIAR (lista circular). O modo de jogo e escolhido depois de INICIAR. */
     move_menu_selection(1);
     bool desceu_para_creditos = (selected_menu_option == CREDITOS);
 
     move_menu_selection(1);
     bool desceu_para_configuracoes = (selected_menu_option == CONFIGURACOES);
+
+    move_menu_selection(1);
+    bool desceu_para_ajuda = (selected_menu_option == AJUDA);
 
     move_menu_selection(1);
     bool desceu_para_sair = (selected_menu_option == SAIR);
@@ -982,7 +1152,20 @@ static void testar_menu(void)
     bool subiu_para_o_fim = (selected_menu_option == SAIR);
 
     checar("CT-22", "Selecao do menu circula nos dois sentidos",
-           desceu_para_creditos && desceu_para_configuracoes && desceu_para_sair && voltou_ao_topo && subiu_para_o_fim);
+           desceu_para_creditos && desceu_para_configuracoes && desceu_para_ajuda && desceu_para_sair && voltou_ao_topo && subiu_para_o_fim);
+
+    /* SAIR pergunta antes de fechar: escolher a opcao abre a confirmacao e ainda nao pede o fechamento. */
+    selected_menu_option = SAIR;
+    confirm_menu_option();
+    checar("UX-13", "Escolher SAIR no menu abre a pergunta e nao fecha o menu na hora",
+           confirm_is_open() && !is_menu_to_close && next_screen == NONE);
+    confirm_close();
+
+    /* AJUDA vai para a tela de ajuda como as outras opcoes. */
+    selected_menu_option = AJUDA;
+    confirm_menu_option();
+    checar("UX-14", "Escolher AJUDA no menu pede a tela de ajuda", !confirm_is_open() && is_menu_to_close && next_screen == AJUDA);
+    initialize_menu_variables();
 
     /* As caixas da tela de configuracoes mudam na hora, e so VOLTAR sai dela. */
     bool saiu_ao_ligar = activate_settings_option(SETTINGS_CONTRAST);
@@ -1013,12 +1196,18 @@ static void testar_menu(void)
 
     set_game_brightness(0.7f);
     toggle_high_contrast();
+    audio_set_music_volume(0.3f);
+    audio_set_effects_volume(0.6f);
     bool gravou = save_preferences(arquivo);
 
     set_game_brightness(1.0f);
     toggle_high_contrast();
+    audio_set_music_volume(1.0f);
+    audio_set_effects_volume(1.0f);
     bool leu = load_preferences(arquivo);
-    bool voltou_igual = leu && is_high_contrast_enabled() && (int)((get_game_brightness() * 10.0f) + 0.5f) == 7;
+    bool voltou_igual = leu && is_high_contrast_enabled() && (int)((get_game_brightness() * 10.0f) + 0.5f) == 7 &&
+                        (int)((audio_get_music_volume() * 10.0f) + 0.5f) == 3 &&
+                        (int)((audio_get_effects_volume() * 10.0f) + 0.5f) == 6;
 
     toggle_high_contrast();
     set_game_brightness(1.0f);
@@ -1031,9 +1220,103 @@ static void testar_menu(void)
     bool sem_arquivo = !load_preferences(arquivo);
 
     set_game_brightness(1.0f);
+    audio_set_music_volume(1.0f);
+    audio_set_effects_volume(1.0f);
 
     checar("CT-43", "Preferencias voltam do arquivo e arquivo invalido nao quebra o jogo",
            gravou && voltou_igual && leu_invalido && valores_validos && sem_arquivo);
+
+    /* Trilha e efeitos sao volumes separados (US20): mexer em um nao muda o outro. */
+    audio_set_music_volume(0.2f);
+    bool musica_sozinha = audio_get_effects_volume() == 1.0f;
+    audio_set_effects_volume(0.5f);
+    bool efeitos_sozinhos = (int)((audio_get_music_volume() * 10.0f) + 0.5f) == 2;
+
+    /* Fora de 0 a 1 o volume fica no limite, sem estourar nem ficar negativo. */
+    audio_set_music_volume(1.7f);
+    audio_set_effects_volume(-0.4f);
+    bool limites = audio_get_music_volume() == 1.0f && audio_get_effects_volume() == 0.0f;
+
+    /* Arquivo antigo, com um volume so: vale para os dois, e um volume invalido e ignorado. */
+    SaveFileText(arquivo, "volume=0.40\nvolume_musica=7\nvolume_efeitos=-1\n");
+    load_preferences(arquivo);
+    bool arquivo_antigo = (int)((audio_get_music_volume() * 10.0f) + 0.5f) == 4 &&
+                          (int)((audio_get_effects_volume() * 10.0f) + 0.5f) == 4;
+    remove(arquivo);
+
+    audio_set_music_volume(1.0f);
+    audio_set_effects_volume(1.0f);
+
+    checar("CT-81", "Volume da trilha e dos efeitos sao independentes, ficam entre 0 e 1 e o arquivo antigo continua valendo",
+           musica_sozinha && efeitos_sozinhos && limites && arquivo_antigo);
+
+    /* Trilha por momento do jogo (US15): cada contexto tem a sua mistura, e a soma da trilha do escritorio
+     * nao muda com a tensao (o crossfade nao fica mais alto nem mais baixo no meio). */
+    float alvo[AUDIO_LAYER_COUNT];
+
+    audio_compute_layer_targets(true, false, AUDIO_CONTEXT_OFFICE, 0.5f, 0.0f, alvo);
+    bool so_menu = alvo[AUDIO_LAYER_MENU] == 1.0f && alvo[AUDIO_LAYER_CALM] == 0.0f &&
+                   alvo[AUDIO_LAYER_TENSION] == 0.0f && alvo[AUDIO_LAYER_QUIZ] == 0.0f;
+
+    audio_compute_layer_targets(false, false, AUDIO_CONTEXT_OFFICE, 0.5f, 0.0f, alvo);
+    bool silencio_fora = alvo[AUDIO_LAYER_MENU] + alvo[AUDIO_LAYER_CALM] + alvo[AUDIO_LAYER_TENSION] + alvo[AUDIO_LAYER_QUIZ] == 0.0f;
+
+    audio_compute_layer_targets(false, true, AUDIO_CONTEXT_OFFICE, 0.0f, 0.0f, alvo);
+    bool escritorio_calmo = alvo[AUDIO_LAYER_CALM] == 1.0f && alvo[AUDIO_LAYER_TENSION] == 0.0f && alvo[AUDIO_LAYER_QUIZ] == 0.0f;
+    audio_compute_layer_targets(false, true, AUDIO_CONTEXT_OFFICE, 1.0f, 0.0f, alvo);
+    bool escritorio_tenso = alvo[AUDIO_LAYER_CALM] == 0.0f && alvo[AUDIO_LAYER_TENSION] == 1.0f;
+
+    audio_compute_layer_targets(false, true, AUDIO_CONTEXT_OFFICE, 0.37f, 0.0f, alvo);
+    bool soma_constante = fabsf(alvo[AUDIO_LAYER_CALM] + alvo[AUDIO_LAYER_TENSION] - 1.0f) < 0.0001f;
+
+    audio_compute_layer_targets(false, true, AUDIO_CONTEXT_QUIZ, 0.4f, 0.0f, alvo);
+    float cama_quiz = alvo[AUDIO_LAYER_CALM] + alvo[AUDIO_LAYER_TENSION];
+    bool quiz_tem_faixa_propria = alvo[AUDIO_LAYER_QUIZ] == 1.0f && cama_quiz > 0.0f && cama_quiz < 0.5f;
+
+    audio_compute_layer_targets(false, true, AUDIO_CONTEXT_FLASH, 0.4f, 0.0f, alvo);
+    float cama_flash = alvo[AUDIO_LAYER_CALM] + alvo[AUDIO_LAYER_TENSION];
+    audio_compute_layer_targets(false, true, AUDIO_CONTEXT_JUMP, 0.4f, 0.0f, alvo);
+    float cama_salto_inicio = alvo[AUDIO_LAYER_CALM] + alvo[AUDIO_LAYER_TENSION];
+    audio_compute_layer_targets(false, true, AUDIO_CONTEXT_JUMP, 0.4f, 0.5f, alvo);
+    float cama_salto_meio = alvo[AUDIO_LAYER_CALM] + alvo[AUDIO_LAYER_TENSION];
+    audio_compute_layer_targets(false, true, AUDIO_CONTEXT_JUMP, 0.4f, 0.9f, alvo);
+    float cama_salto_fim = alvo[AUDIO_LAYER_CALM] + alvo[AUDIO_LAYER_TENSION];
+    /* No salto puro a trilha perde uma fatia a cada dia do bloco, e o flash fica abafado sem mudar. */
+    bool passagem_abafada = alvo[AUDIO_LAYER_QUIZ] == 0.0f && cama_flash < 1.0f && cama_flash > 0.0f &&
+                            cama_salto_inicio > cama_salto_meio && cama_salto_meio > cama_salto_fim &&
+                            cama_salto_fim >= 0.0f && cama_salto_inicio < 1.0f;
+
+    checar("CT-92", "Trilha: menu sozinho, escritorio calmo ou tenso com soma fixa, quiz com faixa propria e flash abafado e salto que perde uma fatia por dia",
+           so_menu && silencio_fora && escritorio_calmo && escritorio_tenso && soma_constante &&
+           quiz_tem_faixa_propria && passagem_abafada);
+
+    /* A troca de faixa e suave: cada camada anda aos poucos, sem pulo nem passar do alvo, nos dois sentidos. */
+    float peso = 0.0f;
+    float anterior = 0.0f;
+    bool subiu_aos_poucos = true;
+    int quadros = 0;
+
+    while (peso < 1.0f && quadros < 1000)
+    {
+        peso = audio_step_toward(peso, 1.0f, 1.0f / 60.0f, 0.8f);
+        if (peso - anterior > 0.05f || peso > 1.0f) subiu_aos_poucos = false;
+        anterior = peso;
+        quadros++;
+    }
+
+    bool tempo_certo = quadros >= 47 && quadros <= 49;   /* 0,8 s a 60 quadros por segundo */
+    bool desce = audio_step_toward(1.0f, 0.0f, 0.1f, 0.8f) < 1.0f && audio_step_toward(1.0f, 0.0f, 5.0f, 0.8f) == 0.0f;
+    bool parado = audio_step_toward(0.4f, 0.4f, 0.1f, 0.8f) == 0.4f;
+    bool sem_duracao = audio_step_toward(0.0f, 1.0f, 0.016f, 0.0f) == 1.0f;
+
+    audio_set_context(AUDIO_CONTEXT_QUIZ);
+    bool guardou_quiz = audio_get_context() == AUDIO_CONTEXT_QUIZ;
+    audio_set_context(AUDIO_CONTEXT_QUIZ);
+    audio_set_context(AUDIO_CONTEXT_OFFICE);
+    bool voltou_escritorio = audio_get_context() == AUDIO_CONTEXT_OFFICE;
+
+    checar("CT-93", "Troca de faixa e gradual nos dois sentidos, no tempo do fade, e o contexto da trilha e guardado",
+           subiu_aos_poucos && tempo_certo && desce && parado && sem_duracao && guardou_quiz && voltou_escritorio);
 
     /* Confirmar guarda a escolha e sinaliza o fechamento do menu. */
     selected_menu_option = CREDITOS;
@@ -1121,6 +1404,7 @@ int main(void)
     testar_logica_e_memoria();
     testar_dias_seguintes();
     testar_modos_e_pontos();
+    testar_manual_ou_automatico();
     testar_menu();
     testar_ciclo_do_menu();
 

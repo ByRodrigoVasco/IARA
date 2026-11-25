@@ -9,41 +9,184 @@
 #include "game_loop.h"
 #include "credits.h"
 #include "settings.h"
+#include "survival.h"
 #include "preferences.h"
+#include "mode_select.h"
+#include "save_select.h"
+#include "save_slots.h"
+#include "save.h"
+#include "cloud_sync.h"
+#include "cloud.h"
+#include "accessibility.h"
+#include "fonts.h"
+#include "helper.h"
+#include "loading.h"
+#include "screen_style.h"
 #include "state_machine.h"
+#include "audio.h"
+#include "help.h"
+#include "notice.h"
+#include "save.h"
 
 bool is_game_to_close = false;
 
+// Verdadeiro entre o momento em que o estado da campanha foi preparado a partir do save e o momento em que o jogador sai dela.
+// Sem isso, fechar o jogo no meio do carregamento gravaria um estado velho dentro do save.
+static bool campaign_state_ready = false;
+
+// Salva ao voltar ao menu e diz o que aconteceu: se der certo, o jogador vê; se falhar, sabe o que conferir.
+static void save_progress_with_notice(void)
+{
+    if (save_active_campaign_progress())
+    {
+        notice_show("Progresso salvo.", NOTICE_SUCCESS);
+    }
+    else
+    {
+        notice_show("Não consegui salvar o progresso. Confira se há espaço livre no disco e se a pasta do jogo permite gravar arquivos.", NOTICE_ERROR);
+    }
+}
+
+// Bolinha e palavra no canto de cima dos menus: a conexão com a nuvem. Sem nuvem, nada aparece.
+static void draw_connection_status(void)
+{
+    int screen = current_game_state_variables.current_screen;
+    cloud_link link = cloud_connection(NULL, 0);
+    const char *word = link == CLOUD_LINK_ONLINE ? "online" : "offline";
+    float scale, size;
+    Vector2 measure, position;
+
+    if (link == CLOUD_LINK_UNKNOWN) return;
+    if (screen != MENU_SCREEN && screen != MODE_SELECT_SCREEN && screen != SAVE_SELECT_SCREEN && screen != SETTINGS_SCREEN &&
+        screen != HELP_SCREEN && !(screen == SURVIVAL_SCREEN && survival_in_menu())) return;
+
+    scale = get_ui_scale();
+    size = DEFAULT_TEXT_FONT_SIZE * 0.95f * scale;
+    measure = MeasureTextEx(default_game_font, word, size, size * 0.06f);
+    position = (Vector2){GetScreenWidth() - measure.x - 22.0f * scale, 18.0f * scale};
+    DrawRectangleRounded((Rectangle){position.x - 38.0f * scale, position.y - 7.0f * scale, measure.x + 51.0f * scale, measure.y + 14.0f * scale}, 0.4f, 6, (Color){0, 0, 0, 160});
+    DrawCircleV((Vector2){position.x - 19.0f * scale, position.y + measure.y / 2.0f}, 8.5f * scale,
+                link == CLOUD_LINK_ONLINE ? (Color){60, 210, 100, 255} : (Color){235, 60, 60, 255});
+    DrawTextEx(default_game_font, word, position, size, size * 0.06f, RAYWHITE);
+}
+
 void handle_state_initialization(void)
 {
+    set_frame_overlay(draw_connection_status);
     initialize_pre_menu_textures();
 }
+
+// -----------------------------------------------------------------------------
+// Carregamento do save escolhido
+// -----------------------------------------------------------------------------
+
+static float job_campaign_state(void)
+{
+    char path[512];
+
+    // Começa de um estado novo; se o save já tem progresso, ele o substitui
+    initialize_game_state_variables();
+    initialize_hidden_statistic();
+
+    if (active_save_path(path, sizeof(path)))
+    {
+        save_result status = load_game_state(path);
+
+        if (status == SAVE_OK) TraceLog(LOG_INFO, "SAVE: \"%s\" retomado no dia %d", active_save_name(), current_game_state_variables.current_day);
+        else if (status == SAVE_NOT_FOUND) TraceLog(LOG_INFO, "SAVE: \"%s\" ainda não tem progresso, começando do Dia 1", active_save_name());
+        else TraceLog(LOG_WARNING, "SAVE: \"%s\" ignorado (%s), começando do Dia 1", active_save_name(), save_result_to_string(status));
+    }
+
+    // A campanha já chegou ao final: a partida recomeça do Dia 1
+    if (current_game_state_variables.resolved_puzzles[TOTAL_GAME_DAYS])
+    {
+        initialize_game_state_variables();
+        initialize_hidden_statistic();
+    }
+
+    campaign_state_ready = true;
+    return 1.0f;
+}
+
+static float job_campaign_office(void)
+{
+    initialize_game_loop_variables();
+    return 1.0f;
+}
+
+static int campaign_loading_jobs(loading_job *jobs)
+{
+    jobs[0] = (loading_job){"Lendo o save", 0.3f, job_campaign_state};
+    jobs[1] = (loading_job){"Montando o escritório", 1.0f, job_campaign_office};
+    return 2;
+}
+
+static int active_save_loading_jobs(loading_job *jobs)
+{
+    return save_mode_is_survival(active_save_mode()) ? survival_loading_jobs(jobs) : campaign_loading_jobs(jobs);
+}
+
+static int active_save_screen(void)
+{
+    return save_mode_is_survival(active_save_mode()) ? SURVIVAL_SCREEN : PLAYING_SCREEN;
+}
+
+int begin_loading_active_save(void)
+{
+    loading_job jobs[LOADING_MAX_JOBS];
+    int count = active_save_loading_jobs(jobs);
+
+    loading_begin("CARREGANDO", jobs, count, active_save_screen());
+    return LOADING_SCREEN;
+}
+
+int start_active_save_now(void)
+{
+    loading_job jobs[LOADING_MAX_JOBS];
+    int count = active_save_loading_jobs(jobs);
+
+    loading_run_all(jobs, count);
+    return active_save_screen();
+}
+
+bool save_active_campaign_progress(void)
+{
+    char path[512];
+    save_result status;
+
+    if (!campaign_state_ready || !active_save_is_set() || active_save_mode() != SAVE_MODE_NORMAL || !active_save_path(path, sizeof(path))) return false;
+
+    status = save_game_state(path);
+    if (status == SAVE_OK) cloud_sync_active_save();
+    if (status == SAVE_OK) TraceLog(LOG_INFO, "SAVE: progresso de \"%s\" gravado (dia %d)", active_save_name(), current_game_state_variables.current_day);
+    else TraceLog(LOG_WARNING, "SAVE: não foi possível gravar \"%s\": %s", active_save_name(), save_result_to_string(status));
+    return status == SAVE_OK;
+}
+
+// -----------------------------------------------------------------------------
+// Menu e telas
+// -----------------------------------------------------------------------------
 
 int handle_menu_action(int screen)
 {
     switch (screen)
     {
     case INICIAR:
-        // A campanha já chegou ao final: a partida recomeça do Dia 1
-        if (current_game_state_variables.resolved_puzzles[TOTAL_GAME_DAYS])
-        {
-            initialize_game_state_variables();
-            initialize_hidden_statistic();
-        }
-
-        initialize_game_loop_variables();
-        return PLAYING_SCREEN;
-        break;
+        // O jogador escolhe o modo e depois o save; o jogo só começa quando o save carregar
+        initialize_mode_select();
+        return MODE_SELECT_SCREEN;
 
     case CREDITOS:
         initialize_credits_screen();
         return CREDITS_SCREEN;
-        break;
 
     case CONFIGURACOES:
         initialize_settings_screen();
         return SETTINGS_SCREEN;
-        break;
+
+    case AJUDA:
+        initialize_help_screen();
+        return HELP_SCREEN;
 
     case SAIR:
         // Só avisa a main.c: fechar a janela aqui derrubaria o jogo no unload_menu() logo depois
@@ -51,7 +194,6 @@ int handle_menu_action(int screen)
         return NONE;
     default:
         return NONE;
-        break;
     }
 }
 
@@ -61,9 +203,13 @@ void handle_state_machine(void)
     {
 
     case PRE_MENU_SCREEN:
+        // As imagens do menu carregam por trás da abertura, uma por quadro, com a porcentagem na tela
+        if (!menu_preload_done()) pre_menu_set_loading_percent(menu_preload_step() * 100.0f);
+        else pre_menu_set_loading_percent(100.0f);
+
         render_pre_menu();
 
-        if (can_close_pre_menu_safely)
+        if (can_close_pre_menu_safely && menu_preload_done())
         {
             unload_pre_menu_textures();
             initialize_menu_variables();
@@ -83,14 +229,104 @@ void handle_state_machine(void)
         }
         break;
 
+    case MODE_SELECT_SCREEN:
+    {
+        int status = render_mode_select();
+
+        if (status == MODE_SELECT_BACK)
+        {
+            initialize_menu_variables();
+            current_game_state_variables.current_screen = MENU_SCREEN;
+        }
+        else if (status == MODE_SELECT_CHOSEN)
+        {
+            initialize_save_select(mode_select_chosen_mode());
+            current_game_state_variables.current_screen = SAVE_SELECT_SCREEN;
+        }
+        break;
+    }
+
+    case SAVE_SELECT_SCREEN:
+    {
+        int status = render_save_select();
+
+        if (status == SAVE_SELECT_BACK)
+        {
+            initialize_mode_select();
+            current_game_state_variables.current_screen = MODE_SELECT_SCREEN;
+        }
+        else if (status == SAVE_SELECT_CHOSEN)
+        {
+            current_game_state_variables.current_screen = begin_loading_active_save();
+        }
+        break;
+    }
+
+    case LOADING_SCREEN:
+        render_loading();
+
+        if (is_loading_finished())
+        {
+            current_game_state_variables.current_screen = loading_next_screen();
+        }
+        break;
+
     case PLAYING_SCREEN:
         render_game_loop();
 
+        if (is_game_loop_quit_requested())
+        {
+            // SAIR DO JOGO na pausa: a main.c salva o progresso e fecha a janela
+            unload_game_loop();
+            is_game_to_close = true;
+            break;
+        }
+
         if (is_game_loop_finished())
         {
+            bool replay = is_game_loop_replay_requested();
+
+            // Quem sai da campanha leva o progresso para o save dela
+            save_progress_with_notice();
+            campaign_state_ready = false;
             unload_game_loop();
-            initialize_menu_variables();
-            current_game_state_variables.current_screen = MENU_SCREEN;
+
+            if (replay)
+            {
+                // JOGAR NOVAMENTE depois do final: o mesmo save é carregado de novo e, como a
+                // campanha dele já chegou ao final, recomeça do Dia 1 (job_campaign_state)
+                current_game_state_variables.current_screen = begin_loading_active_save();
+            }
+            else
+            {
+                cloud_sync_close_save();
+                active_save_clear();
+                initialize_menu_variables();
+                current_game_state_variables.current_screen = MENU_SCREEN;
+            }
+        }
+        break;
+
+    case SURVIVAL_SCREEN:
+        if (render_survival())
+        {
+            bool switch_player = survival_wants_player_switch();
+            save_mode mode = active_save_mode();   // Solo ou dupla: a troca volta para a lista do mesmo modo
+
+            unload_survival();
+            cloud_sync_close_save();
+            active_save_clear();
+            if (switch_player)
+            {
+                // TROCAR JOGADOR: cada jogador (ou dupla) é um save, então volta para a lista de saves do modo
+                initialize_save_select(mode);
+                current_game_state_variables.current_screen = SAVE_SELECT_SCREEN;
+            }
+            else
+            {
+                initialize_menu_variables();
+                current_game_state_variables.current_screen = MENU_SCREEN;
+            }
         }
         break;
 
@@ -113,49 +349,68 @@ void handle_state_machine(void)
         }
         break;
 
+    case HELP_SCREEN:
+        if (render_help_screen())
+        {
+            initialize_menu_variables();
+            current_game_state_variables.current_screen = MENU_SCREEN;
+        }
+        break;
+
     default:
         // Tela desconhecida: volta para o menu por segurança.
         initialize_menu_variables();
         current_game_state_variables.current_screen = MENU_SCREEN;
         break;
     }
+
+    update_audio_for_screen(current_game_state_variables.current_screen);
 }
 
 bool escape_closes_current_screen(void)
 {
     int screen = current_game_state_variables.current_screen;
 
-    return screen != CREDITS_SCREEN && screen != SETTINGS_SCREEN && !is_computer_screen_open();
+    // No menu o ESC abre a pergunta de sair, no escritório abre a pausa e na abertura é ignorado; nas outras telas
+    // ele volta um passo, pausa a partida ou é ignorado (no carregamento). Uma tecla só nunca fecha o jogo de uma vez.
+    return screen != CREDITS_SCREEN && screen != SETTINGS_SCREEN && screen != HELP_SCREEN && screen != MENU_SCREEN &&
+           screen != PLAYING_SCREEN && screen != PRE_MENU_SCREEN && screen != SURVIVAL_SCREEN && screen != MODE_SELECT_SCREEN &&
+           screen != SAVE_SELECT_SCREEN && screen != LOADING_SCREEN && !is_computer_screen_open();
 }
 
 void handle_state_shutdown(void)
 {
-    // A opção SAIR já liberou o menu na própria transição
-    if (is_game_to_close) return;
-
-    switch (current_game_state_variables.current_screen)
+    // A opção SAIR já liberou a tela do menu na própria transição
+    if (!is_game_to_close)
     {
-    case PRE_MENU_SCREEN:
-        unload_pre_menu_textures();
-        break;
+        switch (current_game_state_variables.current_screen)
+        {
+        case PRE_MENU_SCREEN:
+            unload_pre_menu_textures();
+            break;
 
-    case MENU_SCREEN:
-        unload_menu();
-        break;
+        case PLAYING_SCREEN:
+            unload_game_loop();
+            break;
 
-    case PLAYING_SCREEN:
-        unload_game_loop();
-        break;
+        case SURVIVAL_SCREEN:
+            unload_survival();
+            break;
 
-    case CREDITS_SCREEN:
-        unload_credits_screen();
-        break;
+        case CREDITS_SCREEN:
+            unload_credits_screen();
+            break;
 
-    case SETTINGS_SCREEN:
-        unload_settings_screen();
-        break;
+        case SETTINGS_SCREEN:
+            unload_settings_screen();
+            break;
 
-    default:
-        break;
+        default:
+            break;
+        }
     }
+
+    // As imagens do menu e das telas de escolha ficam carregadas durante o jogo todo
+    unload_menu_textures();
+    style_unload();
 }

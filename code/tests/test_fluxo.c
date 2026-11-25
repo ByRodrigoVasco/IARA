@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#include <math.h>
 
 #include "raylib.h"
 #include "janela_de_teste.h"
@@ -24,6 +25,15 @@
 #include "pre_menu.h"
 #include "fonts.h"
 #include "settings.h"
+#include "preferences.h"
+#include "mode_select.h"
+#include "save_select.h"
+#include "save_slots.h"
+#include "loading.h"
+#include "save.h"
+#include "audio.h"
+#include "accessibility.h"
+#include "helper.h"
 
 /* A main.c define estas globais; aqui o teste assume esse papel. */
 unsigned int screen_width = 0;
@@ -56,6 +66,9 @@ static bool tecla_dos_creditos(int tecla)
 #define IsKeyPressed(tecla) tecla_dos_creditos(tecla)
 #include "credits.c"
 #undef IsKeyPressed
+
+/* O modo Sobrevivencia tambem entra direto, para o teste alcancar o estado interno das telas dele. */
+#include "survival.c"
 
 #define LARGURA_JANELA 1280
 #define ALTURA_JANELA 720
@@ -266,17 +279,66 @@ static void gravar_evidencia_do_quiz(const char *arquivo)
 /* Casos de teste                                                             */
 /* ------------------------------------------------------------------------ */
 
-/* Como apertar INICIAR depois do final da campanha: a partida recomeca do Dia 1. */
+/* Os saves do teste ficam numa pasta propria, para nao mexer nos saves de quem roda a suite. */
+#define RAIZ_DOS_SAVES_DE_TESTE "build/tests/saves_fluxo"
+
+static void limpar_saves_de_teste(void)
+{
+    for (int modo = 0; modo < SAVE_MODE_COUNT; modo++)
+    {
+        save_slot_info saves[SAVE_SLOTS_MAX];
+        int quantos = save_slots_list((save_mode)modo, saves, SAVE_SLOTS_MAX);
+
+        for (int i = 0; i < quantos; i++) save_slot_delete((save_mode)modo, saves[i].name);
+    }
+}
+
+static void preparar_saves_de_teste(void)
+{
+    save_slots_set_root(RAIZ_DOS_SAVES_DE_TESTE);
+    save_slots_ensure_folders();
+    limpar_saves_de_teste();
+    save_slot_create(SAVE_MODE_NORMAL, "Fluxo");
+    save_slot_create(SAVE_MODE_SURVIVAL, "Fluxo");
+}
+
+/* Espera o carregamento acabar, quadro a quadro, pela maquina de estados de verdade. */
+static bool esperar_tela(int tela, double limite_em_segundos)
+{
+    double inicio = GetTime();
+
+    while (current_game_state_variables.current_screen != tela && GetTime() - inicio < limite_em_segundos && !WindowShouldClose())
+    {
+        handle_state_machine();
+    }
+    return current_game_state_variables.current_screen == tela;
+}
+
+/* Como apertar INICIAR depois do final da campanha: o save escolhido tem a campanha terminada, e carregar esse save recomeca do Dia 1. */
 static void iniciar_partida_nova(void)
 {
+    char caminho[512];
+
     unload_game_loop();
+    active_save_set(SAVE_MODE_NORMAL, "Fluxo");
     current_game_state_variables.resolved_puzzles[TOTAL_GAME_DAYS] = true;
-    current_game_state_variables.current_screen = handle_menu_action(INICIAR);
+    if (active_save_path(caminho, sizeof(caminho))) save_game_state(caminho);
+    current_game_state_variables.current_screen = start_active_save_now();
 
     for (int quadro = 0; quadro < 5 && !WindowShouldClose(); quadro++)
     {
         handle_state_machine();
     }
+}
+
+/* Grava o estado atual no save "Fluxo" e carrega esse save, como o jogador faz ao escolhe-lo depois de INICIAR. */
+static int retomar_partida_do_save(void)
+{
+    char caminho[512];
+
+    active_save_set(SAVE_MODE_NORMAL, "Fluxo");
+    if (active_save_path(caminho, sizeof(caminho))) save_game_state(caminho);
+    return start_active_save_now();
 }
 
 static void testar_estado_inicial(void)
@@ -301,8 +363,27 @@ static void testar_estado_inicial(void)
 
 static void testar_abertura(void)
 {
-    titulo("Abertura do jogo (CT-27)");
+    titulo("Abertura do jogo, imagens compartilhadas e pular a abertura (CT-27, CT-89 a CT-91, UX-17)");
     etapa("[1/7] tela de abertura e menu principal");
+
+    /* Pular a abertura: com o pedido de pular, ela some em poucos quadros e entrega o menu. */
+    handle_state_initialization();
+    current_game_state_variables.current_screen = PRE_MENU_SCREEN;
+    pre_menu_request_skip();
+
+    int quadros_pulando = 0;
+
+    while (current_game_state_variables.current_screen == PRE_MENU_SCREEN && quadros_pulando < LIMITE_DE_QUADROS)
+    {
+        handle_state_machine();
+        quadros_pulando++;
+    }
+
+    checar("UX-17", "Pedir para pular a abertura entrega o menu em poucos quadros",
+           current_game_state_variables.current_screen == MENU_SCREEN && quadros_pulando < 60);
+
+    /* Volta ao inicio para o teste da abertura inteira, abaixo */
+    unload_menu();
 
     handle_state_initialization();
     current_game_state_variables.current_screen = PRE_MENU_SCREEN;
@@ -327,6 +408,37 @@ static void testar_abertura(void)
            entregou_o_menu && quadros < LIMITE_DE_QUADROS &&
            current_game_state_variables.current_screen == MENU_SCREEN &&
            is_menu_to_close == false);
+
+    /* A abertura e o menu usam as mesmas imagens grandes (o escritorio e o nome IARA): cada uma carrega
+     * uma vez so, e a abertura, ao terminar, entrega a imagem ao menu em vez de descarregar. */
+    checar("CT-89", "A abertura e o menu dividem as imagens grandes: cada uma carrega uma vez so e fica com o menu",
+           shared_texture_users(ESCRITORIO_TELA_PNG_PATH) == 1 &&
+           shared_texture_users("code/assets/sprites/tela-inicial/iara-nome.png") == 1 &&
+           shared_texture_users("code/assets/background/second-background.png") == 1);
+
+    /* Abrir as configuracoes pega o escritorio que o menu ja mantem, sem decodificar de novo, e fechar nao o derruba. */
+    initialize_settings_screen();
+    bool configuracoes_dividem = shared_texture_users(ESCRITORIO_TELA_PNG_PATH) == 2;
+    unload_settings_screen();
+    checar("CT-90", "As configuracoes reaproveitam o escritorio do menu, e ele continua carregado depois de fechadas",
+           configuracoes_dividem && shared_texture_users(ESCRITORIO_TELA_PNG_PATH) == 1 &&
+           menu_textures_loaded == MENU_TEXTURE_COUNT);
+
+    /* A tabela conta os usos: a mesma imagem pedida duas vezes e uma textura so, e ela so sai da memoria na ultima devolucao. */
+    {
+        const char *caminho = "code/assets/icons/arrow-down.png";
+        Texture2D primeira = acquire_smooth_texture(caminho);
+        Texture2D segunda = acquire_smooth_texture(caminho);
+        bool mesma_textura = primeira.id != 0 && primeira.id == segunda.id && shared_texture_users(caminho) == 2;
+        bool ainda_carregada;
+
+        release_smooth_texture(primeira);
+        ainda_carregada = shared_texture_users(caminho) == 1;
+        release_smooth_texture(segunda);
+        release_smooth_texture((Texture2D){0});   /* textura vazia e ignorada */
+        checar("CT-91", "A mesma imagem pedida duas vezes e uma textura so, e sai da memoria so quando o ultimo devolve",
+               mesma_textura && ainda_carregada && shared_texture_users(caminho) == 0);
+    }
 }
 
 static void testar_creditos(void)
@@ -367,18 +479,166 @@ static void testar_creditos(void)
            voltou_ao_menu && menu_aguarda && desconhecida_volta);
 }
 
-static void testar_iniciar(void)
+static void testar_sobrevivencia(void)
 {
-    titulo("Opcao INICIAR (CT-30)");
-    etapa("[3/7] escolhendo INICIAR");
+    titulo("Modo SOBREVIVENCIA pela escolha do modo e do save (CT-77 e CT-78)");
+    etapa("[2/7] INICIAR, modo Sobrevivencia, save: o modo abre, a partida roda sozinha e o jogador volta ao menu");
+
+    /* Sem som: o teste nao deve tocar nada no alto-falante de quem o roda. */
+    sv_audio_disable(true);
 
     navegar_menu_ate(INICIAR);
     confirm_menu_option();
+    handle_state_machine();                                   /* escolha do modo */
+    mode_select_choose(SAVE_MODE_SURVIVAL);
+    handle_state_machine();                                   /* escolha do save */
+    save_select_choose_existing("Fluxo");
+    handle_state_machine();                                   /* tela de carregamento */
+    esperar_tela(SURVIVAL_SCREEN, 20.0);
+    rodar_por(0.5);
 
-    /* Um quadro basta: a maquina de estados processa a escolha. */
+    checar("CT-77", "Escolher o modo e o save carrega o Sobrevivencia, que aguarda a escolha do jogador",
+           current_game_state_variables.current_screen == SURVIVAL_SCREEN && screen == SCREEN_HUB && !leave_to_menu);
+
+    /* JOGAR: a partida comeca e roda com a tela real, sem ninguem mexendo. */
+    start_run();
+    rodar_por(2.0);
+
+    bool partida_rodando = (current_game_state_variables.current_screen == SURVIVAL_SCREEN) &&
+                           (screen == SCREEN_RUN || screen == SCREEN_OVER) && sv_run.time > 1.0f && sv_run.enemy_count > 0;
+
+    /* ESC no inicio do modo devolve o jogador ao menu principal. */
+    screen = SCREEN_HUB;
+    leave_to_menu = true;
     handle_state_machine();
 
-    checar("CT-30", "Escolher INICIAR no menu comeca a partida",
+    checar("CT-78", "A partida roda com a tela real e sair do modo devolve o menu",
+           partida_rodando && current_game_state_variables.current_screen == MENU_SCREEN);
+
+    rodar_por(0.8);
+}
+
+static void testar_modo_e_saves(void)
+{
+    char caminho[512];
+    float anterior = 0.0f;
+    bool subiu_sempre = true;
+    bool viu_carregando = false;
+
+    titulo("Escolha do modo, dos saves e carregamento (CT-79 a CT-88)");
+
+    /* Sem som: o teste nao deve tocar nada no alto-falante de quem o roda. */
+    sv_audio_disable(true);
+    etapa("[2/7] INICIAR abre a escolha do modo; depois a escolha do save, com nome unico, apagar e carregamento");
+
+    navegar_menu_ate(INICIAR);
+    confirm_menu_option();
+    handle_state_machine();
+    rodar_por(0.4);
+    checar("CT-79", "INICIAR abre a escolha do modo, em vez de comecar a partida", current_game_state_variables.current_screen == MODE_SELECT_SCREEN);
+
+    mode_select_go_back();
+    handle_state_machine();
+    bool voltou_ao_menu = (current_game_state_variables.current_screen == MENU_SCREEN);
+    navegar_menu_ate(INICIAR);
+    confirm_menu_option();
+    handle_state_machine();
+    mode_select_choose(SAVE_MODE_NORMAL);
+    handle_state_machine();
+    rodar_por(0.4);
+    checar("CT-80", "VOLTAR leva ao menu, e escolher o modo normal abre a escolha do save", voltou_ao_menu && current_game_state_variables.current_screen == SAVE_SELECT_SCREEN);
+
+    checar("CT-81", "um save com nome que ja existe e recusado (sem diferenciar maiusculas)",
+           save_select_create_named("fluxo") == SAVE_NAME_EXISTS && save_select_create_named("") == SAVE_NAME_EMPTY && save_select_create_named("a/b") == SAVE_NAME_INVALID &&
+               current_game_state_variables.current_screen == SAVE_SELECT_SCREEN);
+
+    /* Um nome novo cria a pasta do save e abre o carregamento. */
+    checar("CT-82", "um nome novo cria o save na pasta do modo", save_select_create_named("Ana Teste") == SAVE_NAME_OK && DirectoryExists(RAIZ_DOS_SAVES_DE_TESTE "/normal/Ana Teste"));
+    handle_state_machine();
+    esperar_tela(PLAYING_SCREEN, 20.0);
+    checar("CT-83", "o save novo carrega e leva ao jogo", current_game_state_variables.current_screen == PLAYING_SCREEN && is_loading_finished());
+
+    /* O Sobrevivencia carrega em muitos pedacos: a porcentagem aparece subindo, sem nunca voltar, ate 100. */
+    unload_game_loop();
+    current_game_state_variables.current_screen = MENU_SCREEN;
+    initialize_menu_variables();
+    navegar_menu_ate(INICIAR);
+    confirm_menu_option();
+    handle_state_machine();
+    mode_select_choose(SAVE_MODE_SURVIVAL);
+    handle_state_machine();
+    save_select_create_named("Carga");
+    handle_state_machine();
+    {
+        int valores_diferentes = 0;
+
+        while (current_game_state_variables.current_screen == LOADING_SCREEN && !WindowShouldClose())
+        {
+            float percentual = loading_percent();
+
+            viu_carregando = true;
+            if (percentual + 0.001f < anterior) subiu_sempre = false;
+            if (percentual > anterior + 0.5f) valores_diferentes++;
+            anterior = percentual;
+            handle_state_machine();
+        }
+        checar("CT-88", "a tela de carregamento mostra a porcentagem subindo aos poucos e leva ao jogo",
+               viu_carregando && subiu_sempre && valores_diferentes >= 4 && current_game_state_variables.current_screen == SURVIVAL_SCREEN && is_loading_finished() && loading_percent() >= 100.0f);
+    }
+    unload_survival();
+    active_save_clear();
+    current_game_state_variables.current_screen = MENU_SCREEN;
+    initialize_menu_variables();
+    active_save_set(SAVE_MODE_NORMAL, "Ana Teste");
+
+    /* Cada save guarda o progresso dele, na pasta dele. */
+    current_game_state_variables.current_day = 5;
+    checar("CT-84", "o progresso vai para a pasta do save ativo e so volta quando o mesmo save e carregado",
+           save_active_campaign_progress() && active_save_path(caminho, sizeof(caminho)) && FileExists(caminho) && strstr(caminho, "normal/Ana Teste") != NULL);
+
+    unload_game_loop();
+    current_game_state_variables.current_day = 1;
+    current_game_state_variables.current_screen = start_active_save_now();
+    bool voltou_o_dia_5 = (current_game_state_variables.current_day == 5);
+    unload_game_loop();
+    active_save_set(SAVE_MODE_NORMAL, "Fluxo");
+    current_game_state_variables.current_screen = start_active_save_now();
+    bool outro_save_comeca_no_dia_1 = (current_game_state_variables.current_day == 1);
+    unload_game_loop();
+    checar("CT-85", "cada save e independente: o dia 5 volta no save dele, e outro save comeca no dia 1", voltou_o_dia_5 && outro_save_comeca_no_dia_1);
+
+    /* Apagar remove a pasta e libera o nome. */
+    active_save_clear();
+    current_game_state_variables.current_screen = MENU_SCREEN;
+    initialize_menu_variables();
+    initialize_save_select(SAVE_MODE_NORMAL);
+    checar("CT-86", "apagar o save remove a pasta dele e libera o nome para um save novo",
+           save_select_delete_named("Ana Teste") && !DirectoryExists(RAIZ_DOS_SAVES_DE_TESTE "/normal/Ana Teste") && !save_slot_exists(SAVE_MODE_NORMAL, "Ana Teste") && save_slot_exists(SAVE_MODE_NORMAL, "Fluxo"));
+
+    checar("CT-87", "os dois modos guardam os saves em pastas separadas",
+           DirectoryExists(RAIZ_DOS_SAVES_DE_TESTE "/normal/Fluxo") && DirectoryExists(RAIZ_DOS_SAVES_DE_TESTE "/sobrevivencia/Fluxo") && save_mode_folder(SAVE_MODE_NORMAL) != save_mode_folder(SAVE_MODE_SURVIVAL));
+
+    active_save_clear();
+    current_game_state_variables.current_screen = MENU_SCREEN;
+    initialize_menu_variables();
+    rodar_por(0.5);
+}
+
+static void testar_iniciar(void)
+{
+    titulo("Opcao INICIAR (CT-30)");
+    etapa("[3/7] INICIAR, modo normal, save: o jogo comeca");
+
+    navegar_menu_ate(INICIAR);
+    confirm_menu_option();
+    handle_state_machine();                                   /* escolha do modo */
+    mode_select_choose(SAVE_MODE_NORMAL);
+    handle_state_machine();                                   /* escolha do save */
+    save_select_choose_existing("Fluxo");
+    handle_state_machine();                                   /* tela de carregamento */
+    esperar_tela(PLAYING_SCREEN, 20.0);
+
+    checar("CT-30", "Escolher INICIAR, o modo e o save comeca a partida",
            current_game_state_variables.current_screen == PLAYING_SCREEN);
 }
 
@@ -723,15 +983,18 @@ static int conferir_layout_na_janela(int largura, int altura)
 
     int problemas = conferir_layout_do_quiz(win_w, font_size);
 
-    /* A colinha fica entre a borda do jogo, a janela da IARA e a barra de tarefas. */
+    /* A colinha fica entre a borda do jogo e a janela da IARA, colada na moldura de baixo do monitor. */
     float screen_x = (largura - screen_w) / 2.0f;
     float screen_y = (altura * MONITOR_TOP_RATIO) + (altura * MONITOR_BEZEL_RATIO);
     Rectangle barra = {screen_x, screen_y + screen_h - taskbar_h, screen_w, taskbar_h};
     Rectangle janela = {screen_x + (screen_w * DESKTOP_WINDOW_LEFT_RATIO), screen_y + (screen_h * DESKTOP_WINDOW_MARGIN_RATIO), win_w, janela_h};
-    Rectangle colinha = get_cheat_sheet_rect(janela, barra, screen_w, screen_h, (float)largura);
+    Rectangle moldura = {screen_x - (altura * MONITOR_BEZEL_RATIO), altura * MONITOR_TOP_RATIO, screen_w + (altura * MONITOR_BEZEL_RATIO * 2.0f),
+                         screen_h + (altura * MONITOR_BEZEL_RATIO) + (altura * MONITOR_CHIN_RATIO)};
+    Rectangle colinha = get_cheat_sheet_rect(janela, moldura, screen_w, screen_h, (float)largura);
     float fonte_da_colinha = get_cheat_sheet_font_size(colinha);
 
-    if (colinha.x < 0.0f || CheckCollisionRecs(colinha, janela) || CheckCollisionRecs(colinha, barra) || fonte_da_colinha < 12.0f)
+    if (colinha.x < 0.0f || CheckCollisionRecs(colinha, janela) || colinha.y + colinha.height > moldura.y + moldura.height ||
+        colinha.y + colinha.height <= barra.y || fonte_da_colinha < 12.0f)
     {
         printf("           janela %dx%d: colinha em %.0f,%.0f de %.0fx%.0f com fonte %.1f\n", largura, altura,
                colinha.x, colinha.y, colinha.width, colinha.height, fonte_da_colinha);
@@ -942,12 +1205,12 @@ static void testar_caminhos_do_dia(void)
     rodar_por(1.5);
     gravar_evidencia_do_quiz("docs/fds/testes/evidencias/colinha-no-monitor.png");
 
-    Rectangle colinha = get_cheat_sheet_rect(iara_window_rect, taskbar_rect, screen_rect.width, screen_rect.height, (float)GetScreenWidth());
+    Rectangle colinha = get_cheat_sheet_rect(iara_window_rect, monitor_rect, screen_rect.width, screen_rect.height, (float)GetScreenWidth());
 
-    checar("CT-54", "Colinha fica colada no canto inferior esquerdo do monitor, sem cobrir a janela da IARA",
+    checar("CT-54", "Colinha fica colada na moldura de baixo, no canto esquerdo do monitor, sem cobrir a janela da IARA",
            current_game_state_variables.has_cheat_sheet &&
-           colinha.x + colinha.width <= iara_window_rect.x && colinha.y + colinha.height <= taskbar_rect.y &&
-           colinha.y > screen_rect.y + (screen_rect.height / 2.0f));
+           colinha.x + colinha.width <= iara_window_rect.x && colinha.y + colinha.height <= monitor_rect.y + monitor_rect.height &&
+           colinha.y + colinha.height > taskbar_rect.y && colinha.y > screen_rect.y + (screen_rect.height / 2.0f));
 
     /* Enviar tudo sem conferir: o relatorio cobra, o jogador volta ao mapa e sai pela porta. */
     while (step_is_ticket(&dialog_sequence[current_step_index]))
@@ -1276,17 +1539,21 @@ static void testar_campanha(void)
            current_game_state_variables.found_mariana && current_game_state_variables.proof_succeeded &&
            current_game_state_variables.evidence_mask == (EVIDENCE_NO_RESIGNATION_LETTER | EVIDENCE_BADGE_AFTER_LEAVING | EVIDENCE_NO_HUMAN_ORDER));
 
-    /* Do final de volta ao menu; INICIAR comeca outra partida do Dia 1. */
+    /* Depois do final o jogo pergunta o que fazer; SAIR PARA O MENU volta ao menu e INICIAR comeca outra partida do Dia 1. */
     render_calendar_day_card_finished = true;
     handle_state_machine();
 
-    bool voltou_ao_menu = current_game_state_variables.current_screen == MENU_SCREEN;
+    bool abriu_a_escolha = current_screen == ENDING_CHOICE_SCREEN && current_game_state_variables.current_screen == PLAYING_SCREEN;
 
-    unload_menu();
-    current_game_state_variables.current_screen = handle_menu_action(INICIAR);
+    choose_ending_option(ENDING_CHOICE_MENU);
     handle_state_machine();
 
-    checar("CT-73", "Depois do final, o jogo volta ao menu e INICIAR recomeca do Dia 1 sem herdar nada",
+    bool voltou_ao_menu = abriu_a_escolha && current_game_state_variables.current_screen == MENU_SCREEN;
+
+    unload_menu();
+    iniciar_partida_nova();   /* o save tem a campanha terminada: carregar esse save recomeca do Dia 1 */
+
+    checar("CT-73", "Depois do final, SAIR PARA O MENU volta ao menu e INICIAR recomeca do Dia 1 sem herdar nada",
            voltou_ao_menu && current_game_state_variables.current_day == 1 &&
            current_game_state_variables.evidence_mask == 0 && !current_game_state_variables.found_mariana &&
            current_hidden_statistic.current_perception_points == HIDDEN_STATISTIC_START);
@@ -1294,24 +1561,413 @@ static void testar_campanha(void)
     /* Retomar um save: o jogo volta no dia em que parou, seja qual for o tipo dele (CA4). */
     unload_game_loop();
     start_game_day(5);
-    current_game_state_variables.current_screen = handle_menu_action(INICIAR);
+    current_game_state_variables.current_screen = retomar_partida_do_save();
     bool retomou_no_salto = current_screen == DAY_TRANSITION_SCREEN && current_game_state_variables.current_day == 5 &&
                             current_game_state_variables.day_type == JUMP_DAY;
 
     unload_game_loop();
     start_game_day(27);
-    current_game_state_variables.current_screen = handle_menu_action(INICIAR);
+    current_game_state_variables.current_screen = retomar_partida_do_save();
     bool retomou_no_dia = current_screen == SCREEN_NONE && current_game_state_variables.current_day == 27 && active_script->day == 27;
 
     /* Fechado no cartao de fim do dia: o dia ja estava encerrado, entao segue para o proximo. */
     unload_game_loop();
     start_game_day(12);
     current_game_state_variables.resolved_puzzles[12] = true;
-    current_game_state_variables.current_screen = handle_menu_action(INICIAR);
+    current_game_state_variables.current_screen = retomar_partida_do_save();
     bool seguiu_para_o_proximo = current_game_state_variables.current_day == 13 && current_screen == DAY_TRANSITION_SCREEN;
 
     checar("CT-75", "Save retoma no salto, no dia jogavel com o roteiro certo e depois de um dia ja encerrado",
            retomou_no_salto && retomou_no_dia && seguiu_para_o_proximo);
+
+    iniciar_partida_nova();
+}
+
+/* ------------------------------------------------------------------------ */
+/* US14: ignorar os NPCs nao bloqueia o progresso (CT-79, PI2-251)            */
+/* ------------------------------------------------------------------------ */
+
+/* Mesma lista de obstaculos que o jogo usa para andar: moveis e NPCs que barram a passagem. */
+static Rectangle obstaculos_com_npcs[OBSTACLE_COUNT + NPC_COUNT];
+static int total_obstaculos_com_npcs = 0;
+
+static void atualizar_obstaculos_com_npcs(void)
+{
+    update_obstacle_recs();
+    total_obstaculos_com_npcs = get_player_movement_obstacles(obstaculos_com_npcs);
+}
+
+/* Livre de moveis, de NPCs e dentro das paredes. */
+static bool posicao_livre_com_npcs(float px, float py)
+{
+    Rectangle hitbox = hitbox_em(px, py);
+
+    if (collides_with_any(hitbox, obstaculos_com_npcs, total_obstaculos_com_npcs)) return false;
+
+    return dentro_do_mapa(hitbox);
+}
+
+/* Na zona do objetivo e longe de todo NPC: ali o ESPACO vai para o objetivo, e nao para uma conversa. */
+static bool chegou_sem_npc_por_perto(float px, float py, Rectangle zona)
+{
+    Rectangle hitbox = hitbox_em(px, py);
+
+    return CheckCollisionRecs(hitbox, zona) && npc_get_nearby(hitbox, get_scale()) < 0;
+}
+
+/* Mesma busca de percurso_do_jogador.h, mas com os NPCs no caminho e o destino longe deles. */
+static bool calcular_caminho_desviando_dos_npcs(Rectangle zona, Vector2 origem, int *passos_do_caminho)
+{
+    float passo = DEFAULT_PLAYER_MOVEMENT_SPEED * get_scale();
+
+    const int di[4] = {1, -1, 0, 0};
+    const int dj[4] = {0, 0, 1, -1};
+
+    memset(veio_de, 0, sizeof(veio_de));
+    tamanho_caminho = 0;
+
+    int inicio = 0;
+    int fim = 0;
+
+    veio_de[GRADE_CENTRO][GRADE_CENTRO] = 5;
+    fila[fim++] = GRADE_CENTRO * GRADE + GRADE_CENTRO;
+
+    while (inicio < fim)
+    {
+        int atual = fila[inicio++];
+        int i = atual / GRADE;
+        int j = atual % GRADE;
+
+        if (chegou_sem_npc_por_perto(origem.x + (i - GRADE_CENTRO) * passo,
+                                     origem.y + (j - GRADE_CENTRO) * passo, zona))
+        {
+            while (veio_de[i][j] != 5)
+            {
+                caminho_i[tamanho_caminho] = i;
+                caminho_j[tamanho_caminho] = j;
+                tamanho_caminho++;
+
+                int de_onde = veio_de[i][j] - 1;
+                i -= di[de_onde];
+                j -= dj[de_onde];
+            }
+
+            caminho_i[tamanho_caminho] = GRADE_CENTRO;
+            caminho_j[tamanho_caminho] = GRADE_CENTRO;
+            tamanho_caminho++;
+
+            *passos_do_caminho = tamanho_caminho - 1;
+            return true;
+        }
+
+        for (int d = 0; d < 4; d++)
+        {
+            int ni = i + di[d];
+            int nj = j + dj[d];
+
+            if (ni < 0 || ni >= GRADE || nj < 0 || nj >= GRADE) continue;
+            if (veio_de[ni][nj] != 0) continue;
+
+            if (!posicao_livre_com_npcs(origem.x + (ni - GRADE_CENTRO) * passo,
+                                        origem.y + (nj - GRADE_CENTRO) * passo)) continue;
+
+            veio_de[ni][nj] = (unsigned char)(d + 1);
+            fila[fim++] = ni * GRADE + nj;
+        }
+    }
+
+    return false;
+}
+
+/* Um quadro de andar como o handle_player_input(), com os NPCs como obstaculo, e sem
+ * nunca apertar ESPACO: handle_map_interactables() roda, mas nenhuma conversa abre. */
+static void andar_um_passo_ignorando_npcs(int dx, int dy, bool desenhar)
+{
+    float speed = DEFAULT_PLAYER_MOVEMENT_SPEED * get_scale();
+
+    if (dx != 0 && dy != 0) speed *= 0.7071f;
+
+    if      (dx == 0 && dy < 0)  current_direction = NORTH;
+    else if (dx == 0 && dy > 0)  current_direction = SOUTH;
+    else if (dx < 0  && dy == 0) current_direction = WEST;
+    else                         current_direction = EAST;
+
+    current_estagiario_texture_direction = estagiario_texture[current_direction];
+    walk_time += 1.0f / 60.0f;
+
+    update_collision_rec();
+    current_estagiario_position.x = move_axis(current_estagiario_position.x, dx * speed,
+                                              estagiario_collision_rec, true,
+                                              obstaculos_com_npcs, total_obstaculos_com_npcs);
+    update_collision_rec();
+    current_estagiario_position.y = move_axis(current_estagiario_position.y, dy * speed,
+                                              estagiario_collision_rec, false,
+                                              obstaculos_com_npcs, total_obstaculos_com_npcs);
+    update_collision_rec();
+    handle_map_collisions();
+    handle_map_interactables();
+
+    if (!desenhar) return;
+
+    /* Mesmo desenho do jogo: escritorio, NPCs e jogador na ordem certa. */
+    BeginDrawing();
+    ClearBackground(BG_COLOR);
+    render_office_with_glass();
+    render_control_tips();
+    render_day_counter();
+    render_interact_arrow(get_next_objective_rectangle());
+    EndDrawing();
+}
+
+/* Evidencia da US14: o mesmo quadro de gravar_evidencia_do_jogo(), mas com os NPCs no escritorio. */
+static void gravar_evidencia_com_npcs(const char *arquivo)
+{
+    RenderTexture2D alvo = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
+
+    BeginTextureMode(alvo);
+    ClearBackground(BG_COLOR);
+
+    render_office_scene();
+    render_control_tips();
+    render_day_counter();
+    render_interact_arrow(get_next_objective_rectangle());
+
+    EndTextureMode();
+
+    Image imagem = LoadImageFromTexture(alvo.texture);
+    ImageFlipVertical(&imagem);
+    ExportImage(imagem, arquivo);
+
+    UnloadImage(imagem);
+    UnloadRenderTexture(alvo);
+}
+
+/* Leva a partida do save "Fluxo" ate a escolha que vem depois do cartao do final. */
+static void chegar_na_escolha_do_final(void)
+{
+    iniciar_partida_nova();
+    start_game_day(TOTAL_GAME_DAYS);
+    current_game_state_variables.resolved_puzzles[TOTAL_GAME_DAYS] = true;
+    current_game_state_variables.evidence_mask = EVIDENCE_NO_RESIGNATION_LETTER;
+    current_hidden_statistic.current_perception_points = HIDDEN_STATISTIC_START + 3;
+    show_ending();
+    render_calendar_day_card_finished = true;
+    handle_state_machine();
+}
+
+/* PI2-318: no fim da campanha e no fim de uma partida da Sobrevivencia, o jogador escolhe entre jogar de novo e sair. */
+static void testar_escolha_depois_do_final(void)
+{
+    titulo("Escolha no fim da partida (CT-106 e CT-107)");
+    etapa("depois do cartao do final, JOGAR NOVAMENTE recomeca do Dia 1 no mesmo save e SAIR pede confirmacao");
+
+    chegar_na_escolha_do_final();
+
+    bool abriu_a_escolha = current_screen == ENDING_CHOICE_SCREEN && ending_choice_selected == ENDING_CHOICE_PLAY_AGAIN &&
+                           !is_game_loop_finished();
+
+    /* Os primeiros quadros nao leem teclas: quem pulou o cartao com ESPACO nao escolhe sem querer. */
+    rodar_por(0.2);
+    bool esperou_antes_de_ler = current_screen == ENDING_CHOICE_SCREEN && !is_game_loop_finished();
+
+    /* SAIR PARA A AREA DE TRABALHO so abre a confirmacao: nada fecha sem o jogador confirmar. */
+    choose_ending_option(ENDING_CHOICE_QUIT);
+    bool sair_pede_confirmacao = confirm_is_open() && !is_game_loop_finished() && !is_game_loop_quit_requested();
+    confirm_close();
+
+    choose_ending_option(ENDING_CHOICE_PLAY_AGAIN);
+    handle_state_machine();
+    bool foi_para_o_carregamento = current_game_state_variables.current_screen == LOADING_SCREEN;
+    bool voltou_a_partida = esperar_tela(PLAYING_SCREEN, 20.0);
+    rodar_por(0.2);
+
+    checar("CT-106", "Depois do final, JOGAR NOVAMENTE recomeca do Dia 1 no mesmo save, sem herdar nada, e SAIR pede confirmacao",
+           abriu_a_escolha && esperou_antes_de_ler && sair_pede_confirmacao && foi_para_o_carregamento && voltou_a_partida &&
+           active_save_is_set() && strcmp(active_save_name(), "Fluxo") == 0 &&
+           current_game_state_variables.current_day == 1 && !current_game_state_variables.resolved_puzzles[TOTAL_GAME_DAYS] &&
+           current_game_state_variables.evidence_mask == 0 &&
+           current_hidden_statistic.current_perception_points == HIDDEN_STATISTIC_START);
+
+    etapa("no fim de uma partida da Sobrevivencia: MENU DA SOBREVIVENCIA e SAIR PARA O MENU");
+
+    unload_game_loop();
+    current_game_state_variables.current_screen = MENU_SCREEN;
+    initialize_menu_variables();
+    sv_audio_disable(true);
+    active_save_set(SAVE_MODE_SURVIVAL, "Fluxo");
+    current_game_state_variables.current_screen = begin_loading_active_save();
+    esperar_tela(SURVIVAL_SCREEN, 20.0);
+
+    /* Partidas marcadas como "com cheat": nao entram no ranking de verdade de quem roda os testes. */
+    start_run();
+    sv_run.cheated = true;
+    abandon_run();
+    bool tela_com_escolha = screen == SCREEN_OVER && over_selected == OVER_SURVIVAL_MENU;
+
+    choose_over_option(OVER_SURVIVAL_MENU);
+    bool voltou_ao_inicio_do_modo = screen == SCREEN_HUB && hub_selected == 0 && !leave_to_menu;
+
+    start_run();
+    sv_run.cheated = true;
+    abandon_run();
+    choose_over_option(OVER_MAIN_MENU);
+    handle_state_machine();
+    bool saiu_para_o_menu = current_game_state_variables.current_screen == MENU_SCREEN;
+
+    checar("CT-107", "No fim da partida da Sobrevivencia, MENU DA SOBREVIVENCIA volta ao inicio do modo, com JOGAR marcado, e SAIR PARA O MENU leva ao menu",
+           tela_com_escolha && voltou_ao_inicio_do_modo && saiu_para_o_menu);
+
+    rodar_por(0.5);
+}
+
+/* Percorre o caminho calculado. Devolve false se algum passo travar ou abrir conversa. */
+static bool percorrer_caminho_ignorando_npcs(Vector2 origem, bool desenhar, bool *abriu_conversa)
+{
+    for (int k = tamanho_caminho - 2; k >= 0 && !WindowShouldClose(); k--)
+    {
+        Vector2 atual = posicao_do_caminho(origem, k + 1);
+        Vector2 proxima = posicao_do_caminho(origem, k);
+
+        int dx = (proxima.x > atual.x) - (proxima.x < atual.x);
+        int dy = (proxima.y > atual.y) - (proxima.y < atual.y);
+
+        andar_um_passo_ignorando_npcs(dx, dy, desenhar);
+
+        if (active_npc_id >= 0) *abriu_conversa = true;
+
+        /* Um NPC no meio do caminho faria o jogador parar antes da proxima casa. */
+        if (fabsf(current_estagiario_position.x - proxima.x) > 0.5f ||
+            fabsf(current_estagiario_position.y - proxima.y) > 0.5f) return false;
+    }
+
+    walk_time = 0.0f;
+    return true;
+}
+
+/* Joga os 9 dias jogaveis sem nunca conversar com um NPC: so anda, usa o computador e sai pela porta. */
+static void testar_ignorar_npcs(void)
+{
+    titulo("US14: ignorar os NPCs nao bloqueia o progresso (CT-79)");
+    etapa("anda desviando dos NPCs, nunca aperta ESPACO perto deles e conclui cada dia");
+
+    double inicio = GetTime();
+    int dias_jogados = 0;
+    int dias_concluidos = 0;
+    int dia_com_falha = 0;
+    bool algum_npc_barra_o_caminho = false;
+    bool abriu_conversa = false;
+
+    iniciar_partida_nova();
+
+    while (current_screen != ENDING_CARD_SCREEN && GetTime() - inicio < 240.0 && !WindowShouldClose())
+    {
+        int dia = current_game_state_variables.current_day;
+
+        if (current_screen == DAY_TRANSITION_SCREEN)
+        {
+            if (current_game_state_variables.day_type == FLASH_DAY)
+            {
+                rodar_por(0.05);
+                advance_to_next_day();
+            }
+            else
+            {
+                while (current_game_state_variables.current_day == dia && !WindowShouldClose()) handle_state_machine();
+            }
+            continue;
+        }
+
+        if (current_screen == SCREEN_NONE) handle_state_machine();
+
+        /* Pula o cartao de chegada: o jogador esta na porta de entrada. */
+        current_screen = IN_GAME_SCREEN;
+        dias_jogados++;
+
+        bool desenhar = (dias_jogados == 1);
+        color_to_fade.a = 255; /* O escritorio ja apareceu por inteiro, como depois do fade do jogo. */
+        estagiario_computer_collision_rectangle = get_computer_collision_rectangle();
+        atualizar_obstaculos_com_npcs();
+
+        for (int npc = 0; npc < NPC_COUNT; npc++)
+        {
+            if (npc_blocks_player(npc)) algum_npc_barra_o_caminho = true;
+        }
+
+        /* 1. Da entrada ate o computador, sem conversar com ninguem. */
+        Vector2 entrada = current_estagiario_position;
+        int passos_ate_o_computador = 0;
+        bool chegou_ao_computador =
+            calcular_caminho_desviando_dos_npcs(estagiario_computer_collision_rectangle, entrada, &passos_ate_o_computador) &&
+            percorrer_caminho_ignorando_npcs(entrada, desenhar, &abriu_conversa);
+
+        handle_map_interactables();
+
+        /* Com nenhum NPC por perto, o ESPACO cai no ramo do computador de handle_map_interactables(). */
+        bool espaco_abre_o_computador = chegou_ao_computador && is_near_computer && nearby_npc_id < 0 &&
+                                        !is_hint_note_open() && !current_game_state_variables.is_resolved;
+
+        if (desenhar) gravar_evidencia_com_npcs("docs/fds/testes/evidencias/us14-computador-sem-npc.png");
+
+        if (!espaco_abre_o_computador)
+        {
+            if (dia_com_falha == 0) dia_com_falha = dia;
+            break;
+        }
+
+        enter_computer_screen = true;
+        rodar_ate_a_tela(COMPUTER_SCREEN, 5.0);
+        jogar_o_computador(0);
+        rodar_ate_a_tela(IN_GAME_SCREEN, 5.0);
+
+        /* 2. Do computador ate a porta, de novo sem conversar. */
+        atualizar_obstaculos_com_npcs();
+        Vector2 computador = current_estagiario_position;
+        int passos_ate_a_porta = 0;
+        bool chegou_a_porta =
+            calcular_caminho_desviando_dos_npcs(get_exit_zone(), computador, &passos_ate_a_porta) &&
+            percorrer_caminho_ignorando_npcs(computador, desenhar, &abriu_conversa);
+
+        handle_map_interactables();
+
+        bool espaco_abre_a_porta = chegou_a_porta && is_near_exit && nearby_npc_id < 0 && !is_near_hint;
+
+        if (desenhar)
+        {
+            etapa(TextFormat("      Dia %d: %d passos ate o computador e %d ate a porta, sem conversa",
+                             dia, passos_ate_o_computador, passos_ate_a_porta));
+            gravar_evidencia_com_npcs("docs/fds/testes/evidencias/us14-porta-sem-npc.png");
+        }
+
+        if (!espaco_abre_a_porta)
+        {
+            if (dia_com_falha == 0) dia_com_falha = dia;
+            break;
+        }
+
+        leave_office = true;
+        rodar_ate_a_tela(DAY_END_CARD_SCREEN, 5.0);
+        render_calendar_day_card_finished = true;
+        handle_state_machine();
+
+        /* O dia conta como concluido se foi salvo e o jogo seguiu: para o proximo dia ou, no ultimo, para o final. */
+        if (current_game_state_variables.resolved_puzzles[dia] &&
+            (current_game_state_variables.current_day > dia || current_screen == ENDING_CARD_SCREEN))
+        {
+            dias_concluidos++;
+        }
+        else if (dia_com_falha == 0)
+        {
+            dia_com_falha = dia;
+        }
+    }
+
+    if (dia_com_falha != 0) etapa(TextFormat("      travou no Dia %d", dia_com_falha));
+    etapa(TextFormat("      %d de 9 dias concluidos sem falar com nenhum NPC, em %.0fs",
+                     dias_concluidos, GetTime() - inicio));
+
+    checar("CT-79", "Sem falar com nenhum NPC, o jogador conclui os 9 dias jogaveis e chega ao final",
+           algum_npc_barra_o_caminho && !abriu_conversa && active_npc_id < 0 && dia_com_falha == 0 &&
+           dias_jogados == 9 && dias_concluidos == 9 && current_screen == ENDING_CARD_SCREEN);
 
     iniciar_partida_nova();
 }
@@ -1413,6 +2069,322 @@ static void testar_layout_do_quiz(void)
            problemas_nas_mesas == 0);
 }
 
+/* Textos do Sobrevivencia: nenhuma carta de escolha deixa texto sobre texto ou fora da carta,
+ * e o botao de velocidade nao toca no resto do HUD, em varios tamanhos de janela. */
+static int problemas_da_carta(const SvChoice *escolha)
+{
+    SvCardLayout layout;
+    char mudancas[SV_CHOICE_LINES][96];
+    int n = sv_choice_lines(escolha, mudancas);
+    int problemas = 0;
+
+    sv_levelup_layout(escolha, &layout);
+
+    if (layout.bottom > SV_CARD_H - SV_CARD_BOTTOM_MARGIN + 0.01f) problemas++;                       /* passa do fim da carta */
+    if (layout.desc_size < SV_CARD_DESC_MIN) problemas++;                                              /* descricao ilegivel */
+    if (layout.desc_lines > SV_CARD_MAX_DESC_LINES) problemas++;
+    if (sv_text_width(sv_choice_title(escolha), layout.title_size) > SV_CARD_W - 2.0f * SV_CARD_TEXT_MARGIN + 0.5f) problemas++;
+    if (layout.changes_y < SV_CARD_DESC_Y + layout.desc_lines * layout.desc_size * 1.15f) problemas++; /* mudancas por cima da descricao */
+
+    for (int k = 0; k < n; k++)
+    {
+        if (sv_text_width(mudancas[k], SV_CARD_CHANGE_MIN) > SV_CARD_W - 2.0f * SV_CARD_TEXT_MARGIN) problemas++;
+    }
+    return problemas;
+}
+
+static void testar_textos_do_sobrevivencia(void)
+{
+    int problemas = 0;
+    int cartas = 0;
+    int janelas[][2] = {{960, 540}, {1280, 720}, {1920, 1080}, {1024, 768}, {2560, 1080}};
+    int problemas_do_botao = 0;
+
+    titulo("Textos das cartas e do HUD do Sobrevivencia (UX-23 e UX-24)");
+    sv_audio_disable(true);
+    sv_game_start(11);
+
+    for (int w = 0; w < W_COUNT; w++)
+    {
+        SvChoice nova = {0, w};
+
+        problemas += problemas_da_carta(&nova);
+        cartas++;
+        for (int nivel = 1; nivel < 5; nivel++)
+        {
+            SvChoice evolui = {1, w};
+
+            sv_cheat_set_weapon(w, nivel);
+            problemas += problemas_da_carta(&evolui);
+            cartas++;
+        }
+        sv_cheat_set_weapon(w, 0);
+    }
+    for (int p = 0; p < P_COUNT; p++)
+    {
+        SvChoice novo = {2, p};
+
+        problemas += problemas_da_carta(&novo);
+        cartas++;
+        for (int nivel = 1; nivel < 5; nivel++)
+        {
+            SvChoice evolui = {3, p};
+
+            sv_cheat_set_passive(p, nivel);
+            problemas += problemas_da_carta(&evolui);
+            cartas++;
+        }
+        sv_cheat_set_passive(p, 0);
+    }
+    {
+        SvChoice marmita = {4, 0};
+        SvChoice banco = {5, 0};
+
+        problemas += problemas_da_carta(&marmita) + problemas_da_carta(&banco);
+        cartas += 2;
+    }
+
+    checar("UX-23", "O texto de todas as cartas de escolha (poderes e passivos, novos e em cada nivel) cabe na carta sem ficar por cima de outro", problemas == 0 && cartas > 80);
+
+    for (int i = 0; i < (int)(sizeof(janelas) / sizeof(janelas[0])); i++)
+    {
+        float ui;
+        Rectangle botao;
+        float largura_do_texto;
+
+        SetWindowSize(janelas[i][0], janelas[i][1]);
+        rodar_por(0.1);
+        ui = sv_ui();
+        botao = sv_speed_button_rect();
+        largura_do_texto = sv_text_width("TEMPO  x3  [TAB]", 24.0f * ui);
+
+        /* Dentro da tela */
+        if (botao.x < 0.0f || botao.y < 0.0f || botao.x + botao.width > (float)GetScreenWidth() || botao.y + botao.height > (float)GetScreenHeight()) problemas_do_botao++;
+        /* O texto cabe no botao */
+        if (largura_do_texto > botao.width - 2.0f * ui) problemas_do_botao++;
+        /* Abaixo do bloco do chefe (nome, barra e escudos terminam em 170) */
+        if (botao.y < 170.0f * ui) problemas_do_botao++;
+        /* Depois da fileira de poderes (ate 6 icones) */
+        if (botao.x < 18.0f * ui + 6.0f * (48.0f + 8.0f) * ui) problemas_do_botao++;
+        /* No canto de baixo, rente a borda */
+        if (botao.y + botao.height < (float)GetScreenHeight() - 40.0f * ui) problemas_do_botao++;
+    }
+    SetWindowSize(LARGURA_JANELA, ALTURA_JANELA);
+    rodar_por(0.1);
+
+    checar("UX-24", "O botao de velocidade fica no canto de baixo, com o texto dentro dele, sem tocar no bloco do chefe nem nos poderes, em 5 tamanhos de janela", problemas_do_botao == 0);
+}
+
+/* Modos da janela: ou tela cheia, ou janela (fixa ou maximizada). */
+static void testar_modos_de_janela(void)
+{
+    WindowMode inicial = get_windowed_mode();
+    bool inicial_cheia = is_fullscreen_enabled();
+    bool exclusivos = true;
+    bool f11_volta = true;
+    bool configuracoes_certas;
+    bool preferencias_voltam;
+    const char *arquivo = "iara_teste_janela.ini";
+
+    titulo("Modos da janela: fixa, maximizada e tela cheia (UX-25 e UX-26)");
+
+    set_window_mode(WINDOW_MODE_FIXED);
+    exclusivos = exclusivos && !is_fullscreen_enabled() && !is_window_maximized_enabled() && get_window_mode() == WINDOW_MODE_FIXED;
+
+    set_window_mode(WINDOW_MODE_MAXIMIZED);
+    exclusivos = exclusivos && !is_fullscreen_enabled() && is_window_maximized_enabled();
+
+    set_window_mode(WINDOW_MODE_FULLSCREEN);
+    exclusivos = exclusivos && is_fullscreen_enabled() && !is_window_maximized_enabled();
+
+    /* F11 sai da tela cheia para a janela que estava antes (a maximizada) e volta */
+    toggle_fullscreen();
+    f11_volta = f11_volta && !is_fullscreen_enabled() && is_window_maximized_enabled();
+    toggle_fullscreen();
+    f11_volta = f11_volta && is_fullscreen_enabled();
+
+    /* Escolher "Janela maximizada" nas configuracoes tira da tela cheia */
+    activate_settings_option(SETTINGS_MAXIMIZED);
+    configuracoes_certas = !is_fullscreen_enabled() && is_window_maximized_enabled();
+    activate_settings_option(SETTINGS_MAXIMIZED);
+    configuracoes_certas = configuracoes_certas && !is_window_maximized_enabled() && !is_fullscreen_enabled();
+    activate_settings_option(SETTINGS_FULLSCREEN);
+    configuracoes_certas = configuracoes_certas && is_fullscreen_enabled() && !is_window_maximized_enabled();
+
+    checar("UX-25", "A janela esta sempre em um so modo (fixa, maximizada ou tela cheia), e F11 e as configuracoes alternam sem deixar dois ligados",
+           exclusivos && f11_volta && configuracoes_certas);
+
+    /* As preferencias guardam a tela cheia e a janela a que ela volta */
+    set_window_mode(WINDOW_MODE_MAXIMIZED);
+    set_window_mode(WINDOW_MODE_FULLSCREEN);
+    save_preferences(arquivo);
+    set_window_mode(WINDOW_MODE_FIXED);
+    load_preferences(arquivo);
+    preferencias_voltam = is_fullscreen_enabled();
+    toggle_fullscreen();
+    preferencias_voltam = preferencias_voltam && is_window_maximized_enabled();
+    remove(arquivo);
+
+    checar("UX-26", "O iara.ini guarda a tela cheia e a janela maximizada, e carregar o arquivo reproduz os dois", preferencias_voltam);
+
+    /* Devolve a janela como estava para os casos seguintes */
+    set_window_mode(inicial);
+    if (inicial_cheia) set_window_mode(WINDOW_MODE_FULLSCREEN);
+    SetWindowSize(LARGURA_JANELA, ALTURA_JANELA);
+    rodar_por(0.1);
+}
+
+/* Ajustes pedidos depois do teste com jogadores: fala digitada, porta, lugares dos colegas e aviso da dica. */
+/* Confere as cinco opcoes de CONFIGURACOES de uma vez. */
+static bool configuracoes_iguais(bool contraste, bool tela_cheia, float brilho, float musica, float efeitos)
+{
+    return is_high_contrast_enabled() == contraste && is_fullscreen_enabled() == tela_cheia &&
+           fabsf(get_game_brightness() - brilho) < 0.001f &&
+           fabsf(audio_get_music_volume() - musica) < 0.001f &&
+           fabsf(audio_get_effects_volume() - efeitos) < 0.001f;
+}
+
+/* O que o jogador escolhe em CONFIGURACOES vale a sessao inteira (US20, PI2-281):
+ * nenhuma tela do caminho volta as opcoes para o padrao. */
+static void testar_configuracoes_na_sessao(void)
+{
+    titulo("Configuracoes valem a sessao inteira (CT-80)");
+
+    bool contraste_inicial = is_high_contrast_enabled();
+    bool tela_cheia_inicial = is_fullscreen_enabled();
+    float brilho_inicial = get_game_brightness();
+    float musica_inicial = audio_get_music_volume();
+    float efeitos_inicial = audio_get_effects_volume();
+
+    /* Todas as opcoes mudam, para nenhuma passar por ja estar no padrao. */
+    bool contraste = !contraste_inicial;
+    bool tela_cheia = !tela_cheia_inicial;
+    float brilho = 0.8f;
+    float musica = 0.3f;
+    float efeitos = 0.6f;
+
+    current_game_state_variables.current_screen = handle_menu_action(CONFIGURACOES);
+    rodar_por(0.2);
+
+    activate_settings_option(SETTINGS_CONTRAST);
+    activate_settings_option(SETTINGS_FULLSCREEN);
+    set_game_brightness(brilho);
+    audio_set_music_volume(musica);
+    audio_set_effects_volume(efeitos);
+    rodar_por(0.3);
+
+    bool nas_configuracoes = configuracoes_iguais(contraste, tela_cheia, brilho, musica, efeitos);
+
+    /* VOLTAR AO MENU, pelo mesmo caminho da maquina de estados. Sem gravar o iara.ini:
+     * o teste nao pode mexer nas preferencias de quem o executa. */
+    unload_settings_screen();
+    initialize_menu_variables();
+    current_game_state_variables.current_screen = MENU_SCREEN;
+    rodar_por(0.3);
+
+    bool no_menu = configuracoes_iguais(contraste, tela_cheia, brilho, musica, efeitos);
+
+    iniciar_partida_nova();
+    rodar_por(0.5);
+
+    bool no_cartao_do_dia = configuracoes_iguais(contraste, tela_cheia, brilho, musica, efeitos);
+
+    current_screen = IN_GAME_SCREEN;
+    rodar_por(0.3);
+
+    bool no_escritorio = configuracoes_iguais(contraste, tela_cheia, brilho, musica, efeitos);
+
+    enter_computer_screen = true;
+    rodar_ate_a_tela(COMPUTER_SCREEN, 5.0);
+    rodar_por(0.3);
+
+    bool no_computador = current_screen == COMPUTER_SCREEN && configuracoes_iguais(contraste, tela_cheia, brilho, musica, efeitos);
+
+    leave_computer();
+    rodar_ate_a_tela(IN_GAME_SCREEN, 5.0);
+
+    /* Reabrir CONFIGURACOES mostra o que foi escolhido, e nao o padrao. */
+    current_game_state_variables.current_screen = handle_menu_action(CONFIGURACOES);
+    rodar_por(0.2);
+
+    bool ao_reabrir = configuracoes_iguais(contraste, tela_cheia, brilho, musica, efeitos);
+
+    checar("CT-80", "Configuracoes escolhidas seguem valendo no menu, no cartao do dia, no escritorio, no computador e ao reabrir",
+           nas_configuracoes && no_menu && no_cartao_do_dia && no_escritorio && no_computador && ao_reabrir);
+
+    /* Devolve tudo como estava, para os casos seguintes */
+    if (is_high_contrast_enabled() != contraste_inicial) activate_settings_option(SETTINGS_CONTRAST);
+    if (is_fullscreen_enabled() != tela_cheia_inicial) activate_settings_option(SETTINGS_FULLSCREEN);
+    set_game_brightness(brilho_inicial);
+    audio_set_music_volume(musica_inicial);
+    audio_set_effects_volume(efeitos_inicial);
+
+    unload_settings_screen();
+    initialize_menu_variables();
+    current_game_state_variables.current_screen = MENU_SCREEN;
+    rodar_por(0.2);
+}
+
+static void testar_ajustes_do_modo_historia(void)
+{
+    titulo("Ajustes do modo historia (UX-18 a UX-22)");
+
+    checar("UX-18", "A fala digitada conta letras e nao bytes, entao os acentos nao quebram no meio",
+           utf8_length("ação") == 4 && utf8_prefix_bytes("ação", 2) == 3 &&
+           utf8_prefix_bytes("ação", 99) == (int)strlen("ação") && utf8_length(NULL) == 0);
+
+    /* A zona de saida vai do comeco da porta ate a soleira: o jogador que chega por qualquer ponto da passagem encerra o dia. */
+    bool zona_cobre_a_passagem = EXIT_ZONE_REFERENCE.y <= glass_door_reference.y &&
+                                 EXIT_ZONE_REFERENCE.y + EXIT_ZONE_REFERENCE.height >= OFFICE_FRONT_BOUNDARY_Y - HITBOX_HEIGHT_AT_REFERENCE &&
+                                 EXIT_ZONE_REFERENCE.x <= glass_door_reference.x &&
+                                 EXIT_ZONE_REFERENCE.x + EXIT_ZONE_REFERENCE.width >= glass_door_reference.x + glass_door_reference.width;
+
+    checar("UX-19", "A zona de saida cobre toda a faixa da porta por onde o jogador consegue chegar", zona_cobre_a_passagem);
+
+    npc_arrange_for_day(1, get_scale(), get_map_center());
+    Vector2 dia_1[NPC_COUNT];
+    for (int npc = 0; npc < NPC_COUNT; npc++) dia_1[npc] = npc_get_position(npc);
+
+    npc_arrange_for_day(3, get_scale(), get_map_center());
+    bool todos_mudaram = true;
+    for (int npc = 0; npc < NPC_COUNT; npc++)
+    {
+        Vector2 hoje = npc_get_position(npc);
+        if (hoje.x == dia_1[npc].x && hoje.y == dia_1[npc].y) todos_mudaram = false;
+    }
+    npc_arrange_for_day(1, get_scale(), get_map_center());
+
+    checar("UX-20", "Cada colega aparece em outro lugar no dia jogavel seguinte", todos_mudaram);
+
+    for (int npc = 0; npc < NPC_COUNT; npc++) npc_greeted_today[npc] = true;
+    active_npc_id = NPC_VASCO;
+    npc_greeted_today[NPC_VASCO] = true;
+    open_playable_day();
+    bool todos_cumprimentam = active_npc_id == -1;
+    for (int npc = 0; npc < NPC_COUNT; npc++) todos_cumprimentam = todos_cumprimentam && !npc_greeted_today[npc];
+
+    checar("UX-21", "Num dia novo todos voltam a cumprimentar e a conversa em curso se encerra", todos_cumprimentam);
+
+    select_day_script(1);
+    current_step_index = FIRST_TICKET_STEP;
+    current_wrong_answers = 0;
+    ticket_time = 0.0f;
+    computer_set_hint_giver("JV");
+    bool calado_no_comeco = get_hint_notification() == NULL;
+    current_wrong_answers = 1;
+    const char *aviso = get_hint_notification();
+    bool avisa_ao_errar = aviso != NULL && strstr(aviso, "JV") != NULL;
+    current_wrong_answers = 0;
+    ticket_time = HINT_NOTICE_DELAY;
+    bool avisa_ao_demorar = get_hint_notification() != NULL;
+    computer_set_hint_giver(NULL);
+    bool sem_dono_sem_aviso = get_hint_notification() == NULL;
+    ticket_time = 0.0f;
+
+    checar("UX-22", "O aviso da dica aparece no computador so ao errar ou demorar, e so se alguem tem a dica do dia",
+           calado_no_comeco && avisa_ao_errar && avisa_ao_demorar && sem_dono_sem_aviso);
+}
+
 int main(void)
 {
     SetTraceLogLevel(LOG_WARNING);
@@ -1434,20 +2406,28 @@ int main(void)
     /* Mesma ordem de preparo da main.c. */
     initialize_fonts();
     initialize_menu_variables();
+    preparar_saves_de_teste();
 
     testar_estado_inicial();
     testar_abertura();
     testar_creditos();
+    testar_modo_e_saves();
+    testar_sobrevivencia();
     testar_iniciar();
     testar_cartao_do_dia();
     testar_caminhada();
     testar_computador();
     testar_quiz();
     testar_layout_do_quiz();
+    testar_textos_do_sobrevivencia();
+    testar_modos_de_janela();
     testar_fim_do_dia();
     testar_caminhos_do_dia();
     testar_saida_no_meio_do_dia();
     testar_campanha();
+    testar_escolha_depois_do_final();
+    testar_ignorar_npcs();
+    testar_ajustes_do_modo_historia();
 
     /* CONFIGURACOES abre a propria tela e VOLTAR devolve o jogador ao menu. */
     current_game_state_variables.current_screen = handle_menu_action(CONFIGURACOES);
@@ -1465,10 +2445,30 @@ int main(void)
 
     unload_settings_screen();
 
+    testar_configuracoes_na_sessao();
+
     /* SAIR nao fecha a janela na hora: a main.c ainda precisa salvar e descarregar tudo. */
     int tela_apos_sair = handle_menu_action(SAIR);
     checar("CT-36", "Escolher SAIR pede o fechamento e mantem a janela viva para o save",
            is_game_to_close && tela_apos_sair == NONE && IsWindowReady());
+    is_game_to_close = false;
+
+    /* Uma tecla so nunca fecha o jogo: no menu o ESC abre a pergunta, no escritorio abre a pausa. */
+    int tela_antes = current_game_state_variables.current_screen;
+    bool esc_nao_fecha_nenhuma = true;
+    int telas_protegidas[] = {PRE_MENU_SCREEN, MENU_SCREEN, PLAYING_SCREEN, CREDITS_SCREEN, SETTINGS_SCREEN, HELP_SCREEN};
+
+    for (int i = 0; i < (int)(sizeof(telas_protegidas) / sizeof(telas_protegidas[0])); i++)
+    {
+        current_game_state_variables.current_screen = telas_protegidas[i];
+        if (escape_closes_current_screen()) esc_nao_fecha_nenhuma = false;
+    }
+    current_game_state_variables.current_screen = tela_antes;
+    checar("UX-15", "ESC na abertura, no menu, no escritorio, nos creditos, nas configuracoes e na ajuda nao fecha o jogo", esc_nao_fecha_nenhuma);
+
+    /* A ajuda abre pelo menu e voltar leva ao menu. */
+    int tela_da_ajuda = handle_menu_action(AJUDA);
+    checar("UX-16", "Escolher AJUDA no menu abre a tela de ajuda", tela_da_ajuda == HELP_SCREEN);
 
     printf("\n------------------------------------------------------------------------\n");
     printf(" Bloco 3: %d de %d casos aprovados", casos_ok, total_casos);
@@ -1480,6 +2480,9 @@ int main(void)
     /* Encerrar com a partida recomecada libera tudo, e uma segunda chamada nao faz nada. */
     unload_game_loop();
     unload_game_loop();
+
+    limpar_saves_de_teste();
+    save_slots_set_root(NULL);
 
     unload_fonts();
     CloseWindow();
