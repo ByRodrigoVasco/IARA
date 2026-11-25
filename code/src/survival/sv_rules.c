@@ -94,7 +94,7 @@ static const SvCharacter characters[CH_COUNT] = {
     [CH_NICOLLAS] = {"Nicollas", "Nicollas", "Suporte técnico", "Plantão Estendido",
                      "Poderes recarregam 12% mais rápido e, a cada 20 inimigos derrotados, ela recupera 4 de vida. Vida máxima -10.",
                      "Sobreviva 6:30 em uma partida.",
-                     1, -10.0f, 0.0f, 1.0f, 0.88f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0, false, 0.0f, 4.0f, 20},
+                     9, -10.0f, 0.0f, 1.0f, 0.88f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0, false, 0.0f, 4.0f, 20},
     [CH_VASCO] = {"Vasco", "Vasco", "Líder de projeto", "Rede de Contatos",
                   "Alcance de coleta 80% maior e 15% a mais de XP. Se pegar o Colega de Plantão, ele vem com 1 colega a mais.",
                   "Elimine 3000 inimigos no total.",
