@@ -59,14 +59,14 @@ Um **roguelike** de 10 minutos, sozinho ou em dupla:
 
 <p align="center">
 
-![C](https://img.shields.io/badge/C-00599C?style=for-the-badge&logo=c&logoColor=white) ![raylib](https://img.shields.io/badge/raylib-000000?style=for-the-badge) ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white) ![Supabase](https://img.shields.io/badge/Supabase-1C1C1C?style=for-the-badge&logo=supabase&logoColor=3FCF8E) ![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white) ![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white) ![Figma](https://img.shields.io/badge/Figma-F24E1E?style=for-the-badge&logo=figma&logoColor=white) ![Jira](https://img.shields.io/badge/Jira-0052CC?style=for-the-badge&logo=jira&logoColor=white)
+![C](https://img.shields.io/badge/C-00599C?style=for-the-badge&logo=c&logoColor=white) ![raylib](https://img.shields.io/badge/raylib-000000?style=for-the-badge) ![Supabase](https://img.shields.io/badge/Supabase-1C1C1C?style=for-the-badge&logo=supabase&logoColor=3FCF8E) ![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white) ![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white) ![Figma](https://img.shields.io/badge/Figma-F24E1E?style=for-the-badge&logo=figma&logoColor=white) ![Jira](https://img.shields.io/badge/Jira-0052CC?style=for-the-badge&logo=jira&logoColor=white)
 
 </p>
 
 | Tecnologia | Para que é usada |
 |---|---|
 | **C** e **raylib** | O jogo: loop, telas, desenho 2D, áudio e saves. A versão para terminal é C puro |
-| **Python** e **PowerShell** | Ferramentas de arte, testes e geração do executável |
+| **PowerShell** | Testes e geração do executável |
 | **Supabase** | Banco de dados dos saves e rankings compartilhados |
 | **Vercel** | Hospedagem do ranking ao vivo e do manual do jogo |
 | **GitHub**, **Jira** e **Figma** | Versionamento, gestão das sprints e protótipos |
