@@ -240,68 +240,15 @@ Nos dois modos há ajuste de volume e brilho, alto contraste, tela cheia, pausa,
 
 ## Squad
 
-<table>
-<tr>
-<td align="center" width="25%">
-<img src="docs/assets/team/anderson-santos.png" alt="Foto de Anderson Santos" height="150"><br>
-<img src="docs/assets/sprites/anderson-santos.png" alt="Personagem de Anderson Santos" width="80"><br>
-<b>Anderson Santos</b><br>
-<sub>Lógica matemática</sub><br>
-<a href="https://github.com/acampospsantos">GitHub</a> · <a href="https://www.linkedin.com/in/andersoncampospsantos">LinkedIn</a><br>
-<sub>acps@cesar.school</sub>
-</td>
-<td align="center" width="25%">
-<img src="docs/assets/team/joao-vitor-medeiros.png" alt="Foto de João Vitor Medeiros" height="150"><br>
-<img src="docs/assets/sprites/joao-vitor-medeiros.png" alt="Personagem de João Vitor Medeiros" width="80"><br>
-<b>João Vitor Medeiros</b><br>
-<sub>Desenvolvimento do motor em C</sub><br>
-<a href="https://github.com/JvMedeiros7">GitHub</a> · <a href="https://www.linkedin.com/in/jvmedeiros7/">LinkedIn</a><br>
-<sub>jvm7@cesar.school</sub>
-</td>
-<td align="center" width="25%">
-<img src="docs/assets/team/julio-cesar-lins.png" alt="Foto de Julio Cesar Lins" height="150"><br>
-<img src="docs/assets/sprites/julio-cesar-lins.png" alt="Personagem de Julio Cesar Lins" width="80"><br>
-<b>Julio Cesar Lins</b><br>
-<sub>Desenvolvimento do motor em C</sub><br>
-<a href="https://github.com/Lins-ju">GitHub</a> · <a href="https://www.linkedin.com/in/j%C3%BAlio-lins-123905182/">LinkedIn</a><br>
-<sub>jcsl@cesar.school</sub>
-</td>
-<td align="center" width="25%">
-<img src="docs/assets/team/laura-brayner.png" alt="Foto de Laura Brayner" height="150"><br>
-<img src="docs/assets/sprites/laura-brayner.png" alt="Personagem de Laura Brayner" width="80"><br>
-<b>Laura Brayner</b><br>
-<sub>Design e integração</sub><br>
-<a href="https://github.com/laurabrayner">GitHub</a> · <a href="https://www.linkedin.com/in/laurabrayner">LinkedIn</a><br>
-<sub>lcbc@cesar.school</sub>
-</td>
-</tr>
-<tr>
-<td align="center" width="25%">
-<img src="docs/assets/team/luan-arruda.png" alt="Foto de Luan Arruda" height="150"><br>
-<img src="docs/assets/sprites/luan-arruda.png" alt="Personagem de Luan Arruda" width="80"><br>
-<b>Luan Arruda</b><br>
-<sub>Design e integração</sub><br>
-<a href="https://github.com/luan-arruda">GitHub</a> · <a href="https://www.linkedin.com/in/luan-arruda-548a9534b">LinkedIn</a><br>
-<sub>las9@cesar.school</sub>
-</td>
-<td align="center" width="25%">
-<img src="docs/assets/team/nicolas-mauricio.png" alt="Foto de Nicolas Mauricio" height="150"><br>
-<img src="docs/assets/sprites/nicolas-mauricio.png" alt="Personagem de Nicolas Mauricio" width="80"><br>
-<b>Nicolas Mauricio</b><br>
-<sub>Gestão ágil</sub><br>
-<a href="https://github.com/nicollasfr">GitHub</a> · <a href="https://www.linkedin.com/in/nicollasmfranca/">LinkedIn</a><br>
-<sub>nmcf@cesar.school</sub>
-</td>
-<td align="center" width="25%">
-<img src="docs/assets/team/rodrigo-vasco.png" alt="Foto de Rodrigo Vasco" height="150"><br>
-<img src="docs/assets/sprites/rodrigo-vasco.png" alt="Personagem de Rodrigo Vasco" width="80"><br>
-<b>Rodrigo Vasco</b><br>
-<sub>Engenharia de software</sub><br>
-<a href="https://github.com/ByRodrigoVasco">GitHub</a> · <a href="https://www.linkedin.com/in/rodrigo-vlm/">LinkedIn</a><br>
-<sub>rvlm@cesar.school</sub>
-</td>
-</tr>
-</table>
+| Foto | Personagem | Nome | Função | Contato |
+|:---:|:---:|---|---|---|
+| <img src="docs/assets/squad/anderson-santos.jpg" alt="Foto de Anderson Santos" width="90"> | <img src="docs/assets/sprites/anderson-santos.png" alt="Personagem de Anderson Santos" width="70"> | **Anderson Santos** | Lógica matemática | [GitHub](https://github.com/acampospsantos) · [LinkedIn](https://www.linkedin.com/in/andersoncampospsantos)<br>acps@cesar.school |
+| <img src="docs/assets/squad/joao-vitor-medeiros.jpg" alt="Foto de João Vitor Medeiros" width="90"> | <img src="docs/assets/sprites/joao-vitor-medeiros.png" alt="Personagem de João Vitor Medeiros" width="70"> | **João Vitor Medeiros** | Desenvolvimento do motor em C | [GitHub](https://github.com/JvMedeiros7) · [LinkedIn](https://www.linkedin.com/in/jvmedeiros7/)<br>jvm7@cesar.school |
+| <img src="docs/assets/squad/julio-cesar-lins.jpg" alt="Foto de Julio Cesar Lins" width="90"> | <img src="docs/assets/sprites/julio-cesar-lins.png" alt="Personagem de Julio Cesar Lins" width="70"> | **Julio Cesar Lins** | Desenvolvimento do motor em C | [GitHub](https://github.com/Lins-ju) · [LinkedIn](https://www.linkedin.com/in/j%C3%BAlio-lins-123905182/)<br>jcsl@cesar.school |
+| <img src="docs/assets/squad/laura-brayner.jpg" alt="Foto de Laura Brayner" width="90"> | <img src="docs/assets/sprites/laura-brayner.png" alt="Personagem de Laura Brayner" width="70"> | **Laura Brayner** | Design e integração | [GitHub](https://github.com/laurabrayner) · [LinkedIn](https://www.linkedin.com/in/laurabrayner)<br>lcbc@cesar.school |
+| <img src="docs/assets/squad/luan-arruda.jpg" alt="Foto de Luan Arruda" width="90"> | <img src="docs/assets/sprites/luan-arruda.png" alt="Personagem de Luan Arruda" width="70"> | **Luan Arruda** | Design e integração | [GitHub](https://github.com/luan-arruda) · [LinkedIn](https://www.linkedin.com/in/luan-arruda-548a9534b)<br>las9@cesar.school |
+| <img src="docs/assets/squad/nicolas-mauricio.jpg" alt="Foto de Nicolas Mauricio" width="90"> | <img src="docs/assets/sprites/nicolas-mauricio.png" alt="Personagem de Nicolas Mauricio" width="70"> | **Nicolas Mauricio** | Gestão ágil | [GitHub](https://github.com/nicollasfr) · [LinkedIn](https://www.linkedin.com/in/nicollasmfranca/)<br>nmcf@cesar.school |
+| <img src="docs/assets/squad/rodrigo-vasco.jpg" alt="Foto de Rodrigo Vasco" width="90"> | <img src="docs/assets/sprites/rodrigo-vasco.png" alt="Personagem de Rodrigo Vasco" width="70"> | **Rodrigo Vasco** | Engenharia de software | [GitHub](https://github.com/ByRodrigoVasco) · [LinkedIn](https://www.linkedin.com/in/rodrigo-vlm/)<br>rvlm@cesar.school |
 
 ## Créditos e menções honrosas
 
