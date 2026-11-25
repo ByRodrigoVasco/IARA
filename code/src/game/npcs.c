@@ -413,6 +413,7 @@ bool initialize_npcs(float scale, Vector2 map_center)
 
                 state->pose_textures[direction] = LoadTexture(path);
                 if (state->pose_textures[direction].id == 0) all_frames_loaded = false;
+                else set_character_filter(&state->pose_textures[direction]);
             }
             continue;
         }
