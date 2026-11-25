@@ -17,6 +17,7 @@
 #include "macros.h"
 #include "loading.h"
 #include "save_slots.h"
+#include "cloud_sync.h"
 #include "confirm_dialog.h"
 #include "help.h"
 #include "notice.h"
@@ -83,6 +84,14 @@ static bool hub_help_open = false;   // A ajuda está aberta por cima do início
 static void warn_if_save_failed(void)
 {
     if (!sv_meta_last_save_ok()) notice_show("Não consegui salvar o progresso do Sobrevivência. Confira se há espaço livre no disco e se a pasta de saves permite gravar arquivos.", NOTICE_ERROR);
+}
+
+// Grava o progresso no disco e manda para a nuvem
+static void save_meta(void)
+{
+    sv_meta_save(sv_meta_path());
+    warn_if_save_failed();
+    if (sv_meta_last_save_ok()) cloud_sync_active_save();
 }
 
 static float job_read_save(void)
@@ -295,6 +304,7 @@ static const char *player_name(void)
 static void finish_run(void)
 {
     earned_coins = sv_game_finish();
+    if (!sv_run.cheated) cloud_sync_active_save();   // sv_game_finish gravou o progresso
     if (run_ranked || sv_run.cheated) return;   // Partida com cheat não entra no ranking
     run_ranked = true;
     last_rank_position = sv_ranking_add(player_name(), (int)sv_run.time, sv_run.kills, sv_run.player.level, sv_run.bosses_defeated, sv_run.player.character, sv_run.phase == SV_WON, &last_run_record);
@@ -330,7 +340,7 @@ static void revalidate_characters(void)
     if (changed)
     {
         char_cursor = sv_meta.character;
-        sv_meta_save(sv_meta_path()); warn_if_save_failed();
+        save_meta();
     }
 }
 
@@ -619,7 +629,7 @@ static void render_characters(void)
             if (saved_character() != char_cursor) load_chosen_player(char_cursor);
             if (char_editing == 1) sv_meta.character2 = char_cursor;
             else sv_meta.character = char_cursor;
-            sv_meta_save(sv_meta_path()); warn_if_save_failed();
+            save_meta();
             char_message = "Personagem escolhido.";
             sv_sfx(SND_confirma);
         }
@@ -732,7 +742,7 @@ static void render_shop(void)
         {
             shop_message = "Comprado.";
             sv_sfx(SND_compra);
-            sv_meta_save(sv_meta_path()); warn_if_save_failed();
+            save_meta();
         }
         else
         {
