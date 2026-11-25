@@ -43,6 +43,23 @@ A coluna de issue traz só o que foi confirmado no Jira; as demais ficam para a 
 | RNF05 | Save ausente ou corrompido | `core/save.c` | `test_save`, PKG-07 a PKG-09 | ✅ | |
 | RNF06 | Entrada inválida no puzzle | Quiz aceita só cliques nos botões | Inspeção | 🟡 | Sem teste específico; rever com puzzles de entrada livre |
 
+## Fora do escopo desta matriz: o Modo Sobrevivência
+
+O Modo Sobrevivência não aparece nas tabelas acima porque **não é requisito da seção 8.4 do GDD**:
+ele nasceu para o estande da Tech Night, com [página própria](../../tech-night/README.md). Ficava
+ausente da matriz sem explicação, o que dava a entender que não era testado. É testado, e por uma
+suíte só dele.
+
+| Item | Onde |
+|---|---|
+| Código | `code/src/survival/`, com o modo em dupla em `sv_duo.c`, o ranking em `sv_ranking.c` e a luz em `sv_light.c` |
+| Suíte própria | `code/tests/test_survival.c`, com os casos `SV-*` |
+| Textos e HUD | UX-23 a UX-26, no bloco 3 de sistema |
+| Fim de partida | CT-107, ainda a executar (PI2-318) |
+
+O resultado de cada execução fica no [relatório de testes](README.md). Se a equipe decidir trazer
+o modo para o escopo do GDD, ele passa a pedir linhas de RF e RNF aqui.
+
 ## Verificação regra × código
 
 O repositório ainda não tem as regras formalizadas por LMC. A verificação usa as regras escritas no GDD.
