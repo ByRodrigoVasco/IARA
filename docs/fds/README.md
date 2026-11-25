@@ -9,6 +9,9 @@ Entregas da disciplina que já estão versionadas neste repositório.
 | Protótipos lo-fi (Entrega 02) | [Protótipos lo-fi](prototipos-lofi/README.md), elaborados no [Figma](https://www.figma.com/design/DpnmgBif3vJcn336pefbpa/IARA---PROTOTIPO-FDS?node-id=0-1&t=vm69jod3fxAtJGjN-1) |
 | Screencast do protótipo de baixa fidelidade (Entrega 02), compartilhado com [IHC](../ihc/README.md) | [Vídeo no YouTube](https://youtu.be/qE2Gn79bmqw) |
 | Testes de sistema | [Relatório dos testes](testes/README.md), com os [bugs encontrados](testes/bugs.md) e o [roteiro do screencast](testes/roteiro-screencast.md) |
+| Rastreabilidade | [Matriz de rastreabilidade](testes/rastreabilidade.md) |
+| Teste em máquina limpa (US02) | [Roteiro](testes/maquina-limpa.md) |
+| Release | [Versões publicadas](https://github.com/ByRodrigoVasco/IARA/releases/latest) |
 | Processo e versionamento | [CONTRIBUTING.md](../../CONTRIBUTING.md): fluxo de branches (GitFlow), padrão de commits e Pull Requests |
 | Report da Sprint 01 (Entrega 03) | [Report da Sprint 01](sprint-01/README.md): histórias implementadas, versionamento, testes, programação em pares e evidências |
 | Report da Sprint 02 | [Report da Sprint 02](sprint-02/README.md): histórias da Week 13e14, testes de sistema, [screencast dos testes](sprint-02/screencast-testes.mp4), bug tracker, programação em pares e prints do board |
