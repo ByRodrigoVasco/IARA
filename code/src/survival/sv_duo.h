@@ -19,7 +19,8 @@
  *    por qualquer um sobe a barra dos dois, e cada um escolhe a sua carta (primeiro o 1, depois o 2).
  *  - Quem fica sem vida cai. O parceiro levanta quem caiu ficando parado ao lado por SV_DUO_REVIVE_TIME.
  *    A partida só acaba quando os dois caem.
- *  - Os dois ficam sempre na mesma tela: um não consegue se afastar demais do outro.
+ *  - Os dois ficam sempre na mesma tela: um não consegue se afastar demais do outro. Com um caído, a câmera
+ *    segue quem está de pé, como no solo, e uma seta na borda mostra onde ficou quem caiu.
  *  - Mais inimigos e chefes mais fortes, para a dupla não atravessar o jogo fácil demais.
  */
 
@@ -58,8 +59,11 @@ bool sv_duo_standing(int index);
 /** @brief Jogador de pé mais perto do ponto, ou -1 se os dois caíram. */
 int sv_duo_nearest(Vector2 pos);
 
-/** @brief Centro da dupla: o meio entre os dois. É para onde a câmera olha e em volta de onde os inimigos nascem. No solo, a posição do jogador. */
+/** @brief Centro da dupla: o meio entre os dois, ou quem está de pé quando o outro caiu. É para onde a câmera olha e em volta de onde os inimigos nascem. No solo, a posição do jogador. */
 Vector2 sv_duo_focus(void);
+
+/** @brief Dupla: de quem é a câmera. 0 ou 1 quando só esse jogador está de pé; -1 quando ela fica no meio dos dois (ou no solo). */
+int sv_duo_focus_player(void);
 
 /** @brief Levantar quem caiu e manter os dois perto um do outro. Chamado a cada quadro da partida. */
 void sv_duo_update(float dt);
