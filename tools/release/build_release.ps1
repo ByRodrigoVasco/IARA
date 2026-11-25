@@ -17,6 +17,9 @@
       3. Liga o raylib e o runtime do gcc de forma estatica, otimiza (-O2), tira os simbolos de
          depuracao (-s) e esconde a janela de console (-mwindows).
 
+    Com o tools/nuvem/nuvem.local (tools/nuvem/LEIA-ME.md), a URL e a chave publica do Supabase
+    entram no executavel, e os saves e rankings passam a ser compartilhados entre notebooks.
+
     Pre-requisitos: MSYS2 UCRT64 com gcc e raylib (o mesmo ambiente da tarefa "build raylib").
 #>
 
@@ -135,9 +138,36 @@ foreach ($pasta in @("code\src", "code\src\core", "code\src\screens", "code\src\
 }
 
 $janela = if ($Console) { @() } else { @("-mwindows") }
-$argumentos = @("-O2", "-s", "-DNDEBUG", "-DIARA_EMBED_ASSETS") + $fontes + $includes +
+
+# Nuvem (saves e rankings compartilhados): a URL e a chave vem do tools/nuvem/nuvem.local, que nao
+# vai para o git. Sem ele o executavel funciona so local. Os valores nunca sao escritos na tela.
+$nuvem = @()
+$arquivoNuvem = Join-Path $raiz "tools\nuvem\nuvem.local"
+if (Test-Path $arquivoNuvem) {
+    $config = @{}
+    foreach ($linha in Get-Content $arquivoNuvem) {
+        if ($linha -match '^\s*(NUVEM_URL|NUVEM_CHAVE)\s*=\s*(\S*)\s*$') { $config[$Matches[1]] = $Matches[2] }
+    }
+    if ($config["NUVEM_URL"] -notmatch '^https://[A-Za-z0-9.-]+/?$') {
+        throw "tools/nuvem/nuvem.local: NUVEM_URL ausente ou fora do formato https://<projeto>.supabase.co"
+    }
+    if ($config["NUVEM_CHAVE"] -notmatch '^[A-Za-z0-9._-]+$') {
+        throw "tools/nuvem/nuvem.local: NUVEM_CHAVE ausente ou com caracteres inesperados"
+    }
+    if ($config["NUVEM_CHAVE"] -like "sb_secret_*") {
+        throw "tools/nuvem/nuvem.local: use a chave publica (publishable), nunca a secreta"
+    }
+    # As aspas escapadas fazem o valor chegar ao gcc como texto de C
+    $nuvem = @("-DIARA_NUVEM_URL=\`"$($config["NUVEM_URL"])\`"", "-DIARA_NUVEM_CHAVE=\`"$($config["NUVEM_CHAVE"])\`"")
+    Write-Host "  nuvem ligada (tools/nuvem/nuvem.local)"
+}
+else {
+    Write-Host "  sem tools/nuvem/nuvem.local: o executavel funciona so local" -ForegroundColor Yellow
+}
+
+$argumentos = @("-O2", "-s", "-DNDEBUG", "-DIARA_EMBED_ASSETS") + $nuvem + $fontes + $includes +
     @("-I", (Join-Path $msys "include"), "-Wa,-I,$saida", "-o", $exe, "-static") + $janela +
-    @("-L", (Join-Path $msys "lib"), "-lraylib", "-lglfw3", "-lopengl32", "-lgdi32", "-lwinmm")
+    @("-L", (Join-Path $msys "lib"), "-lraylib", "-lglfw3", "-lopengl32", "-lgdi32", "-lwinmm", "-lwinhttp")
 
 & gcc @argumentos
 if ($LASTEXITCODE -ne 0) { throw "a compilacao falhou" }
