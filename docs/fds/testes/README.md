@@ -135,10 +135,10 @@ INICIAR, cartão do dia, caminhada pelo escritório, tutorial, os cinco chamados
 | CT-92 | A trilha tem uma mistura por momento: menu sozinho, escritório calmo ou tenso (a soma das duas faixas não muda com a tensão), faixa própria no quiz e trilha abafada no flash e no salto puro (US15, PI2-231 e PI2-259) | OK |
 | CT-93 | A troca de faixa é gradual nos dois sentidos, dura o tempo do fade (0,8 s) sem pulo nem passar do alvo, e o contexto da trilha é guardado (US15, PI2-260) | OK |
 | CT-94 | Passos tocam enquanto o jogador anda e param quando ele para (US16, PI2-262) | OK |
-| CT-95 | Sair pela porta de vidro toca o som de porta (US16, PI2-263) | FALHA ([BUG-39](bugs.md#bug-39)) |
+| CT-95 | Sair pela porta de vidro toca o som de porta (US16, PI2-263) | FALHA ([BUG-39](bugs.md#bug-39)); corrigido na `develop` em 24/11/2026 (merge `aeefb3d`), a reexecutar |
 | CT-96 | O ambiente do escritório toca sem parar, inclusive por baixo da tela do quiz (US16, PI2-264) | OK |
-| CT-97 | Interagir com o computador na tela do quiz toca o som de teclado (US16, PI2-264) | FALHA ([BUG-40](bugs.md#bug-40)) |
-| CT-98 | Quando um NPC começa a falar toca um som curto de fala (US16, PI2-265) | FALHA ([BUG-41](bugs.md#bug-41)) |
+| CT-97 | Interagir com o computador na tela do quiz toca o som de teclado (US16, PI2-264) | FALHA ([BUG-40](bugs.md#bug-40)); corrigido na `develop` em 24/11/2026 (merge `aeefb3d`), a reexecutar |
+| CT-98 | Quando um NPC começa a falar toca um som curto de fala (US16, PI2-265) | FALHA ([BUG-41](bugs.md#bug-41)); corrigido na `develop` em 24/11/2026 (merge `aeefb3d`), a reexecutar |
 | CT-99 | Os sprites dos 7 NPCs seguem a pasta e os nomes de `load_walk_frames` e carregam no jogo (US17, PI2-269) | OK |
 | CT-100 | Flash do dia, salto puro e os 4 finais têm arte própria (US17, PI2-267 e PI2-268) | FALHA ([BUG-42](bugs.md#bug-42)) |
 | CT-101 | Nenhuma estatística oculta aparece como número na tela do escritório (US10, PI2-236) | OK |

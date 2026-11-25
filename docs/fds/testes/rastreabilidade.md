@@ -34,7 +34,7 @@ A coluna de issue traz só o que foi confirmado no Jira; as demais ficam para a 
 | RNF01 | Portabilidade em Windows | `tools/pacote/empacotar.ps1` | PKG-01, PKG-02 | 🟡 | Máquina limpa |
 | RNF02 | Desempenho qualitativo | | | 🟡 | Avaliar na máquina do laboratório; não foi medido |
 | RNF03 | Persistência de save | `core/save.c` | `test_save` | ✅ | |
-| RNF04 | Executável autocontido | Zip com exe, DLLs e assets | PKG-01 | 🟡 | É uma pasta, não um arquivo único; confirmar se atende |
+| RNF04 | Executável autocontido | `tools/release/build_release.ps1`, `core/assets_fs.c`: um `iara.exe` só, com os assets embutidos e o raylib e o GLFW estáticos | PKG-01, PKG-12 | 🟡 | Rodar o `testar_pacote.ps1` e a máquina limpa |
 | RNF05 | Save ausente ou corrompido | `core/save.c` | `test_save`, PKG-07 a PKG-09 | ✅ | |
 | RNF06 | Entrada inválida no puzzle | Quiz aceita só cliques nos botões | Inspeção | 🟡 | Sem teste específico; rever com puzzles de entrada livre |
 

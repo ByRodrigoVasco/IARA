@@ -28,7 +28,11 @@ void ui_draw_backdrop(void)
     float height = (float)GetScreenHeight();
 
     ClearBackground(BG_COLOR);
+#if RAYLIB_VERSION_MAJOR >= 6
     DrawCircleGradient((Vector2){width * 0.5f, height * 0.5f}, width * 0.62f, (Color){36, 18, 40, 255}, BG_COLOR);
+#else
+    DrawCircleGradient((int)(width * 0.5f), (int)(height * 0.5f), width * 0.62f, (Color){36, 18, 40, 255}, BG_COLOR);
+#endif
 }
 
 void ui_draw_dim(void)

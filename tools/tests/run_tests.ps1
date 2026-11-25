@@ -79,17 +79,17 @@ $suite = @(
     @{
         Nome  = "test_collisions"
         Nota  = "Unidade: colisoes e movimento por eixo"
-        Fonte = @("code/tests/test_collisions.c", "code/src/game/collisions.c")
+        Fonte = @("code/tests/test_collisions.c", "code/src/core/assets_fs.c", "code/src/game/collisions.c")
     },
     @{
         Nome  = "test_characters"
         Nota  = "Unidade: frames do andar"
-        Fonte = @("code/tests/test_characters.c", "code/src/game/characters.c")
+        Fonte = @("code/tests/test_characters.c", "code/src/core/assets_fs.c", "code/src/game/characters.c")
     },
     @{
         Nome  = "test_npcs"
         Nota  = "Unidade: dialogos e dicas dos NPCs"
-        Fonte = @("code/tests/test_npcs.c", "code/src/game/npcs.c",
+        Fonte = @("code/tests/test_npcs.c", "code/src/core/assets_fs.c", "code/src/game/npcs.c",
                   "code/src/game/characters.c", "code/src/game/collisions.c",
                   "code/src/game/calendar.c", "code/src/ui/fonts.c")
     },
@@ -97,7 +97,7 @@ $suite = @(
         Nome  = "test_ux"
         Nota  = "Usabilidade: avisos, confirmacao, ajuda e pausa"
         Fonte = @(
-            "code/tests/test_ux.c",
+            "code/tests/test_ux.c", "code/src/core/assets_fs.c",
             "code/src/ui/notice.c", "code/src/ui/ui_widgets.c", "code/src/ui/confirm_dialog.c",
             "code/src/screens/help.c", "code/src/ui/pause_menu.c",
             "code/src/ui/fonts.c", "code/src/core/helper.c", "code/src/core/game_state.c",
@@ -107,23 +107,23 @@ $suite = @(
     @{
         Nome  = "test_symptoms"
         Nota  = "Unidade: limiares dos sintomas visuais (US10)"
-        Fonte = @("code/tests/test_symptoms.c", "code/src/game/symptoms.c", "code/src/core/game_state.c", "code/src/game/calendar.c")
+        Fonte = @("code/tests/test_symptoms.c", "code/src/core/assets_fs.c", "code/src/game/symptoms.c", "code/src/core/game_state.c", "code/src/game/calendar.c")
     },
     @{
         Nome  = "test_save"
         Nota  = "Unidade: save e carregamento da partida"
-        Fonte = @("code/tests/test_save.c", "code/src/core/save.c", "code/src/core/game_state.c", "code/src/game/calendar.c")
+        Fonte = @("code/tests/test_save.c", "code/src/core/assets_fs.c", "code/src/core/save.c", "code/src/core/game_state.c", "code/src/game/calendar.c")
     },
     @{
         Nome  = "test_save_slots"
         Nota  = "Unidade: saves em pastas, nomes unicos e apagar"
-        Fonte = @("code/tests/test_save_slots.c", "code/src/core/save_slots.c")
+        Fonte = @("code/tests/test_save_slots.c", "code/src/core/assets_fs.c", "code/src/core/save_slots.c")
     },
     @{
         Nome  = "test_hints"
         Nota  = "Unidade: dica no mural e pontuacao"
         Fonte = @(
-            "code/tests/test_hints.c", "code/src/game/hints.c", "code/src/game/collisions.c",
+            "code/tests/test_hints.c", "code/src/core/assets_fs.c", "code/src/game/hints.c", "code/src/game/collisions.c",
             "code/src/core/game_state.c", "code/src/core/helper.c", "code/src/ui/fonts.c", "code/src/game/calendar.c"
         )
     },
@@ -131,7 +131,7 @@ $suite = @(
         Nome  = "test_story"
         Nota  = "Cutscenes: variantes, retomada e failsafe"
         Fonte = @(
-            "code/tests/test_story.c",
+            "code/tests/test_story.c", "code/src/core/assets_fs.c",
             "code/src/game/collisions.c", "code/src/game/characters.c", "code/src/game/npcs.c",
             "code/src/ui/fonts.c", "code/src/ui/animations.c", "code/src/ui/button.c",
             "code/src/core/helper.c", "code/src/core/game_state.c",
@@ -146,7 +146,7 @@ $suite = @(
         Nome  = "test_sistema"
         Nota  = "Sistema bloco 1: partida, movimento e colisoes"
         Fonte = @(
-            "code/tests/test_sistema.c",
+            "code/tests/test_sistema.c", "code/src/core/assets_fs.c",
             "code/src/game/collisions.c", "code/src/game/characters.c", "code/src/game/npcs.c",
             "code/src/ui/fonts.c", "code/src/ui/animations.c", "code/src/ui/button.c",
             "code/src/core/helper.c", "code/src/core/game_state.c",
@@ -162,7 +162,7 @@ $suite = @(
         Nome  = "test_conteudo"
         Nota  = "Sistema bloco 2: quiz do computador e menu"
         Fonte = @(
-            "code/tests/test_conteudo.c",
+            "code/tests/test_conteudo.c", "code/src/core/assets_fs.c",
             "code/src/ui/fonts.c", "code/src/ui/animations.c", "code/src/ui/button.c",
             "code/src/core/helper.c", "code/src/core/game_state.c", "code/src/ui/accessibility.c",
             "code/src/screens/settings.c", "code/src/core/preferences.c", "code/src/ui/cheat_sheet.c", "code/src/ui/computer_art.c", "code/src/ui/logic_text.c", "code/src/game/logic.c", "code/src/game/calendar.c",
@@ -177,7 +177,7 @@ $suite = @(
         # inclui direto, para alcancar o estado interno de cada tela e conduzir
         # o jogo sem depender de teclado e mouse.
         Fonte = @(
-            "code/tests/test_fluxo.c",
+            "code/tests/test_fluxo.c", "code/src/core/assets_fs.c",
             "code/src/core/state_machine.c", "code/src/core/game_state.c", "code/src/core/save.c", "code/src/core/save_slots.c",
             "code/src/screens/mode_select.c", "code/src/screens/save_select.c", "code/src/screens/loading.c", "code/src/ui/screen_style.c",
             "code/src/core/helper.c", "code/src/screens/pre_menu.c",
@@ -199,7 +199,7 @@ $suite = @(
         # Inclui o test_fluxo.c e o audio.c direto, para trocar o teclado e registrar os
         # sons tocados; por isso o audio.c nao entra na lista.
         Fonte = @(
-            "code/tests/test_sprint03.c",
+            "code/tests/test_sprint03.c", "code/src/core/assets_fs.c",
             "code/src/core/state_machine.c", "code/src/core/game_state.c", "code/src/core/save.c", "code/src/core/save_slots.c",
             "code/src/screens/mode_select.c", "code/src/screens/save_select.c", "code/src/screens/loading.c", "code/src/ui/screen_style.c",
             "code/src/core/helper.c", "code/src/screens/pre_menu.c",
@@ -218,7 +218,7 @@ $suite = @(
         Nome  = "test_survival"
         Nota  = "Modo Sobrevivencia: regras, progresso e uma partida simulada"
         Fonte = @(
-            "code/tests/test_survival.c",
+            "code/tests/test_survival.c", "code/src/core/assets_fs.c",
             "code/src/survival/sv_rules.c", "code/src/survival/sv_meta.c", "code/src/survival/sv_game.c",
             "code/src/survival/sv_boss.c", "code/src/survival/sv_audio.c", "code/src/survival/sv_map.c", "code/src/survival/sv_ranking.c", "code/src/survival/sv_duo.c"
         )

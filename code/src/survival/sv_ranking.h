@@ -9,11 +9,23 @@
  * Pensado para eventos (como a Tech Night), em que várias pessoas jogam no mesmo computador:
  * o ranking é um arquivo só (iara.ranking, na pasta do jogo) e não depende de internet.
  *
- * Ordem: quem venceu (desligou a IARA) fica na frente; depois quem sobreviveu mais tempo;
- * no empate, quem derrotou mais inimigos; persistindo o empate, quem chegou primeiro.
+ * Ordem: pela PONTUAÇÃO da partida (sv_ranking_score), que junta abates, tempo, chefes e vitória.
+ * Os abates pesam mais que o tempo: quem só foge sem derrotar ninguém não passa na frente de quem
+ * sobreviveu um pouco menos mas lutou mais. No empate de pontos, quem derrotou mais inimigos;
+ * depois, quem sobreviveu mais tempo; persistindo o empate, quem chegou primeiro.
+ *
+ * A pontuação não é gravada no arquivo: é calculada a partir dos outros campos. Assim, mudar os
+ * pesos abaixo reordena um ranking antigo sozinho, sem precisar apagar o arquivo.
  *
  * Regras puras, sem Raylib, para os testes automáticos.
  */
+
+// Pesos da pontuação. Ritmo de referência: um jogador derruba de 2 a 5 inimigos por segundo,
+// então os abates valem cerca de 4 a 10 vezes mais que o tempo na conta final.
+#define SV_SCORE_PER_KILL 10        // Cada inimigo derrotado
+#define SV_SCORE_PER_SECOND 5       // Cada segundo sobrevivido
+#define SV_SCORE_PER_BOSS 500       // Cada chefe derrotado
+#define SV_SCORE_WIN_BONUS 2000     // Desligou a IARA (venceu a partida)
 
 #define SV_RANKING_PATH "iara.ranking"
 #define SV_RANKING_DUO_PATH "iara_duplas.ranking"   // Ranking da Sobrevivência em dupla: separado do solo
@@ -60,6 +72,12 @@ bool sv_ranking_remove(const char *name);
 
 int sv_ranking_count(void);
 const SvRankEntry *sv_ranking_get(int index);   // 0 = primeiro lugar
+
+/**
+ * @brief Pontos de uma partida: abates × SV_SCORE_PER_KILL + segundos × SV_SCORE_PER_SECOND
+ * + chefes × SV_SCORE_PER_BOSS + SV_SCORE_WIN_BONUS se venceu.
+ */
+int sv_ranking_score(const SvRankEntry *e);
 
 /** @brief true se a entrada a fica na frente da b. */
 bool sv_ranking_better(const SvRankEntry *a, const SvRankEntry *b);

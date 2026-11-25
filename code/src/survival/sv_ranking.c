@@ -25,11 +25,22 @@ const char *sv_ranking_path(void)
     return ranking_path;
 }
 
+int sv_ranking_score(const SvRankEntry *e)
+{
+    int kills = e->kills < 0 ? 0 : e->kills;
+    int seconds = e->seconds < 0 ? 0 : e->seconds;
+    int bosses = e->bosses < 0 ? 0 : e->bosses;
+
+    return kills * SV_SCORE_PER_KILL + seconds * SV_SCORE_PER_SECOND + bosses * SV_SCORE_PER_BOSS + (e->won ? SV_SCORE_WIN_BONUS : 0);
+}
+
 bool sv_ranking_better(const SvRankEntry *a, const SvRankEntry *b)
 {
-    if (a->won != b->won) return a->won;
-    if (a->seconds != b->seconds) return a->seconds > b->seconds;
+    int score_a = sv_ranking_score(a), score_b = sv_ranking_score(b);
+
+    if (score_a != score_b) return score_a > score_b;
     if (a->kills != b->kills) return a->kills > b->kills;
+    if (a->seconds != b->seconds) return a->seconds > b->seconds;
     return a->order < b->order;
 }
 

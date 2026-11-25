@@ -117,12 +117,12 @@ extern unsigned int middle_screen_y;
 #define QUIZ_MUSIC_PATH SOUNDS_PATH "SOM AMBIENTE SUSPENSE.mp3"   // Tela do computador (quiz)
 #define FLASH_STINGER_PATH SOUNDS_PATH "TRANSICAO 2.mp3"          // Entrada de um Flash do dia
 #define JUMP_STINGER_PATH SOUNDS_PATH "TRANSICAO 1.mp3"           // Entrada de um bloco de salto puro
-#define DOOR_SOUND_PATH SOUNDS_PATH "PORTA ABRINDO.mp3"
-#define KEYBOARD_SOUND_PATH SOUNDS_PATH "SOM DE TECLADO.wav"
 #define CAMPAIGN_ART_PATH "code/assets/background/campanha/"
 #define MOUSE_CLICK_SOUND_PATH SOUNDS_PATH "CLICK MOUSE.mp3"
 #define IARA_VOICE_SOUND_PATH SOUNDS_PATH "ARI VOICE BLIP.mp3"
 #define PLAYER_FOOTSTEPS_SOUND_PATH SOUNDS_PATH "SOM DE PASSOS.mp3"
+#define DOOR_SOUND_PATH SOUNDS_PATH "PORTA ABRINDO.mp3"             // Saída pela porta de vidro
+#define KEYBOARD_SOUND_PATH SOUNDS_PATH "SOM DE TECLADO.mp3"         // Respostas na tela do computador
 
 // PATHS PARA O COMPUTADOR
 #define COMPUTER_ASSETS_PATH           "code/assets/sprites/computer/"

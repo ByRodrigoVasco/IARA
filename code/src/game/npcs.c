@@ -6,6 +6,7 @@
 #include "raylib.h"
 #include "npcs.h"
 #include "game_state.h"
+#include "assets_fs.h"
 #include "characters.h"
 #include "calendar.h"
 #include "collisions.h"
@@ -616,7 +617,7 @@ bool initialize_npcs(float scale, Vector2 map_center)
                 const char *path = TextFormat("%s%s/walk/%s-0.png", PERSONAGENS_PATH,
                                               definition->sprite_folder, direction_names[direction]);
 
-                if (!FileExists(path))
+                if (!asset_exists(path))
                 {
                     TraceLog(LOG_ERROR, "Pose do NPC %s nao encontrada: %s", definition->name, path);
                     all_frames_loaded = false;

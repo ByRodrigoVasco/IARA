@@ -17,8 +17,9 @@
  *
  * Os dois modos têm saves separados, e cada modo pode ter vários. Dentro de um
  * modo, o nome de um save não pode se repetir (sem diferenciar maiúsculas de
- * minúsculas, porque o Windows não diferencia). A pasta "saves" fica ao lado do
- * executável, como o resto dos arquivos do jogo.
+ * minúsculas, porque o Windows não diferencia). A pasta "saves" fica na pasta de
+ * trabalho do jogo, como o resto dos dados do jogador: Documentos\IARA no executável de
+ * release (data_dir.c) e a pasta do repositório no build de desenvolvimento.
  *
  * Este módulo só cuida de pastas e nomes. O que vai dentro do arquivo de
  * progresso é com save.c (modo normal) e sv_meta.c (modo sobrevivência).

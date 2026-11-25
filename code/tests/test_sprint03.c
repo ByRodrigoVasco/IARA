@@ -561,11 +561,11 @@ static void ct97_teclado(void)
     bool som_de_teclado = tocou_desde(desde, "TECLADO");
 
     char obtido[512];
-    snprintf(obtido, sizeof(obtido), "%s; sons tocados no computador: %s; SOM DE TECLADO.wav carregado: %s",
+    snprintf(obtido, sizeof(obtido), "%s; sons tocados no computador: %s; SOM DE TECLADO.mp3 carregado: %s",
              abriu ? "chamados respondidos" : "o computador nao abriu",
              sons_tocados_desde(desde), algum_som_carregado_tem("TECLADO") ? "sim" : "nao");
     registrar("CT-97", "Interagir com o computador na tela do quiz toca o som de teclado (US16, PI2-264)",
-              "ao responder os chamados toca o som de teclado (arquivo SOM DE TECLADO.wav)",
+              "ao responder os chamados toca o som de teclado (arquivo SOM DE TECLADO.mp3)",
               obtido, abriu && som_de_teclado);
 }
 

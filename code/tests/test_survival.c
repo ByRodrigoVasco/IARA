@@ -489,7 +489,7 @@ static void test_characters(void)
                 if (!strcmp(ca->folder, cb->folder) || !strcmp(ca->name, cb->name) || ca->start_weapon == cb->start_weapon) distinct = false;
             }
         }
-        check("SV-41", "os 11 personagens têm pasta, nome e poder inicial próprios", CH_COUNT == 11 && distinct && weapons_ok);
+        check("SV-41", "os 12 personagens têm pasta, nome e poder inicial próprios", CH_COUNT == 12 && distinct && weapons_ok);
     }
 
     check("SV-42", "só o Estagiário vem liberado; os outros abrem com o progresso",
@@ -1001,18 +1001,35 @@ static void test_ranking(void)
 
     check("SV-100", "ranking vazio comeca sem ninguem", sv_ranking_count() == 0 && sv_ranking_get(0) == NULL);
 
-    sv_ranking_add("Ana", 300, 120, 10, 1, 0, false, NULL);
-    sv_ranking_add("Bruno", 420, 90, 12, 2, 1, false, NULL);
     {
-        int pos = sv_ranking_add("Caio", 300, 150, 9, 1, 2, false, NULL);
+        SvRankEntry e = {0};
 
-        check("SV-101", "mais tempo fica na frente; no empate de tempo, mais abates", pos == 2 && strcmp(sv_ranking_get(0)->name, "Bruno") == 0 && strcmp(sv_ranking_get(1)->name, "Caio") == 0 && strcmp(sv_ranking_get(2)->name, "Ana") == 0);
+        e.kills = 100;
+        e.seconds = 60;
+        e.bosses = 2;
+        e.won = true;
+        check("SV-143", "a pontuacao soma abates, tempo, chefes e o bonus de vitoria",
+              sv_ranking_score(&e) == 100 * SV_SCORE_PER_KILL + 60 * SV_SCORE_PER_SECOND + 2 * SV_SCORE_PER_BOSS + SV_SCORE_WIN_BONUS);
+        e.won = false;
+        check("SV-144", "sem vitoria nao tem o bonus", sv_ranking_score(&e) == 100 * SV_SCORE_PER_KILL + 60 * SV_SCORE_PER_SECOND + 2 * SV_SCORE_PER_BOSS);
     }
-    check("SV-102", "quem desligou a IARA fica na frente de qualquer derrota", sv_ranking_add("Duda", 600, 10, 20, 5, 3, true, NULL) == 1);
+
+    sv_ranking_add("Ana", 300, 120, 10, 1, 0, false, NULL);     // 3200 pontos
+    sv_ranking_add("Bruno", 420, 40, 12, 1, 1, false, NULL);    // 3000: sobreviveu mais, mas quase não lutou
+    {
+        int pos = sv_ranking_add("Caio", 280, 200, 9, 1, 2, false, NULL);   // 3900
+
+        check("SV-101", "quem derrotou mais inimigos passa na frente de quem so sobreviveu mais tempo",
+              pos == 1 && strcmp(sv_ranking_get(0)->name, "Caio") == 0 && strcmp(sv_ranking_get(1)->name, "Ana") == 0 && strcmp(sv_ranking_get(2)->name, "Bruno") == 0);
+    }
+    check("SV-102", "desligar a IARA da o bonus de vitoria e leva ao topo", sv_ranking_add("Duda", 600, 10, 20, 5, 3, true, NULL) == 1);
+    check("SV-145", "empate de pontos: quem derrotou mais inimigos fica na frente",
+          sv_ranking_add("Gabi", 200, 170, 8, 1, 0, false, NULL) == 3 && strcmp(sv_ranking_get(3)->name, "Ana") == 0);   // 3200, igual a Ana
     check("SV-103", "empate total: quem chegou primeiro fica na frente", sv_ranking_add("Eva", 300, 120, 10, 1, 0, false, NULL) == 5 && strcmp(sv_ranking_get(3)->name, "Ana") == 0);
+    sv_ranking_remove("Gabi");
 
     // Mesmo jogador: uma linha só, e só o recorde conta
-    check("SV-112", "partida pior do mesmo jogador nao muda o ranking", sv_ranking_add("Bruno", 100, 10, 3, 0, 1, false, &record) == 2 && !record && sv_ranking_count() == 5 && sv_ranking_get(1)->seconds == 420);
+    check("SV-112", "partida pior do mesmo jogador nao muda o ranking", sv_ranking_add("Bruno", 100, 10, 3, 0, 1, false, &record) == 5 && !record && sv_ranking_count() == 5 && sv_ranking_get(4)->seconds == 420);
     check("SV-113", "recorde novo substitui o antigo e sobe o jogador", sv_ranking_add("bruno", 700, 300, 25, 5, 1, true, &record) == 1 && record && sv_ranking_count() == 5 && sv_ranking_get(0)->seconds == 700);
     check("SV-114", "o nome e o mesmo sem diferenciar maiusculas", sv_ranking_find("BRUNO") == 0 && sv_ranking_find("ninguem") == -1);
 
@@ -1373,6 +1390,91 @@ static void test_duo(void)
     sv_ranking_clear();
 }
 
+// Correções do bug tracker da Sprint 03: BUG-33 (personagem do cheat) e BUG-37 (cheats na dupla)
+static void test_correcoes_do_bug_tracker(void)
+{
+    int locked = -1;
+
+    printf("\nCorrecoes do bug tracker (BUG-33 e BUG-37)\n");
+
+    // BUG-33: um valor só decide o personagem da partida
+    sv_meta_reset();
+    sv_debug_mode = false;
+    for (int c = 0; c < CH_COUNT && locked < 0; c++)
+    {
+        if (!sv_character_unlocked(c, sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills)) locked = c;
+    }
+    check("SV-137", "sem o debug, um personagem bloqueado (ou inválido) vale como Estagiário; com o debug, vale ele mesmo",
+          locked >= 0 && sv_playable_character(locked) == CH_ESTAGIARIO && sv_playable_character(-1) == CH_ESTAGIARIO &&
+          sv_playable_character(CH_COUNT) == CH_ESTAGIARIO && sv_playable_character(CH_ESTAGIARIO) == CH_ESTAGIARIO &&
+          (sv_debug_mode = true, sv_playable_character(locked) == locked));
+
+    sv_meta.character = locked;
+    sv_game_start(501);
+    {
+        bool with_cheat = sv_run.player.character == locked;
+
+        sv_debug_mode = false;   // Desligou o cheat no meio da partida
+        sv_game_start(502);
+        check("SV-138", "desligado o debug, a próxima partida usa o Estagiário, o mesmo valor que o save passa a guardar",
+              with_cheat && sv_run.player.character == CH_ESTAGIARIO && sv_playable_character(sv_meta.character) == CH_ESTAGIARIO);
+    }
+
+    // BUG-37: na dupla, os cheats de jogador valem para os dois
+    sv_meta_reset();
+    sv_duo_mode = true;
+    sv_game_start(503);
+    sv_duo_mode = false;
+    sv_duo_player(0)->hp = 10.0f;
+    sv_duo_player(1)->hp = 10.0f;
+    sv_duo_fall(1);
+    sv_cheat_heal();
+    check("SV-139", "na dupla, curar enche a vida dos dois e levanta quem caiu",
+          sv_duo_player(0)->hp == sv_duo_player(0)->max_hp && sv_duo_player(1)->hp == sv_duo_player(1)->max_hp && !sv_duo_player(1)->down);
+
+    sv_cheat_level_up();
+    check("SV-140", "na dupla, subir de nível enche a barra dos dois",
+          sv_duo_player(0)->xp >= (float)sv_duo_player(0)->xp_needed && sv_duo_player(1)->xp >= (float)sv_duo_player(1)->xp_needed);
+
+    sv_duo_player(0)->revive_ready = false;
+    sv_duo_player(1)->revive_ready = false;
+    sv_cheat_revive();
+    check("SV-141", "na dupla, o Ctrl+Z de volta fica pronto para os dois", sv_duo_player(0)->revive_ready && sv_duo_player(1)->revive_ready);
+
+    {
+        int before_1 = sv_duo_player(0)->weapon_count, before_2 = sv_duo_player(1)->weapon_count;
+        int before_p1 = sv_duo_player(0)->passive_count, before_p2 = sv_duo_player(1)->passive_count;
+        int weapon = -1, passive = -1;
+
+        for (int w = 0; w < W_COUNT && weapon < 0; w++)
+        {
+            bool owned = false;
+
+            for (int k = 0; k < SV_DUO_PLAYERS; k++)
+            {
+                for (int i = 0; i < sv_duo_player(k)->weapon_count; i++) if (sv_duo_player(k)->weapons[i].id == w) owned = true;
+            }
+            if (!owned) weapon = w;
+        }
+        for (int q = 0; q < P_COUNT && passive < 0; q++)
+        {
+            bool owned = false;
+
+            for (int k = 0; k < SV_DUO_PLAYERS; k++)
+            {
+                for (int i = 0; i < sv_duo_player(k)->passive_count; i++) if (sv_duo_player(k)->passives[i].id == q) owned = true;
+            }
+            if (!owned) passive = q;
+        }
+        check("SV-142", "na dupla, dar um poder ou um passivo entrega aos dois, e o jogador em cena continua o mesmo",
+              weapon >= 0 && passive >= 0 && sv_cheat_set_weapon(weapon, 2) && sv_cheat_set_passive(passive, 1) &&
+              sv_duo_player(0)->weapon_count == before_1 + 1 && sv_duo_player(1)->weapon_count == before_2 + 1 &&
+              sv_duo_player(0)->passive_count == before_p1 + 1 && sv_duo_player(1)->passive_count == before_p2 + 1 &&
+              sv_run.active == 0);
+    }
+    sv_debug_mode = false;
+}
+
 int main(void)
 {
     printf("Testes do Modo Sobrevivencia\n");
@@ -1390,6 +1492,7 @@ int main(void)
     test_ajustes_do_teste_com_jogadores();
     test_ranking();
     test_duo();
+    test_correcoes_do_bug_tracker();
 
     printf("\n%d verificacoes, todas passaram.\n", checks);
     return 0;

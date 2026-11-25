@@ -54,7 +54,7 @@ powershell -ExecutionPolicy Bypass -File tools/pacote/empacotar.ps1
 powershell -ExecutionPolicy Bypass -File tools/pacote/testar_pacote.ps1
 ```
 
-O primeiro gera `build/IARA-windows.zip`. Quem recebe só extrai e abre o `iara.exe`, sem instalar nada. O teste em máquina real segue o [roteiro de máquina limpa](docs/fds/testes/maquina-limpa.md).
+O primeiro gera `build/IARA-windows.zip`, com um `iara.exe` autocontido (assets e bibliotecas dentro dele, via `tools/release/build_release.ps1`). Quem recebe só abre o `iara.exe`, sem instalar nada. O teste em máquina real segue o [roteiro de máquina limpa](docs/fds/testes/maquina-limpa.md).
 
 ### Problemas comuns
 
