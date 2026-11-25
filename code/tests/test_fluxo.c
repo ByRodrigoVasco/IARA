@@ -1768,6 +1768,64 @@ static void gravar_evidencia_com_npcs(const char *arquivo)
     UnloadRenderTexture(alvo);
 }
 
+/* PI2-318: no fim da campanha e no fim de uma partida da Sobrevivencia, o jogador escolhe entre jogar de novo e sair. */
+static void testar_escolha_depois_do_final(void)
+{
+    titulo("Escolha no fim da partida (CT-106 e CT-107)");
+    etapa("JOGAR DE NOVO guarda o final e cria outro save para o Dia 1");
+
+    iniciar_partida_nova();
+    start_game_day(TOTAL_GAME_DAYS);
+    current_game_state_variables.evidence_mask = EVIDENCE_NO_RESIGNATION_LETTER;
+    current_hidden_statistic.current_perception_points = HIDDEN_STATISTIC_START + 3;
+    show_ending();
+    replay_requested = true;
+    render_calendar_day_card_finished = true;
+    handle_state_machine();
+    bool foi_para_o_carregamento = current_game_state_variables.current_screen == LOADING_SCREEN;
+    bool criou_outro_save = active_save_is_set() && strcmp(active_save_name(), "Fluxo") != 0 &&
+                           strncmp(active_save_name(), "Reprise ", 8) == 0;
+    bool voltou_a_partida = esperar_tela(PLAYING_SCREEN, 20.0);
+    rodar_por(0.2);
+
+    checar("CT-106", "Depois do final, JOGAR DE NOVO cria outro save e comeca no Dia 1 sem herdar progresso",
+           criou_outro_save && foi_para_o_carregamento && voltou_a_partida &&
+           current_game_state_variables.current_day == 1 && !current_game_state_variables.resolved_puzzles[TOTAL_GAME_DAYS] &&
+           current_game_state_variables.evidence_mask == 0 &&
+           current_hidden_statistic.current_perception_points == HIDDEN_STATISTIC_START);
+
+    etapa("no fim de uma partida da Sobrevivencia: MENU DA SOBREVIVENCIA e SAIR PARA O MENU");
+
+    unload_game_loop();
+    current_game_state_variables.current_screen = MENU_SCREEN;
+    initialize_menu_variables();
+    sv_audio_disable(true);
+    active_save_set(SAVE_MODE_SURVIVAL, "Fluxo");
+    current_game_state_variables.current_screen = begin_loading_active_save();
+    esperar_tela(SURVIVAL_SCREEN, 20.0);
+
+    /* Partidas marcadas como "com cheat": nao entram no ranking de verdade de quem roda os testes. */
+    start_run();
+    sv_run.cheated = true;
+    abandon_run();
+    bool tela_com_escolha = screen == SCREEN_OVER && over_selected == OVER_SURVIVAL_MENU;
+
+    choose_over_option(OVER_SURVIVAL_MENU);
+    bool voltou_ao_inicio_do_modo = screen == SCREEN_HUB && hub_selected == 0 && !leave_to_menu;
+
+    start_run();
+    sv_run.cheated = true;
+    abandon_run();
+    choose_over_option(OVER_MAIN_MENU);
+    handle_state_machine();
+    bool saiu_para_o_menu = current_game_state_variables.current_screen == MENU_SCREEN;
+
+    checar("CT-107", "No fim da partida da Sobrevivencia, MENU DA SOBREVIVENCIA volta ao inicio do modo, com JOGAR marcado, e SAIR PARA O MENU leva ao menu",
+           tela_com_escolha && voltou_ao_inicio_do_modo && saiu_para_o_menu);
+
+    rodar_por(0.5);
+}
+
 /* Percorre o caminho calculado. Devolve false se algum passo travar ou abrir conversa. */
 static bool percorrer_caminho_ignorando_npcs(Vector2 origem, bool desenhar, bool *abriu_conversa)
 {
@@ -2387,6 +2445,7 @@ int main(void)
     testar_caminhos_do_dia();
     testar_saida_no_meio_do_dia();
     testar_campanha();
+    testar_escolha_depois_do_final();
     testar_ignorar_npcs();
     testar_ajustes_do_modo_historia();
 
