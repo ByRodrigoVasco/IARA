@@ -5,6 +5,7 @@
 
 #include "audio.h"
 #include "macros.h"
+#include "assets_fs.h"
 
 static Music menu_music = {0};
 static Music game_music = {0};
@@ -27,7 +28,7 @@ static int active_music_screen = -1;
 // Volumes escolhidos em CONFIGURAÇÕES, de 0 a 1. Ficam guardados mesmo sem dispositivo de áudio,
 // para valerem assim que ele estiver pronto e para o arquivo de preferências gravar o valor certo.
 static float music_volume = 1.0f;   // Trilha: menu, ambiente calmo e trilha de tensão
-static float effects_volume = 1.0f; // Efeitos: clique, passos e voz da IARA
+static float effects_volume = 1.0f; // Efeitos: clique, passos, voz, porta e teclado
 
 static float clamp_volume(float volume)
 {
@@ -55,10 +56,10 @@ bool initialize_audio(void)
         return false;
     }
 
-    menu_music = LoadMusicStream(MENU_MUSIC_PATH);
-    game_music = LoadMusicStream(GAME_MUSIC_PATH);
-    calm_music = LoadMusicStream(CALM_MUSIC_PATH);
-    quiz_music = LoadMusicStream(QUIZ_MUSIC_PATH);
+    menu_music = asset_load_music(MENU_MUSIC_PATH);
+    game_music = asset_load_music(GAME_MUSIC_PATH);
+    calm_music = asset_load_music(CALM_MUSIC_PATH);
+    quiz_music = asset_load_music(QUIZ_MUSIC_PATH);
     flash_stinger = LoadSound(FLASH_STINGER_PATH);
     jump_stinger = LoadSound(JUMP_STINGER_PATH);
     door_sound = LoadSound(DOOR_SOUND_PATH);
@@ -66,7 +67,6 @@ bool initialize_audio(void)
     mouse_click_sound = LoadSound(MOUSE_CLICK_SOUND_PATH);
     iara_voice_sound = LoadSound(IARA_VOICE_SOUND_PATH);
     player_footsteps_sound = LoadSound(PLAYER_FOOTSTEPS_SOUND_PATH);
-
     if (menu_music.ctxData == NULL)
     {
         TraceLog(LOG_ERROR, "AUDIO: falha ao carregar %s", MENU_MUSIC_PATH);
@@ -118,6 +118,8 @@ bool initialize_audio(void)
     else quiz_music.looping = true;
     if (flash_stinger.stream.buffer == NULL) TraceLog(LOG_WARNING, "AUDIO: som do flash ausente (%s)", FLASH_STINGER_PATH);
     if (jump_stinger.stream.buffer == NULL) TraceLog(LOG_WARNING, "AUDIO: som do salto ausente (%s)", JUMP_STINGER_PATH);
+    if (door_sound.stream.buffer == NULL) TraceLog(LOG_WARNING, "AUDIO: som da porta ausente (%s)", DOOR_SOUND_PATH);
+    if (keyboard_sound.stream.buffer == NULL) TraceLog(LOG_WARNING, "AUDIO: som de teclado ausente (%s)", KEYBOARD_SOUND_PATH);
 
     // As preferências podem ter sido lidas antes: aplica o que já estiver escolhido
     SetMusicVolume(menu_music, music_volume);
@@ -304,16 +306,6 @@ void play_click_sound(void)
     PlaySound(mouse_click_sound);
 }
 
-void play_door_sound(void)
-{
-    if (door_sound.stream.buffer != NULL) PlaySound(door_sound);
-}
-
-void play_keyboard_sound(void)
-{
-    if (keyboard_sound.stream.buffer != NULL) PlaySound(keyboard_sound);
-}
-
 void update_player_footstep_audio(bool is_walking)
 {
     if (!IsAudioDeviceReady() || player_footsteps_sound.stream.buffer == NULL) return;
@@ -340,6 +332,18 @@ void update_iara_voice_typing(bool is_typing)
     {
         StopSound(iara_voice_sound);
     }
+}
+
+void play_door_sound(void)
+{
+    if (!IsAudioDeviceReady() || door_sound.stream.buffer == NULL) return;
+    PlaySound(door_sound);
+}
+
+void play_keyboard_sound(void)
+{
+    if (!IsAudioDeviceReady() || keyboard_sound.stream.buffer == NULL) return;
+    PlaySound(keyboard_sound);
 }
 
 void unload_audio(void)
@@ -369,7 +373,6 @@ void unload_audio(void)
     if (mouse_click_sound.stream.buffer != NULL) UnloadSound(mouse_click_sound);
     if (iara_voice_sound.stream.buffer != NULL) UnloadSound(iara_voice_sound);
     if (player_footsteps_sound.stream.buffer != NULL) UnloadSound(player_footsteps_sound);
-
     menu_music = (Music){0};
     game_music = (Music){0};
     calm_music = (Music){0};
@@ -381,6 +384,5 @@ void unload_audio(void)
     mouse_click_sound = (Sound){0};
     iara_voice_sound = (Sound){0};
     player_footsteps_sound = (Sound){0};
-
     if (IsAudioDeviceReady()) CloseAudioDevice();
 }

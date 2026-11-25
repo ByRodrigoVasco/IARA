@@ -1033,6 +1033,8 @@ void handle_map_interactables(void)
                 }
             }
         }
+        // Enquanto a fala aparece letra por letra, toca o som curto de fala (o mesmo blip da IARA)
+        update_iara_voice_typing(active_npc_id >= 0 && npc_typed_characters < line_length);
         return;
     }
 
@@ -1333,6 +1335,10 @@ void render_debug_hitboxes(void)
 {
     if (!show_debug_hitboxes) return;
 
+    // Desempenho: para medir antes e depois de mexer no desenho do escritório
+    DrawRectangle(8, 8, 330, 30, (Color){0, 0, 0, 170});
+    DrawText(TextFormat("FPS %d   quadro %.1f ms", GetFPS(), GetFrameTime() * 1000.0f), 16, 14, 20, LIME);
+
     DrawRectangleLinesEx(map_collision_rec, 2.0f, RED);                           // Limite do mapa
     DrawRectangleLinesEx(estagiario_computer_collision_rectangle, 2.0f, YELLOW);  // Zona do computador
     DrawRectangleLinesEx(estagiario_collision_rec, 2.0f, GREEN);                  // Jogador
@@ -1592,10 +1598,15 @@ static void render_office_with_glass(void)
         Rectangle pane = office_glass_surface[i];
         if (shader_ready)
         {
+            // Só o retângulo do vidro passa pelo shader. Antes a tela inteira era redesenhada a cada
+            // vidro e o shader descartava o que ficava fora: três passadas de tela cheia por quadro.
+            // A textura da cena está de cabeça para baixo, por isso o y é contado de baixo.
+            Rectangle pane_source = {pane.x, (float)height - pane.y - pane.height, pane.width, -pane.height};
+
             SetShaderValue(glass_shader, glass_panel_loc, &pane, SHADER_UNIFORM_VEC4);
             SetShaderValue(glass_shader, glass_size_loc, &size, SHADER_UNIFORM_VEC2);
             BeginShaderMode(glass_shader);
-            DrawTextureRec(glass_scene.texture, source, (Vector2){0}, color_to_fade);
+            DrawTexturePro(glass_scene.texture, pane_source, pane, (Vector2){0}, 0.0f, color_to_fade);
             EndShaderMode();
         }
         // Reutiliza os reflexos do asset e redesenha a moldura sem distorcao.

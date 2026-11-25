@@ -102,8 +102,6 @@ float audio_get_effects_volume(void);
  * @brief Reproduz o efeito sonoro de clique do mouse.
  */
 void play_click_sound(void);
-void play_door_sound(void);
-void play_keyboard_sound(void);
 
 /**
  * @brief Reproduz em sequência o som de passos enquanto o jogador realmente se move.
@@ -118,6 +116,16 @@ void update_player_footstep_audio(bool is_walking);
  * @param is_typing true enquanto ainda há texto sendo revelado.
  */
 void update_iara_voice_typing(bool is_typing);
+
+/**
+ * @brief Reproduz o som da porta de vidro abrindo (saída do escritório).
+ */
+void play_door_sound(void);
+
+/**
+ * @brief Reproduz o som de teclado, quando o jogador responde algo na tela do computador.
+ */
+void play_keyboard_sound(void);
 
 /**
  * @brief Para as músicas, descarrega os recursos de áudio e fecha o dispositivo.

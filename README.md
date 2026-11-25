@@ -9,7 +9,40 @@ as inconsistências. Assim, a mecânica ensina ao mesmo tempo ética em IA e ló
   <img src="docs/assets/capa.png" alt="Capa do projeto IARA" width="800">
 </p>
 
-> **Entrega 3 (FDS):** [Report da Sprint 01](docs/fds/sprint-01/README.md), com histórias, versionamento, testes, programação em pares e evidências.
+> **Entrega final (Unidade 2):** versão publicada nas [Releases do GitHub](https://github.com/ByRodrigoVasco/IARA/releases), reports das sprints [01](docs/fds/sprint-01/README.md), [02](docs/fds/sprint-02/README.md) e [03](docs/fds/sprint-03/README.md), [rastreabilidade das 16 histórias](docs/fds/sprint-03/README.md#rastreabilidade-das-histórias-pi2-330) e [bug tracker](docs/fds/testes/bugs.md).
+
+## Funcionalidades
+
+**Campanha (modo normal)**
+- 100 dias de expediente: 9 dias jogáveis, Flashes do dia e saltos no calendário, para a história caber numa sessão curta.
+- Em cada chamado o jogador escolhe: resolver sozinho, conferir a sugestão da IARA ou enviar sem conferir. A escolha pesa na pontuação e decide qual dos 4 finais o jogador recebe.
+- Puzzles de lógica proposicional ensinados pela própria história, com a colinha dos símbolos no Dia 1.
+- Dicas leves pelos NPCs e pelo mural, nunca a resposta pronta, e failsafe depois de 3 erros para ninguém ficar travado.
+- NPCs com diálogo opcional e um escritório que muda com os dias e com as escolhas, sem HUD numérico.
+- Save automático, com vários saves por modo.
+
+**Modo Sobrevivência**
+- Dez minutos num mapa de 15 áreas do escritório, com 5 atos e 5 chefes.
+- Banco de Horas para comprar melhorias no Plano de Carreira, e ranking de partidas.
+- Sobrevivência em dupla, para duas pessoas no mesmo computador.
+
+**Para todos os modos**
+- Configurações: volume da música e dos efeitos, brilho, alto contraste, tela cheia e janela maximizada.
+- Pausa, ajuda e confirmação antes de sair ou desistir.
+- Trilha sonora por momento do jogo e efeitos sonoros de ações e ambiente.
+- Um `iara.exe` só, sem instalação, conta ou internet.
+
+## Como o software evoluiu
+
+| Etapa | Período | O que entrou |
+|---|---|---|
+| Concepção | Ago a set/2026 | Personas, histórias de usuário, backlog no Trello, [diagramas de atividade](docs/fds/diagramas-atividade/README.md) e [protótipos lo-fi](docs/fds/prototipos-lofi/README.md) com screencast |
+| Núcleo em C | Set a out/2026 | Menu, máquina de estados, escritório com colisões e o primeiro quiz jogável ([screencast do núcleo](https://www.youtube.com/watch?v=z4OrasORL4c)) |
+| [Sprint 01](docs/fds/sprint-01/README.md) | 19/10 a 26/10 | Protótipo jogável para o teste de usabilidade, tela de créditos e a primeira suíte de testes de sistema (32 de 35 aprovados, 8 bugs abertos) |
+| [Sprint 02](docs/fds/sprint-02/README.md) | 26/10 a 06/11 | Save automático, sprites em 8 direções, campanha do Dia 1 ao Dia 100, alto contraste e configurações; suíte com 76 casos, todos aprovados |
+| [Sprint 03](docs/fds/sprint-03/README.md) | 07/11 a 21/11 | Modo Sobrevivência (e em dupla), NPCs, áudio e trilha por momento, pausa e ajuda pelas heurísticas de Nielsen, sintomas visuais e o `CONTRIBUTING.md`; testes CT-94 a CT-105 com um screencast por caso |
+| Final | 23/11 a 04/12 | Executável único, correções do bug tracker e documentação final. Em andamento: escolha de jogar novamente ou sair no fim da partida e a Release |
+
 
 ## Tecnologias
 
@@ -33,6 +66,7 @@ Materiais hospedados fora do repositório:
 | [Jira](https://csprj-adsr-2p-e8.atlassian.net/jira/software/c/projects/PI2/boards/2/backlog) | Board e backlog do projeto | [FDS](docs/fds/README.md) |
 | [Figma](https://www.figma.com/design/DpnmgBif3vJcn336pefbpa/IARA---PROTOTIPO-FDS?node-id=0-1&t=vm69jod3fxAtJGjN-1) | Protótipos de baixa fidelidade | [FDS](docs/fds/README.md) e [IHC](docs/ihc/README.md) |
 | [Screencast do protótipo](https://youtu.be/qE2Gn79bmqw) | Vídeo de demonstração do protótipo lo-fi | [FDS](docs/fds/README.md) e [IHC](docs/ihc/README.md) |
+| [Comprovação de usabilidade](https://www.youtube.com/watch?v=w3n0H6hxeks) | Vídeo do jogo mostrando os critérios de usabilidade atendidos (entrega de 20/11/2026) | [IHC](docs/ihc/README.md) |
 | [User Stories](https://docs.google.com/document/d/1xystBOI81sAymF35XBoupr6fe_IPjK8L6bB3qOobUpk/edit) | Histórias de usuário que originaram os diagramas de atividade | [FDS](docs/fds/README.md) |
 | [raylib](https://www.raylib.com/) | Biblioteca gráfica usada no núcleo em C | [PIF](docs/pif/README.md) |
 
@@ -100,6 +134,8 @@ O `MODO SOBREVIVÊNCIA`, na escolha do modo depois de `INICIAR`, é separado da 
 
 O Banco de Horas coletado na partida, mesmo que você perca, compra upgrades permanentes no `PLANO DE CARREIRA`. O progresso fica no save escolhido (`saves/sobrevivencia/<nome do save>/progresso.survival`). Sprites e sons vêm de `code/assets/sprites/sobrevivencia` e `code/assets/audio`, e o áudio segue as regras de mistura em `code/src/survival/sv_audio.h`.
 
+O ranking (`iara.ranking`) ordena os jogadores pela **pontuação** da melhor partida de cada um: **10 pontos por inimigo derrotado, 5 por segundo sobrevivido, 500 por chefe derrotado e 2000 de bônus por desligar a IARA**. Os abates pesam mais que o tempo, então quem só foge sem lutar não passa na frente de quem durou um pouco menos mas derrotou mais inimigos. No empate de pontos, fica na frente quem tem mais abates, depois quem sobreviveu mais tempo e, por fim, quem jogou primeiro. A pontuação é calculada na hora a partir do arquivo, então os pesos podem ser ajustados em `code/src/survival/sv_ranking.h` sem apagar o ranking da feira.
+
 #### Sobrevivência em dupla
 
 `SOBREVIVÊNCIA EM DUPLA` é o mesmo modo para duas pessoas no mesmo computador, na mesma tela. O **jogador 1** anda com **WASD** (ou o controle 1) e o **jogador 2** com as **setas** (ou o controle 2). Cada um tem a sua vida, os seus poderes e o seu personagem (em `PERSONAGENS`, **TAB** troca de jogador). A XP é dividida: um chip pego por qualquer um sobe a barra dos dois, e cada um escolhe a sua carta, primeiro o jogador 1. Quem fica sem vida **cai**; o parceiro o levanta ficando parado ao lado dele por 3 segundos, e a partida só acaba quando os dois caem. Os dois ficam sempre na mesma tela, e há mais inimigos e chefes mais fortes que no solo.
@@ -125,7 +161,7 @@ powershell -ExecutionPolicy Bypass -File tools/pacote/empacotar.ps1
 powershell -ExecutionPolicy Bypass -File tools/pacote/testar_pacote.ps1
 ```
 
-O primeiro comando gera `build/IARA-windows.zip`, com o executável, as DLLs e os assets. Quem recebe só extrai e abre o `iara.exe`: não precisa de instalação, conta, internet nem administrador. O segundo testa o pacote fora do ambiente de desenvolvimento; o teste em máquina real segue o [roteiro de máquina limpa](docs/fds/testes/maquina-limpa.md).
+O primeiro comando gera `build/IARA-windows.zip`, com um `iara.exe` só: as imagens, os sons e as bibliotecas (raylib, GLFW) estão dentro dele, e o jogo roda sem pastas nem DLLs ao lado. Para gerar só o executável, use `tools/release/build_release.ps1` (saída em `build/release/iara.exe`). Quem recebe só abre o `iara.exe`: não precisa de instalação, conta, internet nem administrador. O segundo testa o pacote fora do ambiente de desenvolvimento; o teste em máquina real segue o [roteiro de máquina limpa](docs/fds/testes/maquina-limpa.md).
 
 ## Entregas por disciplina
 
@@ -135,6 +171,19 @@ O primeiro comando gera `build/IARA-windows.zip`, com o executável, as DLLs e o
 | **PIF**<br>[Programação Imperativa e Funcional](docs/pif/README.md) | • Núcleo do jogo em C (menu, game loop, quiz jogável)<br>• Regras puras em Haskell |
 | **IHC**<br>[Interação Humano-Computador](docs/ihc/README.md) | • Personas<br>• Protótipo lo-fi e screencast<br>• Avaliação heurística (Nielsen)<br>• Critérios de usabilidade e acessibilidade |
 | **LMC**<br>[Lógica para Computação](docs/lmc/README.md) | • Especificação lógica das regras do jogo<br>• Puzzles de lógica clássica |
+
+## Uso de ponteiros
+
+O jogo usa ponteiros em todo o código C. Quatro exemplos:
+
+| Uso | Onde | Como |
+|---|---|---|
+| Passagem por referência | `fade_in_texture()` em [`ui/animations.c`](code/src/ui/animations.c) | Recebe `Color *color` e `bool *is_animation_finished`: a função muda o alpha da cor de quem chamou e avisa o fim da animação pelo mesmo ponteiro, sem precisar devolver nada. |
+| Vetor de ponteiros | `day_27_clauses[]` e `day_58_clauses[]` em [`screens/computer_days.h`](code/src/screens/computer_days.h), lidos por `logic_is_satisfiable()` em [`game/logic.c`](code/src/game/logic.c) | Cada dia guarda suas cláusulas como `const LogicExpression *const day_N_clauses[]`, um vetor de ponteiros para fórmulas. A função recebe esse vetor como `const LogicExpression *const *expressions` e testa todas as combinações de valores. |
+| Struct ligada por ponteiros | `LogicExpression` em [`game/logic.h`](code/src/game/logic.h) e `logic_evaluate()` em [`game/logic.c`](code/src/game/logic.c) | Cada fórmula é uma árvore: a struct aponta para as subfórmulas pelos campos `left` e `right`, e `logic_evaluate()` percorre a árvore de forma recursiva seguindo esses ponteiros. |
+| Manipulação de struct por ponteiro | `recompute_stats()` em [`survival/sv_game.c`](code/src/survival/sv_game.c) | `SvPlayer *p = &sv_run.player;` aponta para o jogador da partida, e a função recalcula vida, dano, velocidade e os outros atributos direto na struct original, com `p->campo`. |
+
+Além disso, os textos do jogo circulam como `const char *`, e o save é lido e gravado com `FILE *` em `save_game_state()` e `load_game_state()` ([`core/save.c`](code/src/core/save.c)).
 
 ## Qualidade e testes
 
@@ -164,6 +213,10 @@ Testes de sistema das histórias que ainda não tinham caso de teste, executados
 Print de **20/11/2026** das [Issues do GitHub](https://github.com/ByRodrigoVasco/IARA/issues?q=is%3Aissue+label%3Abug), com as abertas e as fechadas. Cada issue tem o label da sprint, um responsável e aponta para a história do Jira, o teste e o PR da correção. O status de cada bug também fica em [bugs.md](docs/fds/testes/bugs.md).
 
 ![Bug tracker do GitHub em 20/11/2026](docs/fds/sprint-03/bug-tracker-2026-11-20.png)
+
+## Como contribuir
+
+O passo a passo para configurar o ambiente, o fluxo de branches (GitFlow), o padrão de commits, as issues e os Pull Requests estão no [`CONTRIBUTING.md`](CONTRIBUTING.md). Bugs e tarefas abertas ficam nas [Issues](https://github.com/ByRodrigoVasco/IARA/issues).
 
 ## Créditos de arte
 

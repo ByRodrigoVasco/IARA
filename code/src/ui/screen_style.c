@@ -34,7 +34,11 @@ void style_backdrop(void)
 
     ClearBackground(BG_COLOR);
     // Vinheta: o centro fica um pouco mais claro e roxo, como o fundo do menu
+#if RAYLIB_VERSION_MAJOR >= 6
     DrawCircleGradient((Vector2){width * 0.5f, height * 0.5f}, width * 0.62f, (Color){36, 18, 40, 255}, BG_COLOR);
+#else
+    DrawCircleGradient((int)(width * 0.5f), (int)(height * 0.5f), width * 0.62f, (Color){36, 18, 40, 255}, BG_COLOR);
+#endif
 }
 
 void style_title(const char *title, const char *subtitle)

@@ -50,8 +50,15 @@ void sv_draw_glow(SvSpriteId id, int frame, Vector2 center, bool flip, Color tin
 /** @brief Desenha um quadro esticado em largura e altura próprias (feixes e linhas). */
 void sv_draw_stretched(SvSpriteId id, int frame, Vector2 center, float width, float height, float rotation, Color tint);
 
-// O personagem usa os quadros do andar que já existem no jogo (pasta em PERSONAGENS).
-// Carregar outro personagem descarrega o anterior.
+// Quadros de andar de todos os personagens (pasta em PERSONAGENS), lidos do disco uma vez só, na tela
+// de carregamento: um personagem por chamada. Devolve o andamento, de 0 a 1. Com eles prontos, trocar
+// de personagem (na escolha, no TAB da dupla ou ao começar a partida) não lê nada do disco.
+float sv_load_characters_step(void);
+void sv_unload_characters(void);
+/** @brief Um quadro de andar do personagem, do que já foi carregado (textura vazia se ainda não foi). */
+Texture2D sv_character_frame(int character, int direction, int frame);
+
+// O jogador em cena usa os quadros do personagem: os já carregados, ou do disco se ainda não estiverem.
 void sv_load_player(int character);
 void sv_unload_player(void);
 void sv_draw_player(int direction, int frame, Vector2 center, float scale, Color tint);

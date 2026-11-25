@@ -32,7 +32,6 @@ static int hub_selected = 0;
 static bool duo = false;               // O save em uso é de uma dupla (saves/dupla): as partidas são em dupla
 static int char_cursor = 0;
 static int char_editing = 0;           // Dupla: de quem é o personagem que está sendo escolhido (0 ou 1)
-static Texture2D roster_icons[CH_COUNT];
 static float char_message_timer = 0.0f;
 static const char *char_message = "";
 static int shop_selected = 0;
@@ -85,8 +84,8 @@ static float job_read_save(void)
     else sv_meta_set_path(NULL);
 
     sv_meta_load(sv_meta_path());
-    if (sv_meta.character < 0 || sv_meta.character >= CH_COUNT || !sv_character_unlocked(sv_meta.character, sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills)) sv_meta.character = CH_ESTAGIARIO;
-    if (sv_meta.character2 < 0 || sv_meta.character2 >= CH_COUNT || !sv_character_unlocked(sv_meta.character2, sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills)) sv_meta.character2 = CH_ESTAGIARIO;
+    sv_meta.character = sv_playable_character(sv_meta.character);
+    sv_meta.character2 = sv_playable_character(sv_meta.character2);
     char_cursor = sv_meta.character;
     char_editing = 0;
     return 1.0f;
@@ -97,8 +96,14 @@ static float job_sprites(void)
     return sv_load_sprites_step();
 }
 
+// Todos os personagens ficam na memória, um por quadro da tela de carregamento: assim escolher,
+// trocar (TAB na dupla) ou começar a partida não lê nada do disco
 static float job_characters(void)
 {
+    float progress = sv_load_characters_step();
+
+    if (progress < 1.0f) return progress;
+
     sv_load_player(sv_meta.character);
     if (duo)
     {
@@ -107,17 +112,17 @@ static float job_characters(void)
         sv_load_player(sv_meta.character2);
         sv_use_player_slot(0);
     }
-    for (int i = 0; i < CH_COUNT; i++)
-    {
-        roster_icons[i] = LoadTexture(TextFormat("%s%s/walk/south-0.png", PERSONAGENS_PATH, sv_character(i)->folder));
-        if (roster_icons[i].id) SetTextureFilter(roster_icons[i], TEXTURE_FILTER_POINT);
-    }
     return 1.0f;
 }
 
 static float job_audio(void)
 {
-    return sv_audio_init_step();
+    float progress = sv_audio_init_step();
+
+    // Com os sons prontos, deixa aberta a trilha e o ambiente do começo da partida: assim o JOGAR
+    // não lê nada do disco (BUG-18)
+    if (progress >= 1.0f) sv_audio_prepare(MUS_ATO1, sv_start_ambient());
+    return progress;
 }
 
 static float job_ready(void)
@@ -138,7 +143,7 @@ int survival_loading_jobs(loading_job *jobs)
 {
     jobs[0] = (loading_job){"Lendo o save", 0.3f, job_read_save};
     jobs[1] = (loading_job){"Imagens do mapa, dos inimigos e dos poderes", 5.0f, job_sprites};
-    jobs[2] = (loading_job){"Personagens", 1.0f, job_characters};
+    jobs[2] = (loading_job){"Personagens", 2.0f, job_characters};
     jobs[3] = (loading_job){"Sons e músicas", 3.5f, job_audio};
     jobs[4] = (loading_job){"Preparando o modo", 0.2f, job_ready};
     return 5;
@@ -162,13 +167,8 @@ void unload_survival(void)
     // Quem sai no meio da partida leva o que juntou até aqui
     if (screen == SCREEN_RUN || screen == SCREEN_PAUSE) finish_run();
 
-    for (int i = 0; i < CH_COUNT; i++)
-    {
-        if (roster_icons[i].id) UnloadTexture(roster_icons[i]);
-        roster_icons[i] = (Texture2D){0};
-    }
     sv_audio_close();
-    sv_unload_all_players();
+    sv_unload_characters();   // Também solta os conjuntos dos jogadores
     sv_unload_sprites();
     sv_light_unload();
     SetMouseCursor(MOUSE_CURSOR_ARROW);
@@ -285,8 +285,42 @@ static void finish_run(void)
     last_rank_order = last_rank_position > 0 ? sv_ranking_get(last_rank_position - 1)->order : 0;
 }
 
+// Um personagem escolhido com o debug ligado continua salvo depois que o debug é desligado. Antes de
+// cada partida ele é conferido de novo: se ainda estiver bloqueado, volta para o Estagiário por
+// inteiro (save e aparência), igual à habilidade que sv_game_start monta (BUG-33).
+static void revalidate_characters(void)
+{
+    int first = sv_playable_character(sv_meta.character);
+    int second = sv_playable_character(sv_meta.character2);
+    bool changed = false;
+
+    if (first != sv_meta.character)
+    {
+        sv_meta.character = first;
+        sv_load_player(first);
+        changed = true;
+    }
+    if (second != sv_meta.character2)
+    {
+        sv_meta.character2 = second;
+        if (duo)
+        {
+            sv_use_player_slot(1);
+            sv_load_player(second);
+            sv_use_player_slot(0);
+        }
+        changed = true;
+    }
+    if (changed)
+    {
+        char_cursor = sv_meta.character;
+        sv_meta_save(sv_meta_path()); warn_if_save_failed();
+    }
+}
+
 static void start_run(void)
 {
+    revalidate_characters();
     run_ranked = false;
     last_run_record = false;
     last_rank_position = 0;
@@ -313,22 +347,35 @@ static void draw_backdrop(void)
 // Ranking
 // -----------------------------------------------------------------------------
 
-// Tabela do ranking: posição, nome, tempo e abates. A partida que acabou de terminar aparece destacada.
+// Tabela do ranking: posição, nome, pontos, tempo e abates. A partida que acabou de terminar aparece destacada.
+// As colunas de números ficam alinhadas à direita; o nome usa o espaço que sobra.
 static void draw_ranking(float x, float y, float width, int rows, float size)
 {
     float ui = sv_ui();
     float line = size * 1.25f;
     float pad = 16.0f * ui;
+    float gap = size * 0.5f;
     int count = sv_ranking_count();
     char text[96];
+    Color header = (Color){160, 150, 165, 255};
+    // Cada coluna tem a largura do maior entre o título e o maior número que cabe nela
+    float kills_w = fmaxf(sv_text_width("ABATES", size), sv_text_width("9999", size));
+    float time_w = fmaxf(sv_text_width("TEMPO", size), sv_text_width("10:00", size));
+    float points_w = fmaxf(sv_text_width("PONTOS", size), sv_text_width("99999", size));
+    float kills_right = x + width - pad;
+    float time_right = kills_right - kills_w - gap;
+    float points_right = time_right - time_w - gap;
+    float name_x = x + pad + size * 1.6f;
+    float name_room = (points_right - points_w - gap) - name_x;
 
     DrawRectangleRec((Rectangle){x, y, width, pad * 2.0f + line * (float)(rows + 1) + size * 0.4f}, (Color){10, 4, 16, 215});
     DrawRectangleLinesEx((Rectangle){x, y, width, pad * 2.0f + line * (float)(rows + 1) + size * 0.4f}, 2.0f * ui, (Color){120, 30, 44, 255});
 
-    sv_text("#", x + pad, y + pad, size, (Color){160, 150, 165, 255});
-    sv_text("NOME", x + pad + size * 1.6f, y + pad, size, (Color){160, 150, 165, 255});
-    sv_text("TEMPO", x + width - pad - size * 5.6f, y + pad, size, (Color){160, 150, 165, 255});
-    sv_text("ABATES", x + width - pad - sv_text_width("ABATES", size), y + pad, size, (Color){160, 150, 165, 255});
+    sv_text("#", x + pad, y + pad, size, header);
+    sv_text("NOME", name_x, y + pad, size, header);
+    sv_text("PONTOS", points_right - sv_text_width("PONTOS", size), y + pad, size, (Color){255, 214, 80, 255});
+    sv_text("TEMPO", time_right - sv_text_width("TEMPO", size), y + pad, size, header);
+    sv_text("ABATES", kills_right - sv_text_width("ABATES", size), y + pad, size, header);
 
     for (int i = 0; i < rows; i++)
     {
@@ -338,7 +385,7 @@ static void draw_ranking(float x, float y, float width, int rows, float size)
 
         if (!e)
         {
-            if (i == 0 && count == 0) sv_text("Ninguém jogou ainda. Seja o primeiro!", x + pad, ry, size * 0.85f, (Color){160, 150, 165, 255});
+            if (i == 0 && count == 0) sv_text("Ninguém jogou ainda. Seja o primeiro!", x + pad, ry, size * 0.85f, header);
             break;
         }
         if (last_rank_order != 0 && e->order == last_rank_order)
@@ -349,28 +396,31 @@ static void draw_ranking(float x, float y, float width, int rows, float size)
         snprintf(text, sizeof(text), "%d", i + 1);
         sv_text(text, x + pad, ry, size, color);
         {
-            // Nome comprido é cortado com ".." para não invadir a coluna do tempo
+            // Nome comprido é cortado com ".." para não invadir a coluna dos pontos
             char shown[SV_NAME_BYTES + 4];
-            float room = (x + width - pad - size * 5.6f) - (x + pad + size * 1.6f) - size * 0.4f;
+            float room = name_room - size * 0.2f;
             int len;
 
             snprintf(shown, sizeof(shown), "%s", e->name);
             len = (int)strlen(shown);
-            while (len > 0 && sv_text_width(shown, size) > room)
+            if (sv_text_width(shown, size) > room)
             {
-                len--;
-                while (len > 0 && ((unsigned char)shown[len] & 0xC0) == 0x80) len--;   // não corta no meio de um acento
-                shown[len] = '\0';
-                if (len > 0) snprintf(shown + len, sizeof(shown) - (size_t)len, "..");
-                if (sv_text_width(shown, size) <= room) break;
-                shown[len] = '\0';
+                // Tira uma letra de cada vez até o nome com ".." no fim caber
+                do
+                {
+                    len--;
+                    while (len > 0 && ((unsigned char)shown[len] & 0xC0) == 0x80) len--;   // não corta no meio de um acento
+                    snprintf(shown + len, sizeof(shown) - (size_t)len, "..");
+                } while (len > 0 && sv_text_width(shown, size) > room);
             }
-            sv_text(shown, x + pad + size * 1.6f, ry, size, color);
+            sv_text(shown, name_x, ry, size, color);
         }
+        snprintf(text, sizeof(text), "%d", sv_ranking_score(e));
+        sv_text(text, points_right - sv_text_width(text, size), ry, size, color);
         snprintf(text, sizeof(text), "%d:%02d", e->seconds / 60, e->seconds % 60);
-        sv_text(text, x + width - pad - size * 5.6f, ry, size, e->won ? (Color){120, 230, 160, 255} : color);
+        sv_text(text, time_right - sv_text_width(text, size), ry, size, e->won ? (Color){120, 230, 160, 255} : color);
         snprintf(text, sizeof(text), "%d", e->kills);
-        sv_text(text, x + width - pad - sv_text_width(text, size), ry, size, color);
+        sv_text(text, kills_right - sv_text_width(text, size), ry, size, color);
     }
 }
 
@@ -395,7 +445,7 @@ static void render_hub(void)
         {
             sv_sfx(SND_confirma);
             if (hub_selected == 0) start_run();
-            else if (hub_selected == 1) { screen = SCREEN_CHARS; char_editing = 0; char_cursor = sv_meta.character; char_message_timer = 0.0f; }
+            else if (hub_selected == 1) { revalidate_characters(); screen = SCREEN_CHARS; char_editing = 0; char_cursor = sv_meta.character; char_message_timer = 0.0f; }
             else if (hub_selected == 2) { screen = SCREEN_SHOP; shop_selected = 0; sv_music_play(MUS_LOJA); }
             else if (hub_selected == 3) { help_select_page(1); hub_help_open = true; }
             else if (hub_selected == 4) leave_to_saves = true;
@@ -419,7 +469,8 @@ static void render_hub(void)
         sv_text_centered("Dez minutos de expediente. Sobreviva às cinco áreas e desligue a IARA.", w / 2.0f, 235.0f * ui, 30.0f * ui, (Color){220, 205, 215, 255});
     }
 
-    snprintf(text, sizeof(text), "%s   BANCO DE HORAS  %d", player_name(), sv_meta.coins);
+    // O nome do save vem com rótulo: sozinho, um nome curto (ex.: "a") parecia um caractere solto na tela
+    snprintf(text, sizeof(text), "%s: %s     BANCO DE HORAS: %d", duo ? "DUPLA" : "JOGADOR", player_name(), sv_meta.coins);
     sv_text_centered(text, w / 2.0f, 310.0f * ui, 44.0f * ui, (Color){255, 214, 80, 255});
     snprintf(text, sizeof(text), "Partidas %d   Vitórias %d   Melhor tempo %d:%02d   Abates %d", sv_meta.runs, sv_meta.wins, sv_meta.best_seconds / 60, sv_meta.best_seconds % 60, sv_meta.kills);
     sv_text_centered(text, w / 2.0f, 370.0f * ui, 26.0f * ui, (Color){180, 170, 185, 255});
@@ -480,30 +531,39 @@ static int saved_character(void)
     return char_editing == 1 ? sv_meta.character2 : sv_meta.character;
 }
 
-// Carrega a prévia no conjunto de quadros de quem está escolhendo (no solo, sempre o 0)
-static void load_preview(int id)
+// Carrega os quadros da partida no conjunto de quem está escolhendo (no solo, sempre o 0)
+static void load_chosen_player(int id)
 {
     sv_use_player_slot(char_editing);
     sv_load_player(id);
     sv_use_player_slot(0);
 }
 
+// Só move o cursor: o retrato e a fileira usam os quadros já carregados na tela de carregamento.
+// O conjunto da partida (sv_load_player) só troca quando o jogador confirma, também sem ler o disco.
 static void choose_character(int id)
 {
     if (id == char_cursor) return;
     char_cursor = id;
-    load_preview(id);
     sv_sfx(SND_escolha);
 }
 
-// Dupla: TAB passa a escolha para o outro jogador (quem saiu sem confirmar volta ao personagem salvo)
+// Dupla: TAB passa a escolha para o outro jogador (quem saiu sem confirmar continua com o personagem salvo)
 static void switch_character_editor(void)
 {
-    if (char_cursor != saved_character()) load_preview(saved_character());
     char_editing = 1 - char_editing;
     char_cursor = saved_character();
     char_message_timer = 0.0f;
     sv_sfx(SND_escolha);
+}
+
+// Desenha um quadro de frente do personagem, centrado
+static void draw_roster_frame(int id, int frame, Rectangle dest, Color tint)
+{
+    Texture2D texture = sv_character_frame(id, SOUTH, frame);
+
+    if (!texture.id) return;
+    DrawTexturePro(texture, (Rectangle){0, 0, (float)texture.width, (float)texture.height}, dest, (Vector2){0, 0}, 0.0f, tint);
 }
 
 static void render_characters(void)
@@ -540,6 +600,7 @@ static void render_characters(void)
         }
         else
         {
+            if (saved_character() != char_cursor) load_chosen_player(char_cursor);
             if (char_editing == 1) sv_meta.character2 = char_cursor;
             else sv_meta.character = char_cursor;
             sv_meta_save(sv_meta_path()); warn_if_save_failed();
@@ -551,9 +612,9 @@ static void render_characters(void)
 
     if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_BACKSPACE))
     {
-        // Quem sai sem escolher volta ao personagem salvo
-        if (char_cursor != saved_character()) load_preview(saved_character());
+        // Quem sai sem escolher continua com o personagem salvo (já carregado)
         char_editing = 0;
+        char_cursor = sv_meta.character;
         screen = SCREEN_HUB;
         sv_sfx(SND_confirma);
     }
@@ -575,9 +636,12 @@ static void render_characters(void)
 
     // Retrato grande. Bloqueado aparece como silhueta.
     DrawRectangleRounded((Rectangle){w / 2.0f - 170.0f * ui, 150.0f * ui, 340.0f * ui, 300.0f * ui}, 0.08f, 8, (Color){18, 8, 22, 220});
-    sv_use_player_slot(char_editing);
-    sv_draw_player(SOUTH, unlocked ? frame : 0, (Vector2){w / 2.0f, 300.0f * ui}, 8.0f * ui, unlocked ? WHITE : (Color){12, 8, 18, 255});
-    sv_use_player_slot(0);
+    {
+        Texture2D portrait = sv_character_frame(char_cursor, SOUTH, 0);
+        float pw = (float)portrait.width * 8.0f * ui, ph = (float)portrait.height * 8.0f * ui;
+
+        draw_roster_frame(char_cursor, unlocked ? frame : 0, (Rectangle){w / 2.0f - pw / 2.0f, 300.0f * ui - ph / 2.0f, pw, ph}, unlocked ? WHITE : (Color){12, 8, 18, 255});
+    }
 
     sv_text_centered(unlocked ? c->name : "???", w / 2.0f, 465.0f * ui, 64.0f * ui, WHITE);
     sv_text_centered(c->title, w / 2.0f, 535.0f * ui, 30.0f * ui, (Color){180, 170, 185, 255});
@@ -610,11 +674,10 @@ static void render_characters(void)
         }
         else if (i == sv_meta.character) DrawRectangleLinesEx(cell, 3.0f * ui, (Color){120, 230, 140, 255});
 
-        if (roster_icons[i].id)
         {
             float size = 96.0f * ui;
 
-            DrawTexturePro(roster_icons[i], (Rectangle){0, 0, (float)roster_icons[i].width, (float)roster_icons[i].height}, (Rectangle){cell.x + (cell.width - size) / 2.0f, cell.y + 20.0f * ui, size, size}, (Vector2){0, 0}, 0.0f, open ? WHITE : (Color){12, 8, 18, 255});
+            draw_roster_frame(i, 0, (Rectangle){cell.x + (cell.width - size) / 2.0f, cell.y + 20.0f * ui, size, size}, open ? WHITE : (Color){12, 8, 18, 255});
         }
         sv_text_centered(open ? sv_character(i)->name : "Bloqueado", cell.x + cell.width / 2.0f, cell.y + 145.0f * ui, 28.0f * ui, open ? WHITE : (Color){120, 100, 125, 255});
     }
@@ -883,6 +946,7 @@ static void render_over(void)
         hub_selected = 0;
         sv_music_play(MUS_MENU);
         sv_ambient_play(-1);
+        sv_audio_prepare(MUS_ATO1, sv_start_ambient());   // Para a próxima partida começar sem ler o disco
         sv_sfx(SND_confirma);
     }
 
@@ -894,6 +958,18 @@ static void render_over(void)
     snprintf(text, sizeof(text), "Tempo %d:%02d   Nível %d   Abates %d   Chefes %d", (int)sv_run.time / 60, (int)sv_run.time % 60, sv_run.player.level, sv_run.kills, sv_run.bosses_defeated);
     if (duo && sv_run.duo) snprintf(text, sizeof(text), "Tempo %d:%02d   Nível J1 %d · J2 %d   Abates %d   Chefes %d", (int)sv_run.time / 60, (int)sv_run.time % 60, sv_duo_player(0)->level, sv_duo_player(1)->level, sv_run.kills, sv_run.bosses_defeated);
     sv_text_centered(text, w / 2.0f, 290.0f * ui, 34.0f * ui, (Color){220, 205, 215, 255});
+
+    {
+        // A mesma conta do ranking, para o jogador entender a posição dele
+        SvRankEntry run = {0};
+
+        run.seconds = (int)sv_run.time;
+        run.kills = sv_run.kills;
+        run.bosses = sv_run.bosses_defeated;
+        run.won = won;
+        snprintf(text, sizeof(text), "%d PONTOS   (abate %d · segundo %d · chefe %d · vitória %d)", sv_ranking_score(&run), SV_SCORE_PER_KILL, SV_SCORE_PER_SECOND, SV_SCORE_PER_BOSS, SV_SCORE_WIN_BONUS);
+        sv_text_centered(text, w / 2.0f, 335.0f * ui, 28.0f * ui, (Color){255, 214, 80, 255});
+    }
 
     snprintf(text, sizeof(text), "+%d BANCO DE HORAS", earned_coins);
     sv_text_centered(text, w / 2.0f, 380.0f * ui, 64.0f * ui, (Color){255, 214, 80, 255});

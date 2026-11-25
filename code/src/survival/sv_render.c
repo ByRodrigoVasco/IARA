@@ -137,12 +137,9 @@ static void draw_prompt_windows(void)
             text[shown] = 0;
 
             for (int k = 0; k < 3; k++) DrawRectangle((int)z->pos.x - 1, (int)(wy + wh + 3.0f + (float)k * 8.0f), 2, 4, (Color){56, 240, 228, 150});
+            // Moldura da janela (fx_terminal, gerada por tools/sprites/gerar_prompt.py) com sombra embaixo
             DrawRectangle((int)wx + 2, (int)wy + 2, (int)ww, (int)wh, (Color){0, 0, 0, 90});
-            DrawRectangle((int)wx, (int)wy, (int)ww, (int)wh, (Color){8, 22, 30, 240});
-            DrawRectangle((int)wx, (int)wy, (int)ww, 9, (Color){18, 124, 128, 255});
-            for (int k = 0; k < 3; k++) DrawRectangle((int)wx + 4 + k * 6, (int)wy + 3, 3, 3, k == 0 ? (Color){200, 12, 20, 255} : (Color){232, 194, 74, 255});
-            sv_text("IARA", wx + ww - 30.0f, wy - 1.0f, 8.0f, (Color){224, 255, 248, 210});
-            DrawRectangleLines((int)wx, (int)wy, (int)ww, (int)wh, (Color){56, 240, 228, 255});
+            sv_draw(SPR_fx_terminal, 0, (Vector2){wx + ww / 2.0f, wy + wh / 2.0f}, 1.0f, 0.0f, false, WHITE);
             sv_text(text, wx + 6.0f, wy + 15.0f, 11.0f, (Color){120, 255, 240, 255});
             if (blink) DrawRectangle((int)(wx + 7.0f + sv_text_width(text, 11.0f)), (int)wy + 16, 5, 9, (Color){224, 255, 248, 255});
         }
@@ -157,9 +154,8 @@ static void draw_prompt_windows(void)
                 // A janela fica um instante com o comando completo, pisca em branco e some
                 unsigned char alpha = (unsigned char)(255.0f * (1.0f - q / 0.6f));
 
-                DrawRectangle((int)wx, (int)wy, (int)ww, (int)wh, (Color){8, 22, 30, alpha});
-                DrawRectangle((int)wx, (int)wy, (int)ww, 9, (Color){18, 124, 128, alpha});
-                DrawRectangleLines((int)wx, (int)wy, (int)ww, (int)wh, (Color){180, 255, 248, alpha});
+                // No Enter a moldura acende (quadro 1) e depois some junto com o comando
+                sv_draw(SPR_fx_terminal, q < 0.15f ? 1 : 0, (Vector2){wx + ww / 2.0f, wy + wh / 2.0f}, 1.0f, 0.0f, false, (Color){255, 255, 255, alpha});
                 sv_text(full, wx + 6.0f, wy + 15.0f, 11.0f, (Color){120, 255, 240, alpha});
                 if (q < 0.15f) DrawRectangle((int)wx, (int)wy, (int)ww, (int)wh, (Color){255, 255, 255, (unsigned char)(170.0f * (1.0f - q / 0.15f))});
             }
@@ -535,6 +531,7 @@ static void draw_player(void)
     {
         if (p->weapons[i].id == W_VERA && p->weapons[i].cooldown <= 0.0f) DrawCircleLinesV(p->pos, 16.0f + sinf(sv_run.time * 5.0f), (Color){120, 230, 255, 170});
     }
+    if (p->pure_flash > 0.0f) sv_text_centered("sem efeito colateral", p->pos.x, p->pos.y - 46.0f - (0.9f - p->pure_flash) * 14.0f, 13.0f, (Color){150, 245, 180, (unsigned char)(255.0f * fminf(1.0f, p->pure_flash * 2.5f))});
     if (p->negate_flash > 0.0f) sv_text_centered("V -> F = F", p->pos.x, p->pos.y - 46.0f - (0.9f - p->negate_flash) * 14.0f, 13.0f, (Color){160, 240, 255, (unsigned char)(255.0f * fminf(1.0f, p->negate_flash * 2.5f))});
 
     for (int i = 0; i < p->weapon_count; i++)
@@ -765,6 +762,16 @@ static void draw_shots(void)
 
                 DrawRectanglePro((Rectangle){s->pos.x + stamp.x, s->pos.y + stamp.y, 5.0f, 4.0f}, (Vector2){2.5f, 2.0f}, s->spin, (Color){64, 176, 104, 255});
             }
+            continue;
+        }
+        if (s->kind == 3)
+        {
+            // Recursão: o f() voa reto, com um rastro verde; cada cópia sai menor que a chamada anterior
+            float size = s->radius / 7.0f;   // O f() da primeira chamada sai um pouco maior que o sprite
+            Vector2 tail = Vector2Subtract(s->pos, Vector2Scale(Vector2Normalize(s->vel), 14.0f * size));
+
+            DrawLineEx(tail, s->pos, 4.0f * size, (Color){60, 190, 110, 90});
+            sv_draw(SPR_fx_recursao, 0, s->pos, size, 0.0f, false, WHITE);
             continue;
         }
         sv_draw(SPR_fx_grampeador, anim_frame(s->life, 12.0f) % 4, s->pos, 1.0f, atan2f(s->vel.y, s->vel.x) * RAD2DEG, false, WHITE);
