@@ -48,8 +48,8 @@ Atualizar a coluna Status conforme as issues forem corrigidas e fechadas. Confer
 | BUG-31 | Botão de velocidade (2x) no centro cobre o nome do chefe e o texto vaza do botão | Média | [#78](https://github.com/ByRodrigoVasco/IARA/issues/78) | Corrigido na `develop` (PR #82), issue fechada |
 | BUG-32 | Janela sem opção de maximizar e com tamanho solto | Média | [#79](https://github.com/ByRodrigoVasco/IARA/issues/79) | Corrigido na `develop` (PR #82), issue fechada |
 | BUG-33 | Personagem bloqueado escolhido com cheat volta com a aparência dele e a habilidade do Estagiário | Média | [#94](https://github.com/ByRodrigoVasco/IARA/issues/94) | Corrigido na `develop` (merge `aeefb3d`, 24/11/2026), issue fechada |
-| BUG-34 | Suíte não compila: `test_sistema` sem `rooms.c` | Média | [#95](https://github.com/ByRodrigoVasco/IARA/issues/95) | Aberto; o código dos cômodos (`rooms.c`, commit `7a93e36`) não está mais em nenhuma branch |
-| BUG-35 | `feat/historia-comodos` conflita com sintomas e cutscenes em `game_loop.c` | Média | [#96](https://github.com/ByRodrigoVasco/IARA/issues/96) | Aberto; depende de os cômodos voltarem (ver BUG-34) |
+| BUG-34 | Suíte não compila: `test_sistema` sem `rooms.c` | Média | [#95](https://github.com/ByRodrigoVasco/IARA/issues/95) | Aberto (`feat/historia-comodos`, recuperada no remoto em 25/11/2026) |
+| BUG-35 | `feat/historia-comodos` conflita com sintomas e cutscenes em `game_loop.c` | Média | [#96](https://github.com/ByRodrigoVasco/IARA/issues/96) | Aberto (`feat/historia-comodos` conflita com a `develop` em `game_loop.c`) |
 | BUG-36 | Commit leva 16 imagens de evidência regravadas pela suíte | Baixa | [#97](https://github.com/ByRodrigoVasco/IARA/issues/97) | Aberto (`feature/cutscenes-comportamento-npcs`) |
 | BUG-37 | Cheats do debug valem só para o jogador 1 na dupla | Baixa | [#98](https://github.com/ByRodrigoVasco/IARA/issues/98) | Corrigido na `develop` (merge `aeefb3d`, 24/11/2026), issue fechada |
 | BUG-38 | Análise estática aponta risco de estouro de vetor no quiz de triagem | Baixa | [#99](https://github.com/ByRodrigoVasco/IARA/issues/99) | Corrigido na `develop` (merge `aeefb3d`, 24/11/2026), issue fechada |
@@ -722,7 +722,7 @@ Achados pelo bloco 4 da suíte (`code/tests/test_sprint03.c`), executado na `dev
 
 **Labels:** `bug`, `sprint-03`
 
-Branch aberta a partir da `develop` (`a2b8e07`) para fechar as issues de bug que dependem só da `develop`. Mesclada na `develop` em 24/11/2026 (merge `aeefb3d`, sem PR). Os BUG-36 e BUG-44 ficam na `feature/cutscenes-comportamento-npcs`, que ainda não vai para a `develop`. Os BUG-34 e BUG-35 dependem do código dos cômodos, que hoje não está em nenhuma branch. O BUG-42 pede arte nova. O BUG-17 continua sem reprodução.
+Branch aberta a partir da `develop` (`a2b8e07`) para fechar as issues de bug que dependem só da `develop`. Mesclada na `develop` em 24/11/2026 (merge `aeefb3d`, sem PR). Os BUG-36 e BUG-44 ficam na `feature/cutscenes-comportamento-npcs`, que ainda não vai para a `develop`. Os BUG-34 e BUG-35 dependem do código dos cômodos, que naquela data não estava em nenhuma branch do remoto. Em 25/11/2026 a `feat/historia-comodos` foi recuperada e voltou ao remoto, com os 4 commits originais até o `7a93e36`. O BUG-42 pede arte nova. O BUG-17 continua sem reprodução.
 
 | ID | Issue | Correção | Onde | Coberto por |
 |---|---|---|---|---|
