@@ -30,6 +30,8 @@ void render_game_loop(void);
  * @return true quando a máquina de estados deve sair da partida.
  */
 bool is_game_loop_finished(void);
+bool game_loop_wants_replay(void);
+void game_loop_retry_ending(void);
 
 /**
  * @brief Informa que o jogador escolheu SAIR DO JOGO no menu de pausa.

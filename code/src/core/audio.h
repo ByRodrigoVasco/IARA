@@ -102,6 +102,8 @@ float audio_get_effects_volume(void);
  * @brief Reproduz o efeito sonoro de clique do mouse.
  */
 void play_click_sound(void);
+void play_door_sound(void);
+void play_keyboard_sound(void);
 
 /**
  * @brief Reproduz em sequência o som de passos enquanto o jogador realmente se move.

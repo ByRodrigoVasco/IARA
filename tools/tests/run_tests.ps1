@@ -13,8 +13,9 @@
 #>
 
 param(
-    # Espera uma tecla entre os conjuntos, para narrar com calma na gravacao.
+    # Restringe a execucao aos nomes informados, como test_story e test_sprint03.
     [string[]]$Somente = @(),
+    # Espera uma tecla entre os conjuntos, para narrar com calma na gravacao.
     [switch]$Pausado
 )
 
@@ -136,7 +137,7 @@ $suite = @(
             "code/src/core/helper.c", "code/src/core/game_state.c",
             "code/src/ui/accessibility.c", "code/src/game/hints.c",
             "code/src/core/save.c", "code/src/ui/cheat_sheet.c", "code/src/ui/computer_art.c", "code/src/ui/logic_text.c", "code/src/game/logic.c", "code/src/game/calendar.c",
-            "code/src/core/audio.c",
+            "code/src/core/audio.c", "code/src/game/symptoms.c", "code/src/ui/office_symptoms.c",
             "code/src/ui/notice.c", "code/src/ui/ui_widgets.c", "code/src/ui/confirm_dialog.c",
             "code/src/screens/help.c", "code/src/ui/pause_menu.c"
         )

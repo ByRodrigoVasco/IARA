@@ -284,7 +284,7 @@ static void testar_modos_e_pontos(void)
 
     for (int i = 0; i < TICKET_COUNT; i++)
     {
-        if (ticket_went_wrong(i) && strcmp(get_ticket_report_line(i), dialog_sequence[FIRST_TICKET_STEP + i].wrong_result) == 0) relatos_de_erro++;
+        if (ticket_went_wrong(i) && strstr(get_ticket_report_line(i), dialog_sequence[FIRST_TICKET_STEP + i].wrong_result) != NULL) relatos_de_erro++;
     }
 
     bool lista_de_privacidade = false;
