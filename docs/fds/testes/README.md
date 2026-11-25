@@ -42,7 +42,7 @@ A suíte monta o jogo de verdade — os mesmos módulos, os mesmos arquivos de m
 a mesma máquina de estados — e o conduz como um jogador faria. Não há simulação de
 fachada: `test_sistema` (CT-01 a CT-16) inclui `game_loop.c` para alcançar o estado
 interno real da partida, `test_conteudo` (CT-17 a CT-24, CT-37, CT-41, CT-43, CT-47 a CT-52, CT-57, CT-58, CT-61 a CT-70, CT-74, CT-77, CT-78, CT-81, CT-92 e CT-93) percorre os chamados e o menu, e
-`test_fluxo` (CT-25 a CT-36, CT-42 e CT-44 a CT-46, CT-53 a CT-56, CT-59, CT-60, CT-71 a CT-73, CT-75, CT-76, CT-79 e CT-80) monta o jogo inteiro menos a `main.c` e o percorre do
+`test_fluxo` (CT-25 a CT-36, CT-42 e CT-44 a CT-46, CT-53 a CT-56, CT-59, CT-60, CT-71 a CT-73, CT-75, CT-76, CT-79, CT-80, CT-106 e CT-107) monta o jogo inteiro menos a `main.c` e o percorre do
 começo ao fim com a janela à vista: abertura, menu, CRÉDITOS e a volta ao menu,
 INICIAR, cartão do dia, caminhada pelo escritório, tutorial, os cinco chamados (um deles conferindo a sugestão da IARA), o relatório do dia, a volta ao mapa e a saída pela porta, que encerra o dia. Depois repete o dia pelos outros caminhos: colinha do mural, tudo enviado sem conferir, failsafe e saída do computador no meio do dia. Junto rodam os testes de unidade
 `test_collisions`, `test_characters`, `test_save` e `test_hints`.
@@ -123,7 +123,7 @@ INICIAR, cartão do dia, caminhada pelo escritório, tutorial, os cinco chamados
 | CT-70 | Os 4 finais saem das condições do GDD, sem sorte, em todas as combinações (CA6) | OK |
 | CT-71 | Campanha passa pelos 100 dias em ordem: 9 jogáveis, 14 flashes e o resto em salto | OK |
 | CT-72 | Investigar, conversar e fechar a prova leva ao Final D, com as 3 evidências e a Mariana | OK |
-| CT-73 | Depois do final, o jogo volta ao menu e INICIAR recomeça do Dia 1 sem herdar nada | OK |
+| CT-73 | Depois do final, SAIR PARA O MENU volta ao menu e INICIAR recomeça do Dia 1 sem herdar nada | OK |
 | CT-74 | Três erros em qualquer puzzle acionam o failsafe, vão ao relatório e não contam como prova | OK |
 | CT-75 | Save retoma no salto, no dia jogável com o roteiro certo e depois de um dia já encerrado (CA4) | OK |
 | CT-76 | Botões das mesas de todos os dias cabem, com o texto legível, em 7 tamanhos de janela | OK |
@@ -146,6 +146,8 @@ INICIAR, cartão do dia, caminhada pelo escritório, tutorial, os cinco chamados
 | CT-103 | A tensão da trilha e o cenário sobem dia a dia, começando calmos, sem som de susto (US13) | OK |
 | CT-104 | Em todo dia jogável um NPC (nunca a IARA) dá a dica, e conversar não muda nenhum ponto (US04, PI2-202) | OK |
 | CT-105 | Manual com dica vale mais que manual sem dica, que vale mais que a IARA; os pontos acumulam e um dia isolado não muda o final (US11, PI2-168) | OK |
+| CT-106 | Depois do final da campanha, JOGAR NOVAMENTE recomeça do Dia 1 no mesmo save, sem herdar nada, e SAIR pede confirmação (PI2-318) | OK |
+| CT-107 | No fim de uma partida da Sobrevivência, MENU DA SOBREVIVÊNCIA volta ao início do modo, com JOGAR marcado, e SAIR PARA O MENU leva ao menu (PI2-318) | A executar |
 
 ## Evidência da US14: ignorar os NPCs
 
