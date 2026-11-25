@@ -741,3 +741,33 @@ Branch aberta a partir da `develop` (`a2b8e07`) para fechar as issues de bug que
 **Execução dos testes:** os 13 conjuntos e o executável do jogo compilam. Na máquina em que a correção foi feita, o Windows (Controle de Aplicativo) bloqueou a execução dos `.exe` recém-compilados, então os CT-95, CT-97, CT-98 e os SV-137 a SV-142 ainda precisam ser rodados na `develop`. Até lá, os resultados registrados no [README dos testes](README.md) continuam os da execução de 20/11/2026.
 
 **Issues:** as issues #59, #94, #98, #99, #101, #102 e #103 receberam o comentário com a correção e foram fechadas em 24/11/2026. As #58, #95 e #96 receberam um comentário com a situação e seguem abertas, junto com as #97, #104 e #110.
+
+---
+
+<a id="nuvem-saves-ranking"></a>
+
+## Branch `feat/nuvem-saves-ranking` (25/11/2026): saves e rankings na nuvem
+
+Funcionalidade nova, para eventos com vários notebooks. Não corrige nem abre bug com issue. Guia de montagem e comportamento: [tools/nuvem/LEIA-ME.md](../../../tools/nuvem/LEIA-ME.md).
+
+**Execução dos testes (25/11/2026):** 13 dos 14 conjuntos passaram. `test_cloud` (NV-01 a NV-43, com um servidor falso, sem rede) com 43 de 43; blocos 1 a 3 com 32 de 32, 37 de 37 e 58 de 58; `test_survival` com 148 de 148. A única falha é o CT-100 no bloco 4, o [BUG-42](#bug-42) já aberto, que depende de arte. A suíte foi repetida no fim, já com o indicador de conexão e os personagens da dupla, com o mesmo resultado. O executável de release compilou com a nuvem, e a leitura de saves e rankings no servidor real respondeu certo.
+
+**Depois da primeira entrega:**
+
+- Os menus mostram a conexão (bolinha verde "online" ou vermelha "offline"), e o motivo da queda vai para o `iara-desempenho.log`.
+- O ranking de duplas passou a levar os personagens dos dois jogadores no mesmo campo (J1 + 16 × (J2 + 1)), sem mudar o banco.
+- O ranking ao vivo na web ficou em um repositório próprio, [IARA-Ranking-ao-vivo](https://github.com/ByRodrigoVasco/IARA-Ranking-ao-vivo).
+
+**Conferido à mão (25/11/2026):** o save no servidor real, testado e aprovado por Rodrigo.
+
+**Ainda não verificado:**
+
+- O roteiro com dois notebooks ao mesmo tempo (trava, conflito e queda de rede) não tem resultado registrado.
+- Uma partida em dupla de verdade conferida na página do ranking (J1 e J2).
+
+**Limitações conhecidas:**
+
+- Sem conexão, não dá para abrir, criar nem apagar saves.
+- A campanha só sobe quando o jogo grava (ao voltar ao menu e ao fechar).
+- No servidor, `iara_gravar_save` recria um save que não existe. O jogo confere antes de reenviar a fila depois de uma falha de rede, mas um notebook que ficou suspenso sem registrar falha pode recriar um save apagado nesse intervalo.
+- Saves que já existiam em um computador não são enviados para a nuvem.

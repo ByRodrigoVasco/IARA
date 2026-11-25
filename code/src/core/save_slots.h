@@ -81,6 +81,9 @@ bool save_slot_exists(save_mode mode, const char *name);
 /** @brief Tira os espaços do começo e do fim do nome, no próprio texto. */
 void save_name_trim(char *name);
 
+/** @brief Só as regras do nome (tamanho, letras e nomes do Windows), sem olhar os saves que já existem. */
+save_name_check save_name_check_rules(const char *name);
+
 /** @brief Confere se o nome serve para um save novo neste modo. O nome é conferido sem os espaços das pontas. */
 save_name_check save_slot_check_name(save_mode mode, const char *name);
 
@@ -89,6 +92,9 @@ const char *save_name_check_message(save_name_check result);
 
 /** @brief Cria a pasta do save. Falha se o nome não for aceito. */
 bool save_slot_create(save_mode mode, const char *name);
+
+/** @brief Garante que a pasta do save existe (um save que vem da nuvem pode ser novo neste computador). */
+bool save_slot_ensure(save_mode mode, const char *name);
 
 /** @brief Apaga o save inteiro: os arquivos e a pasta. Só mexe dentro de saves/<modo>/. */
 bool save_slot_delete(save_mode mode, const char *name);
