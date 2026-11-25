@@ -1088,8 +1088,8 @@ static void draw_hud(Camera2D camera)
         sv_text_centered(sv_act_name(sv_run.act), w / 2.0f, pad + 38.0f * ui, 22.0f * ui, (Color){200, 170, 170, 255});
     }
 
-    // Botão de velocidade do tempo: só até os 7:00, depois a tela já está cheia
-    if (sv_run.time < SV_SPEEDUP_LIMIT && sv_run.phase == SV_PLAYING)
+    // Botão de velocidade do tempo
+    if (sv_run.phase == SV_PLAYING)
     {
         Rectangle button = sv_speed_button_rect();
         bool hot = sv_time_scale > 1;
