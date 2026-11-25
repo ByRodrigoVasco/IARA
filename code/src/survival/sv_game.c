@@ -2317,6 +2317,25 @@ static int choice_weight(const SvChoice *c)
     return (c->kind == 2 || c->kind == 3) && c->id == P_LANTERNA ? LANTERNA_WEIGHT : 1;
 }
 
+SvProgress sv_progress_now(void)
+{
+    SvProgress progress = {sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills};
+
+    // O que a partida atual já garantiu: depois de paga (finished_flag) isso já está no save
+    if (!finished_flag && !sv_run.cheated)
+    {
+        progress.kills += sv_run.kills;
+        if ((int)sv_run.time > progress.best_seconds) progress.best_seconds = (int)sv_run.time;
+        if (sv_run.phase == SV_WON) progress.wins++;
+    }
+    return progress;
+}
+
+bool sv_weapon_available(int weapon)
+{
+    return sv_debug_mode || sv_weapon_unlocked(weapon, sv_progress_now());
+}
+
 static void build_choices(void)
 {
     SvChoice pool[32];
@@ -2328,7 +2347,7 @@ static void build_choices(void)
         SvWeapon *owned = find_weapon(w);
 
         if (owned && owned->level < SV_WEAPON_MAX_LEVEL) pool[count++] = (SvChoice){1, w};
-        else if (!owned && p->weapon_count < SV_MAX_WEAPONS) pool[count++] = (SvChoice){0, w};
+        else if (!owned && p->weapon_count < SV_MAX_WEAPONS && sv_weapon_available(w)) pool[count++] = (SvChoice){0, w};
     }
 
     for (int i = 0; i < P_COUNT; i++)

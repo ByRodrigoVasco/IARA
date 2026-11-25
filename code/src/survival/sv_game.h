@@ -315,6 +315,12 @@ extern bool sv_debug_mode;   // Ligado pela tecla F1 (sv_debug.c). Libera as tra
  *  A aparência carregada, a habilidade da partida e o save usam todos este mesmo valor. */
 int sv_playable_character(int character);
 
+// O progresso do save somado ao da partida em andamento (partida com trapaça não soma).
+SvProgress sv_progress_now(void);
+
+// Se o poder pode sair nas cartas: com o debug ligado todos podem.
+bool sv_weapon_available(int weapon);
+
 // Modo dupla: ligado antes de sv_game_start para a próxima partida ser em dupla (veja sv_duo.h).
 extern bool sv_duo_mode;
 

@@ -1456,6 +1456,68 @@ static void test_duo(void)
 }
 
 // Correções do bug tracker da Sprint 03: BUG-33 (personagem do cheat) e BUG-37 (cheats na dupla)
+// Sorteia muitas mãos de cartas: algum poder indisponível apareceu como novidade? E o poder pedido?
+static bool cards_offer(int wanted, bool *only_available)
+{
+    bool seen = false;
+
+    *only_available = true;
+    for (unsigned seed = 1; seed <= 200; seed++)
+    {
+        sv_game_start(seed);
+        sv_run.player.xp = (float)sv_run.player.xp_needed;
+        sv_game_update(1.0f / 60.0f, (Vector2){0.0f, 0.0f});
+        for (int i = 0; i < sv_run.choice_count; i++)
+        {
+            if (sv_run.choices[i].kind != 0) continue;
+            if (!sv_weapon_available(sv_run.choices[i].id)) *only_available = false;
+            if (sv_run.choices[i].id == wanted) seen = true;
+        }
+    }
+    return seen;
+}
+
+static void test_poderes_por_personagem(void)
+{
+    SvProgress zero = {0, 0, 0, 0};
+    bool free_ok = true, locked_ok = true, only = false;
+
+    printf("\nPoderes liberados por personagem\n");
+    sv_debug_mode = false;
+    sv_meta_reset();
+
+    for (int w = 0; w < W_COUNT; w++)
+    {
+        int owner = sv_weapon_owner(w);
+
+        if (owner < 0 || owner == CH_ESTAGIARIO) free_ok = free_ok && sv_weapon_unlocked(w, zero);
+        else locked_ok = locked_ok && !sv_weapon_unlocked(w, zero);
+    }
+    check("SV-150", "save novo: só os poderes sem dono e o do Estagiário estão liberados", free_ok && locked_ok);
+
+    {
+        int laura = sv_character(CH_LAURA)->start_weapon;
+        bool seen = cards_offer(laura, &only);
+
+        check("SV-151", "as cartas nunca oferecem o poder de um personagem bloqueado", !seen && only);
+
+        sv_meta.best_seconds = 180;
+        check("SV-152", "liberado o personagem no save, o poder dele passa a sair nas cartas", cards_offer(laura, &only) && only);
+
+        sv_meta_reset();
+        sv_debug_mode = true;
+        check("SV-153", "com o debug ligado todos os poderes saem nas cartas", cards_offer(laura, &only));
+        sv_debug_mode = false;
+
+        sv_game_start(21);
+        sv_run.time = 181.0f;
+        check("SV-154", "o poder libera no meio da partida que cumpriu o objetivo", sv_weapon_available(laura) && sv_progress_now().best_seconds == 181);
+        sv_run.cheated = true;
+        check("SV-155", "partida com trapaça não libera nada", !sv_weapon_available(laura) && sv_progress_now().best_seconds == 0);
+    }
+    sv_meta_reset();
+}
+
 static void test_correcoes_do_bug_tracker(void)
 {
     int locked = -1;
@@ -1558,6 +1620,7 @@ int main(void)
     test_ranking();
     test_duo();
     test_correcoes_do_bug_tracker();
+    test_poderes_por_personagem();
 
     printf("\n%d verificacoes, todas passaram.\n", checks);
     return 0;
