@@ -11,6 +11,23 @@ as inconsistências. Assim, a mecânica ensina ao mesmo tempo ética em IA e ló
 
 > **Entrega final (Unidade 2):** versão publicada nas [Releases do GitHub](https://github.com/ByRodrigoVasco/IARA/releases), reports das sprints [01](docs/fds/sprint-01/README.md), [02](docs/fds/sprint-02/README.md) e [03](docs/fds/sprint-03/README.md), [rastreabilidade das 16 histórias](docs/fds/sprint-03/README.md#rastreabilidade-das-histórias-pi2-330) e [bug tracker](docs/fds/testes/bugs.md).
 
+## Novidades da Unidade 2
+
+Na Unidade 1 o jogo era o núcleo em C: menu, máquina de estados, o escritório com colisões e um
+quiz jogável. Desde então entrou:
+
+| Novidade | O que é |
+|---|---|
+| **Campanha do Dia 1 ao Dia 100** | O expediente inteiro, com 9 dias jogáveis, Flashes do dia e saltos no calendário. Cada dia traz um conceito de lógica dentro do trabalho, e as escolhas levam a um dos 4 finais |
+| **Modo Sobrevivência** | Dez minutos num mapa de 15 áreas do escritório, com 5 atos, 5 chefes, Banco de Horas para comprar melhorias e ranking de partidas |
+| **Sobrevivência em dupla** | Duas pessoas no mesmo computador, com controles separados, XP dividida e ranking próprio |
+| **Saves por modo** | Save automático com vários slots, separados entre campanha, Sobrevivência e dupla |
+| **Configurações** | Volume da música e dos efeitos, brilho, tela cheia e janela maximizada, guardados entre sessões |
+| **Acessibilidade** | Alto contraste, pausa, tela de ajuda e confirmação antes de sair ou desistir |
+
+Tudo isso roda a partir de um `iara.exe` único, sem instalação nem conta. O detalhamento por sprint
+está em [Como o software evoluiu](#como-o-software-evoluiu).
+
 ## Funcionalidades
 
 **Campanha (modo normal)**
@@ -226,9 +243,9 @@ Testes de sistema das histórias que ainda não tinham caso de teste, executados
 
 ### Bug Tracker
 
-Print de **20/11/2026** das [Issues do GitHub](https://github.com/ByRodrigoVasco/IARA/issues?q=is%3Aissue+label%3Abug), com as abertas e as fechadas. Cada issue tem o label da sprint, um responsável e aponta para a história do Jira, o teste e o PR da correção. O status de cada bug também fica em [bugs.md](docs/fds/testes/bugs.md).
+Print de **25/11/2026**, véspera da entrega, das [Issues do GitHub](https://github.com/ByRodrigoVasco/IARA/issues?q=is%3Aissue+label%3Abug), com as abertas e as fechadas: **44 bugs, 6 em aberto**. Cada issue tem o label da sprint, um responsável e aponta para a história do Jira, o teste e o PR da correção. O status de cada bug também fica em [bugs.md](docs/fds/testes/bugs.md), em dia com as issues.
 
-![Bug tracker do GitHub em 20/11/2026](docs/fds/sprint-03/bug-tracker-2026-11-20.png)
+![Bug tracker do GitHub em 25/11/2026](docs/fds/sprint-03/bug-tracker-2026-11-25.png)
 
 ## Como contribuir
 
