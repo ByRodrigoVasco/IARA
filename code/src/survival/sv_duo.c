@@ -24,6 +24,8 @@ static void seat_save(SvSeat *seat)
     memcpy(seat->colega_attack, sv_run.colega_attack, sizeof(seat->colega_attack));
     memcpy(seat->colega_walk, sv_run.colega_walk, sizeof(seat->colega_walk));
     memcpy(seat->colega_moving, sv_run.colega_moving, sizeof(seat->colega_moving));
+    memcpy(seat->colega_vel, sv_run.colega_vel, sizeof(seat->colega_vel));
+    seat->colega_leader = sv_run.colega_leader;
     seat->colega_heal = sv_run.colega_heal;
     seat->colega_heal_flash = sv_run.colega_heal_flash;
 }
@@ -39,6 +41,8 @@ static void seat_load(const SvSeat *seat)
     memcpy(sv_run.colega_attack, seat->colega_attack, sizeof(sv_run.colega_attack));
     memcpy(sv_run.colega_walk, seat->colega_walk, sizeof(sv_run.colega_walk));
     memcpy(sv_run.colega_moving, seat->colega_moving, sizeof(sv_run.colega_moving));
+    memcpy(sv_run.colega_vel, seat->colega_vel, sizeof(sv_run.colega_vel));
+    sv_run.colega_leader = seat->colega_leader;
     sv_run.colega_heal = seat->colega_heal;
     sv_run.colega_heal_flash = seat->colega_heal_flash;
 }
