@@ -16,6 +16,10 @@
 #include "save_slots.h"
 #include "save.h"
 #include "cloud_sync.h"
+#include "cloud.h"
+#include "accessibility.h"
+#include "fonts.h"
+#include "helper.h"
 #include "loading.h"
 #include "screen_style.h"
 #include "state_machine.h"
@@ -43,8 +47,32 @@ static void save_progress_with_notice(void)
     }
 }
 
+// Bolinha e palavra no canto de cima dos menus: a conexão com a nuvem. Sem nuvem, nada aparece.
+static void draw_connection_status(void)
+{
+    int screen = current_game_state_variables.current_screen;
+    cloud_link link = cloud_connection(NULL, 0);
+    const char *word = link == CLOUD_LINK_ONLINE ? "online" : "offline";
+    float scale, size;
+    Vector2 measure, position;
+
+    if (link == CLOUD_LINK_UNKNOWN) return;
+    if (screen != MENU_SCREEN && screen != MODE_SELECT_SCREEN && screen != SAVE_SELECT_SCREEN && screen != SETTINGS_SCREEN &&
+        screen != HELP_SCREEN && !(screen == SURVIVAL_SCREEN && survival_in_menu())) return;
+
+    scale = get_ui_scale();
+    size = DEFAULT_TEXT_FONT_SIZE * 0.7f * scale;
+    measure = MeasureTextEx(default_game_font, word, size, size * 0.06f);
+    position = (Vector2){GetScreenWidth() - measure.x - 18.0f * scale, 14.0f * scale};
+    DrawRectangleRounded((Rectangle){position.x - 28.0f * scale, position.y - 5.0f * scale, measure.x + 38.0f * scale, measure.y + 10.0f * scale}, 0.4f, 6, (Color){0, 0, 0, 160});
+    DrawCircleV((Vector2){position.x - 14.0f * scale, position.y + measure.y / 2.0f}, 6.0f * scale,
+                link == CLOUD_LINK_ONLINE ? (Color){60, 210, 100, 255} : (Color){235, 60, 60, 255});
+    DrawTextEx(default_game_font, word, position, size, size * 0.06f, RAYWHITE);
+}
+
 void handle_state_initialization(void)
 {
+    set_frame_overlay(draw_connection_status);
     initialize_pre_menu_textures();
 }
 

@@ -95,9 +95,10 @@ static bool send_request(const char *function, const char *body, int *http_statu
                             &status, &size, WINHTTP_NO_HEADER_INDEX))
     {
         *response = read_response(request);
-        *http_status = (int)status;
         ok = *response != NULL;
+        *http_status = ok ? (int)status : -(int)GetLastError();
     }
+    else *http_status = -(int)GetLastError();   // Antes de fechar os handles, que trocam o erro
     if (request != NULL) WinHttpCloseHandle(request);
     if (connection != NULL) WinHttpCloseHandle(connection);
     if (session != NULL) WinHttpCloseHandle(session);

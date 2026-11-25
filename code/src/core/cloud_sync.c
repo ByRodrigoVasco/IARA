@@ -10,6 +10,8 @@
 
 #define PATH_BYTES 600
 #define STOP_TIMEOUT_MS 6000
+#define CLOUD_LOG_PATH "iara-desempenho.log"   // O log do jogo, na pasta de dados
+#define CLOUD_LOG_MAX_LINES 100
 
 void cloud_sync_start(void)
 {
@@ -107,11 +109,36 @@ void cloud_sync_close_save(void)
     cloud_close_save();
 }
 
+// Registra no log cada mudança da conexão, com o motivo quando cai
+static void log_connection(void)
+{
+    static cloud_link last_link = CLOUD_LINK_UNKNOWN;
+    static char last_reason[128] = "";
+    static int lines = 0;
+    char reason[128];
+    cloud_link link = cloud_connection(reason, sizeof(reason));
+    FILE *file;
+
+    if (link == CLOUD_LINK_UNKNOWN || (link == last_link && strcmp(reason, last_reason) == 0)) return;
+    last_link = link;
+    snprintf(last_reason, sizeof(last_reason), "%s", reason);
+
+    if (link == CLOUD_LINK_ONLINE) TraceLog(LOG_INFO, "NUVEM: online");
+    else TraceLog(LOG_WARNING, "NUVEM: offline: %s", reason);
+    if (lines >= CLOUD_LOG_MAX_LINES) return;
+    file = fopen(CLOUD_LOG_PATH, "a");
+    if (file == NULL) return;
+    fprintf(file, "%.1f s  nuvem %s%s%s\n", GetTime(), link == CLOUD_LINK_ONLINE ? "online" : "offline", reason[0] != '\0' ? ": " : "", reason);
+    fclose(file);
+    lines++;
+}
+
 void cloud_sync_update(void)
 {
     cloud_notice notice;
     char text[256];
 
+    log_connection();
     if (!cloud_poll_notice(&notice)) return;
     if (notice.kind == CLOUD_NOTICE_LOST)
         snprintf(text, sizeof(text), "Outro notebook assumiu o save \"%s\". O que for feito aqui não vai para a nuvem: saia e abra o save de novo.", notice.name);

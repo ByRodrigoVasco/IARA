@@ -2,6 +2,7 @@
 #define CLOUD_H
 
 #include <stdbool.h>
+#include <stddef.h>
 
 /*
  * Saves e rankings compartilhados entre notebooks (Supabase, tools/nuvem/).
@@ -39,6 +40,13 @@ typedef enum
     CLOUD_OFFLINE,          // Sem resposta do servidor
     CLOUD_SERVER_ERROR      // O servidor respondeu com erro ou com algo que não dá para entender
 } cloud_status;
+
+typedef enum
+{
+    CLOUD_LINK_UNKNOWN = 0,   // Ainda sem a primeira resposta (ou nuvem desligada)
+    CLOUD_LINK_ONLINE,
+    CLOUD_LINK_OFFLINE
+} cloud_link;
 
 typedef struct
 {
@@ -81,7 +89,8 @@ typedef struct
 
 /**
  * @brief Faz uma chamada: POST em rest/v1/rpc/<function> com o corpo JSON.
- * @return false se o servidor não respondeu. Se true, *response é alocado com malloc.
+ * @return false se o servidor não respondeu; *http_status pode levar o erro de rede do Windows com
+ * sinal negativo. Se true, *response é alocado com malloc.
  */
 typedef bool (*cloud_transport)(const char *function, const char *body, int *http_status, char **response);
 
@@ -100,6 +109,9 @@ const char *cloud_machine_id(void);
 
 /** @brief O último contato com o servidor deu certo? */
 bool cloud_online(void);
+
+/** @brief Situação da conexão. Offline, reason recebe o motivo (sem a URL e sem a chave). */
+cloud_link cloud_connection(char *reason, size_t size);
 
 /** @brief Quantas gravações e partidas ainda estão na fila. */
 int cloud_pending_count(void);

@@ -489,6 +489,18 @@ static void test_cloud(void)
     check("NV-18", "sem rede, só a gravação mais nova fica na fila", cloud_pending_count() == 1 && !cloud_online() && snapshot("sobrevivencia", "Ana").version == 2);
     set_offline(false);
     check("NV-19", "quando a rede volta, a fila sobe sozinha", wait_content("sobrevivencia", "Ana", "coins=40\n") && wait_pending(0));
+    {
+        char reason[128];
+        bool online = cloud_connection(reason, sizeof(reason)) == CLOUD_LINK_ONLINE && reason[0] == '\0';
+        bool offline = false;
+
+        set_offline(true);
+        // Sem nenhum pedido do jogo, a própria nuvem percebe a queda
+        for (int i = 0; i < 600 && !offline; i++, Sleep(5)) offline = cloud_connection(reason, sizeof(reason)) == CLOUD_LINK_OFFLINE;
+        check("NV-43", "a conexão passa de online para offline, com o motivo", online && offline && reason[0] != '\0');
+        set_offline(false);
+        for (int i = 0; i < 600 && !cloud_online(); i++) Sleep(5);
+    }
 
     EnterCriticalSection(&server.lock);
     server.drop_next_write_answer = true;
