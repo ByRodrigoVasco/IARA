@@ -69,7 +69,7 @@ float sv_boss_hit_damage(float percent_of_base_hp)
     return fraction * SV_BASE_HP;
 }
 
-// Ordem dos poderes iniciais (11 Prompt, do Prof. Lucas; 14 Mapa de Calor, do Prof. Baudel): 0 Grampeador, 1 Ponteiro, 2 Caneca, 3 Post-its, 4 Não Perturbe, 5 Deploy, 6 Nota Fiscal, 7 Modus, 12 Vera Fischer
+// Ordem dos poderes iniciais (11 Prompt, do Prof. Lucas; 14 Mapa de Calor, do Prof. Baudel): 0 Grampeador, 1 Aviso Prévio, 2 Caneca, 3 Post-its, 4 Não Perturbe, 5 Deploy, 6 Nota Fiscal, 7 Modus, 12 Vera Fischer
 #define W_VERA_ID 12
 #define W_CALOR_ID 14
 #define W_NEGACAO_ID 15
