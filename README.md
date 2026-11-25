@@ -11,6 +11,23 @@ as inconsistências. Assim, a mecânica ensina ao mesmo tempo ética em IA e ló
 
 > **Entrega final (Unidade 2):** versão publicada nas [Releases do GitHub](https://github.com/ByRodrigoVasco/IARA/releases), reports das sprints [01](docs/fds/sprint-01/README.md), [02](docs/fds/sprint-02/README.md) e [03](docs/fds/sprint-03/README.md), [rastreabilidade das 16 histórias](docs/fds/sprint-03/README.md#rastreabilidade-das-histórias-pi2-330) e [bug tracker](docs/fds/testes/bugs.md).
 
+## Novidades da Unidade 2
+
+Na Unidade 1 o jogo era o núcleo em C: menu, máquina de estados, o escritório com colisões e um
+quiz jogável. Desde então entrou:
+
+| Novidade | O que é |
+|---|---|
+| **Campanha do Dia 1 ao Dia 100** | O expediente inteiro, com 9 dias jogáveis, Flashes do dia e saltos no calendário. Cada dia traz um conceito de lógica dentro do trabalho, e as escolhas levam a um dos 4 finais |
+| **Modo Sobrevivência** | Dez minutos num mapa de 15 áreas do escritório, com 5 atos, 5 chefes, Banco de Horas para comprar melhorias e ranking de partidas |
+| **Sobrevivência em dupla** | Duas pessoas no mesmo computador, com controles separados, XP dividida e ranking próprio |
+| **Saves por modo** | Save automático com vários slots, separados entre campanha, Sobrevivência e dupla |
+| **Configurações** | Volume da música e dos efeitos, brilho, tela cheia e janela maximizada, guardados entre sessões |
+| **Acessibilidade** | Alto contraste, pausa, tela de ajuda e confirmação antes de sair ou desistir |
+
+Tudo isso roda a partir de um `iara.exe` único, sem instalação nem conta. O detalhamento por sprint
+está em [Como o software evoluiu](#como-o-software-evoluiu).
+
 ## Funcionalidades
 
 **Campanha (modo normal)**
@@ -152,8 +169,6 @@ Com o debug ligado, **F2** abre o menu de cheats e para a partida: dar ou tirar 
 Uma partida em que qualquer cheat foi usado **não conta para o progresso do save**: não dá Banco de Horas, não conta vitória nem recorde. A tela de fim avisa.
 
 O jogo também registra em `iara-desempenho.log` (ao lado do executável, ignorado pelo git) os quadros que passaram de 60 ms, com a hora e a tela. É o primeiro lugar para olhar quando alguém disser que o jogo travou.
-
-> **Versão para terminal (PIF):** em desenvolvimento.
 
 ### Eventos: saves e rankings na nuvem
 
