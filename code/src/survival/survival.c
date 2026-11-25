@@ -4,6 +4,7 @@
 #include "raylib.h"
 #include "accessibility.h"
 #include "survival.h"
+#include "sv_achievements.h"
 #include "sv_game.h"
 #include "sv_render.h"
 #include "sv_light.h"
@@ -61,6 +62,13 @@ static long last_rank_order = 0;       // Para destacar a linha do jogador no ra
 
 static void finish_run(void);
 
+// Fim de cada quadro do modo: a notificação de conquista vai por cima de qualquer tela
+static void end_frame(void)
+{
+    sv_ach_draw(GetFrameTime());
+    end_game_drawing();
+}
+
 // Abre a tela de resultado com MENU DA SOBREVIVÊNCIA marcado
 static void enter_over_screen(void)
 {
@@ -112,6 +120,7 @@ static float job_read_save(void)
     else sv_meta_set_path(NULL);
 
     sv_meta_load(sv_meta_path());
+    sv_ach_reset((SvProgress){sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills}); // O que o save já tem não é novidade
     sv_meta.character = sv_playable_character(sv_meta.character);
     sv_meta.character2 = sv_playable_character(sv_meta.character2);
     char_cursor = sv_meta.character;
@@ -547,7 +556,7 @@ static void render_hub(void)
         ui_draw_hint("SETAS: escolher    ENTER: confirmar    ESC: voltar ao menu");
     }
 
-    end_game_drawing();
+    end_frame();
 }
 
 // -----------------------------------------------------------------------------
@@ -612,6 +621,15 @@ static void draw_roster_frame(int id, int frame, Rectangle dest, Color tint)
 
     if (!texture.id) return;
     DrawTexturePro(texture, (Rectangle){0, 0, (float)texture.width, (float)texture.height}, dest, (Vector2){0, 0}, 0.0f, tint);
+}
+
+// Texto centralizado que encolhe até caber na largura, sem sair do lugar na vertical
+static void draw_fitted(const char *text, float center_x, float y, float size, float max_width, Color color)
+{
+    float width = sv_text_width(text, size);
+    float fitted = width > max_width && width > 0.0f ? size * max_width / width : size;
+
+    sv_text_centered(text, center_x, y + (size - fitted) / 2.0f, fitted, color);
 }
 
 static void render_characters(void)
@@ -728,21 +746,28 @@ static void render_characters(void)
             draw_roster_frame(i, 0, (Rectangle){cell.x + (cell.width - size) / 2.0f, cell.y + 20.0f * ui, size, size}, open ? WHITE : (Color){12, 8, 18, 255});
         }
         {
-            // O nome encolhe para caber na célula (com muitos personagens as células ficam estreitas)
+            // "Prof. Fulano" vai em duas linhas: numa só, os nomes compridos ficavam miúdos
             const char *label = open ? sv_character(i)->name : "Bloqueado";
-            float name_size = 28.0f * ui;
+            Color color = open ? WHITE : (Color){120, 100, 125, 255};
             float max_w = cell.width - 14.0f * ui;
-            float name_w = sv_text_width(label, name_size);
+            float center = cell.x + cell.width / 2.0f;
+            float y = cell.y + 145.0f * ui;
 
-            if (name_w > max_w && name_w > 0.0f) name_size *= max_w / name_w;
-            sv_text_centered(label, cell.x + cell.width / 2.0f, cell.y + 145.0f * ui + (28.0f * ui - name_size) / 2.0f, name_size, open ? WHITE : (Color){120, 100, 125, 255});
+            if (strncmp(label, "Prof. ", 6) == 0)
+            {
+                draw_fitted("Prof.", center, cell.y + 124.0f * ui, 22.0f * ui, max_w, color);
+                label += 6;
+                y = cell.y + 150.0f * ui;
+            }
+            // Mesmo numa linha só o nome encolhe para caber na célula (com muitos personagens ela é estreita)
+            draw_fitted(label, center, y, 28.0f * ui, max_w, color);
         }
     }
 
     sv_text_centered(duo ? "Setas ou A/D trocam. Enter escolhe. TAB troca de jogador. ESC volta." : "Setas ou A/D trocam. Enter escolhe. ESC volta.", w / 2.0f, GetScreenHeight() - 60.0f * ui, 26.0f * ui, (Color){190, 180, 195, 255});
     if (char_message_timer > 0.0f) sv_text_centered(char_message, w / 2.0f, GetScreenHeight() - 105.0f * ui, 30.0f * ui, (Color){255, 214, 80, 255});
 
-    end_game_drawing();
+    end_frame();
 }
 
 static void render_shop(void)
@@ -829,7 +854,7 @@ static void render_shop(void)
     sv_text_centered("Setas e Enter para comprar. ESC volta.", w / 2.0f, GetScreenHeight() - 70.0f * ui, 26.0f * ui, (Color){190, 180, 195, 255});
     if (shop_message_timer > 0.0f) sv_text_centered(shop_message, w / 2.0f, GetScreenHeight() - 110.0f * ui, 30.0f * ui, (Color){255, 214, 80, 255});
 
-    end_game_drawing();
+    end_frame();
 }
 
 // -----------------------------------------------------------------------------
@@ -880,9 +905,8 @@ static void render_run(void)
         }
         else
         {
-            // Acelerar o tempo (TAB ou clique no botão) vale só até os 7:00
-            if (sv_run.time >= SV_SPEEDUP_LIMIT) sv_time_scale = 1;
-            else if (IsKeyPressed(KEY_TAB) || (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(GetMousePosition(), sv_speed_button_rect())))
+            // Acelerar o tempo (TAB ou clique no botão) vale a partida inteira
+            if (IsKeyPressed(KEY_TAB) || (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(GetMousePosition(), sv_speed_button_rect())))
             {
                 sv_time_scale = sv_time_scale % 3 + 1;
                 sv_sfx(SND_escolha);
@@ -909,7 +933,7 @@ static void render_run(void)
     sv_render_game();
     if (sv_run.phase == SV_LEVELUP) sv_render_levelup(levelup_selected);
     sv_debug_draw_menu();
-    end_game_drawing();
+    end_frame();
 }
 
 #define PAUSE_OPTIONS 3
@@ -984,7 +1008,7 @@ static void render_pause(void)
 
         if (confirm_is_open() && confirm_update_and_draw() == CONFIRM_YES) abandon_run();
     }
-    end_game_drawing();
+    end_frame();
 }
 
 // Botões do fim da partida, lado a lado embaixo do ranking (medidas em 1080p, como o resto do modo)
@@ -1049,7 +1073,7 @@ static void render_over(void)
     {
         begin_game_drawing();
         draw_backdrop();
-        end_game_drawing();
+        end_frame();
         return;
     }
 
@@ -1111,7 +1135,7 @@ static void render_over(void)
 
     ui_draw_hint("SETAS: escolher    ENTER: confirmar    ESC: menu da Sobrevivência");
 
-    end_game_drawing();
+    end_frame();
 }
 
 bool render_survival(void)
@@ -1120,6 +1144,9 @@ bool render_survival(void)
     if (IsKeyPressed(KEY_F1)) sv_debug_toggle();
     // Durante a partida a tabela não aparece: as respostas são lidas fora dela
     if (screen != SCREEN_RUN && screen != SCREEN_PAUSE) sv_ranking_cloud_update();
+
+    // Vale durante a partida (tempo e abates) e logo depois dela (número de partidas)
+    sv_ach_check(sv_progress_now());
 
     switch (screen)
     {

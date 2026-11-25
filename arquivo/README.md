@@ -5,7 +5,7 @@ Material que o jogo **não usa** e que **não entra no executável** nem no paco
 
 | Pasta | O que é |
 |---|---|
-| `originais/sprites/` | personagens em pixel art de 32x32, Colegas de Plantão antigos e o efeito e o ícone do Ponteiro |
+| `originais/sprites/` | personagens em pixel art de 32x32 e as versões anteriores dos colegas, poderes, ícones, chefes, inimigos e itens |
 | `originais/docs/` | sprites da equipe e folhas de caminhada antigos, que apareciam na documentação |
 | `originais/audio/sobrevivencia/` | músicas e ambientes em WAV; o jogo usa as versões OGG de `code/assets/audio` |
 | `originais/audio/campanha/` | músicas em MP3 na qualidade original |
