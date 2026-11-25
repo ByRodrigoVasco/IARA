@@ -90,4 +90,19 @@ const SvCharacter *sv_character(int id);
 // Se o personagem está liberado para o progresso informado.
 bool sv_character_unlocked(int id, int runs, int wins, int best_seconds, int kills);
 
+// O progresso que libera personagens, poderes e conquistas
+typedef struct
+{
+    int runs;          // Partidas jogadas
+    int wins;          // Vezes que a IARA foi derrotada
+    int best_seconds;  // Maior tempo de sobrevivência
+    int kills;         // Inimigos eliminados no total
+} SvProgress;
+
+// O personagem que começa com o poder, ou -1 se o poder não é de ninguém.
+int sv_weapon_owner(int weapon);
+
+// Poder sem dono está sempre liberado; o de um personagem só com o personagem liberado.
+bool sv_weapon_unlocked(int weapon, SvProgress progress);
+
 #endif // SV_RULES_H

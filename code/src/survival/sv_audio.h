@@ -28,7 +28,7 @@ typedef enum { TIER_ALERTA, TIER_ATAQUE, TIER_EVENTO, TIER_UI, TIER_PODER, TIER_
     X(reneCarimbo, TIER_ATAQUE, 0.25f, 2) X(reneCorrente, TIER_ATAQUE, 0.25f, 2) X(reneSombra, TIER_ATAQUE, 0.25f, 2)                   \
     X(iaraMaos, TIER_ATAQUE, 0.25f, 2) X(iaraRiso, TIER_ATAQUE, 0.25f, 2)                                                                \
     X(subirNivel, TIER_EVENTO, 0.25f, 1) X(bau, TIER_EVENTO, 0.25f, 1) X(evolucao, TIER_EVENTO, 0.25f, 1) X(novoAto, TIER_EVENTO, 0.25f, 1) \
-    X(compra, TIER_EVENTO, 0.25f, 1) X(marmita, TIER_EVENTO, 0.25f, 1) X(aguaSobe, TIER_EVENTO, 0.25f, 1)                                \
+    X(compra, TIER_EVENTO, 0.25f, 1) X(conquista, TIER_EVENTO, 0.25f, 1) X(marmita, TIER_EVENTO, 0.25f, 1) X(aguaSobe, TIER_EVENTO, 0.25f, 1)                                \
     X(novaconversa, TIER_EVENTO, 0.25f, 1) X(prompt, TIER_EVENTO, 0.25f, 1)                                                              \
     X(confirma, TIER_UI, 0.1f, 1) X(semSaldo, TIER_UI, 0.1f, 1) X(escolha, TIER_UI, 0.06f, 1)                                           \
     X(ponteiro, TIER_PODER, 0.25f, 2) X(caneca, TIER_PODER, 0.25f, 2) X(deploy, TIER_PODER, 0.25f, 2)   \

@@ -132,6 +132,22 @@ const SvCharacter *sv_character(int id)
     return &characters[id];
 }
 
+int sv_weapon_owner(int weapon)
+{
+    for (int i = 0; i < CH_COUNT; i++)
+    {
+        if (characters[i].start_weapon == weapon) return i;
+    }
+    return -1;
+}
+
+bool sv_weapon_unlocked(int weapon, SvProgress progress)
+{
+    int owner = sv_weapon_owner(weapon);
+
+    return owner < 0 || sv_character_unlocked(owner, progress.runs, progress.wins, progress.best_seconds, progress.kills);
+}
+
 bool sv_character_unlocked(int id, int runs, int wins, int best_seconds, int kills)
 {
     switch (id)
