@@ -602,7 +602,6 @@ static void draw_colega(int c)
     Vector2 dir = sv_run.colega_dir[c];
     bool moving = sv_run.colega_moving[c];
     float attack = sv_run.colega_attack[c];
-    float bob = moving ? 0.0f : sinf(sv_run.time * 3.0f + (float)c * 1.7f);
     int frame;
     bool flip = dir.x < 0.0f;
     Color color = colega_colors[c];
@@ -617,7 +616,7 @@ static void draw_colega(int c)
         int base = fabsf(dir.x) >= fabsf(dir.y) ? 4 : dir.y > 0.0f ? 0 : 8;
 
         if (base != 4) flip = false;
-        frame = base + (moving ? (int)(sv_run.colega_walk[c] * 9.0f) % 4 : 0);
+        frame = base + (moving ? (int)sv_run.colega_walk[c] % 4 : 0);
     }
 
     draw_shadow(pos, 9.0f);
@@ -627,8 +626,8 @@ static void draw_colega(int c)
 
         DrawCircleLinesV(pos, 12.0f + 18.0f * t, (Color){color.r, color.g, color.b, (unsigned char)(200.0f * (1.0f - t))});
     }
-    sv_draw(colega_sprites[c], frame, (Vector2){pos.x, pos.y + bob}, 1.0f, 0.0f, flip, WHITE);
-    DrawRectanglePro((Rectangle){pos.x, pos.y - 25.0f + bob, 4.0f, 4.0f}, (Vector2){2.0f, 2.0f}, 45.0f, color);
+    sv_draw(colega_sprites[c], frame, pos, 1.0f, 0.0f, flip, WHITE);
+    DrawRectanglePro((Rectangle){pos.x, pos.y - 25.0f, 4.0f, 4.0f}, (Vector2){2.0f, 2.0f}, 45.0f, color);
 
     if (c == 2 && sv_run.colega_heal_flash > 0.0f)
     {
@@ -1140,8 +1139,8 @@ static void draw_hud(Camera2D camera)
         sv_text_centered(sv_act_name(sv_run.act), w / 2.0f, pad + 38.0f * ui, 22.0f * ui, (Color){200, 170, 170, 255});
     }
 
-    // Botão de velocidade do tempo: só até os 7:00, depois a tela já está cheia
-    if (sv_run.time < SV_SPEEDUP_LIMIT && sv_run.phase == SV_PLAYING)
+    // Botão de velocidade do tempo
+    if (sv_run.phase == SV_PLAYING)
     {
         Rectangle button = sv_speed_button_rect();
         bool hot = sv_time_scale > 1;

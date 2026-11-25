@@ -1357,6 +1357,32 @@ static float recharge_pace(void);
 // Funções dos colegas, na ordem em que entram: Segurança, Suporte de TI, Enfermeira do RH e Entregador
 enum { COLEGA_SEGURANCA, COLEGA_SUPORTE, COLEGA_ENFERMEIRA, COLEGA_ENTREGADOR };
 #define COLEGA_CURA_A_CADA 6.0f
+#define COLEGA_RESPOSTA 10.0f     // quão depressa a velocidade chega na desejada: maior é mais brusco
+#define COLEGA_APROXIMA 5.0f      // quanto da distância até o posto vira velocidade
+#define COLEGA_PASSADA 9.0f       // pixels andados a cada quadro da caminhada
+#define COLEGA_PASSOS_MIN 5.0f    // quadros por segundo da caminhada, no mínimo e no máximo
+#define COLEGA_PASSOS_MAX 12.0f
+
+// O lugar de cada um em volta do jogador, na ordem em que entram
+static const Vector2 colega_posto[SV_MAX_COLEGAS] = {{36.0f, -8.0f}, {-36.0f, -8.0f}, {-20.0f, 20.0f}, {26.0f, 22.0f}};
+
+// Vira o colega para onde anda. Só troca entre lado, frente e costas quando a direção muda de verdade,
+// para o sprite não ficar piscando quando o caminho é quase diagonal
+static void colega_virar(int c, Vector2 vel)
+{
+    Vector2 dir = sv_run.colega_dir[c];
+    float ax = fabsf(vel.x), ay = fabsf(vel.y);
+    bool side = fabsf(dir.x) >= fabsf(dir.y);
+
+    side = side ? ay <= ax * 1.35f : ax > ay * 1.35f;
+    if (side)
+    {
+        float sign = ax > 6.0f ? (vel.x < 0.0f ? -1.0f : 1.0f) : (dir.x < 0.0f ? -1.0f : 1.0f);
+
+        sv_run.colega_dir[c] = (Vector2){sign, 0.0f};
+    }
+    else sv_run.colega_dir[c] = (Vector2){0.0f, vel.y < 0.0f ? -1.0f : 1.0f};
+}
 
 static void update_colegas(SvWeapon *w, float dt)
 {
@@ -1367,6 +1393,12 @@ static void update_colegas(SvWeapon *w, float dt)
     float damage = WS(W_COLEGA, WSTAT_DAMAGE, level);
     float interval = WS(W_COLEGA, WSTAT_COOLDOWN, level) * p->cooldown_mult;
     float pace = recharge_pace();
+    Vector2 lead = {0};
+
+    // A velocidade do jogador: os colegas andam junto com ele em vez de correr atrás depois
+    if (dt > 0.0f && Vector2Distance(sv_run.colega_leader, p->pos) < 24.0f)
+        lead = Vector2Scale(Vector2Subtract(p->pos, sv_run.colega_leader), 1.0f / dt);
+    sv_run.colega_leader = p->pos;
 
     w->angle += dt;
     if (sv_run.colega_heal_flash > 0.0f) sv_run.colega_heal_flash -= dt;
@@ -1375,15 +1407,20 @@ static void update_colegas(SvWeapon *w, float dt)
     {
         Vector2 *pos = &sv_run.colega_pos[c];
         Vector2 before = *pos;
-        float a = (float)c * 1.9f + w->angle * 0.4f;
-        Vector2 target = Vector2Add(p->pos, (Vector2){cosf(a) * 34.0f, sinf(a) * 24.0f});
+        Vector2 target = Vector2Add(p->pos, colega_posto[c]);
         float speed = 150.0f + Vector2Distance(*pos, p->pos);
+        bool chasing = false;
         Target near_enemy = {0};
-        Vector2 moved;
+        Vector2 moved, desired;
+        float walked;
 
         if (sv_run.colega_cd[c] > 0.0f) sv_run.colega_cd[c] -= dt * pace;
         if (sv_run.colega_attack[c] > 0.0f) sv_run.colega_attack[c] -= dt;
-        if (Vector2Distance(*pos, p->pos) > 420.0f) *pos = p->pos;
+        if (Vector2Distance(*pos, p->pos) > 420.0f)
+        {
+            *pos = before = p->pos;
+            sv_run.colega_vel[c] = (Vector2){0};
+        }
 
         switch (c)
         {
@@ -1394,6 +1431,7 @@ static void update_colegas(SvWeapon *w, float dt)
             {
                 target = near_enemy.pos;
                 speed = 130.0f;
+                chasing = true;
             }
             break;
         case COLEGA_SUPORTE:
@@ -1407,7 +1445,6 @@ static void update_colegas(SvWeapon *w, float dt)
         }
         case COLEGA_ENFERMEIRA:
             // Fica colada em você e protege quem chega perto
-            target = Vector2Add(p->pos, (Vector2){cosf(a) * 22.0f, sinf(a) * 16.0f});
             near_enemy = nearest_target(*pos, reach * 1.6f, NULL, 0);
             break;
         default:
@@ -1417,24 +1454,41 @@ static void update_colegas(SvWeapon *w, float dt)
             {
                 target = near_enemy.pos;
                 speed = 210.0f;
+                chasing = true;
             }
             break;
         }
 
-        if (Vector2Distance(*pos, target) > 10.0f)
+        // Indo a um inimigo, freia só na chegada; seguindo, soma a velocidade do jogador à correção
+        if (chasing) desired = Vector2Scale(direction_of(*pos, target), fminf(speed, Vector2Distance(*pos, target) * 10.0f));
+        else
         {
-            float step = fminf(speed * dt, Vector2Distance(*pos, target));
-
-            *pos = Vector2Add(*pos, Vector2Scale(direction_of(*pos, target), step));
+            desired = Vector2Add(lead, Vector2Scale(Vector2Subtract(target, *pos), COLEGA_APROXIMA));
+            if (Vector2Length(lead) < 1.0f && Vector2Distance(*pos, target) < 2.5f) desired = (Vector2){0};
+            desired = Vector2ClampValue(desired, 0.0f, speed);
         }
+        sv_run.colega_vel[c] = Vector2Lerp(sv_run.colega_vel[c], desired, 1.0f - expf(-COLEGA_RESPOSTA * dt));
+        *pos = Vector2Add(*pos, Vector2Scale(sv_run.colega_vel[c], dt));
         sv_map_collide(pos, 6.0f, 8.0f);
 
+        // A animação usa o que ele andou de fato: encostado numa mesa, não marcha no lugar
         moved = Vector2Subtract(*pos, before);
-        sv_run.colega_moving[c] = Vector2Length(moved) > 0.15f;
+        walked = Vector2Length(moved);
+        if (dt > 0.0f)
+        {
+            float real = walked / dt;
+
+            if (!sv_run.colega_moving[c] && real > 16.0f)
+            {
+                sv_run.colega_moving[c] = true;
+                sv_run.colega_walk[c] = 1.0f; // começa já num passo
+            }
+            else if (sv_run.colega_moving[c] && real < 9.0f) sv_run.colega_moving[c] = false;
+        }
         if (sv_run.colega_moving[c])
         {
-            sv_run.colega_dir[c] = Vector2Normalize(moved);
-            sv_run.colega_walk[c] += dt;
+            sv_run.colega_walk[c] += Clamp(walked / COLEGA_PASSADA, COLEGA_PASSOS_MIN * dt, COLEGA_PASSOS_MAX * dt);
+            if (sv_run.colega_attack[c] <= 0.0f) colega_virar(c, sv_run.colega_vel[c]);
         }
 
         if (c == COLEGA_ENFERMEIRA)
@@ -2263,6 +2317,25 @@ static int choice_weight(const SvChoice *c)
     return (c->kind == 2 || c->kind == 3) && c->id == P_LANTERNA ? LANTERNA_WEIGHT : 1;
 }
 
+SvProgress sv_progress_now(void)
+{
+    SvProgress progress = {sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills};
+
+    // O que a partida atual já garantiu: depois de paga (finished_flag) isso já está no save
+    if (!finished_flag && !sv_run.cheated)
+    {
+        progress.kills += sv_run.kills;
+        if ((int)sv_run.time > progress.best_seconds) progress.best_seconds = (int)sv_run.time;
+        if (sv_run.phase == SV_WON) progress.wins++;
+    }
+    return progress;
+}
+
+bool sv_weapon_available(int weapon)
+{
+    return sv_debug_mode || sv_weapon_unlocked(weapon, sv_progress_now());
+}
+
 static void build_choices(void)
 {
     SvChoice pool[32];
@@ -2274,7 +2347,7 @@ static void build_choices(void)
         SvWeapon *owned = find_weapon(w);
 
         if (owned && owned->level < SV_WEAPON_MAX_LEVEL) pool[count++] = (SvChoice){1, w};
-        else if (!owned && p->weapon_count < SV_MAX_WEAPONS) pool[count++] = (SvChoice){0, w};
+        else if (!owned && p->weapon_count < SV_MAX_WEAPONS && sv_weapon_available(w)) pool[count++] = (SvChoice){0, w};
     }
 
     for (int i = 0; i < P_COUNT; i++)

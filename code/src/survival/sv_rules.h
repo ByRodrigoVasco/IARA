@@ -9,7 +9,6 @@
 #include <stdbool.h>
 
 #define SV_RUN_SECONDS 600.0f   // Uma partida dura 10 minutos
-#define SV_SPEEDUP_LIMIT 420.0f // O jogador só pode acelerar o tempo até os 7:00; depois a tela já está cheia
 #define SV_ACT_COUNT 5          // Atos I a V
 #define SV_BASE_HP 100.0f       // "Vida base": o teto de dano dos chefes é percentual dela
 #define SV_BOSS_HIT_CAP 0.30f   // Nenhum golpe de chefe passa de 30% da vida base
@@ -89,5 +88,20 @@ const SvCharacter *sv_character(int id);
 
 // Se o personagem está liberado para o progresso informado.
 bool sv_character_unlocked(int id, int runs, int wins, int best_seconds, int kills);
+
+// O progresso que libera personagens, poderes e conquistas
+typedef struct
+{
+    int runs;          // Partidas jogadas
+    int wins;          // Vezes que a IARA foi derrotada
+    int best_seconds;  // Maior tempo de sobrevivência
+    int kills;         // Inimigos eliminados no total
+} SvProgress;
+
+// O personagem que começa com o poder, ou -1 se o poder não é de ninguém.
+int sv_weapon_owner(int weapon);
+
+// Poder sem dono está sempre liberado; o de um personagem só com o personagem liberado.
+bool sv_weapon_unlocked(int weapon, SvProgress progress);
 
 #endif // SV_RULES_H
