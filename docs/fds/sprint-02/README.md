@@ -1,6 +1,6 @@
 # Report da Sprint 02
 
-Evidências da entrega da Sprint 02 de [FDS](../README.md). Cada seção responde a um dos critérios de avaliação.
+Evidências da entrega da Sprint 02 de [FDS](../../entregaveis/README.md#fds-fundamentos-de-desenvolvimento-de-software). Cada seção responde a um dos critérios de avaliação.
 
 | Recurso | Link |
 |---|---|
