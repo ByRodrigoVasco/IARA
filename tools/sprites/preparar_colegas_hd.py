@@ -12,10 +12,12 @@ A caminhada usa o mesmo ciclo dos personagens. No golpe os pés ficam no lugar e
 """
 
 import sys
+from pathlib import Path
 
 import numpy as np
 from PIL import Image
 
+from compactar_hd import compactar
 from preparar_personagem_hd import (ALFA_MINIMO, BALANCO, BASE, LADO, ciclo, componentes, limpar,
                                     no_quadro, reduzir, sangrar, tirar_rebarbas)
 
@@ -82,6 +84,7 @@ def montar(nome):
     for i, quadro in enumerate(quadros):
         tira.paste(Image.fromarray(sangrar(sem_brilho(quadro.copy())), "RGBA"), (i * LADO, 0))
     tira.save(SAIDA.format(nome), optimize=True)
+    compactar([Path(SAIDA.format(nome))])
     print(nome, "ok", tira.size)
 
 
