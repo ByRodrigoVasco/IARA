@@ -530,7 +530,7 @@ static void test_characters(void)
 
         sv_meta.character = CH_NICOLLAS;
         sv_game_start(7);
-        check("SV-48", "Nicollas: recarga menor e recupera vida a cada 20 abates", sv_run.player.cooldown_mult < 0.9f && sv_run.player.kill_heal_every == 20 && sv_run.player.kill_heal > 3.0f);
+        check("SV-48", "Nicollas: começa com o Colega de Plantão, recarga menor e recupera vida a cada 20 abates", sv_run.player.weapons[0].id == W_COLEGA && sv_colega_count() == 1 && sv_run.player.cooldown_mult < 0.9f && sv_run.player.kill_heal_every == 20 && sv_run.player.kill_heal > 3.0f);
 
         sv_meta.character = CH_LAURA;
         sv_game_start(7);
@@ -648,7 +648,7 @@ static void test_characters(void)
         check("SV-66", "o Deploy em Produção acerta o inimigo que se aproxima", sv_run.kills >= 1);
     }
 
-    // Nicollas: cada 20 abates devolvem 4 de vida, e o Ponteiro mira o inimigo mais próximo
+    // Nicollas: cada 20 abates devolvem 4 de vida, e o Aviso Prévio mira o inimigo mais distante
     {
         float hp;
 
@@ -656,11 +656,12 @@ static void test_characters(void)
         unlock_everything();
         sv_meta.character = CH_NICOLLAS;
         sv_game_start(14);
+        sv_run.player.weapons[0].id = W_NAOPERTURBE;   // Mede a cura por abates com uma área em volta
         sv_run.player.hp = sv_run.player.max_hp - 30.0f;
         hp = sv_run.player.hp;
         sv_run.player.dmg_mult = 50.0f;
         sv_run.player.invulnerable = 30.0f;
-        // 20 chamados enfileirados na linha do Ponteiro, que derruba quase todos num golpe só
+        // 20 chamados encostando no jogador, dentro da área do Não Perturbe
         for (int i = 0; i < 20; i++) sv_spawn_enemy_at(EN_CHAMADO, (Vector2){sv_run.player.pos.x + 55.0f + (float)i * 2.5f, sv_run.player.pos.y}, false);
         for (int frame = 0; frame < 60 * 6 && sv_run.kills < 20; frame++)
         {
