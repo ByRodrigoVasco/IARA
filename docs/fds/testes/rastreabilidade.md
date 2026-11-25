@@ -70,7 +70,7 @@ O repositório ainda não tem as regras formalizadas por LMC. A verificação us
 | Dica não reduz a pontuação | `toggle_hint_note()` | `test_hints`, CT-39 | Respeitada |
 | Dica não entrega a resposta | Bilhete em `hints.c` | `test_hints` procura termos da resposta | Respeitada; a avaliação pedagógica é da equipe |
 | Dica não vem da IA | Item no mural e dicas de erro do roteiro | Inspeção | Respeitada |
-| Sem tela de teoria isolada | Telas do Dia 1 | [Auditoria](../../lmc/mapeamento-puzzles.md) | Respeitada |
+| Sem tela de teoria isolada | Telas dos 9 dias jogáveis | [Auditoria](../../lmc/mapeamento-puzzles.md), nas duas passagens | Respeitada; os 7 trechos em voz de apostila achados na segunda passagem foram reescritos (PI2-214 e PI2-215) |
 | Manual = 10, automático = -5, failsafe = -10 (US11) | Nenhum | Busca no código | **Não implementada**: o jogo usa 10, 0 e 0 por chamado |
 | Pontos nunca negativos (GDD 7.3/7.5) | CT-47 a CT-49, CT-51, CT-58 | Leitura do GDD | **Conflita com a US11**, que prevê -5 e -10; a equipe precisa decidir |
 | 3 erros seguidos acionam o failsafe | `continue_after_answer()` | CT-50, CT-51, CT-56 | Respeitada |
