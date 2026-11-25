@@ -1498,70 +1498,14 @@ static void render_computer_backdrop(void)
 static void render_office_scene(void)
 {
     render_game_loop_escritorio();
-    float scale = get_scale();
-    Vector2 center = get_map_center();
-    int day = current_game_state_variables.current_day;
-    HiddenStatisticBands bands = hidden_statistic_bands(&current_hidden_statistic);
-    if (calendar_get_day_type(day) == PLAYABLE_DAY && scale > 0)
-    {
-        if (bands.automation >= 1)
-        {
-            if (bands.automation >= 2)
-            {
-                Rectangle queue = scale_reference_rect((Rectangle){196, 56, 33, 21}, scale, center);
-                DrawRectangleRec(queue, (Color){22, 37, 46, 255});
-                DrawRectangleLinesEx(queue, scale, SKYBLUE);
-                DrawLineEx((Vector2){queue.x + 4 * scale, queue.y + 5 * scale},
-                           (Vector2){queue.x + 17 * scale, queue.y + 5 * scale}, scale, RAYWHITE);
-            }
-            // A barra fica no painel inferior do monitor, abaixo da janela de fila.
-            Rectangle indicator = scale_reference_rect((Rectangle){210, 78, 18, 10}, scale, center);
-            Rectangle bar = scale_reference_rect((Rectangle){212, 80, 14, 5}, scale, center);
-            DrawRectangleRec(indicator, (Color){9, 18, 20, 255});
-            DrawRectangleRec(bar, (Color){210, 255, 138, 255});
-            if (bands.automation == 3)
-                DrawRectangleRec(scale_reference_rect((Rectangle){197, 104, 26, 3}, scale, center), SKYBLUE);
-        }
-        if (bands.perception >= 1)
-        {
-            Rectangle mural = get_hint_item_rectangle(scale, center);
-            // O risco acompanha o canto da moldura, dentro do contorno de interação.
-            Vector2 scratch_start = {mural.x + mural.width - 19 * scale, mural.y + 12 * scale};
-            Vector2 scratch_bend = {scratch_start.x + 8 * scale, scratch_start.y + 2 * scale};
-            Vector2 scratch_end = {scratch_start.x + 14 * scale, scratch_start.y + 9 * scale};
-            DrawLineEx(scratch_start, scratch_bend, 5 * scale, DARKBROWN);
-            DrawLineEx(scratch_bend, scratch_end, 5 * scale, DARKBROWN);
-            DrawLineEx(scratch_start, scratch_bend, 2.7f * scale, RAYWHITE);
-            DrawLineEx(scratch_bend, scratch_end, 2.7f * scale, RAYWHITE);
-            if (bands.perception >= 2)
-            {
-                Vector2 archive = {center.x - 433 * scale, center.y + 92 * scale};
-                DrawLineEx(archive, (Vector2){archive.x - 5 * scale, archive.y + 6 * scale}, 2 * scale, RAYWHITE);
-            }
-            if (bands.perception == 3)
-            {
-                Vector2 keyboard = {center.x + 237 * scale, center.y + 106 * scale};
-                DrawLineEx(keyboard, (Vector2){keyboard.x - 5 * scale, keyboard.y + 6 * scale}, 2 * scale, RAYWHITE);
-            }
-        }
-        if (bands.bond >= 1)
-        {
-            Rectangle note = scale_reference_rect((Rectangle){-107, -360, 97, 18}, scale, center);
-            DrawRectangleRec(note, (Color){248, 229, 164, 255});
-            DrawTextEx(default_game_font, "Chama a gente", (Vector2){note.x + 4 * scale, note.y + 3 * scale},
-                       13 * scale, 0, BLACK);
-            if (bands.bond == 2)
-            {
-                note.y += note.height + 2 * scale;
-                DrawRectangleRec(note, RAYWHITE);
-                DrawTextEx(default_game_font, "Eu ajudo", (Vector2){note.x + 4 * scale, note.y + 3 * scale},
-                           13 * scale, 0, BLACK);
-            }
-        }
-    }
+    // Mantém o alfa da cena ao desenhar as bordas suavizadas dos personagens.
+    rlSetBlendFactorsSeparate(RL_SRC_ALPHA, RL_ONE_MINUS_SRC_ALPHA, RL_ONE, RL_ONE_MINUS_SRC_ALPHA,
+                              RL_FUNC_ADD, RL_FUNC_ADD);
+    BeginBlendMode(BLEND_CUSTOM_SEPARATE);
     draw_npcs_lit(get_scale(), character_light, current_estagiario_position.y, true);
     render_player();
     draw_npcs_lit(get_scale(), character_light, current_estagiario_position.y, false);
+    EndBlendMode();
 }
 
 static void render_office_with_glass(void)

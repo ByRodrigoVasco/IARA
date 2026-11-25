@@ -48,8 +48,8 @@ Atualizar a coluna Status conforme as issues forem corrigidas e fechadas. Confer
 | BUG-31 | Botão de velocidade (2x) no centro cobre o nome do chefe e o texto vaza do botão | Média | [#78](https://github.com/ByRodrigoVasco/IARA/issues/78) | Corrigido na `develop` (PR #82), issue fechada |
 | BUG-32 | Janela sem opção de maximizar e com tamanho solto | Média | [#79](https://github.com/ByRodrigoVasco/IARA/issues/79) | Corrigido na `develop` (PR #82), issue fechada |
 | BUG-33 | Personagem bloqueado escolhido com cheat volta com a aparência dele e a habilidade do Estagiário | Média | [#94](https://github.com/ByRodrigoVasco/IARA/issues/94) | Corrigido na `develop` (merge `aeefb3d`, 24/11/2026), issue fechada |
-| BUG-34 | Suíte não compila: `test_sistema` sem `rooms.c` | Média | [#95](https://github.com/ByRodrigoVasco/IARA/issues/95) | Aberto; o código dos cômodos (`rooms.c`, commit `7a93e36`) não está mais em nenhuma branch |
-| BUG-35 | `feat/historia-comodos` conflita com sintomas e cutscenes em `game_loop.c` | Média | [#96](https://github.com/ByRodrigoVasco/IARA/issues/96) | Aberto; depende de os cômodos voltarem (ver BUG-34) |
+| BUG-34 | Suíte não compila: `test_sistema` sem `rooms.c` | Média | [#95](https://github.com/ByRodrigoVasco/IARA/issues/95) | Aberto (`feat/historia-comodos`, recuperada no remoto em 25/11/2026) |
+| BUG-35 | `feat/historia-comodos` conflita com sintomas e cutscenes em `game_loop.c` | Média | [#96](https://github.com/ByRodrigoVasco/IARA/issues/96) | Aberto (`feat/historia-comodos` conflita com a `develop` em `game_loop.c`) |
 | BUG-36 | Commit leva 16 imagens de evidência regravadas pela suíte | Baixa | [#97](https://github.com/ByRodrigoVasco/IARA/issues/97) | Aberto (`feature/cutscenes-comportamento-npcs`) |
 | BUG-37 | Cheats do debug valem só para o jogador 1 na dupla | Baixa | [#98](https://github.com/ByRodrigoVasco/IARA/issues/98) | Corrigido na `develop` (merge `aeefb3d`, 24/11/2026), issue fechada |
 | BUG-38 | Análise estática aponta risco de estouro de vetor no quiz de triagem | Baixa | [#99](https://github.com/ByRodrigoVasco/IARA/issues/99) | Corrigido na `develop` (merge `aeefb3d`, 24/11/2026), issue fechada |
@@ -722,7 +722,7 @@ Achados pelo bloco 4 da suíte (`code/tests/test_sprint03.c`), executado na `dev
 
 **Labels:** `bug`, `sprint-03`
 
-Branch aberta a partir da `develop` (`a2b8e07`) para fechar as issues de bug que dependem só da `develop`. Mesclada na `develop` em 24/11/2026 (merge `aeefb3d`, sem PR). Os BUG-36 e BUG-44 ficam na `feature/cutscenes-comportamento-npcs`, que ainda não vai para a `develop`. Os BUG-34 e BUG-35 dependem do código dos cômodos, que hoje não está em nenhuma branch. O BUG-42 pede arte nova. O BUG-17 continua sem reprodução.
+Branch aberta a partir da `develop` (`a2b8e07`) para fechar as issues de bug que dependem só da `develop`. Mesclada na `develop` em 24/11/2026 (merge `aeefb3d`, sem PR). Os BUG-36 e BUG-44 ficam na `feature/cutscenes-comportamento-npcs`, que ainda não vai para a `develop`. Os BUG-34 e BUG-35 dependem do código dos cômodos, que naquela data não estava em nenhuma branch do remoto. Em 25/11/2026 a `feat/historia-comodos` foi recuperada e voltou ao remoto, com os 4 commits originais até o `7a93e36`. O BUG-42 pede arte nova. O BUG-17 continua sem reprodução.
 
 | ID | Issue | Correção | Onde | Coberto por |
 |---|---|---|---|---|
@@ -741,3 +741,33 @@ Branch aberta a partir da `develop` (`a2b8e07`) para fechar as issues de bug que
 **Execução dos testes:** os 13 conjuntos e o executável do jogo compilam. Na máquina em que a correção foi feita, o Windows (Controle de Aplicativo) bloqueou a execução dos `.exe` recém-compilados, então os CT-95, CT-97, CT-98 e os SV-137 a SV-142 ainda precisam ser rodados na `develop`. Até lá, os resultados registrados no [README dos testes](README.md) continuam os da execução de 20/11/2026.
 
 **Issues:** as issues #59, #94, #98, #99, #101, #102 e #103 receberam o comentário com a correção e foram fechadas em 24/11/2026. As #58, #95 e #96 receberam um comentário com a situação e seguem abertas, junto com as #97, #104 e #110.
+
+---
+
+<a id="nuvem-saves-ranking"></a>
+
+## Branch `feat/nuvem-saves-ranking` (25/11/2026): saves e rankings na nuvem
+
+Funcionalidade nova, para eventos com vários notebooks. Não corrige nem abre bug com issue. Guia de montagem e comportamento: [tools/nuvem/LEIA-ME.md](../../../tools/nuvem/LEIA-ME.md).
+
+**Execução dos testes (25/11/2026):** 13 dos 14 conjuntos passaram. `test_cloud` (NV-01 a NV-43, com um servidor falso, sem rede) com 43 de 43; blocos 1 a 3 com 32 de 32, 37 de 37 e 58 de 58; `test_survival` com 148 de 148. A única falha é o CT-100 no bloco 4, o [BUG-42](#bug-42) já aberto, que depende de arte. A suíte foi repetida no fim, já com o indicador de conexão e os personagens da dupla, com o mesmo resultado. O executável de release compilou com a nuvem, e a leitura de saves e rankings no servidor real respondeu certo.
+
+**Depois da primeira entrega:**
+
+- Os menus mostram a conexão (bolinha verde "online" ou vermelha "offline"), e o motivo da queda vai para o `iara-desempenho.log`.
+- O ranking de duplas passou a levar os personagens dos dois jogadores no mesmo campo (J1 + 16 × (J2 + 1)), sem mudar o banco.
+- O ranking ao vivo na web ficou em um repositório próprio, [IARA-Ranking-ao-vivo](https://github.com/ByRodrigoVasco/IARA-Ranking-ao-vivo).
+
+**Conferido à mão (25/11/2026):** o save no servidor real, testado e aprovado por Rodrigo.
+
+**Ainda não verificado:**
+
+- O roteiro com dois notebooks ao mesmo tempo (trava, conflito e queda de rede) não tem resultado registrado.
+- Uma partida em dupla de verdade conferida na página do ranking (J1 e J2).
+
+**Limitações conhecidas:**
+
+- Sem conexão, não dá para abrir, criar nem apagar saves.
+- A campanha só sobe quando o jogo grava (ao voltar ao menu e ao fechar).
+- No servidor, `iara_gravar_save` recria um save que não existe. O jogo confere antes de reenviar a fila depois de uma falha de rede, mas um notebook que ficou suspenso sem registrar falha pode recriar um save apagado nesse intervalo.
+- Saves que já existiam em um computador não são enviados para a nuvem.

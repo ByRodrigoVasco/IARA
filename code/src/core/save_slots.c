@@ -128,7 +128,7 @@ void save_name_trim(char *name)
     if (start > 0) memmove(name, name + start, strlen(name + start) + 1);
 }
 
-save_name_check save_slot_check_name(save_mode mode, const char *name)
+save_name_check save_name_check_rules(const char *name)
 {
     char trimmed[SAVE_NAME_MAX * 4];
 
@@ -143,8 +143,18 @@ save_name_check save_slot_check_name(save_mode mode, const char *name)
         if (!is_allowed_character((unsigned char)trimmed[i])) return SAVE_NAME_INVALID;
     }
     if (is_reserved_name(trimmed)) return SAVE_NAME_RESERVED;
-    if (save_slot_exists(mode, trimmed)) return SAVE_NAME_EXISTS;
     return SAVE_NAME_OK;
+}
+
+save_name_check save_slot_check_name(save_mode mode, const char *name)
+{
+    save_name_check check = save_name_check_rules(name);
+    char trimmed[SAVE_NAME_MAX * 4];
+
+    if (check != SAVE_NAME_OK) return check;
+    snprintf(trimmed, sizeof(trimmed), "%s", name);
+    save_name_trim(trimmed);
+    return save_slot_exists(mode, trimmed) ? SAVE_NAME_EXISTS : SAVE_NAME_OK;
 }
 
 const char *save_name_check_message(save_name_check result)
@@ -255,6 +265,15 @@ bool save_slot_create(save_mode mode, const char *name)
     if (!slot_folder_path(mode, trimmed, folder, sizeof(folder))) return false;
 
     MakeDirectory(folder);
+    return DirectoryExists(folder);
+}
+
+bool save_slot_ensure(save_mode mode, const char *name)
+{
+    char folder[PATH_MAX_LENGTH];
+
+    if (!save_slots_ensure_folders() || !slot_folder_path(mode, name, folder, sizeof(folder))) return false;
+    if (!DirectoryExists(folder)) MakeDirectory(folder);
     return DirectoryExists(folder);
 }
 

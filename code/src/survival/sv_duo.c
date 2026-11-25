@@ -24,6 +24,8 @@ static void seat_save(SvSeat *seat)
     memcpy(seat->colega_attack, sv_run.colega_attack, sizeof(seat->colega_attack));
     memcpy(seat->colega_walk, sv_run.colega_walk, sizeof(seat->colega_walk));
     memcpy(seat->colega_moving, sv_run.colega_moving, sizeof(seat->colega_moving));
+    memcpy(seat->colega_vel, sv_run.colega_vel, sizeof(seat->colega_vel));
+    seat->colega_leader = sv_run.colega_leader;
     seat->colega_heal = sv_run.colega_heal;
     seat->colega_heal_flash = sv_run.colega_heal_flash;
 }
@@ -39,6 +41,8 @@ static void seat_load(const SvSeat *seat)
     memcpy(sv_run.colega_attack, seat->colega_attack, sizeof(sv_run.colega_attack));
     memcpy(sv_run.colega_walk, seat->colega_walk, sizeof(sv_run.colega_walk));
     memcpy(sv_run.colega_moving, seat->colega_moving, sizeof(sv_run.colega_moving));
+    memcpy(sv_run.colega_vel, seat->colega_vel, sizeof(sv_run.colega_vel));
+    sv_run.colega_leader = seat->colega_leader;
     sv_run.colega_heal = seat->colega_heal;
     sv_run.colega_heal_flash = seat->colega_heal_flash;
 }
@@ -88,12 +92,27 @@ int sv_duo_nearest(Vector2 pos)
     return best;
 }
 
+int sv_duo_focus_player(void)
+{
+    if (!sv_run.duo) return -1;
+
+    // Com um caído, a câmera é de quem está de pé, como no solo
+    if (sv_duo_player(0)->down && !sv_duo_player(1)->down) return 1;
+    if (sv_duo_player(1)->down && !sv_duo_player(0)->down) return 0;
+    return -1;
+}
+
 Vector2 sv_duo_focus(void)
 {
+    int focused;
+
     if (!sv_run.duo) return sv_run.player.pos;
 
-    // Sempre o meio entre os dois, mesmo com um caído: como um não se afasta do outro mais que
-    // SV_DUO_LEASH_X / SV_DUO_LEASH_Y, os dois cabem na tela e quem caiu continua à vista
+    focused = sv_duo_focus_player();
+    if (focused >= 0) return sv_duo_player(focused)->pos;
+
+    // Os dois de pé (ou os dois caídos, no fim da partida): o meio entre eles. Como um não se afasta
+    // do outro mais que SV_DUO_LEASH_X / SV_DUO_LEASH_Y, os dois cabem na tela
     return Vector2Scale(Vector2Add(sv_duo_player(0)->pos, sv_duo_player(1)->pos), 0.5f);
 }
 
@@ -167,7 +186,8 @@ static void update_revive(float dt)
 // Os dois na mesma tela
 // -----------------------------------------------------------------------------
 
-// Se um passou do limite, os dois são puxados para o meio só o que passou
+// Se um passou do limite, os dois são puxados para o meio só o que passou. Com um caído não há
+// limite: a câmera segue quem está de pé (sv_duo_focus) e uma seta na borda da tela mostra quem caiu.
 static void keep_together(void)
 {
     SvPlayer *a = sv_duo_player(0);
@@ -176,10 +196,10 @@ static void keep_together(void)
     float dy = b->pos.y - a->pos.y;
     float extra_x = fabsf(dx) - SV_DUO_LEASH_X;
     float extra_y = fabsf(dy) - SV_DUO_LEASH_Y;
+    float share_a = 0.5f;
+    float share_b = 0.5f;
 
-    // Quem caiu fica no chão: só quem está de pé é puxado
-    float share_a = a->down ? 0.0f : (b->down ? 1.0f : 0.5f);
-    float share_b = b->down ? 0.0f : (a->down ? 1.0f : 0.5f);
+    if (a->down || b->down) return;
 
     if (extra_x > 0.0f)
     {

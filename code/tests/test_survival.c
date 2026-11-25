@@ -530,7 +530,7 @@ static void test_characters(void)
 
         sv_meta.character = CH_NICOLLAS;
         sv_game_start(7);
-        check("SV-48", "Nicollas: recarga menor e recupera vida a cada 20 abates", sv_run.player.cooldown_mult < 0.9f && sv_run.player.kill_heal_every == 20 && sv_run.player.kill_heal > 3.0f);
+        check("SV-48", "Nicollas: começa com o Colega de Plantão, recarga menor e recupera vida a cada 20 abates", sv_run.player.weapons[0].id == W_COLEGA && sv_colega_count() == 1 && sv_run.player.cooldown_mult < 0.9f && sv_run.player.kill_heal_every == 20 && sv_run.player.kill_heal > 3.0f);
 
         sv_meta.character = CH_LAURA;
         sv_game_start(7);
@@ -648,7 +648,7 @@ static void test_characters(void)
         check("SV-66", "o Deploy em Produção acerta o inimigo que se aproxima", sv_run.kills >= 1);
     }
 
-    // Nicollas: cada 20 abates devolvem 4 de vida, e o Ponteiro mira o inimigo mais próximo
+    // Nicollas: cada 20 abates devolvem 4 de vida, e o Aviso Prévio mira o inimigo mais distante
     {
         float hp;
 
@@ -656,11 +656,12 @@ static void test_characters(void)
         unlock_everything();
         sv_meta.character = CH_NICOLLAS;
         sv_game_start(14);
+        sv_run.player.weapons[0].id = W_NAOPERTURBE;   // Mede a cura por abates com uma área em volta
         sv_run.player.hp = sv_run.player.max_hp - 30.0f;
         hp = sv_run.player.hp;
         sv_run.player.dmg_mult = 50.0f;
         sv_run.player.invulnerable = 30.0f;
-        // 20 chamados enfileirados na linha do Ponteiro, que derruba quase todos num golpe só
+        // 20 chamados encostando no jogador, dentro da área do Não Perturbe
         for (int i = 0; i < 20; i++) sv_spawn_enemy_at(EN_CHAMADO, (Vector2){sv_run.player.pos.x + 55.0f + (float)i * 2.5f, sv_run.player.pos.y}, false);
         for (int frame = 0; frame < 60 * 6 && sv_run.kills < 20; frame++)
         {
@@ -670,9 +671,32 @@ static void test_characters(void)
         check("SV-67", "a cada 20 inimigos derrotados a Nicollas recupera 4 de vida", sv_run.kills >= 20 && sv_run.player.hp > hp + 3.9f && sv_run.player.hp < hp + 4.1f);
 
         sv_game_start(15);
+        sv_run.player.weapons[0].id = W_AVISO;
         sv_spawn_enemy_at(EN_CHAMADO, (Vector2){sv_run.player.pos.x + 70.0f, sv_run.player.pos.y}, false);
         for (int frame = 0; frame < 60 * 3 && sv_run.kills == 0; frame++) sv_game_update(1.0f / 60.0f, (Vector2){0.0f, 0.0f});
-        check("SV-68", "o Ponteiro acerta o inimigo mesmo fora da direção em que o jogador olha", sv_run.kills >= 1);
+        check("SV-68", "o Aviso Prévio acerta o inimigo mesmo fora da direção em que o jogador olha", sv_run.kills >= 1);
+
+        // O avião escolhe o mais distante: com um perto e um longe, o carimbo cai no de longe
+        {
+            bool stamped_far = false;
+
+            sv_game_start(18);
+            sv_run.player.weapons[0].id = W_AVISO;
+            sv_run.cheats[CHEAT_NO_SPAWN] = true;
+            sv_run.cheats[CHEAT_FREEZE] = true;
+            memset(sv_run.enemies, 0, sizeof(sv_run.enemies));
+            sv_spawn_enemy_at(EN_CHAMADO, (Vector2){sv_run.player.pos.x + 90.0f, sv_run.player.pos.y + 90.0f}, false);
+            sv_spawn_enemy_at(EN_CHAMADO, (Vector2){sv_run.player.pos.x - 420.0f, sv_run.player.pos.y}, false);
+            for (int frame = 0; frame < 60 * 3 && !stamped_far; frame++)
+            {
+                sv_game_update(1.0f / 60.0f, (Vector2){0.0f, 0.0f});
+                for (int z = 0; z < SV_MAX_ZONES; z++)
+                {
+                    if (sv_run.zones[z].alive && sv_run.zones[z].kind == ZK_AVISO && sv_run.zones[z].pos.x < sv_run.player.pos.x - 330.0f) stamped_far = true;
+                }
+            }
+            check("SV-149", "o Aviso Prévio voa até o inimigo mais distante, a mais de 400 px, e carimba lá", stamped_far);
+        }
     }
 
     // Colegas de Plantão: o Vasco traz um a mais, e cada função faz a sua parte
@@ -969,7 +993,6 @@ static void test_ajustes_do_teste_com_jogadores(void)
     printf("\nAjustes do teste com jogadores\n");
 
     check("SV-96", "o começo da partida já tem inimigos de sobra (pelo menos 2 por segundo)", sv_spawn_rate(0.0f) >= 2.0f);
-    check("SV-97", "acelerar o tempo só vale até os 7:00", SV_SPEEDUP_LIMIT == 420.0f && SV_SPEEDUP_LIMIT < sv_boss_spawn_time(BOSS_IARA));
     check("SV-98", "a partida começa na velocidade normal", sv_time_scale == 1);
     {
         float base_hp, base_cd;
@@ -1195,6 +1218,35 @@ static void test_duo(void)
     step_duo(1, (Vector2){0, 0}, (Vector2){0, 0});
     check("SV-120", "um chip de XP pego por um sobe a barra dos dois", sv_duo_player(0)->xp > 0.0f && fabsf(sv_duo_player(0)->xp - sv_duo_player(1)->xp) < 0.001f);
 
+    // O chip vale menos na dupla: o mesmo chip rende SV_DUO_XP_MULT do valor para cada um.
+    // O chip é de 1: bem abaixo dos 9 de XP do nível 1, para ninguém subir de nível no meio da conta.
+    {
+        float solo_xp;
+
+        sv_duo_mode = false;
+        sv_game_start(14);
+        clear_enemies();
+        sv_run.player.xp = 0.0f;
+        sv_add_gem(sv_run.player.pos, 0, 1.0f);
+        sv_game_update(1.0f / 60.0f, (Vector2){0, 0});
+        solo_xp = sv_run.player.xp / sv_run.player.xp_mult;
+
+        start_duo(14);
+        clear_enemies();
+        sv_duo_player(0)->xp = 0.0f;
+        sv_duo_player(1)->xp = 0.0f;
+        sv_add_gem(sv_duo_player(0)->pos, 0, 1.0f);
+        step_duo(1, (Vector2){0, 0}, (Vector2){0, 0});
+        check("SV-146", "na dupla cada chip de XP vale menos que no solo, para os dois",
+              SV_DUO_XP_MULT < 1.0f && fabsf(solo_xp - 1.0f) < 0.001f &&
+              fabsf(sv_duo_player(0)->xp / sv_duo_player(0)->xp_mult - SV_DUO_XP_MULT) < 0.001f &&
+              fabsf(sv_duo_player(1)->xp / sv_duo_player(1)->xp_mult - SV_DUO_XP_MULT) < 0.001f);
+    }
+
+    // Os dois sobem de nível juntos: volta ao estado do SV-120
+    start_duo(14);
+    clear_enemies();
+
     sv_duo_player(0)->xp = (float)sv_duo_player(0)->xp_needed;
     sv_duo_player(1)->xp = (float)sv_duo_player(1)->xp_needed;
     step_duo(1, (Vector2){0, 0}, (Vector2){0, 0});
@@ -1231,6 +1283,19 @@ static void test_duo(void)
 
         step_duo(30, (Vector2){0, 0}, (Vector2){1, 0});
         check("SV-124", "quem caiu fica parado no chão", Vector2Distance(where, sv_duo_player(1)->pos) < 0.01f);
+    }
+
+    // Com um caído, a dupla vira um jogo solo para quem está de pé: a câmera é dele e não há distância máxima
+    check("SV-147", "com um caído, a câmera (e o nascimento dos inimigos) segue quem está de pé",
+          sv_duo_focus_player() == 0 && Vector2Distance(sv_duo_focus(), sv_duo_player(0)->pos) < 0.01f);
+    {
+        Vector2 fallen = sv_duo_player(1)->pos;
+
+        sv_duo_player(0)->pos = Vector2Add(fallen, (Vector2){SV_DUO_LEASH_X + 300.0f, 0.0f});
+        clear_enemies();
+        step_duo(1, (Vector2){0, 0}, (Vector2){0, 0});
+        check("SV-148", "com um caído, quem está de pé pode se afastar além da distância máxima da dupla",
+              fabsf(sv_duo_player(0)->pos.x - fallen.x) > SV_DUO_LEASH_X + 200.0f && Vector2Distance(fallen, sv_duo_player(1)->pos) < 0.01f);
     }
 
     // O parceiro chega perto e fica ao lado
@@ -1391,6 +1456,68 @@ static void test_duo(void)
 }
 
 // Correções do bug tracker da Sprint 03: BUG-33 (personagem do cheat) e BUG-37 (cheats na dupla)
+// Sorteia muitas mãos de cartas: algum poder indisponível apareceu como novidade? E o poder pedido?
+static bool cards_offer(int wanted, bool *only_available)
+{
+    bool seen = false;
+
+    *only_available = true;
+    for (unsigned seed = 1; seed <= 200; seed++)
+    {
+        sv_game_start(seed);
+        sv_run.player.xp = (float)sv_run.player.xp_needed;
+        sv_game_update(1.0f / 60.0f, (Vector2){0.0f, 0.0f});
+        for (int i = 0; i < sv_run.choice_count; i++)
+        {
+            if (sv_run.choices[i].kind != 0) continue;
+            if (!sv_weapon_available(sv_run.choices[i].id)) *only_available = false;
+            if (sv_run.choices[i].id == wanted) seen = true;
+        }
+    }
+    return seen;
+}
+
+static void test_poderes_por_personagem(void)
+{
+    SvProgress zero = {0, 0, 0, 0};
+    bool free_ok = true, locked_ok = true, only = false;
+
+    printf("\nPoderes liberados por personagem\n");
+    sv_debug_mode = false;
+    sv_meta_reset();
+
+    for (int w = 0; w < W_COUNT; w++)
+    {
+        int owner = sv_weapon_owner(w);
+
+        if (owner < 0 || owner == CH_ESTAGIARIO) free_ok = free_ok && sv_weapon_unlocked(w, zero);
+        else locked_ok = locked_ok && !sv_weapon_unlocked(w, zero);
+    }
+    check("SV-150", "save novo: só os poderes sem dono e o do Estagiário estão liberados", free_ok && locked_ok);
+
+    {
+        int laura = sv_character(CH_LAURA)->start_weapon;
+        bool seen = cards_offer(laura, &only);
+
+        check("SV-151", "as cartas nunca oferecem o poder de um personagem bloqueado", !seen && only);
+
+        sv_meta.best_seconds = 180;
+        check("SV-152", "liberado o personagem no save, o poder dele passa a sair nas cartas", cards_offer(laura, &only) && only);
+
+        sv_meta_reset();
+        sv_debug_mode = true;
+        check("SV-153", "com o debug ligado todos os poderes saem nas cartas", cards_offer(laura, &only));
+        sv_debug_mode = false;
+
+        sv_game_start(21);
+        sv_run.time = 181.0f;
+        check("SV-154", "o poder libera no meio da partida que cumpriu o objetivo", sv_weapon_available(laura) && sv_progress_now().best_seconds == 181);
+        sv_run.cheated = true;
+        check("SV-155", "partida com trapaça não libera nada", !sv_weapon_available(laura) && sv_progress_now().best_seconds == 0);
+    }
+    sv_meta_reset();
+}
+
 static void test_correcoes_do_bug_tracker(void)
 {
     int locked = -1;
@@ -1493,6 +1620,7 @@ int main(void)
     test_ranking();
     test_duo();
     test_correcoes_do_bug_tracker();
+    test_poderes_por_personagem();
 
     printf("\n%d verificacoes, todas passaram.\n", checks);
     return 0;

@@ -48,8 +48,10 @@ SvSpriteId sv_enemy_sprite(int type)
     return enemy_sprites[type];
 }
 
-// Ponteiro: distância em que ele procura o inimigo para mirar
-#define PONTEIRO_RANGE 320.0f
+// Aviso Prévio: o avião de papel persegue o alvo e fere menos quem só estiver no caminho
+#define AVISO_SPEED 430.0f
+#define AVISO_CURVA 7.0f        // Quanto o rumo se corrige por segundo
+#define AVISO_RASPAO 0.5f       // Fração do dano em quem é atravessado antes do alvo
 
 // Não Perturbe: quanto a aura empurra quem está dentro dela
 #define NAOPERTURBE_PUSH 125.0f
@@ -87,10 +89,10 @@ static const SpawnWeight act_spawns[SV_ACT_COUNT][8] = {
     {{EN_ECO, 20}, {EN_AUDITOR, 7}, {EN_AFOGADO, 20}, {EN_CRACHA, 15}, {EN_AUTORESPOSTA, 15}, {EN_ALUCINACAO, 12}, {EN_DADO, 10}, {-1, 0}},
 };
 
-static const char *weapon_names[W_COUNT] = {"Grampeador", "Ponteiro", "Caneca Arremessada", "Post-its Orbitais", "Não Perturbe", "Deploy em Produção", "Nota Fiscal", "Modus Ponens", "Tabela-Verdade", "Colega de Plantão", "Nova Conversa", "Prompt da IARA", "Vera Fischer", "Fibra Óptica", "Mapa de Calor", "Negação", "Recursão"};
+static const char *weapon_names[W_COUNT] = {"Grampeador", "Aviso Prévio", "Caneca Arremessada", "Post-its Orbitais", "Não Perturbe", "Deploy em Produção", "Nota Fiscal", "Modus Ponens", "Tabela-Verdade", "Colega de Plantão", "Nova Conversa", "Prompt da IARA", "Vera Fischer", "Fibra Óptica", "Mapa de Calor", "Negação", "Recursão"};
 static const char *weapon_descriptions[W_COUNT] = {
     "Tiros retos no inimigo mais próximo.",
-    "Golpe em linha, para os dois lados, na direção do inimigo mais próximo.",
+    "Um avião de papel voa até o inimigo mais distante e carimba a demissão em área.",
     "Cai sobre os inimigos mais próximos e derrama café quente em área.",
     "Giram ao seu redor e protegem de perto.",
     "Aura de dano que afasta quem chega perto.",
@@ -106,7 +108,7 @@ static const char *weapon_descriptions[W_COUNT] = {
     "Como num teste de usabilidade: marca onde os inimigos mais se juntam com um mapa de calor que queima quem fica dentro.",
     "Um ¬ gigante cai sobre o maior grupo de inimigos: eles levam dano e ficam negados, andando para longe de você.",
     "Dispara um f() no inimigo mais próximo. Ao acertar, ele chama a si mesmo: divide-se em duas cópias menores que buscam outros inimigos, até chegar ao caso base."};
-static const SvSpriteId weapon_icons[W_COUNT] = {SPR_ic_grampeador, SPR_ic_ponteiro, SPR_ic_caneca, SPR_ic_postits, SPR_ic_naoperturbe, SPR_ic_deploy, SPR_ic_nota, SPR_ic_modus, SPR_ic_tabela, SPR_ic_colega, SPR_ic_novaconversa, SPR_ic_prompt, SPR_ps_cracha, SPR_ic_fibra, SPR_ic_calor, SPR_ic_negacao, SPR_ic_recursao};
+static const SvSpriteId weapon_icons[W_COUNT] = {SPR_ic_grampeador, SPR_ic_aviso, SPR_ic_caneca, SPR_ic_postits, SPR_ic_naoperturbe, SPR_ic_deploy, SPR_ic_nota, SPR_ic_modus, SPR_ic_tabela, SPR_ic_colega, SPR_ic_novaconversa, SPR_ic_prompt, SPR_ps_cracha, SPR_ic_fibra, SPR_ic_calor, SPR_ic_negacao, SPR_ic_recursao};
 
 static const char *passive_names[P_COUNT] = {"Café", "Manual", "Colinha", "Ergonomia", "Crachá", "Plano de Saúde", "Network", "Hora Extra", "Marmita Térmica", "Sorte de Principiante", "Espinhos Corporativos", "Foco", "Lanterna do Celular"};
 static const char *passive_descriptions[P_COUNT] = {
@@ -136,7 +138,8 @@ typedef struct
 
 static const WeaponDef weapon_defs[W_COUNT] = {
     [W_GRAMPEADOR]   = {{10, 10, 14, 14, 20}, {0.70f, 0.60f, 0.60f, 0.50f, 0.45f}, {1, 1, 2, 2, 3}, {0, 0, 0, 0, 0}, {1, 2, 2, 3, 3}},
-    [W_PONTEIRO]     = {{14, 14, 20, 20, 28}, {1.60f, 1.45f, 1.45f, 1.25f, 1.10f}, {0, 0, 0, 0, 0}, {85, 95, 95, 110, 125}, {14, 14, 17, 17, 20}},
+    // Aviso Prévio: dano, recarga, quantos aviões, raio do carimbo e alcance
+    [W_AVISO]        = {{18, 18, 24, 24, 34}, {2.00f, 1.85f, 1.85f, 1.65f, 1.45f}, {1, 1, 2, 2, 3}, {36, 42, 42, 50, 58}, {480, 520, 520, 580, 640}},
     [W_CANECA]       = {{20, 20, 26, 26, 36}, {2.20f, 2.00f, 2.00f, 1.80f, 1.60f}, {1, 1, 2, 2, 3}, {40, 46, 46, 52, 58}, {0, 0, 0, 0, 0}},
     [W_POSTITS]      = {{7, 7, 10, 10, 15}, {0.50f, 0.45f, 0.45f, 0.40f, 0.35f}, {0, 0, 0, 0, 0}, {54, 60, 60, 68, 76}, {0, 0, 0, 0, 0}},
     [W_NAOPERTURBE]  = {{4, 4, 6, 6, 10}, {0.55f, 0.50f, 0.50f, 0.45f, 0.40f}, {0, 0, 0, 0, 0}, {64, 72, 72, 84, 96}, {0, 0, 0, 0, 0}},
@@ -158,7 +161,7 @@ static const WeaponDef weapon_defs[W_COUNT] = {
 
 static const WeaponInfo weapon_infos[W_COUNT] = {
     [W_GRAMPEADOR]   = {"Recarga", "Projéteis", NULL, "Perfuração", false, false, false},
-    [W_PONTEIRO]     = {"Recarga", NULL, "Alcance", "Largura", false, true, true},
+    [W_AVISO]        = {"Recarga", "Aviões", "Raio do carimbo", "Alcance", false, true, false},
     [W_CANECA]       = {"Recarga", "Canecas", "Raio", NULL, false, true, false},
     [W_POSTITS]      = {"Intervalo", NULL, "Raio", NULL, false, true, false},
     [W_NAOPERTURBE]  = {"Intervalo", NULL, "Raio", NULL, false, true, false},
@@ -758,6 +761,45 @@ static Target nearest_target(Vector2 from, float max_distance, const unsigned *s
     return best;
 }
 
+// O alvo mais distante dentro do alcance (as cópias da Alucinação não contam)
+static Target farthest_target(Vector2 from, float max_distance, const unsigned *skip, int skip_count)
+{
+    Target best = {0};
+    float best_distance = -1.0f;
+
+    for (int i = 0; i < SV_MAX_ENEMIES; i++)
+    {
+        SvEnemy *e = &sv_run.enemies[i];
+        float d;
+
+        if (!e->alive || e->fake || id_listed(e->id, skip, skip_count)) continue;
+        d = Vector2Distance(from, e->pos);
+        if (d <= max_distance && d > best_distance)
+        {
+            best_distance = d;
+            best.found = true;
+            best.is_boss = false;
+            best.enemy = e;
+            best.pos = e->pos;
+        }
+    }
+
+    if (sv_run.boss.active && !id_listed(0xB055u, skip, skip_count))
+    {
+        float d = Vector2Distance(from, sv_run.boss.pos);
+
+        if (d - sv_run.boss.radius <= max_distance && d > best_distance)
+        {
+            best.found = true;
+            best.is_boss = true;
+            best.enemy = NULL;
+            best.pos = sv_run.boss.pos;
+        }
+    }
+
+    return best;
+}
+
 // O alvo com mais vida dentro do alcance: o chefe, se estiver perto, ou o inimigo mais resistente
 static Target strongest_target(Vector2 from, float max_distance, const unsigned *skip, int skip_count)
 {
@@ -968,17 +1010,38 @@ static void fire_weapon(SvWeapon *w)
         sv_sfx(SND_grampeador);
         break;
     }
-    case W_PONTEIRO:
+    case W_AVISO:
     {
-        float reach = WS(W_PONTEIRO, WSTAT_AREA, level) * p->area_mult;
-        float width = WS(W_PONTEIRO, WSTAT_EXTRA, level) * p->area_mult;
+        // Um avião por alvo, do mais distante para o mais perto; sem ninguém ao alcance, sai para a frente
+        int count = (int)WS(W_AVISO, WSTAT_COUNT, level);
+        float range = WS(W_AVISO, WSTAT_EXTRA, level);
+        unsigned chosen[3];
+        int chosen_count = 0;
 
-        Vector2 aim = aim_vector(PONTEIRO_RANGE);
+        base_cd = WS(W_AVISO, WSTAT_COOLDOWN, level);
+        for (int i = 0; i < count && i < 3; i++)
+        {
+            Target t = farthest_target(p->pos, range, chosen, chosen_count);
+            Vector2 dir = t.found ? direction_of(p->pos, t.pos) : p->facing_vector;
+            SvShot *s;
 
-        base_cd = WS(W_PONTEIRO, WSTAT_COOLDOWN, level);
-        angle = atan2f(aim.y, aim.x) * RAD2DEG;
-        add_strike_zone(p->pos, angle, reach, width, WS(W_PONTEIRO, WSTAT_DAMAGE, level), 0.0f, ZK_PONTEIRO);
-        add_strike_zone(p->pos, angle + 180.0f, reach, width, WS(W_PONTEIRO, WSTAT_DAMAGE, level), 0.0f, ZK_PONTEIRO);
+            if (!t.found && i > 0) break;
+            s = new_shot();
+            if (!s) break;
+            if (t.found)
+            {
+                s->target_id = t.is_boss ? 0xB055u : t.enemy->id;
+                chosen[chosen_count++] = s->target_id;
+            }
+            s->kind = 4;
+            s->pos = p->pos;
+            s->vel = Vector2Scale(dir, AVISO_SPEED);
+            s->damage = WS(W_AVISO, WSTAT_DAMAGE, level);
+            s->radius = 8.0f;
+            s->blast = WS(W_AVISO, WSTAT_AREA, level) * p->area_mult;
+            s->pierce = 9999;
+            s->life = (range / AVISO_SPEED) * 1.5f * p->duration_mult;
+        }
         sv_sfx(SND_ponteiro);
         break;
     }
@@ -1294,6 +1357,32 @@ static float recharge_pace(void);
 // Funções dos colegas, na ordem em que entram: Segurança, Suporte de TI, Enfermeira do RH e Entregador
 enum { COLEGA_SEGURANCA, COLEGA_SUPORTE, COLEGA_ENFERMEIRA, COLEGA_ENTREGADOR };
 #define COLEGA_CURA_A_CADA 6.0f
+#define COLEGA_RESPOSTA 10.0f     // quão depressa a velocidade chega na desejada: maior é mais brusco
+#define COLEGA_APROXIMA 5.0f      // quanto da distância até o posto vira velocidade
+#define COLEGA_PASSADA 9.0f       // pixels andados a cada quadro da caminhada
+#define COLEGA_PASSOS_MIN 5.0f    // quadros por segundo da caminhada, no mínimo e no máximo
+#define COLEGA_PASSOS_MAX 12.0f
+
+// O lugar de cada um em volta do jogador, na ordem em que entram
+static const Vector2 colega_posto[SV_MAX_COLEGAS] = {{36.0f, -8.0f}, {-36.0f, -8.0f}, {-20.0f, 20.0f}, {26.0f, 22.0f}};
+
+// Vira o colega para onde anda. Só troca entre lado, frente e costas quando a direção muda de verdade,
+// para o sprite não ficar piscando quando o caminho é quase diagonal
+static void colega_virar(int c, Vector2 vel)
+{
+    Vector2 dir = sv_run.colega_dir[c];
+    float ax = fabsf(vel.x), ay = fabsf(vel.y);
+    bool side = fabsf(dir.x) >= fabsf(dir.y);
+
+    side = side ? ay <= ax * 1.35f : ax > ay * 1.35f;
+    if (side)
+    {
+        float sign = ax > 6.0f ? (vel.x < 0.0f ? -1.0f : 1.0f) : (dir.x < 0.0f ? -1.0f : 1.0f);
+
+        sv_run.colega_dir[c] = (Vector2){sign, 0.0f};
+    }
+    else sv_run.colega_dir[c] = (Vector2){0.0f, vel.y < 0.0f ? -1.0f : 1.0f};
+}
 
 static void update_colegas(SvWeapon *w, float dt)
 {
@@ -1304,6 +1393,12 @@ static void update_colegas(SvWeapon *w, float dt)
     float damage = WS(W_COLEGA, WSTAT_DAMAGE, level);
     float interval = WS(W_COLEGA, WSTAT_COOLDOWN, level) * p->cooldown_mult;
     float pace = recharge_pace();
+    Vector2 lead = {0};
+
+    // A velocidade do jogador: os colegas andam junto com ele em vez de correr atrás depois
+    if (dt > 0.0f && Vector2Distance(sv_run.colega_leader, p->pos) < 24.0f)
+        lead = Vector2Scale(Vector2Subtract(p->pos, sv_run.colega_leader), 1.0f / dt);
+    sv_run.colega_leader = p->pos;
 
     w->angle += dt;
     if (sv_run.colega_heal_flash > 0.0f) sv_run.colega_heal_flash -= dt;
@@ -1312,15 +1407,20 @@ static void update_colegas(SvWeapon *w, float dt)
     {
         Vector2 *pos = &sv_run.colega_pos[c];
         Vector2 before = *pos;
-        float a = (float)c * 1.9f + w->angle * 0.4f;
-        Vector2 target = Vector2Add(p->pos, (Vector2){cosf(a) * 34.0f, sinf(a) * 24.0f});
+        Vector2 target = Vector2Add(p->pos, colega_posto[c]);
         float speed = 150.0f + Vector2Distance(*pos, p->pos);
+        bool chasing = false;
         Target near_enemy = {0};
-        Vector2 moved;
+        Vector2 moved, desired;
+        float walked;
 
         if (sv_run.colega_cd[c] > 0.0f) sv_run.colega_cd[c] -= dt * pace;
         if (sv_run.colega_attack[c] > 0.0f) sv_run.colega_attack[c] -= dt;
-        if (Vector2Distance(*pos, p->pos) > 420.0f) *pos = p->pos;
+        if (Vector2Distance(*pos, p->pos) > 420.0f)
+        {
+            *pos = before = p->pos;
+            sv_run.colega_vel[c] = (Vector2){0};
+        }
 
         switch (c)
         {
@@ -1331,6 +1431,7 @@ static void update_colegas(SvWeapon *w, float dt)
             {
                 target = near_enemy.pos;
                 speed = 130.0f;
+                chasing = true;
             }
             break;
         case COLEGA_SUPORTE:
@@ -1344,7 +1445,6 @@ static void update_colegas(SvWeapon *w, float dt)
         }
         case COLEGA_ENFERMEIRA:
             // Fica colada em você e protege quem chega perto
-            target = Vector2Add(p->pos, (Vector2){cosf(a) * 22.0f, sinf(a) * 16.0f});
             near_enemy = nearest_target(*pos, reach * 1.6f, NULL, 0);
             break;
         default:
@@ -1354,24 +1454,41 @@ static void update_colegas(SvWeapon *w, float dt)
             {
                 target = near_enemy.pos;
                 speed = 210.0f;
+                chasing = true;
             }
             break;
         }
 
-        if (Vector2Distance(*pos, target) > 10.0f)
+        // Indo a um inimigo, freia só na chegada; seguindo, soma a velocidade do jogador à correção
+        if (chasing) desired = Vector2Scale(direction_of(*pos, target), fminf(speed, Vector2Distance(*pos, target) * 10.0f));
+        else
         {
-            float step = fminf(speed * dt, Vector2Distance(*pos, target));
-
-            *pos = Vector2Add(*pos, Vector2Scale(direction_of(*pos, target), step));
+            desired = Vector2Add(lead, Vector2Scale(Vector2Subtract(target, *pos), COLEGA_APROXIMA));
+            if (Vector2Length(lead) < 1.0f && Vector2Distance(*pos, target) < 2.5f) desired = (Vector2){0};
+            desired = Vector2ClampValue(desired, 0.0f, speed);
         }
+        sv_run.colega_vel[c] = Vector2Lerp(sv_run.colega_vel[c], desired, 1.0f - expf(-COLEGA_RESPOSTA * dt));
+        *pos = Vector2Add(*pos, Vector2Scale(sv_run.colega_vel[c], dt));
         sv_map_collide(pos, 6.0f, 8.0f);
 
+        // A animação usa o que ele andou de fato: encostado numa mesa, não marcha no lugar
         moved = Vector2Subtract(*pos, before);
-        sv_run.colega_moving[c] = Vector2Length(moved) > 0.15f;
+        walked = Vector2Length(moved);
+        if (dt > 0.0f)
+        {
+            float real = walked / dt;
+
+            if (!sv_run.colega_moving[c] && real > 16.0f)
+            {
+                sv_run.colega_moving[c] = true;
+                sv_run.colega_walk[c] = 1.0f; // começa já num passo
+            }
+            else if (sv_run.colega_moving[c] && real < 9.0f) sv_run.colega_moving[c] = false;
+        }
         if (sv_run.colega_moving[c])
         {
-            sv_run.colega_dir[c] = Vector2Normalize(moved);
-            sv_run.colega_walk[c] += dt;
+            sv_run.colega_walk[c] += Clamp(walked / COLEGA_PASSADA, COLEGA_PASSOS_MIN * dt, COLEGA_PASSOS_MAX * dt);
+            if (sv_run.colega_attack[c] <= 0.0f) colega_virar(c, sv_run.colega_vel[c]);
         }
 
         if (c == COLEGA_ENFERMEIRA)
@@ -1603,7 +1720,7 @@ static void apply_zone(SvZone *z)
 
         if (!inside) continue;
         if (z->confuse > 0.0f) e->confused = z->confuse;
-        damage_enemy(e, z->kind == ZK_PROMPT && e->id != z->target_id ? z->damage * PROMPT_SPLASH : z->damage, z->pos, z->kind == ZK_VERA ? 130.0f : z->kind == ZK_CANECA ? 70.0f : z->kind == ZK_PROMPT ? 50.0f : z->kind == ZK_CALOR ? 0.0f : z->kind == ZK_NEGACAO ? 40.0f : 30.0f);
+        damage_enemy(e, z->kind == ZK_PROMPT && e->id != z->target_id ? z->damage * PROMPT_SPLASH : z->damage, z->pos, z->kind == ZK_VERA ? 130.0f : z->kind == ZK_CANECA ? 70.0f : z->kind == ZK_PROMPT ? 50.0f : z->kind == ZK_CALOR ? 0.0f : z->kind == ZK_NEGACAO ? 40.0f : z->kind == ZK_AVISO ? 90.0f : 30.0f);
     }
 
     if (sv_run.boss.active)
@@ -1761,6 +1878,72 @@ static void recursao_split(const SvShot *parent)
     }
 }
 
+// O avião chegou (ou ficou sem fôlego): o carimbo de demissão fere todo mundo em volta
+static void aviso_carimbar(SvShot *s)
+{
+    SvZone *z = new_zone();
+
+    s->alive = false;
+    if (!z) return;
+    z->shape = ZONE_CIRCLE;
+    z->kind = ZK_AVISO;
+    z->pos = s->pos;
+    z->radius = s->blast;
+    z->damage = s->damage;
+    z->life = z->max_life = 0.45f;
+}
+
+// Corrige o rumo do avião para o alvo; se o alvo caiu, procura outro perto dele. Devolve false se chegou.
+static bool update_aviso_flight(SvShot *s, float dt)
+{
+    Vector2 target = {0};
+    float radius = 0.0f;
+    bool found = false;
+
+    if (s->target_id == 0xB055u && sv_run.boss.active)
+    {
+        target = sv_run.boss.pos;
+        radius = sv_run.boss.radius;
+        found = true;
+    }
+    else for (int j = 0; j < SV_MAX_ENEMIES && s->target_id; j++)
+    {
+        SvEnemy *e = &sv_run.enemies[j];
+
+        if (e->alive && e->id == s->target_id)
+        {
+            target = e->pos;
+            radius = enemy_stats[e->type].radius;
+            found = true;
+            break;
+        }
+    }
+
+    if (!found)
+    {
+        Target next = nearest_target(s->pos, 240.0f, NULL, 0);
+
+        s->target_id = !next.found ? 0u : next.is_boss ? 0xB055u : next.enemy->id;
+        return true;
+    }
+
+    if (Vector2Distance(s->pos, target) < radius + s->radius + AVISO_SPEED * dt * 0.5f)
+    {
+        s->pos = target;
+        aviso_carimbar(s);
+        return false;
+    }
+
+    {
+        Vector2 wanted = Vector2Scale(direction_of(s->pos, target), AVISO_SPEED);
+        // Perto do alvo a curva aperta, para o avião não ficar orbitando
+        float turn = fminf(1.0f, dt * (Vector2Distance(s->pos, target) < 90.0f ? AVISO_CURVA * 3.0f : AVISO_CURVA));
+
+        s->vel = Vector2Scale(Vector2Normalize(Vector2Lerp(s->vel, wanted, turn)), AVISO_SPEED);
+    }
+    return true;
+}
+
 static void update_shots(float dt)
 {
     for (int i = 0; i < SV_MAX_SHOTS; i++)
@@ -1771,9 +1954,10 @@ static void update_shots(float dt)
         sv_duo_use(s->owner);   // Dupla: o tiro usa os bônus de quem atirou, e a nota volta para ele
 
         if (s->kind == 2 && !update_nota_flight(s, dt)) continue;
+        if (s->kind == 4 && !update_aviso_flight(s, dt)) continue;
 
         s->pos = Vector2Add(s->pos, Vector2Scale(s->vel, dt));
-        if (sv_map_point_blocked(s->pos, 2.0f))
+        if (s->kind != 4 && sv_map_point_blocked(s->pos, 2.0f))   // O avião voa por cima dos móveis
         {
             if (s->kind == 2) start_nota_return(s);   // Bateu num objeto: a nota volta
             else
@@ -1786,6 +1970,11 @@ static void update_shots(float dt)
         if (s->life <= 0.0f && !(s->kind == 2 && s->returning))
         {
             if (s->kind == 2) start_nota_return(s);
+            else if (s->kind == 4)
+            {
+                aviso_carimbar(s);
+                continue;
+            }
             else
             {
                 s->alive = false;
@@ -1802,7 +1991,7 @@ static void update_shots(float dt)
             {
                 memmove(&s->hit_ids[1], &s->hit_ids[0], sizeof(unsigned) * 3);
                 s->hit_ids[0] = e->id;
-                damage_enemy(e, s->damage, Vector2Subtract(s->pos, s->vel), 30.0f);
+                damage_enemy(e, s->kind == 4 ? s->damage * AVISO_RASPAO : s->damage, Vector2Subtract(s->pos, s->vel), 30.0f);
                 if (s->kind == 3) recursao_split(s);
                 if (--s->pierce <= 0) s->alive = false;
             }
@@ -1814,7 +2003,7 @@ static void update_shots(float dt)
             {
                 memmove(&s->hit_ids[1], &s->hit_ids[0], sizeof(unsigned) * 3);
                 s->hit_ids[0] = 0xB055u;
-                sv_damage_boss(s->damage * sv_run.player.dmg_mult);
+                sv_damage_boss((s->kind == 4 ? s->damage * AVISO_RASPAO : s->damage) * sv_run.player.dmg_mult);
                 if (s->kind == 3) recursao_split(s);
                 if (--s->pierce <= 0) s->alive = false;
             }
@@ -2087,10 +2276,15 @@ static void update_gems(float dt)
             switch (g->kind)
             {
             case 0:
-                p->xp += g->value * p->xp_mult;
-                share_with_partner(0, g->value);
+            {
+                // Na dupla cada chip vale menos (SV_DUO_XP_MULT): caem mais chips e os dois ganham o valor inteiro
+                float value = g->value * (sv_run.duo ? SV_DUO_XP_MULT : 1.0f);
+
+                p->xp += value * p->xp_mult;
+                share_with_partner(0, value);
                 sv_sfx(SND_coletaXp);
                 break;
+            }
             case 1:
                 sv_run.coins++;
                 sv_sfx(SND_coletaMoeda);
@@ -2123,6 +2317,25 @@ static int choice_weight(const SvChoice *c)
     return (c->kind == 2 || c->kind == 3) && c->id == P_LANTERNA ? LANTERNA_WEIGHT : 1;
 }
 
+SvProgress sv_progress_now(void)
+{
+    SvProgress progress = {sv_meta.runs, sv_meta.wins, sv_meta.best_seconds, sv_meta.kills};
+
+    // O que a partida atual já garantiu: depois de paga (finished_flag) isso já está no save
+    if (!finished_flag && !sv_run.cheated)
+    {
+        progress.kills += sv_run.kills;
+        if ((int)sv_run.time > progress.best_seconds) progress.best_seconds = (int)sv_run.time;
+        if (sv_run.phase == SV_WON) progress.wins++;
+    }
+    return progress;
+}
+
+bool sv_weapon_available(int weapon)
+{
+    return sv_debug_mode || sv_weapon_unlocked(weapon, sv_progress_now());
+}
+
 static void build_choices(void)
 {
     SvChoice pool[32];
@@ -2134,7 +2347,7 @@ static void build_choices(void)
         SvWeapon *owned = find_weapon(w);
 
         if (owned && owned->level < SV_WEAPON_MAX_LEVEL) pool[count++] = (SvChoice){1, w};
-        else if (!owned && p->weapon_count < SV_MAX_WEAPONS) pool[count++] = (SvChoice){0, w};
+        else if (!owned && p->weapon_count < SV_MAX_WEAPONS && sv_weapon_available(w)) pool[count++] = (SvChoice){0, w};
     }
 
     for (int i = 0; i < P_COUNT; i++)
