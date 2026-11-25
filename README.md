@@ -50,6 +50,7 @@ A história passa por 100 dias, e você joga 9 deles. O que você escolhe define
 - você só se movimenta, os poderes atacam sozinhos;
 - ao subir de nível, escolhe uma carta com um poder novo ou uma melhoria;
 - cinco chefes aparecem durante a partida;
+- derrotada a IARA, dá para encerrar ou continuar na hora extra, com tudo em dobro;
 - o Banco de Horas ganho compra melhorias que ficam no save;
 - cumprir objetivos libera personagens e poderes.
 
@@ -85,10 +86,10 @@ quiz jogável. De lá para cá entrou:
 | **Campanha do Dia 1 ao Dia 100** | O expediente inteiro, com 9 dias jogáveis, Flashes do dia e saltos no calendário. Cada dia traz um conceito de lógica dentro do trabalho, e as escolhas levam a um dos 4 finais |
 | **Modo Sobrevivência** | Dez minutos num mapa de 14 áreas do escritório, com 5 atos, 5 chefes, Banco de Horas para comprar melhorias e ranking de partidas |
 | **Sobrevivência em dupla** | Duas pessoas no mesmo computador, com controles separados, XP dividida e ranking próprio |
-| **Progressão e conquistas** | 12 personagens, cada um com o seu poder, liberados por objetivos, com notificação de conquista |
+| **Progressão e conquistas** | 12 personagens, cada um com o seu poder, e três poderes extras, liberados por objetivos, com notificação de conquista |
 | **Arte nova** | Personagens e Colegas de Plantão redesenhados em alta resolução, e o executável reduzido de cerca de 54 MB para 30 MB |
 | **Versão para terminal** | A campanha em texto, sem janela e sem raylib, para PIF |
-| **Eventos** | Saves e rankings compartilhados entre dispositivos (opcional) |
+| **Eventos** | Saves e rankings compartilhados entre dispositivos (opcional). Sem internet, o jogo salva no dispositivo e envia depois |
 | **Saves por modo** | Save automático com vários slots, separados entre campanha, Sobrevivência e dupla |
 | **Configurações** | Volume da música e dos efeitos, brilho, tela cheia e janela maximizada, guardados entre sessões |
 | **Acessibilidade** | Alto contraste, pausa, tela de ajuda e confirmação antes de sair ou desistir |
@@ -185,12 +186,12 @@ O script cria `build/IARA-windows.zip` e `build/release/iara.exe`. O executável
 
 <br>
 
-Só é preciso para compartilhar saves e ranking. Sem isso, o jogo salva tudo no próprio dispositivo.
+Só é preciso para compartilhar saves e ranking. Sem isso, o jogo salva tudo no próprio dispositivo. Com o banco ligado, ele continua funcionando sem internet e sincroniza quando a rede volta.
 
 **Banco de dados (Supabase)**
 
 1. Em [supabase.com](https://supabase.com), crie um projeto gratuito na região South America (São Paulo).
-2. No **SQL Editor**, cole e execute o conteúdo de [`tools/nuvem/supabase.sql`](tools/nuvem/supabase.sql).
+2. No **SQL Editor**, cole e execute o conteúdo de [`tools/nuvem/supabase.sql`](tools/nuvem/supabase.sql). Em um banco já criado, execute de novo sempre que o arquivo mudar.
 3. Defina a senha de apagar saves, trocando `SUA-SENHA` (não salve essa consulta):
 
    ```sql
@@ -225,7 +226,7 @@ Atenção: o plano gratuito do Supabase pausa o projeto depois de uns 7 dias par
 | Puzzles de lógica proposicional explicados pela própria história | Conquistas com aviso na tela e som |
 | Dicas dos colegas e do mural, sem entregar a resposta | Plano de Carreira com melhorias permanentes |
 | O escritório muda com os dias e com as escolhas, sem números na tela | Modo em dupla no mesmo computador |
-| Save automático, com vários saves | Velocidade x1, x2 ou x3 e ranking |
+| Save automático, com vários saves | Velocidade x1, x2 ou x3, hora extra depois da IARA e ranking |
 
 Nos dois modos há ajuste de volume e brilho, alto contraste, tela cheia, pausa, ajuda e confirmação antes de sair. Em eventos, saves e rankings podem ser compartilhados entre dispositivos e aparecem no [ranking ao vivo](https://iara-ranking-ao-vivo.vercel.app/).
 

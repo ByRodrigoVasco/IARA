@@ -767,7 +767,24 @@ Funcionalidade nova, para eventos com vários notebooks. Não corrige nem abre b
 
 **Limitações conhecidas:**
 
-- Sem conexão, não dá para abrir, criar nem apagar saves.
+- Sem conexão, não dá para abrir, criar nem apagar saves. (Resolvido em 25/11/2026: [BUG-46](#bug-45-a-47).)
 - A campanha só sobe quando o jogo grava (ao voltar ao menu e ao fechar).
 - No servidor, `iara_gravar_save` recria um save que não existe. O jogo confere antes de reenviar a fila depois de uma falha de rede, mas um notebook que ficou suspenso sem registrar falha pode recriar um save apagado nesse intervalo.
-- Saves que já existiam em um computador não são enviados para a nuvem.
+- Saves que já existiam em um computador não são enviados para a nuvem. (Desde 25/11/2026 sobem ao serem abertos.)
+
+---
+
+<a id="bug-45-a-47"></a>
+
+## BUG-45 a BUG-47: exe único, progressão e hora extra (25/11/2026)
+
+| Bug | Descrição | Como estava | Situação |
+|---|---|---|---|
+| BUG-45 | O ranking online recusava partidas com mais de 600 s | A IARA só aparece aos 10:00, então vitórias não entravam no ranking compartilhado | Corrigido no jogo e no `tools/nuvem/supabase.sql` (limite de 7200 s). **Exige rodar o SQL novo no Supabase** |
+| BUG-46 | O executável com nuvem não abria nem criava save sem internet | Sem rede, o jogo parava na tela de saves | Corrigido: o save é local e sincroniza quando há conexão; se online e local divergirem, o jogador escolhe. Testes NV-44 a NV-58 |
+| BUG-47 | `tools/pacote/testar_pacote.ps1` apaga os saves da campanha em `Documentos\IARA` de quem o roda | O script remove `saves/normal/*/progresso.save` para testar o fluxo do menu | **Aberto.** Antes de rodar, copie a pasta `Documentos\IARA\saves` |
+
+**Execução dos testes (25/11/2026):** 13 dos 14 conjuntos passaram, com `test_cloud` em 60 de 60 e `test_survival` em 171 de 171. A única falha é o CT-100, o [BUG-42](#bug-42). No teste do pacote, PKG-10 e PKG-11 falham porque as teclas simuladas não chegam bem ao menu; precisam de conferência à mão.
+
+**Ainda não verificado:** a sincronização contra o banco real com a rede caindo, e dois dispositivos ao mesmo tempo.
+
