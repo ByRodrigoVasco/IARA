@@ -495,6 +495,11 @@ static void draw_enemy(SvEnemy *e)
 // Dupla: cor de cada jogador (marcador sobre a cabeça e no HUD)
 static const Color duo_colors[SV_DUO_PLAYERS] = {{255, 90, 100, 255}, {90, 170, 255, 255}};
 
+Color sv_duo_color(int index)
+{
+    return duo_colors[(index == 1) ? 1 : 0];
+}
+
 // Dupla: quem caiu fica deitado e cinza, com o anel de quanto falta para levantar
 static void draw_fallen_player(SvPlayer *p, int index)
 {

@@ -129,6 +129,7 @@ void sv_duo_fall(int index)
 
     if (p->down) return;
     p->down = true;
+    p->stats.falls++;
     p->hp = 0.0f;
     p->revive = 0.0f;
     p->moving = false;
@@ -174,7 +175,9 @@ static void update_revive(float dt)
             fallen->down = false;
             fallen->revive = 0.0f;
             fallen->hp = fallen->max_hp * SV_DUO_REVIVE_HP;
-            fallen->invulnerable = 2.0f;
+            fallen->invulnerable = SV_DUO_REVIVE_INVULNERABLE;
+            fallen->stats.revived++;
+            partner->stats.revives_given++;
             sv_spawn_fx(FX_WAVE, fallen->pos, 0.5f, 2.0f);
             sv_banner(revive_banner[i], 2.0f);
             sv_sfx(SND_evolucao);
