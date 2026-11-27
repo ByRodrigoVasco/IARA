@@ -4,6 +4,7 @@
 #include "macros.h"
 #include "accessibility.h"
 #include "ui_theme.h"
+#include "helper.h"
 
 #define CREDITS_MEMBER_COUNT 7
 #define CREDITS_TOP_ROW_COUNT 5
@@ -63,22 +64,13 @@ void initialize_credits_screen(void)
 
 bool render_credits_screen(void)
 {
-    Rectangle back_button = {
-        screen_width * 0.34f,
-        screen_height * 0.87f,
-        screen_width * 0.32f,
-        screen_height * 0.1f};
-    Vector2 mouse_position = GetMousePosition();
-    bool is_back_button_hovered = IsWindowFocused() && CheckCollisionPointRec(mouse_position, back_button);
+    // Botão no mesmo lugar e no mesmo estilo do VOLTAR da escolha de modo: acima da dica do rodapé, sem encostar nela
+    float scale = get_ui_scale();
+    float window_width = (float)GetScreenWidth();
+    float window_height = (float)GetScreenHeight();
+    Rectangle back_button = {(window_width - 360.0f * scale) / 2.0f, window_height - 135.0f * scale, 360.0f * scale, 62.0f * scale};
+    bool is_back_button_hovered = ui_mouse_over(back_button);
     bool is_back_button_clicked = is_back_button_hovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
-    float button_font_size = screen_height * 0.04f;
-    if (button_font_size > screen_width * 0.022f) button_font_size = screen_width * 0.022f;
-    const char *button_text = "VOLTAR AO MENU";
-    float button_letter_spacing = button_font_size * 0.06f;
-    Vector2 button_text_size = MeasureTextEx(default_game_font, button_text, button_font_size, button_letter_spacing);
-    Vector2 button_text_position = {
-        back_button.x + (back_button.width - button_text_size.x) / 2,
-        back_button.y + (back_button.height - button_text_size.y) / 2};
 
     SetMouseCursor(is_back_button_hovered ? MOUSE_CURSOR_POINTING_HAND : MOUSE_CURSOR_ARROW);
 
@@ -106,8 +98,7 @@ bool render_credits_screen(void)
         draw_member(&members[index], center_x, bottom_row_y, bottom_row_height, max_member_width);
     }
 
-    DrawRectangleRounded(back_button, 0.25f, 8, is_back_button_hovered ? (Color){96, 64, 96, 255} : (Color){48, 32, 48, 255});
-    DrawTextEx(default_game_font, button_text, button_text_position, button_font_size, button_letter_spacing, WHITE);
+    ui_draw_button(back_button, "VOLTAR AO MENU", true, false);   // Única ação da tela: sempre destacado
 
     ui_draw_hint("ESC, ENTER ou ESPAÇO: voltar");
 
