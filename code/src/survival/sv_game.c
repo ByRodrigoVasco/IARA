@@ -585,6 +585,7 @@ static void kill_enemy(SvEnemy *e)
     e->alive = false;
     sv_run.enemy_count--;
     sv_run.kills++;
+    sv_run.player.stats.kills++;   // Dupla: quem está em cena é o dono do tiro, da área ou do golpe
 
     // Nicollas: a cada tantos chamados atendidos, recupera um pouco de vida
     if (!e->fake && sv_run.player.kill_heal_every > 0 && ++sv_run.player.kills_since_heal >= sv_run.player.kill_heal_every)
@@ -637,6 +638,7 @@ static void damage_enemy(SvEnemy *e, float damage, Vector2 from, float knockback
     damage *= sv_run.player.dmg_mult;
     if (sv_run.player.crit_chance > 0.0f && sv_rand() < sv_run.player.crit_chance) damage *= 2.0f;
     if (sv_run.cheats[CHEAT_ONE_HIT]) damage *= 1000.0f;
+    sv_run.player.stats.damage_dealt += fminf(damage, fmaxf(e->hp, 0.0f));   // Dupla: quem está em cena é o dono do golpe
     e->hp -= damage;
     e->hurt_flash = 0.1f;
     sv_sfx(SND_acertaInimigo);

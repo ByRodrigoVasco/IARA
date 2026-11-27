@@ -188,6 +188,16 @@ typedef struct
     bool announced_final; // IARA: a trilha final já começou
 } SvBoss;
 
+// Números de um jogador na partida, para a tabela do fim da partida em dupla (veja sv_duo.h)
+typedef struct
+{
+    int kills;             // Inimigos derrotados por tiros, áreas e golpes deste jogador
+    int falls;             // Vezes que caiu
+    int revived;           // Vezes que o parceiro o levantou
+    int revives_given;     // Vezes que levantou o parceiro
+    float damage_dealt;    // Dano em inimigos e chefes (só o que de fato saiu da vida deles)
+} SvPlayerStats;
+
 typedef struct
 {
     Vector2 pos;
@@ -223,6 +233,7 @@ typedef struct
     bool moving;           // Andando neste quadro
     bool down;             // Dupla: caiu e espera o parceiro levantar (nunca acontece no solo)
     float revive;          // Dupla: segundos que o parceiro já passou ao lado para levantar este jogador
+    SvPlayerStats stats;   // Números da partida, zerados no começo junto com o resto de sv_run
     SvWeapon weapons[SV_MAX_WEAPONS];
     int weapon_count;
     SvPassive passives[SV_MAX_PASSIVES];

@@ -1322,6 +1322,11 @@ static void test_duo(void)
               half > 0.4f && half < 0.6f && !sv_duo_player(1)->down && fabsf(sv_duo_player(1)->hp - sv_duo_player(1)->max_hp * SV_DUO_REVIVE_HP) < 1.0f);
     }
 
+    // A queda e a levantada entram na tabela do fim da partida
+    check("SV-189", "a tabela da dupla conta a queda de um e a levantada que o outro deu",
+          sv_duo_player(1)->stats.falls == 1 && sv_duo_player(1)->stats.revived == 1 && sv_duo_player(1)->stats.revives_given == 0 &&
+          sv_duo_player(0)->stats.falls == 0 && sv_duo_player(0)->stats.revived == 0 && sv_duo_player(0)->stats.revives_given == 1);
+
     // Quem levanta fica invencível por SV_DUO_REVIVE_INVULNERABLE segundos (o sprite pisca enquanto isso)
     {
         bool protected_at_start = sv_duo_player(1)->invulnerable > SV_DUO_REVIVE_INVULNERABLE - 0.2f;
@@ -1446,6 +1451,16 @@ static void test_duo(void)
 
         printf("      dupla: %.0f s, nível %d, %d abates, %d chefes, pico de %d inimigos\n", r.seconds, r.level, r.kills, r.bosses, r.peak_enemies);
         check("SV-133", "uma partida inteira em dupla roda sem travar e sem ninguém sair do mapa", r.seconds > 60.0f && r.kills > 0);
+
+        // Cada abate da partida fica com um dos dois: a soma da tabela bate com o total
+        check("SV-191", "os abates de cada jogador somam o total da partida, e os dois aparecem na tabela com dano causado",
+              sv_duo_player(0)->stats.kills + sv_duo_player(1)->stats.kills == sv_run.kills &&
+              sv_duo_player(0)->stats.kills > 0 && sv_duo_player(1)->stats.kills > 0 &&
+              sv_duo_player(0)->stats.damage_dealt > 0.0f && sv_duo_player(1)->stats.damage_dealt > 0.0f);
+
+        start_duo(78);
+        check("SV-192", "uma partida nova começa com a tabela zerada",
+              sv_duo_player(0)->stats.kills == 0 && sv_duo_player(1)->stats.falls == 0 && sv_duo_player(0)->stats.damage_dealt == 0.0f);
     }
 
     // Save e ranking da dupla

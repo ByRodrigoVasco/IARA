@@ -1113,6 +1113,51 @@ static void choose_over_option(int option)
     if (option == OVER_MAIN_MENU) leave_to_menu = true;
 }
 
+// Dupla: tabela do fim da partida com os números de cada jogador, lado a lado.
+// Mesma altura e mesmo estilo da tabela do ranking, que fica ao lado dela.
+static void draw_duo_stats(float x, float y, float width, float size)
+{
+    static const char *labels[] = {"ABATES", "QUEDAS", "FOI LEVANTADO", "LEVANTOU O PARCEIRO", "DANO CAUSADO"};
+    const int rows = (int)(sizeof(labels) / sizeof(labels[0]));
+    float ui = sv_ui();
+    float line = size * 1.25f;
+    float pad = 16.0f * ui;
+    float height = pad * 2.0f + line * (float)(rows + 1) + size * 0.4f;
+    float column_w = fmaxf(sv_text_width("J1", size), sv_text_width("999999", size)) + size;   // O dano passa fácil de quatro dígitos
+    float j2_right = x + width - pad;
+    float j1_right = j2_right - column_w;
+    Color header = (Color){160, 150, 165, 255};
+    char text[32];
+
+    DrawRectangleRec((Rectangle){x, y, width, height}, (Color){10, 4, 16, 215});
+    DrawRectangleLinesEx((Rectangle){x, y, width, height}, 2.0f * ui, (Color){120, 30, 44, 255});
+
+    sv_text("DUPLA", x + pad, y + pad, size, header);
+    for (int p = 0; p < SV_DUO_PLAYERS; p++)
+    {
+        float right = p == 0 ? j1_right : j2_right;
+
+        snprintf(text, sizeof(text), "J%d", p + 1);
+        sv_text(text, right - sv_text_width(text, size), y + pad, size, sv_duo_color(p));
+    }
+
+    for (int i = 0; i < rows; i++)
+    {
+        float ry = y + pad + line * (float)(i + 1) + size * 0.4f;
+
+        sv_text(labels[i], x + pad, ry, size, (Color){220, 205, 215, 255});
+        for (int p = 0; p < SV_DUO_PLAYERS; p++)
+        {
+            const SvPlayerStats *s = &sv_duo_player(p)->stats;
+            int value = i == 0 ? s->kills : i == 1 ? s->falls : i == 2 ? s->revived : i == 3 ? s->revives_given : (int)(s->damage_dealt + 0.5f);
+            float right = p == 0 ? j1_right : j2_right;
+
+            snprintf(text, sizeof(text), "%d", value);
+            sv_text(text, right - sv_text_width(text, size), ry, size, sv_duo_color(p));
+        }
+    }
+}
+
 static void render_over(void)
 {
     static const char *labels[OVER_OPTIONS] = {"MENU DA SOBREVIVÊNCIA", "SAIR PARA O MENU"};
@@ -1198,7 +1243,13 @@ static void render_over(void)
         sv_text_centered(text, w / 2.0f, 530.0f * ui, 40.0f * ui, last_rank_position <= 5 ? (Color){255, 214, 80, 255} : (Color){230, 220, 230, 255});
     }
 
-    draw_ranking(w / 2.0f - 420.0f * ui, 600.0f * ui, 840.0f * ui, 5, 34.0f * ui);
+    // Dupla: os números de cada um à esquerda e o ranking à direita, na mesma altura
+    if (duo && sv_run.duo)
+    {
+        draw_duo_stats(w / 2.0f - 860.0f * ui, 600.0f * ui, 840.0f * ui, 34.0f * ui);
+        draw_ranking(w / 2.0f + 20.0f * ui, 600.0f * ui, 840.0f * ui, 5, 34.0f * ui);
+    }
+    else draw_ranking(w / 2.0f - 420.0f * ui, 600.0f * ui, 840.0f * ui, 5, 34.0f * ui);
 
     for (int i = 0; i < OVER_OPTIONS; i++)
     {
