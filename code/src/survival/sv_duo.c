@@ -174,7 +174,7 @@ static void update_revive(float dt)
             fallen->down = false;
             fallen->revive = 0.0f;
             fallen->hp = fallen->max_hp * SV_DUO_REVIVE_HP;
-            fallen->invulnerable = 2.0f;
+            fallen->invulnerable = SV_DUO_REVIVE_INVULNERABLE;
             sv_spawn_fx(FX_WAVE, fallen->pos, 0.5f, 2.0f);
             sv_banner(revive_banner[i], 2.0f);
             sv_sfx(SND_evolucao);

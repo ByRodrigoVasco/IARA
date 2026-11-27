@@ -36,6 +36,7 @@
 #define SV_DUO_REVIVE_TIME 3.0f      // Segundos ao lado de quem caiu
 #define SV_DUO_REVIVE_RANGE 40.0f    // Distância para contar como "ao lado"
 #define SV_DUO_REVIVE_HP 0.5f        // Vida com que volta (fração da máxima)
+#define SV_DUO_REVIVE_INVULNERABLE 3.0f  // Segundos invencível depois de levantar; o sprite pisca enquanto isso
 
 // Distância máxima entre os dois (a câmera mostra 1280 x 720 de mundo numa tela 16:9)
 #define SV_DUO_LEASH_X 1000.0f

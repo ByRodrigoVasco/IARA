@@ -1322,6 +1322,30 @@ static void test_duo(void)
               half > 0.4f && half < 0.6f && !sv_duo_player(1)->down && fabsf(sv_duo_player(1)->hp - sv_duo_player(1)->max_hp * SV_DUO_REVIVE_HP) < 1.0f);
     }
 
+    // Quem levanta fica invencível por SV_DUO_REVIVE_INVULNERABLE segundos (o sprite pisca enquanto isso)
+    {
+        bool protected_at_start = sv_duo_player(1)->invulnerable > SV_DUO_REVIVE_INVULNERABLE - 0.2f;
+        bool ignored_hit, took_hit;
+        float hp_before;
+
+        step_duo((int)(60 * (SV_DUO_REVIVE_INVULNERABLE - 0.5f)), (Vector2){0, 0}, (Vector2){0, 0});
+        hp_before = sv_duo_player(1)->hp;
+        sv_duo_use(1);
+        sv_hurt_player(10.0f, EFF_NONE, 0.0f);
+        sv_duo_use(0);
+        ignored_hit = fabsf(sv_duo_player(1)->hp - hp_before) < 0.001f;
+
+        step_duo(60, (Vector2){0, 0}, (Vector2){0, 0});
+        hp_before = sv_duo_player(1)->hp;
+        sv_duo_use(1);
+        sv_hurt_player(10.0f, EFF_NONE, 0.0f);
+        sv_duo_use(0);
+        took_hit = sv_duo_player(1)->hp < hp_before - 0.5f;
+
+        check("SV-190", "quem foi levantado fica invencível pelos primeiros segundos e volta a levar dano depois",
+              SV_DUO_REVIVE_INVULNERABLE >= 3.0f && protected_at_start && ignored_hit && took_hit);
+    }
+
     // Ctrl+Z vale para cada um antes de cair
     start_duo(16);
     clear_enemies();
